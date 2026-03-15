@@ -111,6 +111,37 @@ This rule applies to both **standard library and third-party modules**.
 Only split imports across multiple lines when required for readability
 (e.g., long `from module import (...)` statements).
 
+#### Future Import Rule
+
+If a Python file uses `from __future__ import ...`, it **must appear immediately after the header comments** and **before any other statements**, including `__all__`.
+
+Correct structure:
+
+```python
+
+# filename.py
+# __all__: 4
+from __future__ import annotations
+import json, os
+
+__all__ = [...]
+
+```
+
+Incorrect:
+
+```python
+# filename.py
+# __all__: 4
+
+__all__ = [...]
+
+from __future__ import annotations
+```
+
+This requirement comes from Python's language rules.
+`from __future__` imports must appear at the beginning of the file.
+
 ---
 
 ### 5. Variable and Constant Placement

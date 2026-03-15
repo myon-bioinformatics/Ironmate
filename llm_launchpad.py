@@ -3,6 +3,13 @@
 
 from __future__ import annotations
 
+import json, os
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Dict, Tuple
+
+from llm_loader import DEFAULT_CACHE_DIR, LLMLoader
+
 __all__ = [
     "DEFAULT_LIGHT_MODEL",
     "DEFAULT_TOOL_MODEL",
@@ -12,14 +19,7 @@ __all__ = [
     "execute_allowed_tool",
 ]
 
-import json, os
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Any, Dict, Tuple
-
-from llm_loader import DEFAULT_CACHE_DIR, LLMLoader
-
-DEFAULT_LIGHT_MODEL = os.getenv("IRONMATE_LIGHT_MODEL", "Qwen/Qwen2.5-1.5B-Instruct")
+DEFAULT_LIGHT_MODEL = os.getenv("IRONMATE_LIGHT_MODEL", "Qwen/Qwen3-4B-Instruct-2507")
 DEFAULT_TOOL_MODEL = os.getenv("IRONMATE_TOOL_MODEL", DEFAULT_LIGHT_MODEL)
 DEFAULT_MAX_NEW_TOKENS_LIGHT = int(os.getenv("IRONMATE_MAX_NEW_TOKENS_LIGHT", "256"))
 DEFAULT_MAX_NEW_TOKENS_TOOL = int(os.getenv("IRONMATE_MAX_NEW_TOKENS_TOOL", "192"))

@@ -6,26 +6,42 @@ import argparse, json, sys
 
 from llm_launchpad import DEFAULT_LIGHT_MODEL, DEFAULT_TOOL_MODEL, TransformersDualLLM, default_tool_schema, execute_allowed_tool
 
+
 __all__ = ["build_parser", "main"]
 
+
 def build_parser() -> argparse.ArgumentParser:
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument("--light-model", default=None, help="Override light model id (HF repo or local path)")
+    common.add_argument("--tool-model", default=None, help="Override tool model id (HF repo or local path)")
+    common.add_argument("--no-4bit", action="store_true", help="Disable 4-bit quantization")
+
     p = argparse.ArgumentParser(prog="i_am_ironmate.py")
     sub = p.add_subparsers(dest="mode", required=True)
 
-    p_light = sub.add_parser("light", help="Use the light (~2B) model for text generation")
+    p_light = sub.add_parser(
+        "light",
+        parents=[common],
+        help="Use the light model for text generation",
+    )
     p_light.add_argument("--prompt", required=True, help="User prompt")
 
-    p_tool = sub.add_parser("tool", help="Use the tool model to output JSON tool call")
+    p_tool = sub.add_parser(
+        "tool",
+        parents=[common],
+        help="Use the tool model to output JSON tool call",
+    )
     p_tool.add_argument("--prompt", required=True, help="User prompt")
     p_tool.add_argument("--dry-run", action="store_true", help="Do not execute tool; only print JSON")
     p_tool.add_argument("--print-raw", action="store_true", help="Print raw model text too")
 
-    p_repl = sub.add_parser("tool-repl", help="Keep the tool model loaded and accept prompts interactively")
+    p_repl = sub.add_parser(
+        "tool-repl",
+        parents=[common],
+        help="Keep the tool model loaded and accept prompts interactively",
+    )
     p_repl.add_argument("--print-raw", action="store_true", help="Print raw model text too")
 
-    p.add_argument("--light-model", default=None, help="Override light model id (HF repo or local path)")
-    p.add_argument("--tool-model", default=None, help="Override tool model id (HF repo or local path)")
-    p.add_argument("--no-4bit", action="store_true", help="Disable 4-bit quantization")
     return p
 
 
@@ -73,7 +89,9 @@ def _run_tool_repl(llm: TransformersDualLLM, print_raw: bool = False) -> int:
         if not prompt:
             continue
 
-        _run_tool_prompt(llm, prompt=prompt, dry_run=False, print_raw=print_raw)
+        code = _run_tool_prompt(llm, prompt=prompt, dry_run=False, print_raw=print_raw)
+        if code != 0:
+            print(f"[warn] command returned exit code {code}", file=sys.stderr)
 
 
 def main(argv: list[str]) -> int:

@@ -1,35 +1,27 @@
 # markdown_market.py
 # __all__: 3
 
+import os, re
+
 __all__ = [
     "save_markdown",
     "read_markdown",
     "extract_sections",
 ]
 
-import os, re
-
 
 def save_markdown(content: str, filepath: str) -> str:
-    """Save Markdown content to a file.
-
-    Args:
-        content: The Markdown content to save.
-        filepath: The path to the file where content will be saved.
-
-    Returns:
-        A message indicating success or describing an error.
-    """
+    """Save Markdown content to a file."""
     try:
-        dirpath = os.path.dirname(filepath)
+        abs_path = os.path.abspath(filepath)
+        dirpath = os.path.dirname(abs_path)
         if dirpath:
             os.makedirs(dirpath, exist_ok=True)
-        with open(filepath, "w", encoding="utf-8") as f:
+        with open(abs_path, "w", encoding="utf-8") as f:
             f.write(content)
-        return f"Saved successfully: {filepath}"
+        return f"Saved successfully: {abs_path}"
     except OSError as e:
         return f"Error saving file: {e}"
-
 
 def read_markdown(filepath: str, count_hashtags: bool = False) -> dict:
     """Read a Markdown file and optionally count hashtags.

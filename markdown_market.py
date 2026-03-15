@@ -1,25 +1,23 @@
 # markdown_market.py
 # __all__: 3
 
-import os, re
-
 __all__ = [
     "save_markdown",
     "read_markdown",
     "extract_sections",
 ]
 
+import os, re
+from pathlib import Path
+
 
 def save_markdown(content: str, filepath: str) -> str:
     """Save Markdown content to a file."""
     try:
-        abs_path = os.path.abspath(filepath)
-        dirpath = os.path.dirname(abs_path)
-        if dirpath:
-            os.makedirs(dirpath, exist_ok=True)
-        with open(abs_path, "w", encoding="utf-8") as f:
-            f.write(content)
-        return f"Saved successfully: {abs_path}"
+        path = Path(filepath).resolve()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+        return f"Saved successfully: {path}"
     except OSError as e:
         return f"Error saving file: {e}"
 

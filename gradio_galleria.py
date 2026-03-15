@@ -1,5 +1,6 @@
 # gradio_galleria.py
 # __all__: 1
+
 from __future__ import annotations
 
 __all__ = ["build_ui"]
@@ -28,6 +29,13 @@ BASE_DIR = Path(__file__).resolve().parent
 # ASCII Art helpers
 # ---------------------------------------------------------------------------
 
+def _get_template(name: str | None) -> str:
+    """Return a predefined ASCII template."""
+    if not name:
+        return ""
+    return get_template(name)
+
+
 def _render_shape(shape: str, size: int, char: str) -> str:
     """Generate the requested shape."""
     char = char.strip() or "*"
@@ -44,23 +52,24 @@ def _render_shape(shape: str, size: int, char: str) -> str:
     return ""
 
 
-def _get_template(name: str) -> str:
-    """Return a predefined ASCII template."""
-    return get_template(name)
-
-
 # ---------------------------------------------------------------------------
 # Markdown helpers
 # ---------------------------------------------------------------------------
 
-def _save_md(content: str, filepath: str) -> str:
-    """Save Markdown file."""
-    filepath = filepath.strip()
+def _extract_sections_ui(content: str) -> str:
+    """Extract Markdown sections."""
+    if not content.strip():
+        return "No content to analyze."
 
-    if not filepath:
-        return "Please specify a file path."
+    sections = extract_sections(content)
 
-    return save_markdown(content, filepath)
+    if not sections:
+        return "No headings found."
+
+    return "\n".join(
+        f"{'  ' * (sec['level'] - 1)}{'#' * sec['level']} {sec['title']}"
+        for sec in sections
+    )
 
 
 def _read_md(filepath: str, count_hashtags: bool) -> tuple[str, str]:
@@ -82,20 +91,14 @@ def _read_md(filepath: str, count_hashtags: bool) -> tuple[str, str]:
     return result["content"], info
 
 
-def _extract_sections_ui(content: str) -> str:
-    """Extract Markdown sections."""
-    if not content.strip():
-        return "No content to analyze."
+def _save_md(content: str, filepath: str) -> str:
+    """Save Markdown file."""
+    filepath = filepath.strip()
 
-    sections = extract_sections(content)
+    if not filepath:
+        return "Please specify a file path."
 
-    if not sections:
-        return "No headings found."
-
-    return "\n".join(
-        f"{'  ' * (sec['level'] - 1)}{'#' * sec['level']} {sec['title']}"
-        for sec in sections
-    )
+    return save_markdown(content, filepath)
 
 
 # ---------------------------------------------------------------------------
@@ -124,51 +127,6 @@ def _format_json(text: str) -> str:
         return json.dumps(json.loads(text), indent=2, ensure_ascii=False)
     except json.JSONDecodeError:
         return text
-
-
-def _read_text(path: Path, size_limit_bytes: int = 5 * 1024 * 1024) -> str:
-    """Read text file safely."""
-    if not path.exists():
-        return f"[missing] {path}"
-
-    try:
-        size = path.stat().st_size
-    except OSError as e:
-        return f"[error] stat failed: {e}"
-
-    if size > size_limit_bytes:
-        return f"[too_large] {path} ({size} bytes)"
-
-    for enc in ("utf-8", "utf-8-sig", "cp932", "latin-1"):
-        try:
-            return path.read_text(encoding=enc)
-        except UnicodeDecodeError:
-            continue
-        except OSError as e:
-            return f"[error] read failed: {e}"
-
-    return "[error] decode failed"
-
-
-def _read_csv_as_table(path: Path) -> str | dict:
-    """Read CSV file as table."""
-    raw = _read_text(path)
-
-    if raw.startswith(("[error]", "[missing]", "[too_large]")):
-        return raw
-
-    try:
-        rows = list(csv.reader(io.StringIO(raw)))
-    except Exception as e:
-        return f"[error] csv parse failed: {e}"
-
-    if not rows:
-        return {"headers": [], "data": []}
-
-    return {
-        "headers": rows[0],
-        "data": rows[1:],
-    }
 
 
 def _load_for_display(
@@ -202,6 +160,51 @@ def _load_for_display(
     return "text", raw, None
 
 
+def _read_csv_as_table(path: Path) -> str | dict:
+    """Read CSV file as table."""
+    raw = _read_text(path)
+
+    if raw.startswith(("[error]", "[missing]", "[too_large]")):
+        return raw
+
+    try:
+        rows = list(csv.reader(io.StringIO(raw)))
+    except Exception as e:
+        return f"[error] csv parse failed: {e}"
+
+    if not rows:
+        return {"headers": [], "data": []}
+
+    return {
+        "headers": rows[0],
+        "data": rows[1:],
+    }
+
+
+def _read_text(path: Path, size_limit_bytes: int = 5 * 1024 * 1024) -> str:
+    """Read text file safely."""
+    if not path.exists():
+        return f"[missing] {path}"
+
+    try:
+        size = path.stat().st_size
+    except OSError as e:
+        return f"[error] stat failed: {e}"
+
+    if size > size_limit_bytes:
+        return f"[too_large] {path} ({size} bytes)"
+
+    for enc in ("utf-8", "utf-8-sig", "cp932", "latin-1"):
+        try:
+            return path.read_text(encoding=enc)
+        except UnicodeDecodeError:
+            continue
+        except OSError as e:
+            return f"[error] read failed: {e}"
+
+    return "[error] decode failed"
+
+
 def _scan_repo_files() -> Dict[str, Path]:
     """Scan repository files."""
     return find_files_as_map(BASE_DIR, extensions=list(DEFAULT_EXTENSIONS))
@@ -209,7 +212,6 @@ def _scan_repo_files() -> Dict[str, Path]:
 
 def _to_view_updates(kind: str, text_value: str = "", csv_value: Optional[dict] = None):
     """Convert file content into Gradio update objects."""
-
     if kind == "markdown":
         return (
             gr.update(visible=False, value=""),
@@ -241,55 +243,49 @@ def _to_view_updates(kind: str, text_value: str = "", csv_value: Optional[dict] 
 
 def build_ui() -> gr.Blocks:
     """Build Gradio UI."""
-    templates = list_templates()
-
+    default_template = None
     files = _scan_repo_files()
     labels = list(files) or ["(no files)"]
     default_label = labels[0]
+    templates = list_templates()
+
+    if templates:
+        default_template = templates[0]
 
     def on_change(label: str):
         if label == "(no files)":
             return _to_view_updates("text", "ファイルが見つかりません。")
 
         kind, text_value, csv_value = _load_for_display(label, files)
-
         return _to_view_updates(kind, text_value, csv_value)
 
     with gr.Blocks(title="Ironmate — Gradio Galleria") as demo:
-
         gr.Markdown("# 🦾 Ironmate — Gradio Galleria")
-
         gr.Markdown(
             "Your J.A.R.V.I.S-inspired assistant for ASCII art, Markdown management, and file viewing."
         )
 
         with gr.Tabs():
-
-            # ASCII Art
             with gr.Tab("ASCII Art"):
-
                 gr.Markdown("## Dynamic Shape Generator")
 
                 with gr.Row():
-
+                    char_input = gr.Textbox(
+                        value="*",
+                        label="Character",
+                        max_lines=1,
+                    )
                     shape_choice = gr.Radio(
                         choices=["Square", "Triangle", "Diamond"],
                         value="Square",
                         label="Shape",
                     )
-
                     size_slider = gr.Slider(
                         minimum=1,
                         maximum=20,
                         value=5,
                         step=1,
                         label="Size / Height",
-                    )
-
-                    char_input = gr.Textbox(
-                        value="*",
-                        max_lines=1,
-                        label="Character",
                     )
 
                 shape_output = gr.Textbox(
@@ -310,40 +306,38 @@ def build_ui() -> gr.Blocks:
 
                 template_choice = gr.Dropdown(
                     choices=templates,
-                    value=templates[0] if templates else None,
+                    value=default_template,
                     label="Template",
                 )
-
                 template_output = gr.Textbox(
                     label="Template Art",
                     lines=10,
                     interactive=False,
                 )
 
-                load_template_btn = gr.Button("Load Template")
-
-                load_template_btn.click(
+                template_choice.change(
                     fn=_get_template,
                     inputs=template_choice,
                     outputs=template_output,
                 )
 
-            # Markdown
-            with gr.Tab("Markdown Manager"):
+                demo.load(
+                    fn=lambda: _get_template(default_template),
+                    outputs=template_output,
+                )
 
+            with gr.Tab("Markdown Manager"):
                 gr.Markdown("## Save Markdown")
 
                 md_filepath_save = gr.Textbox(
                     label="File Path (e.g. notes/my_doc.md)",
                     max_lines=1,
                 )
-
                 md_content_save = gr.Textbox(
                     label="Markdown Content",
                     lines=10,
                     placeholder="# Hello\nWrite your markdown here...",
                 )
-
                 save_status = gr.Textbox(label="Status", interactive=False)
 
                 save_btn = gr.Button("Save")
@@ -360,18 +354,15 @@ def build_ui() -> gr.Blocks:
                     label="File Path to Read",
                     max_lines=1,
                 )
-
                 count_hashtags_cb = gr.Checkbox(
                     label="Count heading '#' characters",
                     value=False,
                 )
-
                 md_content_read = gr.Textbox(
                     label="File Content",
                     lines=10,
                     interactive=False,
                 )
-
                 read_info = gr.Textbox(label="Info", interactive=False)
 
                 read_btn = gr.Button("Read")
@@ -389,7 +380,6 @@ def build_ui() -> gr.Blocks:
                     lines=8,
                     placeholder="# Section 1\n## Sub-section\n...",
                 )
-
                 sections_output = gr.Textbox(
                     label="Sections Found",
                     lines=8,
@@ -404,11 +394,8 @@ def build_ui() -> gr.Blocks:
                     outputs=sections_output,
                 )
 
-            # File Viewer
             with gr.Tab("File Viewer"):
-
                 gr.Markdown("## File Viewer")
-
                 gr.Markdown(
                     "このタブは、`gradio_galleria.py` と同じディレクトリ以下をスキャンして、"
                     "プルダウンでファイル内容を表示します。"
@@ -420,16 +407,13 @@ def build_ui() -> gr.Blocks:
                     label="ファイル選択",
                     interactive=True,
                 )
-
                 text_view = gr.Textbox(
                     label="Text",
                     lines=28,
                     max_lines=40,
                     visible=True,
                 )
-
                 markdown_view = gr.Markdown(visible=False)
-
                 csv_view = gr.Dataframe(
                     label="CSV",
                     visible=False,

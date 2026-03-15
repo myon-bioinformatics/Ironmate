@@ -18,25 +18,54 @@ from template_store import list_ascii_templates, load_ascii_template, load_promp
 def _sanitize_ascii_output(text: str) -> str:
     text = text.replace("\r\n", "\n").strip()
 
+    if "assistant\n```" in text:
+        text = text.split("assistant\n```", 1)[1]
+    elif "assistant\r\n```" in text:
+        text = text.split("assistant\r\n```", 1)[1]
+    elif "assistant\n" in text:
+        text = text.split("assistant\n", 1)[1]
+
     if text.startswith("```"):
-        text = re.sub(r"^```[^\n]*\n", "", text)
-        text = re.sub(r"\n```$", "", text)
+        lines = text.splitlines()
+        if lines:
+            lines = lines[1:]
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        text = "\n".join(lines)
 
     lines = [line.rstrip() for line in text.splitlines()]
 
-    while lines and not lines[0].strip():
-        lines.pop(0)
-    while lines and not lines[-1].strip():
-        lines.pop()
+    filtered = []
+    skip_prefixes = ("system", "user", "assistant", "[system]", "[user]", "[assistant]")
 
-    filtered = [
-        line for line in lines
-        if line.strip().lower() not in (
+    for line in lines:
+        stripped = line.strip()
+        lowered = stripped.lower()
+
+        if not stripped:
+            filtered.append("")
+            continue
+
+        if lowered in skip_prefixes:
+            continue
+
+        if stripped in {"```", "~~~"}:
+            continue
+
+        if lowered in {
             "here's your ascii art:",
             "here is your ascii art:",
             "ascii art:",
-        )
-    ]
+        }:
+            continue
+
+        filtered.append(line)
+
+    while filtered and not filtered[0].strip():
+        filtered.pop(0)
+    while filtered and not filtered[-1].strip():
+        filtered.pop()
+
     return "\n".join(filtered).strip()
 
 

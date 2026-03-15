@@ -1,10 +1,11 @@
-"""
-markdown_market.py
-Handles operations related to Markdown files:
-- Saving Markdown content to a file
-- Reading Markdown files with optional hashtag counting
-- Extracting section names (headings) from Markdown content
-"""
+# markdown_market.py
+# __all__: 3
+
+__all__ = [
+    "save_markdown",
+    "read_markdown",
+    "extract_sections",
+]
 
 import os
 import re

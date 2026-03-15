@@ -1,8 +1,7 @@
-"""
-gradio_galleria.py
-Implements a Gradio-based UI to interact with and display ASCII art and
-Markdown files. Designed for user-friendly previewing and management.
-"""
+# gradio_galleria.py
+# __all__: 1
+
+__all__ = ["build_ui"]
 
 import gradio as gr
 

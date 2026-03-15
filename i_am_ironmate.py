@@ -1,20 +1,12 @@
 # i_am_ironmate.py
 # __all__: 2
-from __future__ import annotations
 
+from __future__ import annotations
 import argparse, json, sys
 
-from llm_launchpad import (
-    DEFAULT_LIGHT_MODEL,
-    DEFAULT_TOOL_MODEL,
-    TransformersDualLLM,
-    default_tool_schema,
-    execute_allowed_tool,
-)
-
+from llm_launchpad import DEFAULT_LIGHT_MODEL, DEFAULT_TOOL_MODEL, TransformersDualLLM, default_tool_schema, execute_allowed_tool
 
 __all__ = ["build_parser", "main"]
-
 
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="i_am_ironmate.py")
@@ -23,15 +15,65 @@ def build_parser() -> argparse.ArgumentParser:
     p_light = sub.add_parser("light", help="Use the light (~2B) model for text generation")
     p_light.add_argument("--prompt", required=True, help="User prompt")
 
-    p_tool = sub.add_parser("tool", help="Use the tool (~8B) model to output JSON tool call")
+    p_tool = sub.add_parser("tool", help="Use the tool model to output JSON tool call")
     p_tool.add_argument("--prompt", required=True, help="User prompt")
     p_tool.add_argument("--dry-run", action="store_true", help="Do not execute tool; only print JSON")
     p_tool.add_argument("--print-raw", action="store_true", help="Print raw model text too")
+
+    p_repl = sub.add_parser("tool-repl", help="Keep the tool model loaded and accept prompts interactively")
+    p_repl.add_argument("--print-raw", action="store_true", help="Print raw model text too")
 
     p.add_argument("--light-model", default=None, help="Override light model id (HF repo or local path)")
     p.add_argument("--tool-model", default=None, help="Override tool model id (HF repo or local path)")
     p.add_argument("--no-4bit", action="store_true", help="Disable 4-bit quantization")
     return p
+
+
+def _run_tool_prompt(llm: TransformersDualLLM, prompt: str, dry_run: bool = False, print_raw: bool = False) -> int:
+    schema = default_tool_schema()
+    res = llm.generate_tool(prompt, tool_schema=schema)
+
+    if print_raw:
+        print("----- RAW MODEL TEXT -----", file=sys.stderr)
+        print(res.text, file=sys.stderr)
+        print("--------------------------", file=sys.stderr)
+
+    tool_json = llm.extract_first_json(res.text)
+    if tool_json is None:
+        print("Failed to parse tool JSON from model output.", file=sys.stderr)
+        print("Raw:", res.text, file=sys.stderr)
+        return 2
+
+    print(json.dumps(tool_json, ensure_ascii=False))
+
+    if dry_run:
+        return 0
+
+    msg, raw = execute_allowed_tool(tool_json, llm=llm)
+    print(msg)
+
+    content = raw.get("result", {}).get("content", "") if isinstance(raw, dict) else ""
+    if tool_json.get("tool") == "generate_ascii_art" and content:
+        print(content)
+
+    return 0
+
+
+def _run_tool_repl(llm: TransformersDualLLM, print_raw: bool = False) -> int:
+    print("Ironmate tool REPL. Type 'exit' or 'quit' to stop.")
+    while True:
+        try:
+            prompt = input("> ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            return 0
+
+        if prompt.lower() in {"exit", "quit"}:
+            return 0
+        if not prompt:
+            continue
+
+        _run_tool_prompt(llm, prompt=prompt, dry_run=False, print_raw=print_raw)
 
 
 def main(argv: list[str]) -> int:
@@ -49,29 +91,15 @@ def main(argv: list[str]) -> int:
         return 0
 
     if args.mode == "tool":
-        schema = default_tool_schema()
-        res = llm.generate_tool(args.prompt, tool_schema=schema)
+        return _run_tool_prompt(
+            llm,
+            prompt=args.prompt,
+            dry_run=args.dry_run,
+            print_raw=args.print_raw,
+        )
 
-        if args.print_raw:
-            print("----- RAW MODEL TEXT -----", file=sys.stderr)
-            print(res.text, file=sys.stderr)
-            print("--------------------------", file=sys.stderr)
-
-        tool_json = llm.extract_first_json(res.text)
-        if tool_json is None:
-            print("Failed to parse tool JSON from model output.", file=sys.stderr)
-            print("Raw:", res.text, file=sys.stderr)
-            return 2
-
-        # Print JSON for transparency/logging
-        print(json.dumps(tool_json, ensure_ascii=False))
-
-        if args.dry_run:
-            return 0
-
-        msg, _raw = execute_allowed_tool(tool_json, llm=llm)
-        print(msg)
-        return 0
+    if args.mode == "tool-repl":
+        return _run_tool_repl(llm, print_raw=args.print_raw)
 
     return 1
 

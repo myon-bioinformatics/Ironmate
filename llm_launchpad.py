@@ -10,9 +10,7 @@ __all__ = [
 
 from __future__ import annotations
 
-import json
-import os
-import re
+import json, os, re
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, Tuple
 

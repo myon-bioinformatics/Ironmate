@@ -1,5 +1,5 @@
 # ascii_art.py
-# __all__: 5
+# __all__: 6
 
 __all__ = [
     "generate_square",
@@ -7,124 +7,96 @@ __all__ = [
     "generate_diamond",
     "get_template",
     "list_templates",
+    "render_prompt_ascii",
 ]
 
-# Pre-defined ASCII art templates
-TEMPLATES = {
-    "ironmate": r"""
-  _____                                _
- |_   _|  _ __    ___    _ __   _ __  | |__    __ _   ___   ___
-   | |   | '__|  / _ \  | '_ \ | '_ \ | '_ \  / _` | / __| / __|
-   | |   | |    | (_) | | | | || | | || | | || (_| || (__ | (__
-   |_|   |_|     \___/  |_| |_||_| |_||_| |_| \__,_| \___| \___|
-  IRONMATE - Your J.A.R.V.I.S-inspired assistant
-""",
-    "arc_reactor": r"""
-      .---.
-    /       \
-   |  o   o  |
-   |    ^    |
-    \  \_/  /
-      '---'
-  [ ARC REACTOR ]
-""",
-    "helmet": r"""
-   _______
-  /       \
- | () | () |
- |   ___   |
-  \_______/
-  [ IRONMATE ]
-""",
-    "welcome": r"""
- __        __   _                                
- \ \      / /__| | ___ ___  _ __ ___   ___  
-  \ \ /\ / / _ \ |/ __/ _ \| '_ ` _ \ / _ \ 
-   \ V  V /  __/ | (_| (_) | | | | | |  __/ 
-    \_/\_/ \___|_|\___\___/|_| |_| |_|\___| 
-  to IRONMATE!
-""",
-}
+import re
+
+from template_store import list_ascii_templates, load_ascii_template, load_prompt_template
+
+
+def _sanitize_ascii_output(text: str) -> str:
+    text = text.replace("\r\n", "\n").strip()
+
+    if text.startswith("```"):
+        text = re.sub(r"^```[^\n]*\n", "", text)
+        text = re.sub(r"\n```$", "", text)
+
+    lines = [line.rstrip() for line in text.splitlines()]
+
+    while lines and not lines[0].strip():
+        lines.pop(0)
+    while lines and not lines[-1].strip():
+        lines.pop()
+
+    filtered = [
+        line for line in lines
+        if line.strip().lower() not in (
+            "here's your ascii art:",
+            "here is your ascii art:",
+            "ascii art:",
+        )
+    ]
+    return "\n".join(filtered).strip()
 
 
 def generate_square(size: int, char: str = "*") -> str:
-    """Generate a square of the given size using the specified character.
-
-    Args:
-        size: The number of characters per side.
-        char: The character to use for drawing (default: '*').
-
-    Returns:
-        A string representing a square in ASCII art.
-    """
+    """Generate a square of the given size using the specified character."""
     if size <= 0:
         return ""
     row = char * size
-    return "\n".join([row] * size)
+    return "\n".join(row for _ in range(size))
 
 
 def generate_triangle(height: int, char: str = "*") -> str:
-    """Generate a right-aligned triangle of the given height.
-
-    Args:
-        height: The number of rows in the triangle.
-        char: The character to use for drawing (default: '*').
-
-    Returns:
-        A string representing a triangle in ASCII art.
-    """
+    """Generate a left-aligned triangle of the given height."""
     if height <= 0:
         return ""
-    lines = []
-    for i in range(1, height + 1):
-        lines.append(char * i)
-    return "\n".join(lines)
+    return "\n".join(char * i for i in range(1, height + 1))
 
 
 def generate_diamond(half_height: int, char: str = "*") -> str:
-    """Generate a diamond shape of the given half-height.
-
-    Args:
-        half_height: The number of rows from the center to the top (or bottom).
-        char: The character to use for drawing (default: '*').
-
-    Returns:
-        A string representing a diamond in ASCII art.
-    """
+    """Generate a diamond shape of the given half-height."""
     if half_height <= 0:
         return ""
-    lines = []
     width = 2 * half_height - 1
-    # Upper half (including the middle row)
-    for i in range(1, half_height + 1):
-        num_chars = 2 * i - 1
-        padding = (width - num_chars) // 2
-        lines.append(" " * padding + char * num_chars)
-    # Lower half
-    for i in range(half_height - 1, 0, -1):
-        num_chars = 2 * i - 1
-        padding = (width - num_chars) // 2
-        lines.append(" " * padding + char * num_chars)
-    return "\n".join(lines)
+    upper = [
+        " " * ((width - (2 * i - 1)) // 2) + char * (2 * i - 1)
+        for i in range(1, half_height + 1)
+    ]
+    lower = [
+        " " * ((width - (2 * i - 1)) // 2) + char * (2 * i - 1)
+        for i in range(half_height - 1, 0, -1)
+    ]
+    return "\n".join(upper + lower)
 
 
 def get_template(name: str) -> str:
-    """Retrieve a pre-defined ASCII art template by name.
-
-    Args:
-        name: The name of the template to retrieve.
-
-    Returns:
-        The ASCII art string for the given template name, or an empty string
-        if the template is not found.
-    """
-    return TEMPLATES.get(name, "")
+    """Load a predefined ASCII art template from templates_ascii/<name>.txt."""
+    return load_ascii_template(name.strip().lower())
 
 
-def list_templates() -> list:
-    """Return a list of all available template names.
+def list_templates() -> list[str]:
+    """Return a sorted list of available ASCII template names."""
+    return list_ascii_templates()
 
-    Returns:
-        A list of template name strings.
-    """
-    return list(TEMPLATES.keys())
+
+def render_prompt_ascii(prompt: str, llm) -> str:
+    """Generate ASCII art from a free-form prompt via the light LLM."""
+    prompt_data = load_prompt_template("ascii_prompt")
+    template = prompt_data.get("ascii_basic", {})
+    base_prompt = str(template.get("prompt", "")).strip()
+    max_width = int(template.get("max_width", 60))
+
+    user_prompt = prompt.strip()
+    final_prompt = (
+        f"{base_prompt}\n\n"
+        f"USER_REQUEST:\n{user_prompt}\n\n"
+        f"CONSTRAINTS:\n"
+        f"- Keep width under {max_width} characters.\n"
+        f"- Return ASCII art only.\n"
+        f"- No explanations.\n"
+    )
+
+    result = llm.generate_light(final_prompt)
+    return _sanitize_ascii_output(result.text)

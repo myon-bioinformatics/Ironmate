@@ -5,9 +5,7 @@ __all__ = ["build_parser", "main"]
 
 from __future__ import annotations
 
-import argparse
-import json
-import sys
+import argparse, json, sys
 
 from llm_launchpad import (
     DEFAULT_LIGHT_MODEL,

@@ -1,8 +1,5 @@
 # i_am_ironmate.py
 # __all__: 2
-
-__all__ = ["build_parser", "main"]
-
 from __future__ import annotations
 
 import argparse, json, sys
@@ -14,6 +11,9 @@ from llm_launchpad import (
     default_tool_schema,
     execute_allowed_tool,
 )
+
+
+__all__ = ["build_parser", "main"]
 
 
 def build_parser() -> argparse.ArgumentParser:

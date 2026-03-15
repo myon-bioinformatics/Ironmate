@@ -1,8 +1,13 @@
-"""
-ascii_art.py
-Provides functions to generate ASCII art dynamically (square, triangle, diamond)
-and retrieve pre-defined ASCII art templates.
-"""
+# ascii_art.py
+# __all__: 5
+
+__all__ = [
+    "generate_square",
+    "generate_triangle",
+    "generate_diamond",
+    "get_template",
+    "list_templates",
+]
 
 # Pre-defined ASCII art templates
 TEMPLATES = {

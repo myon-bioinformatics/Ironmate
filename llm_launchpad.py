@@ -1,21 +1,12 @@
-"""
-llm_launchpad.py
-Local dual-LLM runtime (Transformers) for Ironmate.
+# llm_launchpad.py
+# __all__: 4
 
-Design goals:
-- GPU-first (GTX 2070 class): default to 4-bit quant (bitsandbytes) when available.
-- Two models:
-  - "light": ~2B for lightweight tasks (markdown drafts, ascii art ideas)
-  - "tool" : ~8B for tool-JSON output that can trigger safe Python functions
-- Lazy loading: load model/tokenizer only when first used.
-- Safe tool execution protocol:
-  Model returns a single line JSON like:
-    {"tool":"save_markdown","args":{"content":"...","filepath":"notes/a.md"}}
-  We only allow a small whitelist of tools (from markdown_market.py).
-
-Notes:
-- This module is CLI/library friendly (no gradio dependency).
-"""
+__all__ = [
+    "GenerationResult",
+    "TransformersDualLLM",
+    "default_tool_schema",
+    "execute_allowed_tool",
+]
 
 from __future__ import annotations
 

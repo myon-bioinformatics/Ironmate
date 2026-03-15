@@ -1,11 +1,7 @@
-"""
-i_am_ironmate.py
-CLI entrypoint for Ironmate local LLM usage (Transformers).
+# i_am_ironmate.py
+# __all__: 2
 
-Examples:
-  python i_am_ironmate.py light --prompt "研究ノート用にMarkdownテンプレを作って"
-  python i_am_ironmate.py tool --prompt "notes/test.md に '# Hello' を保存して"
-"""
+__all__ = ["build_parser", "main"]
 
 from __future__ import annotations
 

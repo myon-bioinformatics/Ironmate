@@ -16,13 +16,9 @@ from typing import Any, Dict, Optional, Tuple
 
 DEFAULT_LIGHT_MODEL = os.getenv("IRONMATE_LIGHT_MODEL", "Qwen/Qwen2.5-1.5B-Instruct")
 DEFAULT_TOOL_MODEL = os.getenv("IRONMATE_TOOL_MODEL", "Qwen/Qwen2.5-7B-Instruct")
-
-# For GTX 2070 (8GB), 8B often needs 4-bit quant to fit comfortably.
 DEFAULT_LOAD_4BIT = os.getenv("IRONMATE_LOAD_4BIT", "1").strip() not in ("0", "false", "False")
-
 DEFAULT_MAX_NEW_TOKENS_LIGHT = int(os.getenv("IRONMATE_MAX_NEW_TOKENS_LIGHT", "512"))
 DEFAULT_MAX_NEW_TOKENS_TOOL = int(os.getenv("IRONMATE_MAX_NEW_TOKENS_TOOL", "768"))
-
 DEFAULT_TEMPERATURE_LIGHT = float(os.getenv("IRONMATE_TEMPERATURE_LIGHT", "0.7"))
 DEFAULT_TEMPERATURE_TOOL = float(os.getenv("IRONMATE_TEMPERATURE_TOOL", "0.2"))
 
@@ -43,15 +39,10 @@ class TransformersDualLLM:
         self.light_model_id = light_model
         self.tool_model_id = tool_model
         self.load_4bit = load_4bit
+        self._light = None
+        self._tool = None
 
-        self._light = None  # (tokenizer, model)
-        self._tool = None   # (tokenizer, model)
-
-    # -----------------------
-    # Model loading
-    # -----------------------
     def _get_bnb_config(self):
-        # Optional: bitsandbytes 4-bit quant config
         try:
             from transformers import BitsAndBytesConfig
         except Exception:
@@ -75,17 +66,14 @@ class TransformersDualLLM:
         model_id = self.light_model_id if which == "light" else self.tool_model_id
 
         tok = AutoTokenizer.from_pretrained(model_id, use_fast=True)
-        # Some models don't have pad token by default
         if tok.pad_token_id is None and tok.eos_token_id is not None:
             tok.pad_token_id = tok.eos_token_id
 
-        kwargs = dict(
-            device_map="auto",
-            trust_remote_code=True,
-        )
-
-        # GTX 2070 is typically fp16; set float16 for safety.
-        kwargs["torch_dtype"] = torch.float16
+        kwargs = {
+            "device_map": "auto",
+            "trust_remote_code": True,
+            "torch_dtype": torch.float16,
+        }
 
         if bnb_config is not None:
             kwargs["quantization_config"] = bnb_config
@@ -104,11 +92,7 @@ class TransformersDualLLM:
             self._tool = self._load("tool")
         return self._tool
 
-    # -----------------------
-    # Prompting helpers
-    # -----------------------
     def _chat_prompt(self, tokenizer, system: str, user: str) -> str:
-        # Use chat template if available; fallback to simple format
         if hasattr(tokenizer, "apply_chat_template"):
             messages = [
                 {"role": "system", "content": system},
@@ -158,10 +142,10 @@ class TransformersDualLLM:
         import torch
 
         prompt = self._chat_prompt(tok, system=system, user=user)
-
         inputs = tok(prompt, return_tensors="pt")
+
         if hasattr(model, "device") and model.device is not None:
-            inputs = {k: v.to(model.device) for k, v in inputs.items()}
+            inputs = {key: value.to(model.device) for key, value in inputs.items()}
 
         with torch.no_grad():
             out = model.generate(
@@ -180,17 +164,14 @@ class TransformersDualLLM:
             text = text[len(prompt):]
         return GenerationResult(text=text.strip())
 
-    # -----------------------
-    # Tool JSON parsing
-    # -----------------------
     _JSON_RE = re.compile(r"\{.*\}", re.DOTALL)
 
     def extract_first_json(self, text: str) -> Optional[Dict[str, Any]]:
-        m = self._JSON_RE.search(text.strip())
-        if not m:
+        match = self._JSON_RE.search(text.strip())
+        if not match:
             return None
         try:
-            return json.loads(m.group(0))
+            return json.loads(match.group(0))
         except json.JSONDecodeError:
             return None
 
@@ -202,21 +183,41 @@ def default_tool_schema() -> str:
         "1) save_markdown: args={content:str, filepath:str}\n"
         "2) read_markdown: args={filepath:str, count_hashtags:bool}\n"
         "3) extract_sections: args={content:str}\n"
-        "4) none: args={}\n"
+        "4) save_ascii_art: args={name:str, filepath:str}\n"
+        "5) generate_ascii_art: args={prompt:str}\n"
+        "6) save_generated_ascii: args={prompt:str, filepath:str}\n"
+        "7) list_ascii_templates: args={}\n"
+        "8) none: args={}\n"
         "\n"
-        "Rules:\n"
+        "Predefined ASCII template names currently available:\n"
+        "- ironmate\n"
+        "- arc_reactor\n"
+        "- helmet\n"
+        "- welcome\n"
+        "\n"
+        "Tool selection rules:\n"
+        "- Use save_ascii_art when the user asks to save a predefined ASCII template by name.\n"
+        "- Use list_ascii_templates when the user asks what templates are available.\n"
+        "- Use generate_ascii_art when the user asks for a new ASCII art generated from a free-form prompt.\n"
+        "- Use save_generated_ascii when the user asks to generate ASCII art from a free-form prompt and save it to a file.\n"
+        "- If the user names a known template and wants it saved, prefer save_ascii_art over save_generated_ascii.\n"
+        "- If the requested predefined template name is unknown, prefer generate_ascii_art or save_generated_ascii when the request is still clear.\n"
+        "- If user asks to run arbitrary bash/commands, refuse by returning tool=none.\n"
+        "\n"
+        "Output rules:\n"
         "- Output must be a single JSON object in one line.\n"
         "- Do not include explanations.\n"
-        "- If user asks to run arbitrary bash/commands, refuse by returning tool=none.\n"
+        "- Valid JSON shape: {\"tool\":\"...\",\"args\":{...}}\n"
     )
 
 
-def execute_allowed_tool(tool_json: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]:
+def execute_allowed_tool(tool_json: Dict[str, Any], llm=None) -> Tuple[str, Dict[str, Any]]:
     tool = (tool_json.get("tool") or "").strip()
     args = tool_json.get("args") or {}
     if not isinstance(args, dict):
         args = {}
 
+    from ascii_art import get_template, list_templates, render_prompt_ascii
     from markdown_market import extract_sections, read_markdown, save_markdown
 
     if tool == "save_markdown":
@@ -234,6 +235,76 @@ def execute_allowed_tool(tool_json: Dict[str, Any]) -> Tuple[str, Dict[str, Any]
     if tool == "extract_sections":
         content = str(args.get("content", ""))
         res = extract_sections(content)
+        return "OK", {"tool": tool, "result": res}
+
+    if tool == "save_ascii_art":
+        filepath = str(args.get("filepath", "")).strip()
+        name = str(args.get("name", "")).strip().lower()
+
+        if not name:
+            msg = "ASCII art name is required."
+            return msg, {"tool": tool, "result": msg}
+
+        if not filepath:
+            msg = "File path is required."
+            return msg, {"tool": tool, "result": msg}
+
+        content = get_template(name)
+        if not content:
+            available = list_templates()
+            msg = f"Unknown ASCII art template: {name}. Available templates: {', '.join(available)}"
+            return msg, {"tool": tool, "result": {"name": name, "available_templates": available}}
+
+        msg = save_markdown(content.rstrip() + "\n", filepath)
+        return msg, {"tool": tool, "result": {"name": name, "filepath": filepath, "message": msg}}
+
+    if tool == "generate_ascii_art":
+        prompt = str(args.get("prompt", "")).strip()
+
+        if not prompt:
+            msg = "ASCII art prompt is required."
+            return msg, {"tool": tool, "result": msg}
+
+        if llm is None:
+            msg = "LLM instance is required for generate_ascii_art."
+            return msg, {"tool": tool, "result": msg}
+
+        content = render_prompt_ascii(prompt, llm)
+        if not content:
+            msg = "Failed to generate ASCII art."
+            return msg, {"tool": tool, "result": msg}
+
+        return "OK", {"tool": tool, "result": {"prompt": prompt, "content": content}}
+
+    if tool == "save_generated_ascii":
+        prompt = str(args.get("prompt", "")).strip()
+        filepath = str(args.get("filepath", "")).strip()
+
+        if not prompt:
+            msg = "ASCII art prompt is required."
+            return msg, {"tool": tool, "result": msg}
+
+        if not filepath:
+            msg = "File path is required."
+            return msg, {"tool": tool, "result": msg}
+
+        if llm is None:
+            msg = "LLM instance is required for save_generated_ascii."
+            return msg, {"tool": tool, "result": msg}
+
+        content = render_prompt_ascii(prompt, llm)
+        if not content:
+            msg = "Failed to generate ASCII art."
+            return msg, {"tool": tool, "result": msg}
+
+        msg = save_markdown(content.rstrip() + "\n", filepath)
+        return msg, {
+            "tool": tool,
+            "result": {"prompt": prompt, "filepath": filepath, "content": content, "message": msg},
+        }
+
+    if tool == "list_ascii_templates":
+        res = list_templates()
         return "OK", {"tool": tool, "result": res}
 
     return "No tool executed.", {"tool": "none", "result": {}}

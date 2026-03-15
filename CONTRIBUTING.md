@@ -89,6 +89,28 @@ from ascii_art import generate_square
 from file_finder import find_files_as_map
 ```
 
+#### Single-line Import Rule
+
+Whenever possible, multiple imports from the same category should be written on **a single line**.
+
+Preferred:
+
+```python
+import argparse, json, sys
+```
+
+Avoid:
+
+```python
+import argparse
+import json
+import sys
+```
+
+This rule applies to both **standard library and third-party modules**.
+Only split imports across multiple lines when required for readability
+(e.g., long `from module import (...)` statements).
+
 ---
 
 ### 5. Variable and Constant Placement

@@ -3,3 +3,4 @@ transformers
 accelerate
 bitsandbytes
 gradio
+pyyaml

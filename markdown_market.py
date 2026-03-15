@@ -7,8 +7,7 @@ __all__ = [
     "extract_sections",
 ]
 
-import os
-import re
+import os, re
 
 
 def save_markdown(content: str, filepath: str) -> str:

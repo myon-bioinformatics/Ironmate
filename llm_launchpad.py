@@ -2,6 +2,7 @@
 # __all__: 4
 from __future__ import annotations
 
+from pathlib import Path
 import json, os, re
 from dataclasses import dataclass
 from typing import Any, Dict, Optional, Tuple
@@ -211,36 +212,57 @@ def default_tool_schema() -> str:
     )
 
 
+def _normalize_tool_args(args: Dict[str, Any]) -> Dict[str, Any]:
+    raw_filepath = str(args.get("filepath", "")).strip()
+    return {
+        "content": str(args.get("content", "")),
+        "count_hashtags": bool(args.get("count_hashtags", False)),
+        "filepath": str(Path(raw_filepath).resolve()) if raw_filepath else "",
+        "name": str(args.get("name", "")).strip().lower(),
+        "prompt": str(args.get("prompt", "")).strip(),
+    }
+
+
 def execute_allowed_tool(tool_json: Dict[str, Any], llm=None) -> Tuple[str, Dict[str, Any]]:
     tool = (tool_json.get("tool") or "").strip()
     args = tool_json.get("args") or {}
     if not isinstance(args, dict):
         args = {}
 
+    normalized = _normalize_tool_args(args)
+    content = normalized["content"]
+    count_hashtags = normalized["count_hashtags"]
+    filepath = normalized["filepath"]
+    name = normalized["name"]
+    prompt = normalized["prompt"]
+
     from ascii_art import get_template, list_templates, render_prompt_ascii
     from markdown_market import extract_sections, read_markdown, save_markdown
 
     if tool == "save_markdown":
-        content = str(args.get("content", ""))
-        filepath = str(args.get("filepath", "")).strip()
+        if not filepath:
+            msg = "File path is required."
+            return msg, {"tool": tool, "result": msg}
+
         msg = save_markdown(content, filepath)
-        return msg, {"tool": tool, "result": msg}
+        return msg, {"tool": tool, "result": {"filepath": filepath, "message": msg}}
 
     if tool == "read_markdown":
-        filepath = str(args.get("filepath", "")).strip()
-        count_hashtags = bool(args.get("count_hashtags", False))
+        if not filepath:
+            msg = "File path is required."
+            return msg, {"tool": tool, "result": msg}
+
         res = read_markdown(filepath, count_hashtags=count_hashtags)
-        return "OK" if res.get("success") else "ERROR", {"tool": tool, "result": res}
+        return "OK" if res.get("success") else "ERROR", {
+            "tool": tool,
+            "result": {"filepath": filepath, **res},
+        }
 
     if tool == "extract_sections":
-        content = str(args.get("content", ""))
         res = extract_sections(content)
         return "OK", {"tool": tool, "result": res}
 
     if tool == "save_ascii_art":
-        filepath = str(args.get("filepath", "")).strip()
-        name = str(args.get("name", "")).strip().lower()
-
         if not name:
             msg = "ASCII art name is required."
             return msg, {"tool": tool, "result": msg}
@@ -253,14 +275,18 @@ def execute_allowed_tool(tool_json: Dict[str, Any], llm=None) -> Tuple[str, Dict
         if not content:
             available = list_templates()
             msg = f"Unknown ASCII art template: {name}. Available templates: {', '.join(available)}"
-            return msg, {"tool": tool, "result": {"name": name, "available_templates": available}}
+            return msg, {
+                "tool": tool,
+                "result": {"name": name, "available_templates": available},
+            }
 
         msg = save_markdown(content.rstrip() + "\n", filepath)
-        return msg, {"tool": tool, "result": {"name": name, "filepath": filepath, "message": msg}}
+        return msg, {
+            "tool": tool,
+            "result": {"name": name, "filepath": filepath, "message": msg},
+        }
 
     if tool == "generate_ascii_art":
-        prompt = str(args.get("prompt", "")).strip()
-
         if not prompt:
             msg = "ASCII art prompt is required."
             return msg, {"tool": tool, "result": msg}
@@ -277,9 +303,6 @@ def execute_allowed_tool(tool_json: Dict[str, Any], llm=None) -> Tuple[str, Dict
         return "OK", {"tool": tool, "result": {"prompt": prompt, "content": content}}
 
     if tool == "save_generated_ascii":
-        prompt = str(args.get("prompt", "")).strip()
-        filepath = str(args.get("filepath", "")).strip()
-
         if not prompt:
             msg = "ASCII art prompt is required."
             return msg, {"tool": tool, "result": msg}
@@ -308,3 +331,7 @@ def execute_allowed_tool(tool_json: Dict[str, Any], llm=None) -> Tuple[str, Dict
         return "OK", {"tool": tool, "result": res}
 
     return "No tool executed.", {"tool": "none", "result": {}}
+
+
+if __name__ == "__main__":
+    raise SystemExit(1)

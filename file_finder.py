@@ -1,32 +1,97 @@
-import os
+# file_finder.py
+# __all__: 2
 
-# Default extensions for file scanning
-_DEFAULT_EXTENSIONS = ['.txt', '.json', '.csv', '.toml', '.ini', '.cfg', '.conf', '.log', '.rst', '.ts', '.js', '.css', '.html']
+from __future__ import annotations
 
-# Function to find all files in a directory, excluding specified directories
+__all__ = [
+    "find_files",
+    "find_files_as_map",
+]
 
-def find_files(root_directory):
-    found_files = []
-    for dirpath, dirnames, filenames in os.walk(root_directory):
-        if '__pycache__' in dirnames:
-            dirnames.remove('__pycache__')  # Exclude __pycache__ directories
-        if '.ironmate_venv' in dirnames:
-            dirnames.remove('.ironmate_venv')  # Exclude .ironmate_venv directories
-        for filename in filenames:
-            if any(filename.endswith(ext) for ext in _DEFAULT_EXTENSIONS):
-                found_files.append(os.path.join(dirpath, filename))
-    return found_files
+from pathlib import Path
+from typing import Dict, List, Optional
 
-# Function to find files and return their paths as a map
 
-def find_files_as_map(root_directory):
-    file_map = {}
-    for dirpath, dirnames, filenames in os.walk(root_directory):
-        if '__pycache__' in dirnames:
-            dirnames.remove('__pycache__')  # Exclude __pycache__ directories
-        if '.ironmate_venv' in dirnames:
-            dirnames.remove('.ironmate_venv')  # Exclude .ironmate_venv directories
-        for filename in filenames:
-            if any(filename.endswith(ext) for ext in _DEFAULT_EXTENSIONS):
-                file_map[filename] = os.path.join(dirpath, filename)
-    return file_map
+_DEFAULT_EXTENSIONS = (
+    ".txt",
+    ".md",
+    ".markdown",
+    ".yaml",
+    ".yml",
+    ".toml",
+    ".ini",
+    ".cfg",
+    ".conf",
+    ".log",
+    ".json",
+    ".csv",
+    ".py",
+    ".sh",
+    ".rst",
+    ".ts",
+    ".js",
+    ".css",
+    ".html",
+)
+
+_EXCLUDE_DIR_NAMES = {
+    "__pycache__",
+    ".ironmate_venv",
+}
+
+
+def find_files(
+    directory: str | Path,
+    extensions: Optional[List[str]] = None,
+) -> List[Path]:
+    """Recursively find files under *directory* matching *extensions*.
+
+    Excludes any file that is inside a directory whose name is in
+    ``_EXCLUDE_DIR_NAMES``.
+
+    Args:
+        directory: Root directory to search.
+        extensions: File suffixes to include (e.g. [".md", ".yaml"]).
+                    Defaults to ``_DEFAULT_EXTENSIONS``.
+
+    Returns:
+        Sorted list of Path objects.
+
+    Raises:
+        ValueError: If *directory* does not exist or is not a directory.
+    """
+    base = Path(directory)
+    if not base.is_dir():
+        raise ValueError(f"Not a directory: {directory}")
+
+    exts = set(s.lower() for s in (extensions if extensions is not None else _DEFAULT_EXTENSIONS))
+
+    results: List[Path] = []
+    for path in base.rglob("*"):
+        if not path.is_file():
+            continue
+
+        # Exclude if any parent directory is excluded
+        if any(parent.name in _EXCLUDE_DIR_NAMES for parent in path.parents):
+            continue
+
+        if path.suffix.lower() in exts:
+            results.append(path)
+
+    return sorted(results)
+
+
+def find_files_as_map(
+    directory: str | Path,
+    extensions: Optional[List[str]] = None,
+) -> Dict[str, Path]:
+    """Return a label -> path mapping suitable for use in a Gradio dropdown.
+
+    Labels are relative paths from *directory* using forward slashes.
+    """
+    base = Path(directory)
+    files = find_files(base, extensions=extensions)
+    return {
+        str(path.relative_to(base)).replace("\\", "/"): path
+        for path in files
+    }

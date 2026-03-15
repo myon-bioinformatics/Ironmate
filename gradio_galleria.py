@@ -1,10 +1,6 @@
 # gradio_galleria.py
 # __all__: 1
-
 from __future__ import annotations
-
-__all__ = ["build_ui"]
-
 import csv, io, json
 from pathlib import Path
 from typing import Dict, Mapping, Optional
@@ -20,6 +16,8 @@ from ascii_art import (
 )
 from file_finder import DEFAULT_EXTENSIONS, find_files_as_map
 from markdown_market import extract_sections, read_markdown, save_markdown
+
+__all__ = ["build_ui"]
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -62,7 +60,6 @@ def _extract_sections_ui(content: str) -> str:
         return "No content to analyze."
 
     sections = extract_sections(content)
-
     if not sections:
         return "No headings found."
 
@@ -243,16 +240,14 @@ def _to_view_updates(kind: str, text_value: str = "", csv_value: Optional[dict] 
 
 def build_ui() -> gr.Blocks:
     """Build Gradio UI."""
-    default_template = None
     files = _scan_repo_files()
     labels = list(files) or ["(no files)"]
     default_label = labels[0]
+
     templates = list_templates()
+    default_template = templates[0] if templates else None
 
-    if templates:
-        default_template = templates[0]
-
-    def on_change(label: str):
+    def on_file_change(label: str):
         if label == "(no files)":
             return _to_view_updates("text", "ファイルが見つかりません。")
 
@@ -292,11 +287,20 @@ def build_ui() -> gr.Blocks:
                     label="Generated Shape",
                     lines=10,
                     interactive=False,
+                    value=_render_shape("Square", 5, "*"),
                 )
 
-                generate_btn = gr.Button("Generate Shape")
-
-                generate_btn.click(
+                shape_choice.change(
+                    fn=_render_shape,
+                    inputs=[shape_choice, size_slider, char_input],
+                    outputs=shape_output,
+                )
+                size_slider.change(
+                    fn=_render_shape,
+                    inputs=[shape_choice, size_slider, char_input],
+                    outputs=shape_output,
+                )
+                char_input.change(
                     fn=_render_shape,
                     inputs=[shape_choice, size_slider, char_input],
                     outputs=shape_output,
@@ -313,16 +317,12 @@ def build_ui() -> gr.Blocks:
                     label="Template Art",
                     lines=10,
                     interactive=False,
+                    value=_get_template(default_template),
                 )
 
                 template_choice.change(
                     fn=_get_template,
                     inputs=template_choice,
-                    outputs=template_output,
-                )
-
-                demo.load(
-                    fn=lambda: _get_template(default_template),
                     outputs=template_output,
                 )
 
@@ -341,7 +341,6 @@ def build_ui() -> gr.Blocks:
                 save_status = gr.Textbox(label="Status", interactive=False)
 
                 save_btn = gr.Button("Save")
-
                 save_btn.click(
                     fn=_save_md,
                     inputs=[md_content_save, md_filepath_save],
@@ -366,7 +365,6 @@ def build_ui() -> gr.Blocks:
                 read_info = gr.Textbox(label="Info", interactive=False)
 
                 read_btn = gr.Button("Read")
-
                 read_btn.click(
                     fn=_read_md,
                     inputs=[md_filepath_read, count_hashtags_cb],
@@ -387,7 +385,6 @@ def build_ui() -> gr.Blocks:
                 )
 
                 extract_btn = gr.Button("Extract Sections")
-
                 extract_btn.click(
                     fn=_extract_sections_ui,
                     inputs=sections_input,
@@ -422,13 +419,13 @@ def build_ui() -> gr.Blocks:
                 )
 
                 selector.change(
-                    fn=on_change,
+                    fn=on_file_change,
                     inputs=selector,
                     outputs=[text_view, markdown_view, csv_view],
                 )
 
                 demo.load(
-                    fn=lambda: on_change(default_label),
+                    fn=lambda: on_file_change(default_label),
                     outputs=[text_view, markdown_view, csv_view],
                 )
 

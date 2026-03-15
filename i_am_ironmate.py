@@ -2,13 +2,15 @@
 # __all__: 2
 
 from __future__ import annotations
-import argparse, json, sys
 
+import argparse, json, sys
+from pathlib import Path
+
+from ascii_art import get_template, render_prompt_ascii
+from markdown_market import save_markdown
 from llm_launchpad import DEFAULT_LIGHT_MODEL, DEFAULT_TOOL_MODEL, TransformersDualLLM, default_tool_schema, execute_allowed_tool
 
-
 __all__ = ["build_parser", "main"]
-
 
 def build_parser() -> argparse.ArgumentParser:
     common = argparse.ArgumentParser(add_help=False)
@@ -42,7 +44,67 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_repl.add_argument("--print-raw", action="store_true", help="Print raw model text too")
 
+    p_ascii = sub.add_parser(
+        "ascii",
+        parents=[common],
+        help="Generate ASCII art directly with the light model",
+    )
+    p_ascii.add_argument("--prompt", required=True, help="ASCII art prompt")
+
+    p_ascii_save = sub.add_parser(
+        "ascii-save",
+        parents=[common],
+        help="Generate ASCII art directly with the light model and save it to a file",
+    )
+    p_ascii_save.add_argument("--prompt", required=True, help="ASCII art prompt")
+    p_ascii_save.add_argument("--output", required=True, help="Output file path")
+
+    p_template_save = sub.add_parser(
+        "template-save",
+        parents=[common],
+        help="Save a predefined ASCII template to a file",
+    )
+    p_template_save.add_argument("--name", required=True, help="Template name")
+    p_template_save.add_argument("--output", required=True, help="Output file path")
+
     return p
+
+
+def _normalize_output_path(output: str) -> str:
+    return str(Path(output).resolve())
+
+
+def _run_ascii_prompt(llm: TransformersDualLLM, prompt: str) -> int:
+    content = render_prompt_ascii(prompt, llm)
+    if not content:
+        print("Failed to generate ASCII art.", file=sys.stderr)
+        return 2
+    print(content)
+    return 0
+
+
+def _run_ascii_save(llm: TransformersDualLLM, prompt: str, output: str) -> int:
+    filepath = _normalize_output_path(output)
+    content = render_prompt_ascii(prompt, llm)
+    if not content:
+        print("Failed to generate ASCII art.", file=sys.stderr)
+        return 2
+
+    msg = save_markdown(content.rstrip() + "\n", filepath)
+    print(msg)
+    return 0
+
+
+def _run_template_save(name: str, output: str) -> int:
+    filepath = _normalize_output_path(output)
+    content = get_template(name.strip().lower())
+    if not content:
+        print(f"Unknown ASCII template: {name}", file=sys.stderr)
+        return 2
+
+    msg = save_markdown(content.rstrip() + "\n", filepath)
+    print(msg)
+    return 0
 
 
 def _run_tool_prompt(llm: TransformersDualLLM, prompt: str, dry_run: bool = False, print_raw: bool = False) -> int:
@@ -118,6 +180,15 @@ def main(argv: list[str]) -> int:
 
     if args.mode == "tool-repl":
         return _run_tool_repl(llm, print_raw=args.print_raw)
+
+    if args.mode == "ascii":
+        return _run_ascii_prompt(llm, prompt=args.prompt)
+
+    if args.mode == "ascii-save":
+        return _run_ascii_save(llm, prompt=args.prompt, output=args.output)
+
+    if args.mode == "template-save":
+        return _run_template_save(name=args.name, output=args.output)
 
     return 1
 

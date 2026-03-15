@@ -299,7 +299,6 @@ def build_ui() -> gr.Blocks:
                     label="Text",
                     lines=28,
                     max_lines=40,
-                    show_copy_button=True,
                     visible=True,
                 )
                 markdown_view = gr.Markdown(visible=False)

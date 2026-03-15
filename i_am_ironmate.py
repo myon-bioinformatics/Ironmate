@@ -69,7 +69,7 @@ def main(argv: list[str]) -> int:
         if args.dry_run:
             return 0
 
-        msg, _raw = execute_allowed_tool(tool_json)
+        msg, _raw = execute_allowed_tool(tool_json, llm=llm)
         print(msg)
         return 0
 

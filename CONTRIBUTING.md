@@ -24,12 +24,16 @@ Every file must include its own file name as a comment on the **first line**.
 
 All Python files must declare `__all__` explicitly.
 
-- The **second line** of every Python file must be a comment stating the number of
-  publicly exported names: `# __all__: <count>`
-- Immediately after the header comments, define `__all__` as a list of strings.
-- Only include names intended for external use (i.e., no leading-underscore names).
+- The **second line** of every Python file must be a comment stating the number of publicly exported names:
 
-**Example:**
+```
+# __all__: <count>
+```
+
+- Immediately after the header comments, define `__all__` as a list of strings.
+- Only include names intended for external use (no leading `_` names).
+
+Example:
 
 ```python
 # ascii_art.py
@@ -48,62 +52,245 @@ __all__ = [
 
 ### 3. File Naming Convention
 
-File names consist of **two English words joined by an underscore**, chosen so
-the meaning is clear at a glance.
+File names consist of **two English words joined by an underscore**.
 
-Examples: `ascii_art.py`, `markdown_market.py`, `llm_launchpad.py`,
-`gradio_galleria.py`, `file_finder.py`
+Examples:
+
+```
+ascii_art.py
+markdown_market.py
+gradio_galleria.py
+file_finder.py
+llm_launchpad.py
+```
 
 ---
 
-### 4. Examples by File Type
+### 4. Python Import Order
 
-#### Python
+Imports must be grouped and sorted alphabetically within each group.
+
+Order:
+
+1. Standard library
+2. Third-party libraries
+3. Local modules
+
+Example:
 
 ```python
-# my_module.py
-# __all__: 2
+import csv, io, json
+from pathlib import Path
+from typing import Dict
 
-__all__ = ["public_func_a", "public_func_b"]
+import gradio as gr
 
-
-def public_func_a() -> str:
-    ...
-
-
-def public_func_b() -> int:
-    ...
-```
-
-#### Markdown
-
-```markdown
-# my_doc.md
-
-Content goes here.
-```
-
-#### YAML
-
-```yaml
-# config.yaml
-key1: value1
-key2: value2
-```
-
-#### Shell Script
-
-```bash
-# setup.sh
-#!/bin/bash
-echo "Setting up the environment..."
+from ascii_art import generate_square
+from file_finder import find_files_as_map
 ```
 
 ---
 
-### 5. Summary
+### 5. Variable and Constant Placement
 
-- **All files**: first line = `# <filename>`
-- **Python files**: second line = `# __all__: <count>`, followed by an explicit
-  `__all__` list
-- **File names**: two descriptive English words separated by `_`
+Top-level variables should appear **after imports**.
+
+Sort them alphabetically when practical.
+
+Example:
+
+```python
+BASE_DIR = Path(__file__).resolve().parent
+MAX_FILE_SIZE = 5 * 1024 * 1024
+```
+
+---
+
+### 6. Avoid Unnecessary Constants
+
+Constants should only be introduced when they improve reuse.
+
+Preferred:
+
+```python
+if suffix == ".md":
+```
+
+Avoid:
+
+```python
+_MARKDOWN_EXTENSION = ".md"
+```
+
+unless reused across modules.
+
+---
+
+### 7. Helper Function Style
+
+Reusable internal logic should be extracted into helper functions.
+
+Private helpers must start with `_`.
+
+Example:
+
+```python
+def _detect_kind(path: Path) -> str:
+```
+
+Public functions exported via `__all__` **must not start with `_`**.
+
+---
+
+### 8. Function Order Rule
+
+Python files should follow a consistent structure.
+
+Order:
+
+1. imports
+2. constants
+3. private helper functions (`_name`)
+4. public functions (listed in `__all__`)
+5. entry point (`if __name__ == "__main__":`)
+
+Example:
+
+```python
+import json
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent
+
+
+def _helper():
+    ...
+
+
+def public_function():
+    ...
+
+
+if __name__ == "__main__":
+    public_function()
+```
+
+This ordering makes files easier to scan and maintain.
+
+---
+
+### 9. Prefer Early Returns
+
+Use guard clauses to avoid deep nesting.
+
+Preferred:
+
+```python
+if not filepath:
+    return "Please specify a file path."
+```
+
+---
+
+### 10. Prefer Generator Expressions
+
+Use generator expressions instead of temporary lists when possible.
+
+Preferred:
+
+```python
+return "\n".join(
+    f"{'#' * sec['level']} {sec['title']}"
+    for sec in sections
+)
+```
+
+Avoid:
+
+```python
+lines = []
+for sec in sections:
+    lines.append(...)
+return "\n".join(lines)
+```
+
+---
+
+### 11. Tuple Prefix Matching
+
+When checking multiple prefixes, prefer tuple matching.
+
+Preferred:
+
+```python
+if raw.startswith(("[error]", "[missing]", "[too_large]")):
+```
+
+Avoid:
+
+```python
+if raw.startswith("[error]") or raw.startswith("[missing]"):
+```
+
+---
+
+### 12. Module Responsibility Rule
+
+Each module should have **a clear single responsibility**.
+
+Examples:
+
+```
+ascii_art.py        -> ASCII art generation
+markdown_market.py  -> Markdown utilities
+file_finder.py      -> file discovery
+gradio_galleria.py  -> UI layer
+```
+
+Avoid mixing unrelated responsibilities inside the same module.
+
+---
+
+### 13. UI / Logic Separation Rule
+
+User interface code should remain separate from business logic.
+
+Structure example:
+
+```
+core logic
+    ↓
+helper functions
+    ↓
+UI layer (Gradio / CLI / API)
+```
+
+Example:
+
+```python
+def process_markdown(text: str) -> str:
+    ...
+
+
+def build_ui():
+    ...
+```
+
+Benefits:
+
+- logic becomes reusable
+- easier testing
+- easier future CLI / API support
+
+---
+
+### 14. Design Philosophy
+
+This repository prioritizes:
+
+- clarity over cleverness
+- minimal code duplication
+- predictable structure
+- readable imports and variables
+
+The goal is to keep every module **easy to understand and safe to modify**.

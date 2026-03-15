@@ -193,8 +193,7 @@ def default_tool_schema() -> str:
         "Predefined ASCII template names currently available:\n"
         "- ironmate\n"
         "- arc_reactor\n"
-        "- helmet\n"
-        "- welcome\n"
+        "- icon_ironmate\n"
         "\n"
         "Tool selection rules:\n"
         "- Use save_ascii_art when the user asks to save a predefined ASCII template by name.\n"
@@ -224,6 +223,7 @@ def _normalize_tool_args(args: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def execute_allowed_tool(tool_json: Dict[str, Any], llm=None) -> Tuple[str, Dict[str, Any]]:
+    print("execute_allowed_tool called with:", tool_json)
     tool = (tool_json.get("tool") or "").strip()
     args = tool_json.get("args") or {}
     if not isinstance(args, dict):
@@ -240,6 +240,7 @@ def execute_allowed_tool(tool_json: Dict[str, Any], llm=None) -> Tuple[str, Dict
     from markdown_market import extract_sections, read_markdown, save_markdown
 
     if tool == "save_markdown":
+        print("save_markdown tool called with args:", args)
         if not filepath:
             msg = "File path is required."
             return msg, {"tool": tool, "result": msg}
@@ -248,6 +249,7 @@ def execute_allowed_tool(tool_json: Dict[str, Any], llm=None) -> Tuple[str, Dict
         return msg, {"tool": tool, "result": {"filepath": filepath, "message": msg}}
 
     if tool == "read_markdown":
+        print("read_markdown tool called with args:", args)
         if not filepath:
             msg = "File path is required."
             return msg, {"tool": tool, "result": msg}
@@ -259,10 +261,12 @@ def execute_allowed_tool(tool_json: Dict[str, Any], llm=None) -> Tuple[str, Dict
         }
 
     if tool == "extract_sections":
+        print("extract_sections tool called with args:", args)
         res = extract_sections(content)
         return "OK", {"tool": tool, "result": res}
 
     if tool == "save_ascii_art":
+        print("save_ascii_art tool called with args:", args)
         if not name:
             msg = "ASCII art name is required."
             return msg, {"tool": tool, "result": msg}
@@ -287,6 +291,7 @@ def execute_allowed_tool(tool_json: Dict[str, Any], llm=None) -> Tuple[str, Dict
         }
 
     if tool == "generate_ascii_art":
+        print("generate_ascii_art tool called with args:", args)
         if not prompt:
             msg = "ASCII art prompt is required."
             return msg, {"tool": tool, "result": msg}
@@ -303,6 +308,7 @@ def execute_allowed_tool(tool_json: Dict[str, Any], llm=None) -> Tuple[str, Dict
         return "OK", {"tool": tool, "result": {"prompt": prompt, "content": content}}
 
     if tool == "save_generated_ascii":
+        print("save_generated_ascii tool called with args:", args)
         if not prompt:
             msg = "ASCII art prompt is required."
             return msg, {"tool": tool, "result": msg}
@@ -327,6 +333,7 @@ def execute_allowed_tool(tool_json: Dict[str, Any], llm=None) -> Tuple[str, Dict
         }
 
     if tool == "list_ascii_templates":
+        print("list_ascii_templates tool called with args:", args)
         res = list_templates()
         return "OK", {"tool": tool, "result": res}
 

@@ -17,7 +17,7 @@ def list_portfolio_repositories(query="", limit=5):
     except Exception:
         return _failure(retrieved_at, "source_fetch_failed")
     if isinstance(payload,list): entries = payload
-    elif isinstance(payload,dict) and isinstance(payload.get("repositories",[]),list): entries = payload["repositories"]
+    elif isinstance(payload,dict) and isinstance(payload.get("repositories"),list): entries = payload["repositories"]
     else: return _failure(retrieved_at, "source_payload_invalid")
     if query: entries=[x for x in entries if query in json.dumps(x,ensure_ascii=False).lower()]
     return {"items":entries[:limit],"source_url":SOURCE_URL,"retrieved_at":retrieved_at,"missing_data":[],"status":"completed"}

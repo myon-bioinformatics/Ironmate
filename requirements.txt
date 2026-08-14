@@ -4,3 +4,4 @@ accelerate
 bitsandbytes
 gradio
 pyyaml
+fastmcp

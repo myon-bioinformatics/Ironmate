@@ -15,3 +15,6 @@ class ValidateTest(unittest.TestCase):
  def test_bad_shape_is_safe(self):
   with patch("ironmate_mcp.urlopen",return_value=io.BytesIO(b'null')): result=list_portfolio_repositories()
   self.assertEqual(result["error"],"source_payload_invalid")
+ def test_missing_repository_key_is_safe(self):
+  with patch("ironmate_mcp.urlopen",return_value=io.BytesIO(b'{}')): result=list_portfolio_repositories()
+  self.assertEqual(result["error"],"source_payload_invalid")

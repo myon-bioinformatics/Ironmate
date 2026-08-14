@@ -22,6 +22,18 @@ __all__ = ["build_ui"]
 
 BASE_DIR = Path(__file__).resolve().parent
 
+TERMINAL_CSS = """
+:root { --lime: #c9ffb6; --cyan: #48a8ff; --ink: #080d13; --panel: #0d1720; }
+.gradio-container { max-width: 1120px !important; background: var(--ink) !important; color: var(--lime) !important; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important; }
+.gradio-container::before { content: ''; display: block; border-top: 4px dashed var(--cyan); margin-bottom: 1rem; }
+h1, h2, h3, p, label, .prose { color: var(--lime) !important; }
+.block, .form, .wrap, .gr-box, .gr-panel, .tabitem { background: var(--panel) !important; border: 1px solid var(--cyan) !important; box-shadow: 4px 4px 0 #132b42 !important; }
+button { background: #102b22 !important; border: 1px solid var(--lime) !important; color: var(--lime) !important; font-family: inherit !important; }
+textarea, input, select { background: #081118 !important; color: var(--lime) !important; border-color: var(--cyan) !important; font-family: inherit !important; }
+.tab-nav button { box-shadow: none !important; border: 0 !important; }
+footer { display: none !important; }
+"""
+
 
 # ---------------------------------------------------------------------------
 # ASCII Art helpers
@@ -254,10 +266,10 @@ def build_ui() -> gr.Blocks:
         kind, text_value, csv_value = _load_for_display(label, files)
         return _to_view_updates(kind, text_value, csv_value)
 
-    with gr.Blocks(title="Ironmate — Gradio Galleria") as demo:
-        gr.Markdown("# 🦾 Ironmate — Gradio Galleria")
+    with gr.Blocks(title="Ironmate — Terminal Galleria", css=TERMINAL_CSS) as demo:
+        gr.Markdown("# > 🦾 Ironmate")
         gr.Markdown(
-            "Your J.A.R.V.I.S-inspired assistant for ASCII art, Markdown management, and file viewing."
+            "`[ local assistant ]` J.A.R.V.I.S-inspired tools for ASCII art, Markdown management, and safe file viewing."
         )
 
         with gr.Tabs():

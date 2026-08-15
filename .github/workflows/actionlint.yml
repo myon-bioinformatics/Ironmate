@@ -19,4 +19,4 @@ jobs:
       - name: Check added workflow syntax
         uses: docker://rhysd/actionlint:1.7.12
         with:
-          args: -color .github/workflows/claude.yml .github/workflows/actionlint.yml
+          args: -color .github/workflows/claude.yml .github/workflows/actionlint.yml .github/workflows/mcp-tests.yml

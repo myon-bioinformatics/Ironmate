@@ -1,0 +1,32 @@
+name: Test MCP stub
+
+on:
+  pull_request:
+    paths:
+      - "ironmate_mcp.py"
+      - "tests/**"
+      - "requirements-mcp.txt"
+      - ".github/workflows/mcp-tests.yml"
+  push:
+    branches: [main]
+    paths:
+      - "ironmate_mcp.py"
+      - "tests/**"
+      - "requirements-mcp.txt"
+      - ".github/workflows/mcp-tests.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -r requirements-mcp.txt
+      - run: python -m py_compile ironmate_mcp.py
+      - run: python -m unittest tests/test_ironmate_mcp.py

@@ -29,6 +29,10 @@ def _matches(item: dict[str, Any], query: str) -> bool:
     return query in json.dumps(visible, ensure_ascii=False).lower()
 
 
+def _public_item(item: dict[str, Any]) -> dict[str, Any]:
+    return {field: item.get(field) for field in FILTER_FIELDS}
+
+
 def list_portfolio_repositories(query: str = "", limit: int = 5) -> dict[str, Any]:
     """Filter public portfolio repositories by selected display fields."""
     query, limit = _validate(query, limit)
@@ -51,7 +55,7 @@ def list_portfolio_repositories(query: str = "", limit: int = 5) -> dict[str, An
     if query:
         entries = [item for item in entries if _matches(item, query)]
     return {
-        "items": entries[:limit],
+        "items": [_public_item(item) for item in entries[:limit]],
         "filter": {"query": query, "fields": list(FILTER_FIELDS)},
         "matched_count": len(entries),
         "available_count": available_count,

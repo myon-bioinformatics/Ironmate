@@ -7,8 +7,8 @@ class ValidateTest(unittest.TestCase):
  def test_invalid(self):
   with self.assertRaises(ValueError): _validate("",0)
  def test_filters_fixture(self):
-  with patch("ironmate_mcp.urlopen",return_value=io.BytesIO(b'{"repos":[{"name":"Flutter","topics":["dart"]},{"name":"Python"}]}')): result=list_portfolio_repositories("flutter",1)
-  self.assertEqual(result["items"],[{"name":"Flutter","topics":["dart"]}])
+  with patch("ironmate_mcp.urlopen",return_value=io.BytesIO(b'{"repos":[{"name":"Flutter","topics":["dart"],"internal":"nope"},{"name":"Python"}]}')): result=list_portfolio_repositories("flutter",1)
+  self.assertEqual(result["items"],[{"name":"Flutter","description":None,"language":None,"topics":["dart"],"readmeSummary":None}])
   self.assertEqual(result["matched_count"],1)
   self.assertEqual(result["available_count"],2)
  def test_failure_is_safe(self):

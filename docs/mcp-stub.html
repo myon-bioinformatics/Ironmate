@@ -1,1 +1,50 @@
-<!doctype html><meta charset="utf-8"><title>Ironmate MCP Stub</title><style>body{background:#080d13;color:#c9ffb6;font:16px ui-monospace,monospace;max-width:800px;margin:3rem auto;padding:1rem}button,input,pre{background:#0d1720;color:#c9ffb6;border:1px solid #48a8ff;padding:.6rem}pre{white-space:pre-wrap}.summary{border:1px dashed #48a8ff;padding:.7rem;margin:1rem 0}</style><h1>&gt; Ironmate MCP stub</h1><p>Searches and returns only: name, description, language, topics, readme summary.</p><input id=q placeholder="filter, e.g. flutter"><button id=b>Run</button><div class=summary id=s>Filter: — · matched: —</div><pre id=o>Ready.</pre><script>const u="https://myon-bioinformatics.github.io/api/repos.json",fields=["name","description","language","topics","readmeSummary"],timeoutMs=10000,publicItem=x=>Object.fromEntries(fields.map(f=>[f,x[f]??null]));b.onclick=async()=>{let request_id=crypto.randomUUID(),run_id=crypto.randomUUID(),call_id=crypto.randomUUID(),retrieved_at=new Date().toISOString(),q=document.querySelector("#q").value.trim().toLowerCase(),controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeoutMs);o.textContent="Loading…";try{let p=await fetch(u,{signal:controller.signal});if(!p.ok)throw Error("HTTP "+p.status);let d=await p.json(),a=Array.isArray(d)?d:d.repos;if(!Array.isArray(a))throw Error("invalid payload");a=a.filter(x=>x&&typeof x==="object");let available_count=a.length;if(q)a=a.filter(x=>JSON.stringify(publicItem(x)).toLowerCase().includes(q));s.textContent=`Filter: ${q||"(all)"} · fields: ${fields.join(", ")} · matched: ${a.length} of ${available_count}`;o.textContent=JSON.stringify({request_id,run_id,call_id,status:"completed",filter:{query:q,fields},matched_count:a.length,available_count,source_url:u,retrieved_at,items:a.slice(0,5).map(publicItem),missing_data:[]},null,2)}catch(e){s.textContent=`Filter: ${q||"(all)"} · request failed`;o.textContent=JSON.stringify({request_id,run_id,call_id,status:"failed",source_url:u,retrieved_at,items:[],missing_data:["repository fixture could not be retrieved"],error:e.name==="AbortError"?"source_timeout":"source_fetch_failed"},null,2)}finally{clearTimeout(timer)}};</script>
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ironmate MCP Stub Explorer</title>
+<style>
+:root{--ink:#080d13;--panel:#0d1720;--lime:#c9ffb6;--cyan:#48a8ff;--muted:#a4afbc}*{box-sizing:border-box}body{margin:0;background:var(--ink);color:var(--lime);font:16px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace}.shell{max-width:1000px;margin:auto;padding:22px;border-inline:3px dashed var(--cyan)}h1{font-size:clamp(1.7rem,6vw,3rem)}button,input{font:inherit;background:#091218;color:var(--lime);border:1px solid var(--cyan);padding:.65rem}button{cursor:pointer}.panel{background:var(--panel);border:1px solid var(--cyan);box-shadow:4px 4px #132b42;padding:16px;margin:20px 0}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.card{border:1px solid var(--cyan);background:#091218;padding:12px;text-align:left}.card strong{display:block;font-size:1.05rem}.meta,.hint{color:var(--muted);font-size:.9rem}.tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}.tag{border:1px solid var(--lime);padding:1px 5px;font-size:.78rem}.actions{display:flex;gap:8px;flex-wrap:wrap}pre{overflow:auto;white-space:pre-wrap;word-break:break-word;margin:0}.hidden{display:none}@media(max-width:560px){.shell{border:0;padding:14px}}
+</style>
+<main class="shell">
+  <p>$ ironmate explore --source repos.json</p>
+  <h1>&gt; MCP Stub Explorer</h1>
+  <p class="hint">Search public repositories, inspect the result, export evidence, and rerun a prior request.</p>
+  <section class="panel">
+    <label for="query">Filter</label>
+    <div class="actions"><input id="query" placeholder="e.g. flutter" autocomplete="off"><button id="run">Run</button><button id="clear">Clear history</button></div>
+    <p id="summary" class="hint">Filter: — · matched: —</p>
+  </section>
+  <section class="panel">
+    <p>+---[ repository details ]---+</p><div id="results" class="grid"></div>
+  </section>
+  <section class="panel">
+    <p>+---[ technology stack ]---+</p><div id="stats" class="grid"></div>
+  </section>
+  <section class="panel">
+    <p>+---[ evidence export ]---+</p>
+    <div class="actions"><button id="copy-json">Copy JSON</button><button id="download-json">Download JSON</button><button id="download-md">Download Markdown</button></div>
+    <pre id="trace">Run a query to create a trace.</pre>
+  </section>
+  <section class="panel">
+    <p>+---[ recent runs ]---+</p><div id="history" class="grid"></div>
+  </section>
+</main>
+<script>
+const sourceUrl="https://myon-bioinformatics.github.io/api/repos.json";
+const fields=["name","description","language","topics","readmeSummary"];
+const historyKey="ironmate.mcp-stub.history.v1",maxHistory=12;
+let current;
+const $=id=>document.getElementById(id);
+const publicItem=x=>Object.fromEntries(fields.map(f=>[f,x[f]??null]));
+const text=x=>String(x??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function stacks(items,key){const counts={};items.forEach(x=>{const v=x[key];(Array.isArray(v)?v:[v]).filter(Boolean).forEach(y=>counts[y]=(counts[y]||0)+1)});return Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,12)}
+function renderStats(items){const cards=[["Languages",stacks(items,"language")],["Topics",stacks(items,"topics")]];$("stats").innerHTML=cards.map(([title,rows])=>`<article class="card"><strong>${title}</strong><div class="tags">${rows.map(([v,n])=>`<span class="tag">${text(v)} × ${n}</span>`).join("")||"<span class=hint>No data</span>"}</div></article>`).join("")}
+function renderResults(items){$("results").innerHTML=items.map(x=>`<article class="card"><strong>${text(x.name)}</strong><span class=meta>${text(x.language||"Unknown")}</span><p>${text(x.description||x.readmeSummary||"No summary available.")}</p><div class=tags>${(x.topics||[]).map(t=>`<span class=tag>#${text(t)}</span>`).join("")}</div><p><a href="https://github.com/myon-bioinformatics/${encodeURIComponent(x.name)}" target="_blank" rel="noopener">Open GitHub ↗</a></p></article>`).join("")||"<p class=hint>No matching repositories.</p>"}
+function readHistory(){try{return JSON.parse(localStorage.getItem(historyKey))||[]}catch{return[]}}
+function saveHistory(run){const next=[{query:run.filter.query,matched_count:run.matched_count,available_count:run.available_count,retrieved_at:run.retrieved_at},...readHistory().filter(x=>x.query!==run.filter.query)].slice(0,maxHistory);localStorage.setItem(historyKey,JSON.stringify(next));renderHistory()}
+function renderHistory(){$("history").innerHTML=readHistory().map(x=>`<button class="card rerun" data-query="${encodeURIComponent(x.query)}"><strong>${text(x.query||"(all)")}</strong><span class=meta>${x.matched_count} of ${x.available_count} · ${new Date(x.retrieved_at).toLocaleString()}</span></button>`).join("")||"<p class=hint>No saved runs.</p>";document.querySelectorAll(".rerun").forEach(b=>b.onclick=()=>run(decodeURIComponent(b.dataset.query)))}
+async function run(forcedQuery){const query=(forcedQuery??$("query").value).trim().toLowerCase();$("query").value=query;$("summary").textContent="Loading…";try{const response=await fetch(sourceUrl);if(!response.ok)throw Error();const payload=await response.json();let entries=Array.isArray(payload)?payload:payload.repos;if(!Array.isArray(entries))throw Error();entries=entries.filter(x=>x&&typeof x==="object");const available_count=entries.length;const matches=query?entries.filter(x=>JSON.stringify(publicItem(x)).toLowerCase().includes(query)):entries;const items=matches.slice(0,20).map(publicItem);current={request_id:crypto.randomUUID(),run_id:crypto.randomUUID(),call_id:crypto.randomUUID(),status:"completed",filter:{query,fields},matched_count:matches.length,available_count,source_url:sourceUrl,retrieved_at:new Date().toISOString(),items,missing_data:[]};$("summary").textContent=`Filter: ${query||"(all)"} · matched: ${matches.length} of ${available_count} · display: ${items.length}`;renderResults(items);renderStats(items);$("trace").textContent=JSON.stringify(current,null,2);saveHistory(current)}catch{$("summary").textContent="Request failed";$("trace").textContent=JSON.stringify({status:"failed",source_url:sourceUrl,error:"source_fetch_failed"},null,2)}}
+function download(name,type,content){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([content],{type}));a.download=name;a.click();URL.revokeObjectURL(a.href)}
+function markdown(){const r=current;return `# Ironmate repository search\n\n- Query: \`${r.filter.query||"(all)"}\`\n- Matched: ${r.matched_count} of ${r.available_count}\n- Retrieved: ${r.retrieved_at}\n- Source: ${r.source_url}\n\n## Results\n\n${r.items.map(x=>`### ${x.name}\n- Language: ${x.language||"Unknown"}\n- Topics: ${(x.topics||[]).join(", ")||"None"}\n- ${x.description||x.readmeSummary||"No summary"}`).join("\n\n")}\n`}
+$("run").onclick=()=>run();$("clear").onclick=()=>{localStorage.removeItem(historyKey);renderHistory()};$("copy-json").onclick=async()=>{if(current)await navigator.clipboard.writeText(JSON.stringify(current,null,2))};$("download-json").onclick=()=>current&&download("ironmate-run.json","application/json",JSON.stringify(current,null,2));$("download-md").onclick=()=>current&&download("ironmate-report.md","text/markdown",markdown());renderHistory();
+</script>

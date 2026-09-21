@@ -110,7 +110,11 @@ def search_repository_metadata(query: str = "", limit: int = 5) -> dict[str, Any
 
 
 def get_repository_metadata(repository: str) -> dict[str, Any]:
-    """Return a compact repository snapshot.\n\n    ``latest_pr`` is latest-created by PR number; ``latest_updated_pr`` is the\n    PR with the most recent ``updated_at`` timestamp. CI metadata is latest-run only.\n    """
+    """Return a compact repository snapshot.
+
+    ``latest_pr`` is latest-created by PR number; ``latest_updated_pr`` is the
+    PR with the most recent ``updated_at`` timestamp. CI metadata is latest-run only.
+    """
     repository = _repository_name(repository)
     url = f"{CATALOG_BASE_URL}/repos/{quote(repository)}.json"
     payload = _load_json(url)

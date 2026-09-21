@@ -129,11 +129,16 @@ def select_readme(tree: list[dict[str, Any]]) -> str | None:
 
 
 def select_python_sources(tree: list[dict[str, Any]], limit: int = 3) -> list[str]:
-    ignored = ("tests/", "test/", "vendor/", ".venv/", "venv/", "docs/")
+    ignored_parts = {"tests", "test", "vendor", ".venv", "venv", "docs"}
     paths = []
     for item in tree:
         path = str(item.get("path") or "")
-        if item.get("type") != "blob" or not path.endswith(".py") or path.startswith(ignored):
+        parts = path.split("/")
+        if (
+            item.get("type") != "blob"
+            or not path.endswith(".py")
+            or any(part in ignored_parts for part in parts[:-1])
+        ):
             continue
         depth = path.count("/")
         paths.append((depth, len(path), path))

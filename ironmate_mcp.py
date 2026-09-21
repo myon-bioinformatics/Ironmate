@@ -110,17 +110,72 @@ def search_repository_metadata(query: str = "", limit: int = 5) -> dict[str, Any
 
 
 def get_repository_metadata(repository: str) -> dict[str, Any]:
-    """Return one repository snapshot from ``/Ironmate/api/repos/<repo>.json``."""
+    """Return a compact repository snapshot from the static catalog."""
     repository = _repository_name(repository)
     url = f"{CATALOG_BASE_URL}/repos/{quote(repository)}.json"
     payload = _load_json(url)
+    readme = payload.get("readme") if isinstance(payload.get("readme"), dict) else {}
+    important = payload.get("important_files") if isinstance(payload.get("important_files"), dict) else {}
+    fields = ("version", "latest_release", "latest_tag", "ci", "api", "readme", "important_files")
+    availability = {
+        field: (payload.get(field) or {}).get("status")
+        for field in fields
+        if isinstance(payload.get(field), dict)
+    }
     return {
         "name": payload.get("name"),
+        "description": payload.get("description"),
+        "language": payload.get("language"),
+        "topics": payload.get("topics"),
         "default_branch": payload.get("default_branch"),
         "latest_commit": payload.get("latest_commit"),
         "latest_pr": payload.get("latest_pr"),
+        "latest_updated_pr": payload.get("latest_updated_pr"),
         "pr_count": payload.get("pr_count"),
+        "version": payload.get("version"),
+        "latest_release": payload.get("latest_release"),
+        "latest_tag": payload.get("latest_tag"),
+        "ci": payload.get("ci"),
+        "readme": readme.get("value"),
+        "important_files": important.get("value"),
+        "availability": availability,
         "pushed_at": payload.get("pushed_at"),
+        "generated_at": payload.get("generated_at"),
+        "source_url": url,
+    }
+
+
+def get_repository_exports(repository: str, limit: int = 50) -> dict[str, Any]:
+    """Return detected public API names without returning the entire repository snapshot."""
+    repository = _repository_name(repository)
+    if not isinstance(limit, int) or isinstance(limit, bool) or not 1 <= limit <= 100:
+        raise ValueError("limit must be an integer from 1 to 100")
+    url = f"{CATALOG_BASE_URL}/repos/{quote(repository)}.json"
+    payload = _load_json(url)
+    api = payload.get("api")
+    if not isinstance(api, dict):
+        return {"repository": repository, "status": "not_found", "items": [], "source_url": url}
+    if api.get("status") != "detected":
+        return {
+            "repository": repository,
+            "status": api.get("status") or "not_found",
+            "items": [],
+            "source_url": url,
+        }
+
+    items: list[dict[str, Any]] = []
+    for record in api.get("value") or []:
+        if not isinstance(record, dict) or record.get("status") != "detected":
+            continue
+        value = record.get("value") or {}
+        source = record.get("source")
+        for name in value.get("exports") or []:
+            items.append({"name": name, "source": source, "kind": "export"})
+    return {
+        "repository": repository,
+        "status": "detected",
+        "items": items[:limit],
+        "matched_count": len(items),
         "generated_at": payload.get("generated_at"),
         "source_url": url,
     }
@@ -161,5 +216,6 @@ if __name__ == "__main__":
     mcp.tool()(list_portfolio_repositories)
     mcp.tool()(search_repository_metadata)
     mcp.tool()(get_repository_metadata)
+    mcp.tool()(get_repository_exports)
     mcp.tool()(get_pull_request_metadata)
     mcp.run()

@@ -1,18 +1,26 @@
-"""Build a static, LLM-friendly metadata catalog for myon-bioinformatics.
-
-The generated files are intended for GitHub Pages. Runtime consumers can fetch a
-small organization-wide index first, then only the repository or pull-request
-record they actually need.
-"""
+"""Build static, LLM-friendly repository metadata for GitHub Pages."""
 from __future__ import annotations
 
+import base64
 from datetime import UTC, datetime
 import json
 import os
 from pathlib import Path
 from typing import Any
+from urllib.error import HTTPError, URLError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
+
+from repository_metadata import (
+    availability,
+    important_file_shas,
+    parse_manifest_version,
+    parse_python_api,
+    readme_digest,
+    select_manifest,
+    select_python_sources,
+    select_readme,
+)
 
 OWNER = os.environ.get("IRONMATE_GITHUB_OWNER", "myon-bioinformatics")
 OUTPUT_DIR = Path(os.environ.get("IRONMATE_CATALOG_DIR", "docs/api"))
@@ -36,6 +44,17 @@ def _request_json(url: str) -> Any:
         return json.load(response)
 
 
+def _optional_json(url: str) -> tuple[str, Any]:
+    try:
+        return "detected", _request_json(url)
+    except HTTPError as exc:
+        if exc.code == 404:
+            return "not_found", None
+        return "fetch_failed", None
+    except (URLError, TimeoutError, ValueError):
+        return "fetch_failed", None
+
+
 def _paged(url: str) -> list[dict[str, Any]]:
     items: list[dict[str, Any]] = []
     page = 1
@@ -48,6 +67,22 @@ def _paged(url: str) -> list[dict[str, Any]]:
         if len(batch) < 100:
             return items
         page += 1
+
+
+def _content_text(repo_name: str, path: str, ref: str) -> tuple[str, str | None]:
+    status, data = _optional_json(
+        f"{API_ROOT}/repos/{quote(OWNER)}/{quote(repo_name)}/contents/"
+        f"{quote(path, safe='/')}?ref={quote(ref)}"
+    )
+    if status != "detected" or not isinstance(data, dict):
+        return status, None
+    content = data.get("content")
+    if not isinstance(content, str):
+        return "fetch_failed", None
+    try:
+        return "detected", base64.b64decode(content).decode("utf-8")
+    except (ValueError, UnicodeDecodeError):
+        return "parse_failed", None
 
 
 def _commit_metadata(repo_name: str, default_branch: str) -> dict[str, Any]:
@@ -82,6 +117,118 @@ def _pr_metadata(pr: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _release_metadata(repo_name: str) -> dict[str, Any]:
+    status, data = _optional_json(f"{API_ROOT}/repos/{quote(OWNER)}/{quote(repo_name)}/releases/latest")
+    if status != "detected" or not isinstance(data, dict):
+        return availability(status)
+    return availability(
+        "detected",
+        {
+            "tag_name": data.get("tag_name"),
+            "name": data.get("name"),
+            "published_at": data.get("published_at"),
+            "html_url": data.get("html_url"),
+        },
+    )
+
+
+def _tag_metadata(repo_name: str) -> dict[str, Any]:
+    status, data = _optional_json(f"{API_ROOT}/repos/{quote(OWNER)}/{quote(repo_name)}/tags?per_page=1")
+    if status != "detected":
+        return availability(status)
+    if not isinstance(data, list) or not data:
+        return availability("not_found")
+    tag = data[0]
+    return availability("detected", {"name": tag.get("name"), "sha": (tag.get("commit") or {}).get("sha")})
+
+
+def _ci_metadata(repo_name: str, default_branch: str) -> dict[str, Any]:
+    status, data = _optional_json(
+        f"{API_ROOT}/repos/{quote(OWNER)}/{quote(repo_name)}/actions/runs"
+        f"?branch={quote(default_branch)}&per_page=1"
+    )
+    if status != "detected" or not isinstance(data, dict):
+        return availability(status)
+    runs = data.get("workflow_runs")
+    if not isinstance(runs, list) or not runs:
+        return availability("not_found")
+    run = runs[0]
+    return availability(
+        "detected",
+        {
+            "name": run.get("name"),
+            "status": run.get("status"),
+            "conclusion": run.get("conclusion"),
+            "head_sha": run.get("head_sha"),
+            "updated_at": run.get("updated_at"),
+            "html_url": run.get("html_url"),
+        },
+    )
+
+
+def _tree(repo_name: str, default_branch: str) -> tuple[str, list[dict[str, Any]]]:
+    status, data = _optional_json(
+        f"{API_ROOT}/repos/{quote(OWNER)}/{quote(repo_name)}/git/trees/"
+        f"{quote(default_branch)}?recursive=1"
+    )
+    if status != "detected" or not isinstance(data, dict):
+        return status, []
+    tree = data.get("tree")
+    return ("detected", [item for item in tree if isinstance(item, dict)]) if isinstance(tree, list) else ("fetch_failed", [])
+
+
+def _repository_enrichment(repo_name: str, default_branch: str, language: str | None) -> dict[str, Any]:
+    tree_status, tree = _tree(repo_name, default_branch)
+    if tree_status != "detected":
+        return {
+            "version": availability(tree_status),
+            "readme": availability(tree_status),
+            "api": availability(tree_status),
+            "important_files": availability(tree_status),
+            "latest_release": _release_metadata(repo_name),
+            "latest_tag": _tag_metadata(repo_name),
+            "ci": _ci_metadata(repo_name, default_branch),
+        }
+
+    manifest = select_manifest(tree)
+    if manifest:
+        status, text = _content_text(repo_name, manifest, default_branch)
+        version = parse_manifest_version(manifest, text) if status == "detected" and text is not None else availability(status, source=manifest)
+    else:
+        version = availability("not_found")
+
+    readme_path = select_readme(tree)
+    if readme_path:
+        status, text = _content_text(repo_name, readme_path, default_branch)
+        readme = availability("detected", readme_digest(text), source=readme_path) if status == "detected" and text is not None else availability(status, source=readme_path)
+    else:
+        readme = availability("not_found")
+
+    if (language or "").lower() == "python":
+        source_paths = select_python_sources(tree, limit=3)
+        api_items = []
+        for path in source_paths:
+            status, text = _content_text(repo_name, path, default_branch)
+            api_items.append(
+                parse_python_api(text, source=path)
+                if status == "detected" and text is not None
+                else availability(status, source=path)
+            )
+        api = availability("detected", api_items) if api_items else availability("not_found")
+    else:
+        api = availability("unsupported")
+
+    return {
+        "version": version,
+        "readme": readme,
+        "api": api,
+        "important_files": availability("detected", important_file_shas(tree)),
+        "latest_release": _release_metadata(repo_name),
+        "latest_tag": _tag_metadata(repo_name),
+        "ci": _ci_metadata(repo_name, default_branch),
+    }
+
+
 def build_catalog() -> dict[str, Any]:
     generated_at = datetime.now(UTC).isoformat()
     repos = _paged(
@@ -105,9 +252,9 @@ def build_catalog() -> dict[str, Any]:
             "?state=all&sort=created&direction=desc"
         )
         pr_items = [_pr_metadata(pr) for pr in pulls]
-        # "latest" means the greatest GitHub PR number (latest-created PR in the
-        # repository's monotonic numbering), not the most recently updated PR.
         latest_pr = max(pr_items, key=lambda item: int(item["number"] or 0), default=None)
+        recently_updated_pr = max(pr_items, key=lambda item: item.get("updated_at") or "", default=None)
+        enrichment = _repository_enrichment(name, default_branch, repo.get("language"))
 
         repo_payload = {
             "name": name,
@@ -118,10 +265,12 @@ def build_catalog() -> dict[str, Any]:
             "default_branch": default_branch,
             "latest_commit": latest_commit,
             "latest_pr": latest_pr,
+            "latest_updated_pr": recently_updated_pr,
             "pr_count": len(pr_items),
             "pushed_at": repo.get("pushed_at"),
             "updated_at": repo.get("updated_at"),
-            "url": repo.get("html_url"),
+            "html_url": repo.get("html_url"),
+            **enrichment,
             "generated_at": generated_at,
         }
         (repo_dir / f"{name}.json").write_text(
@@ -150,9 +299,12 @@ def build_catalog() -> dict[str, Any]:
                 "sha": latest_commit.get("sha"),
                 "date": latest_commit.get("date"),
                 "latest_pr": latest_pr.get("number") if latest_pr else None,
-                "pr_updated_at": latest_pr.get("updated_at") if latest_pr else None,
+                "latest_updated_pr": recently_updated_pr.get("number") if recently_updated_pr else None,
                 "language": repo.get("language"),
                 "topics": repo.get("topics") or [],
+                "version": enrichment["version"].get("value"),
+                "release": (enrichment["latest_release"].get("value") or {}).get("tag_name"),
+                "ci": (enrichment["ci"].get("value") or {}).get("conclusion"),
             }
         )
 

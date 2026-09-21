@@ -138,7 +138,7 @@ def get_pull_request_metadata(repository: str, pr_number: int | str = "latest") 
         latest = repo.get("latest_pr")
         if not isinstance(latest, dict) or latest.get("number") is None:
             raise ValueError("repository has no pull requests")
-        return {**latest, "repository": repository, "source_url": repo["source_url"]}
+        return get_pull_request_metadata(repository, latest["number"])
 
     if isinstance(pr_number, bool):
         raise ValueError("pr_number must be a positive integer or 'latest'")

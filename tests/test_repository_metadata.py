@@ -58,6 +58,8 @@ class RepositoryMetadataTest(unittest.TestCase):
             {"type":"blob","path":"pyproject.toml","sha":"p","size":20},
             {"type":"blob","path":"main.py","sha":"m","size":30},
             {"type":"blob","path":"tests/test_main.py","sha":"t","size":40},
+            {"type":"blob","path":"src/tests/test_nested.py","sha":"nt","size":41},
+            {"type":"blob","path":"pkg/vendor/generated.py","sha":"v","size":42},
         ]
         self.assertEqual(select_manifest(tree), "pyproject.toml")
         from repository_metadata import select_readme

@@ -1,6 +1,7 @@
 import io
 import json
 import unittest
+from urllib.error import HTTPError
 from unittest.mock import patch
 
 from ironmate_mcp import (
@@ -87,11 +88,28 @@ class ValidateTest(unittest.TestCase):
         self.assertEqual(result["number"], 54)
         self.assertTrue(result["source_url"].endswith("/prs/markdown/54.json"))
 
-    def test_latest_pr_uses_repository_metadata(self):
+    def test_latest_pr_uses_exact_pr_payload_shape(self):
         latest = {"number":54,"head_sha":"abc","updated_at":"2026-09-21T00:00:00Z"}
-        with patch("ironmate_mcp.get_repository_metadata", return_value={"latest_pr":latest,"source_url":"repo"}):
+        pr_fixture = {
+            "repository":"markdown",
+            "number":54,
+            "head_sha":"abc",
+            "updated_at":"2026-09-21T00:00:00Z",
+            "generated_at":"2026-09-21T00:01:00Z",
+            "html_url":"https://github.com/example/markdown/pull/54",
+        }
+        with patch("ironmate_mcp.get_repository_metadata", return_value={"latest_pr":latest}),              patch("ironmate_mcp.urlopen", return_value=io.BytesIO(json.dumps(pr_fixture).encode())):
             result = get_pull_request_metadata("markdown", "latest")
         self.assertEqual(result["number"], 54)
+        self.assertEqual(result["generated_at"], "2026-09-21T00:01:00Z")
+        self.assertEqual(result["html_url"], "https://github.com/example/markdown/pull/54")
+        self.assertTrue(result["source_url"].endswith("/prs/markdown/54.json"))
+
+    def test_missing_static_item_is_normalized(self):
+        error = HTTPError("https://example.invalid/missing.json", 404, "Not Found", None, None)
+        with patch("ironmate_mcp.urlopen", side_effect=error):
+            with self.assertRaisesRegex(ValueError, "static catalog item not found"):
+                get_repository_metadata("missing")
 
 
 if __name__ == "__main__":

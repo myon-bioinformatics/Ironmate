@@ -5,6 +5,7 @@ on:
     paths:
       - "docs/**"
       - "github_catalog.py"
+      - "repository_metadata.py"
       - "ironmate_mcp.py"
       - ".github/workflows/deploy-pages.yml"
   schedule:

@@ -7,6 +7,9 @@ import re
 from typing import Any
 
 _STATUS = {"detected", "not_found", "unsupported", "fetch_failed", "parse_failed"}
+README_MAX_HEADINGS = 8
+README_MAX_EXCERPT = 480
+IMPORTANT_FILES_LIMIT = 12
 
 
 def availability(status: str, value: Any = None, *, source: str | None = None) -> dict[str, Any]:
@@ -76,7 +79,7 @@ def parse_python_api(text: str, *, source: str) -> dict[str, Any]:
     return availability("detected", value, source=source)
 
 
-def readme_digest(text: str, *, max_headings: int = 8, max_excerpt: int = 480) -> dict[str, Any]:
+def readme_digest(\n    text: str,\n    *,\n    max_headings: int = README_MAX_HEADINGS,\n    max_excerpt: int = README_MAX_EXCERPT,\n) -> dict[str, Any]:
     """Produce a deterministic, non-LLM README digest."""
     headings: list[str] = []
     prose: list[str] = []
@@ -113,9 +116,10 @@ def select_manifest(tree: list[dict[str, Any]]) -> str | None:
 
 def select_readme(tree: list[dict[str, Any]]) -> str | None:
     files = [str(item.get("path")) for item in tree if item.get("type") == "blob" and "/" not in str(item.get("path"))]
-    for candidate in ("README.md", "README.rst", "README.txt", "README"):
-        if candidate in files:
-            return candidate
+    by_lower = {path.lower(): path for path in files}
+    for candidate in ("readme.md", "readme.rst", "readme.txt", "readme"):
+        if candidate in by_lower:
+            return by_lower[candidate]
     return next((path for path in files if path.lower().startswith("readme")), None)
 
 
@@ -132,10 +136,9 @@ def select_python_sources(tree: list[dict[str, Any]], limit: int = 3) -> list[st
     return [path for _, _, path in paths[:limit]]
 
 
-def important_file_shas(tree: list[dict[str, Any]], limit: int = 12) -> list[dict[str, Any]]:
+def important_file_shas(\n    tree: list[dict[str, Any]], limit: int = IMPORTANT_FILES_LIMIT\n) -> list[dict[str, Any]]:
     """Return stable identifiers for useful files without fetching file contents."""
-    preferred_names = {
-        "readme.md", "readme.rst", "pyproject.toml", "package.json", "pubspec.yaml",
+    # Rank manifests/README/container entry points first, then source files.\n    preferred_names = {\n        "readme.md", "readme.rst", "pyproject.toml", "package.json", "pubspec.yaml",
         "cargo.toml", "setup.cfg", "dockerfile", "compose.yaml", "compose.yml",
     }
     ranked: list[tuple[int, int, str, dict[str, Any]]] = []

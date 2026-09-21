@@ -9,7 +9,7 @@ from urllib.error import HTTPError
 from urllib.parse import quote
 from urllib.request import urlopen
 
-PORTFOLIO_PORTFOLIO_SOURCE_URL = "https://myon-bioinformatics.github.io/api/repos.json"
+PORTFOLIO_SOURCE_URL = "https://myon-bioinformatics.github.io/api/repos.json"
 CATALOG_BASE_URL = "https://myon-bioinformatics.github.io/Ironmate/api"
 FILTER_FIELDS = ("name", "description", "language", "topics", "readmeSummary")
 _REPOSITORY_RE = re.compile(r"^[A-Za-z0-9_.-]+$")

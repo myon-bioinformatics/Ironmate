@@ -54,15 +54,17 @@ class RepositoryMetadataTest(unittest.TestCase):
 
     def test_selection_and_file_shas(self):
         tree = [
-            {"type":"blob","path":"README.md","sha":"r","size":10},
+            {"type":"blob","path":"README.MD","sha":"r","size":10},
             {"type":"blob","path":"pyproject.toml","sha":"p","size":20},
             {"type":"blob","path":"main.py","sha":"m","size":30},
             {"type":"blob","path":"tests/test_main.py","sha":"t","size":40},
         ]
         self.assertEqual(select_manifest(tree), "pyproject.toml")
+        from repository_metadata import select_readme
+        self.assertEqual(select_readme(tree), "README.MD")
         self.assertEqual(select_python_sources(tree), ["main.py"])
         files = important_file_shas(tree)
-        self.assertEqual(files[0]["path"], "README.md")
+        self.assertEqual(files[0]["path"], "README.MD")
         self.assertTrue(any(item["path"] == "pyproject.toml" for item in files))
 
 

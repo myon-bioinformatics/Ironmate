@@ -8,6 +8,7 @@ on:
       - "ironmate_mcp.py"
       - ".github/workflows/deploy-pages.yml"
   schedule:
+    # GitHub Actions cron is UTC: minute 17 of every UTC hour.
     - cron: "17 * * * *"
   workflow_dispatch:
 permissions:

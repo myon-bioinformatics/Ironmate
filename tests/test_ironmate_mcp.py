@@ -98,8 +98,12 @@ class ValidateTest(unittest.TestCase):
             "generated_at":"2026-09-21T00:01:00Z",
             "html_url":"https://github.com/example/markdown/pull/54",
         }
-        with patch("ironmate_mcp.get_repository_metadata", return_value={"latest_pr":latest}),              patch("ironmate_mcp.urlopen", return_value=io.BytesIO(json.dumps(pr_fixture).encode())):
-            result = get_pull_request_metadata("markdown", "latest")
+        with patch("ironmate_mcp.get_repository_metadata", return_value={"latest_pr":latest}):
+            with patch(
+                "ironmate_mcp.urlopen",
+                return_value=io.BytesIO(json.dumps(pr_fixture).encode()),
+            ):
+                result = get_pull_request_metadata("markdown", "latest")
         self.assertEqual(result["number"], 54)
         self.assertEqual(result["generated_at"], "2026-09-21T00:01:00Z")
         self.assertEqual(result["html_url"], "https://github.com/example/markdown/pull/54")

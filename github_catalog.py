@@ -18,6 +18,7 @@ OWNER = os.environ.get("IRONMATE_GITHUB_OWNER", "myon-bioinformatics")
 OUTPUT_DIR = Path(os.environ.get("IRONMATE_CATALOG_DIR", "docs/api"))
 API_ROOT = "https://api.github.com"
 TOKEN = os.environ.get("GITHUB_TOKEN", "")
+RATE_LIMIT = {"remaining": None, "limit": None, "reset": None}
 
 
 def _request_json(url: str) -> Any:
@@ -29,6 +30,9 @@ def _request_json(url: str) -> Any:
     if TOKEN:
         headers["Authorization"] = f"Bearer {TOKEN}"
     with urlopen(Request(url, headers=headers), timeout=30) as response:
+        RATE_LIMIT["remaining"] = response.headers.get("X-RateLimit-Remaining")
+        RATE_LIMIT["limit"] = response.headers.get("X-RateLimit-Limit")
+        RATE_LIMIT["reset"] = response.headers.get("X-RateLimit-Reset")
         return json.load(response)
 
 
@@ -101,6 +105,8 @@ def build_catalog() -> dict[str, Any]:
             "?state=all&sort=created&direction=desc"
         )
         pr_items = [_pr_metadata(pr) for pr in pulls]
+        # "latest" means the greatest GitHub PR number (latest-created PR in the
+        # repository's monotonic numbering), not the most recently updated PR.
         latest_pr = max(pr_items, key=lambda item: int(item["number"] or 0), default=None)
 
         repo_payload = {
@@ -171,6 +177,7 @@ if __name__ == "__main__":
                 "owner": result["owner"],
                 "generated_at": result["generated_at"],
                 "repository_count": result["repository_count"],
+                "rate_limit": RATE_LIMIT,
             },
             ensure_ascii=False,
         )

@@ -26,6 +26,7 @@ OWNER = os.environ.get("IRONMATE_GITHUB_OWNER", "myon-bioinformatics")
 OUTPUT_DIR = Path(os.environ.get("IRONMATE_CATALOG_DIR", "docs/api"))
 API_ROOT = "https://api.github.com"
 TOKEN = os.environ.get("GITHUB_TOKEN", "")
+PYTHON_SOURCE_LIMIT = max(1, int(os.environ.get("IRONMATE_PYTHON_SOURCE_LIMIT", "3")))
 RATE_LIMIT = {"remaining": None, "limit": None, "reset": None}
 
 
@@ -143,6 +144,7 @@ def _tag_metadata(repo_name: str) -> dict[str, Any]:
 
 
 def _ci_metadata(repo_name: str, default_branch: str) -> dict[str, Any]:
+    """Return only the latest Actions workflow run on the default branch."""
     status, data = _optional_json(
         f"{API_ROOT}/repos/{quote(OWNER)}/{quote(repo_name)}/actions/runs"
         f"?branch={quote(default_branch)}&per_page=1"
@@ -205,7 +207,7 @@ def _repository_enrichment(repo_name: str, default_branch: str, language: str | 
         readme = availability("not_found")
 
     if (language or "").lower() == "python":
-        source_paths = select_python_sources(tree, limit=3)
+        source_paths = select_python_sources(tree, limit=PYTHON_SOURCE_LIMIT)
         api_items = []
         for path in source_paths:
             status, text = _content_text(repo_name, path, default_branch)
@@ -252,9 +254,25 @@ def build_catalog() -> dict[str, Any]:
             "?state=all&sort=created&direction=desc"
         )
         pr_items = [_pr_metadata(pr) for pr in pulls]
+        # latest_pr is latest-created (greatest PR number); latest_updated_pr is
+        # independently selected by updated_at and can change after comments/reviews.
         latest_pr = max(pr_items, key=lambda item: int(item["number"] or 0), default=None)
         recently_updated_pr = max(pr_items, key=lambda item: item.get("updated_at") or "", default=None)
-        enrichment = _repository_enrichment(name, default_branch, repo.get("language"))
+        try:
+            enrichment = _repository_enrichment(name, default_branch, repo.get("language"))
+        except Exception as exc:
+            print(
+                json.dumps(
+                    {"repository": name, "metadata_enrichment": "fetch_failed", "error_type": type(exc).__name__}
+                )
+            )
+            enrichment = {
+                field: availability("fetch_failed")
+                for field in (
+                    "version", "readme", "api", "important_files",
+                    "latest_release", "latest_tag", "ci",
+                )
+            }
 
         repo_payload = {
             "name": name,

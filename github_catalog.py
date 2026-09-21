@@ -78,7 +78,7 @@ def _pr_metadata(pr: dict[str, Any]) -> dict[str, Any]:
         "updated_at": pr.get("updated_at"),
         "closed_at": pr.get("closed_at"),
         "merged_at": pr.get("merged_at"),
-        "url": pr.get("html_url"),
+        "html_url": pr.get("html_url"),
     }
 
 

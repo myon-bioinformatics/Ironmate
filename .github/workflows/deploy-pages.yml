@@ -2,7 +2,14 @@ name: Deploy GitHub Pages
 on:
   push:
     branches: [main]
-    paths: ["docs/**", ".github/workflows/deploy-pages.yml"]
+    paths:
+      - "docs/**"
+      - "github_catalog.py"
+      - "ironmate_mcp.py"
+      - ".github/workflows/deploy-pages.yml"
+  schedule:
+    # GitHub Actions cron is UTC: minute 17 of every UTC hour.
+    - cron: "17 * * * *"
   workflow_dispatch:
 permissions:
   contents: read
@@ -19,6 +26,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Build static repository metadata catalog
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python github_catalog.py
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

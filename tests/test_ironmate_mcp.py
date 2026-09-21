@@ -8,6 +8,7 @@ from ironmate_mcp import (
     _repository_name,
     _validate,
     get_pull_request_metadata,
+    get_repository_exports,
     get_repository_metadata,
     list_portfolio_repositories,
     search_repository_metadata,
@@ -74,12 +75,49 @@ class ValidateTest(unittest.TestCase):
             "pr_count":54,
             "pushed_at":"2026-09-21T00:00:00Z",
             "generated_at":"2026-09-21T00:01:00Z",
+            "description":"stdlib metadata gateway",
+            "language":"Python",
+            "topics":["mcp"],
+            "latest_updated_pr":{"number":53},
+            "version":{"status":"detected","value":"1.2.3","source":"pyproject.toml"},
+            "latest_release":{"status":"not_found"},
+            "latest_tag":{"status":"detected","value":{"name":"v1.2.3","sha":"tagsha"}},
+            "ci":{"status":"detected","value":{"conclusion":"success"}},
+            "readme":{"status":"detected","value":{"headings":["Ironmate"],"excerpt":"hello"}},
+            "api":{"status":"detected","value":[]},
+            "important_files":{"status":"detected","value":[{"path":"README.md","sha":"sha1"}]},
             "extra":"not returned",
         }
         with patch("ironmate_mcp.urlopen", return_value=io.BytesIO(json.dumps(fixture).encode())):
             result = get_repository_metadata("markdown")
         self.assertNotIn("extra", result)
         self.assertEqual(result["latest_pr"]["number"], 54)
+        self.assertEqual(result["version"]["value"], "1.2.3")
+        self.assertEqual(result["availability"]["ci"], "detected")
+        self.assertEqual(result["readme"]["excerpt"], "hello")
+
+    def test_repository_exports_is_compact(self):
+        fixture = {
+            "generated_at":"2026-09-21T00:01:00Z",
+            "api":{
+                "status":"detected",
+                "value":[
+                    {"status":"detected","source":"markdown.py","value":{"exports":["one","two"],"functions":["one"],"classes":[]}}
+                ],
+            },
+        }
+        with patch("ironmate_mcp.urlopen", return_value=io.BytesIO(json.dumps(fixture).encode())):
+            result = get_repository_exports("markdown", 1)
+        self.assertEqual(result["status"], "detected")
+        self.assertEqual(result["matched_count"], 2)
+        self.assertEqual(result["items"], [{"name":"one","source":"markdown.py","kind":"export"}])
+
+    def test_repository_exports_unsupported(self):
+        fixture = {"api":{"status":"unsupported"}}
+        with patch("ironmate_mcp.urlopen", return_value=io.BytesIO(json.dumps(fixture).encode())):
+            result = get_repository_exports("flutter_navigation_basic")
+        self.assertEqual(result["status"], "unsupported")
+        self.assertEqual(result["items"], [])
 
     def test_specific_pr_metadata(self):
         fixture = {"repository":"markdown","number":54,"head_sha":"abc","updated_at":"2026-09-21T00:00:00Z"}

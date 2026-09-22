@@ -6,6 +6,7 @@ on:
       - "ironmate_mcp.py"
       - "github_catalog.py"
       - "repository_metadata.py"
+      - "docs/mcp-stub.html"
       - "tests/**"
       - "requirements-mcp.txt"
       - ".github/workflows/mcp-tests.yml"
@@ -15,6 +16,7 @@ on:
       - "ironmate_mcp.py"
       - "github_catalog.py"
       - "repository_metadata.py"
+      - "docs/mcp-stub.html"
       - "tests/**"
       - "requirements-mcp.txt"
       - ".github/workflows/mcp-tests.yml"
@@ -33,4 +35,4 @@ jobs:
       - run: python -m pip install --upgrade pip
       - run: python -m pip install -r requirements-mcp.txt
       - run: python -m py_compile ironmate_mcp.py github_catalog.py repository_metadata.py
-      - run: python -m unittest tests/test_ironmate_mcp.py tests/test_repository_metadata.py
+      - run: python -m unittest tests/test_ironmate_mcp.py tests/test_repository_metadata.py tests/test_mcp_stub_page.py

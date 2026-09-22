@@ -172,8 +172,8 @@ def execute_allowed_tool(tool_json: Dict[str, Any], llm=None) -> Tuple[str, Dict
     name = normalized["name"]
     prompt = normalized["prompt"]
 
-    from ascii_art import get_template, list_templates, render_prompt_ascii
-    from markdown_market import extract_sections, read_markdown, save_markdown
+    from vendor.ascii_artist import get_template, list_templates, render_prompt_ascii
+    from vendor.markdown import extract_sections, read_markdown, save_markdown
 
     if tool == "save_markdown":
         if not filepath:

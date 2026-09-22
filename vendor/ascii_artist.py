@@ -1,4 +1,4 @@
-# ascii_art.py
+# ascii_artist.py
 # __all__: 6
 
 __all__ = [
@@ -12,7 +12,14 @@ __all__ = [
 
 import re
 
-from template_store import list_ascii_templates, load_ascii_template, load_prompt_template
+_ASCII_TEMPLATES = {
+    "icon_ironmate": "   _______\n  /       \\\n | () | () |\n |   ___   |\n  \\_______/\n  [ IRONMATE ]\n",
+    "ironmate": "  _____                                _\n |_   _|  _ __    ___    _ __   _ __  | |__    __ _   ___   ___\n   | |   | '__|  / _ \\  | '_ \\ | '_ \\ | '_ \\  / _` | / __| / __|\n   | |   | |    | (_) | | | | || | | || | | || (_| || (__ | (__\n   |_|   |_|     \\___/  |_| |_||_| |_||_| |_| \\__,_| \\___| \\___|\n  IRONMATE - Your J.A.R.V.I.S-inspired assistant\n",
+    "welcome": " __        __   _\n \\ \\      / /__| | ___ ___  _ __ ___   ___\n  \\ \\ /\\ / / _ \\ |/ __/ _ \\| '_ ` _ \\ / _ \\\n   \\ V  V /  __/ | (_| (_) | | | | | |  __/\n    \\_/\\_/ \\___|_|\\___\\___/|_| |_| |_|\\___|\n  to IRONMATE!\n",
+}
+
+_DEFAULT_ASCII_PROMPT = "Generate compact ASCII art that represents the user's request."
+_DEFAULT_MAX_WIDTH = 60
 
 
 def _sanitize_ascii_output(text: str) -> str:
@@ -101,21 +108,19 @@ def generate_diamond(half_height: int, char: str = "*") -> str:
 
 
 def get_template(name: str) -> str:
-    """Load a predefined ASCII art template from templates_ascii/<name>.txt."""
-    return load_ascii_template(name.strip().lower())
+    """Return a built-in ASCII art template by name."""
+    return _ASCII_TEMPLATES.get(name.strip().lower(), "")
 
 
 def list_templates() -> list[str]:
-    """Return a sorted list of available ASCII template names."""
-    return list_ascii_templates()
+    """Return the sorted built-in ASCII template names."""
+    return sorted(_ASCII_TEMPLATES)
 
 
 def render_prompt_ascii(prompt: str, llm) -> str:
-    """Generate ASCII art from a free-form prompt via the light LLM."""
-    prompt_data = load_prompt_template("ascii_prompt")
-    template = prompt_data.get("ascii_basic", {})
-    base_prompt = str(template.get("prompt", "")).strip()
-    max_width = int(template.get("max_width", 60))
+    """Generate ASCII art from a free-form prompt via a compatible LLM object."""
+    base_prompt = _DEFAULT_ASCII_PROMPT
+    max_width = _DEFAULT_MAX_WIDTH
 
     user_prompt = prompt.strip()
     final_prompt = (

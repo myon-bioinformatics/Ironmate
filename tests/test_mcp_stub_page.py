@@ -21,7 +21,7 @@ class McpStubPageTest(unittest.TestCase):
 
     def test_repository_catalog_fetch_avoids_stale_cache(self):
         self.assertIn('cache:"no-store"', self.html)
-        self.assertIn("?t=\1790083721643", self.html)
+        self.assertIn("?t=${Date.now()}", self.html)
 
     def test_query_searches_public_repository_fields(self):
         for field in ("name", "description", "language", "topics", "readmeSummary"):

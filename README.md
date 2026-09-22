@@ -206,9 +206,20 @@ This avoids repeated model loading and is more reliable than routing every reque
 ├─ i_am_ironmate.py
 ├─ llm_loader.py
 ├─ llm_launchpad.py
-├─ ascii_art.py
-├─ markdown_market.py
+├─ vendor/
+│  ├─ ascii_artist.py
+│  └─ markdown.py
 ├─ template_store.py
 ├─ templates_ascii/
 └─ templates_prompt/
 ```
+
+
+## Vendored utilities
+
+Ironmate keeps pinned source snapshots under `vendor/` instead of treating these helpers as runtime package dependencies.
+
+- `vendor/markdown.py` is sourced from [`myon-bioinformatics/markdown`](https://github.com/myon-bioinformatics/markdown).
+- `vendor/ascii_artist.py` is sourced from [`myon-bioinformatics/ascii_artist`](https://github.com/myon-bioinformatics/ascii_artist).
+
+The sibling repositories are the upstream sources; changes should be developed there first and then intentionally refreshed in Ironmate.

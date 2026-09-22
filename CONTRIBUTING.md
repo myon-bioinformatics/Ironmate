@@ -57,8 +57,8 @@ File names consist of **two English words joined by an underscore**.
 Examples:
 
 ```
-ascii_art.py
-markdown_market.py
+ascii_artist.py
+markdown.py
 gradio_galleria.py
 file_finder.py
 llm_launchpad.py
@@ -294,8 +294,8 @@ Each module should have **a clear single responsibility**.
 Examples:
 
 ```
-ascii_art.py        -> ASCII art generation
-markdown_market.py  -> Markdown utilities
+vendor/ascii_artist.py -> vendored ASCII art utilities
+vendor/markdown.py     -> vendored Markdown utilities
 file_finder.py      -> file discovery
 gradio_galleria.py  -> UI layer
 ```
@@ -347,3 +347,8 @@ This repository prioritizes:
 - readable imports and variables
 
 The goal is to keep every module **easy to understand and safe to modify**.
+
+
+### 15. Vendored Module Exception
+
+Files under `vendor/` are snapshots maintained in sibling upstream repositories and are exempt from the two-English-words filename rule. Keep their upstream filenames unchanged (`vendor/markdown.py`, `vendor/ascii_artist.py`) so updates remain easy to audit and diff.

@@ -6,8 +6,8 @@ from __future__ import annotations
 import argparse, json, sys
 from pathlib import Path
 
-from ascii_art import get_template, render_prompt_ascii
-from markdown_market import save_markdown
+from vendor.ascii_artist import get_template, render_prompt_ascii
+from vendor.markdown import save_markdown
 from llm_launchpad import DEFAULT_LIGHT_MODEL, DEFAULT_TOOL_MODEL, TransformersDualLLM, default_tool_schema, execute_allowed_tool
 
 __all__ = ["build_parser", "main"]

@@ -4,6 +4,9 @@ on:
     branches: [main]
     paths:
       - "docs/**"
+      - "vendor/markdown.py"
+      - "vendor/ascii_artist.py"
+      - "scripts/build_web_ui_consumer_examples.py"
       - "github_catalog.py"
       - "repository_metadata.py"
       - "ironmate_mcp.py"
@@ -31,6 +34,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: python github_catalog.py
+      - name: Build web-ui v1 consumer examples
+        run: python scripts/build_web_ui_consumer_examples.py
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

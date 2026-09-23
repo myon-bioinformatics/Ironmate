@@ -219,8 +219,8 @@ This avoids repeated model loading and is more reliable than routing every reque
 
 Ironmate keeps pinned source snapshots under `vendor/` instead of treating these helpers as runtime package dependencies.
 
-- `vendor/markdown.py` is sourced from [`myon-bioinformatics/markdown`](https://github.com/myon-bioinformatics/markdown).
-- `vendor/ascii_artist.py` is sourced from [`myon-bioinformatics/ascii_artist`](https://github.com/myon-bioinformatics/ascii_artist).
+- `vendor/markdown.py` is sourced from [`myon-bioinformatics/markdown`](https://github.com/myon-bioinformatics/markdown), currently pinned to `83a325ce`.
+- `vendor/ascii_artist.py` is sourced from [`myon-bioinformatics/ascii_artist`](https://github.com/myon-bioinformatics/ascii_artist), currently pinned to `7c21bacf`.
 
 The sibling repositories are the upstream sources; changes should be developed there first and then intentionally refreshed in Ironmate.
 
@@ -233,7 +233,7 @@ The static MCP Stub Explorer at `docs/mcp-stub.html` consumes the shared
 `myon-bioinformatics/web-ui` semantic contract and the Modern theme.
 
 Presentation is supplied by pinned `web-ui` CSS at commit
-`77ae752599a59e50b6595233f6162a38ebc572b7`. Ironmate continues to own
+`dfdbb26a76f71b147483f212ec49ca677384b936`. Ironmate continues to own
 repository-search semantics, evidence export, history, and MCP-specific behavior.
 
 This migration is presentation-only: the existing MCP Stub search, history,
@@ -248,3 +248,35 @@ The screenshots are uploaded as the `ironmate-mcp-stub-screenshots` artifact.
 Open the relevant **Test MCP stub** Actions run and use its Artifacts section to
 inspect the desktop/mobile evidence. Run artifacts are evidence for that commit;
 they are not a permanent release asset.
+
+
+---
+
+## web-ui v1 consumer integration
+
+Ironmate now exercises the frozen web-ui v1 contract through both vendored
+sibling libraries rather than only through hand-written Stub markup.
+
+`scripts/build_web_ui_consumer_examples.py` composes:
+
+- `vendor/markdown.py::markdown_to_web_ui_v1()`
+- `vendor/ascii_artist.py::to_web_ui_v1_html()`
+- pinned web-ui CSS at `dfdbb26a`
+
+The libraries emit semantic HTML only. Ironmate remains responsible for loading
+the pinned presentation assets, which keeps the upstream libraries stdlib-only
+and dependency-free.
+
+GitHub Pages generates these integration examples at deploy time:
+
+- `/consumer-v1/index.html`
+- `/consumer-v1/markdown.html`
+- `/consumer-v1/ascii.html`
+
+CI compiles the vendored modules and builder, validates the semantic classes and
+text escaping, and captures deterministic Chromium evidence in the
+`ironmate-web-ui-consumer-screenshots` artifact.
+
+This also records the exact upstream revisions in generated HTML comments, so a
+render can be traced back to the web-ui, markdown, and ascii_artist commits that
+produced it.

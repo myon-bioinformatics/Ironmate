@@ -1,6 +1,9 @@
 """Integration checks for pinned vendored sibling utilities."""
 
+import subprocess
+import sys
 import unittest
+from pathlib import Path
 
 from scripts.build_web_ui_consumer_examples import (
     ASCII_ARTIST_SHA,
@@ -10,6 +13,8 @@ from scripts.build_web_ui_consumer_examples import (
 )
 from vendor import ascii_artist, markdown
 
+
+ROOT = Path(__file__).resolve().parents[1]
 
 class VendorModuleIntegrationTest(unittest.TestCase):
     def test_vendor_ascii_artist_smoke(self):
@@ -25,6 +30,17 @@ class VendorModuleIntegrationTest(unittest.TestCase):
         )
         self.assertIn('class="ui-page"', html)
         self.assertIn('class="ui-panel"', html)
+
+    def test_builder_direct_execution_resolves_vendor(self):
+        result = subprocess.run(
+            [sys.executable, "scripts/build_web_ui_consumer_examples.py"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue((ROOT / "docs" / "consumer-v1" / "index.html").exists())
 
     def test_generated_consumer_examples_use_v1_contract_and_pins(self):
         documents = build_documents()

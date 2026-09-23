@@ -76,7 +76,7 @@ jobs:
 
       - name: Capture desktop screenshot
         run: |
-          npx --yes playwright@${PLAYWRIGHT_VERSION} screenshot \
+          npx --yes "playwright@${PLAYWRIGHT_VERSION}" screenshot \
             --browser="${PLAYWRIGHT_BROWSER}" \
             --viewport-size="1440,900" \
             http://127.0.0.1:8000/docs/mcp-stub.html \
@@ -84,7 +84,7 @@ jobs:
 
       - name: Capture mobile screenshot
         run: |
-          npx --yes playwright@${PLAYWRIGHT_VERSION} screenshot \
+          npx --yes "playwright@${PLAYWRIGHT_VERSION}" screenshot \
             --browser="${PLAYWRIGHT_BROWSER}" \
             --viewport-size="390,844" \
             http://127.0.0.1:8000/docs/mcp-stub.html \

@@ -82,6 +82,8 @@ class McpStubPageTest(unittest.TestCase):
         ):
             self.assertIn(class_name, self.html)
         self.assertIn('<aside aria-label="Supporting information">', self.html)
+        self.assertIn('<div id="stats" class="ui-grid"></div>', self.html)
+        self.assertIn("function renderStats(items)", self.html)
         self.assertLess(self.html.index('class="ui-panel stub-result"'), self.html.index('<aside aria-label="Supporting information">'))
 
     def test_repository_catalog_fetch_avoids_stale_cache(self):

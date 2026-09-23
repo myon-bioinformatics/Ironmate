@@ -15,7 +15,21 @@ if str(ROOT) not in sys.path:
     # Add the root explicitly before importing repository-local vendored modules.
     sys.path.insert(0, str(ROOT))
 
-from vendor import ascii_artist, markdown
+import importlib.util
+
+def _load_vendor(name: str):
+    """Load a vendored module by absolute file path, independent of cwd/sys.path."""
+    path = ROOT / "vendor" / f"{name}.py"
+    spec = importlib.util.spec_from_file_location(f"ironmate_vendor_{name}", path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load vendored module: {path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+ascii_artist = _load_vendor("ascii_artist")
+markdown = _load_vendor("markdown")
 
 OUTPUT_DIR = ROOT / "docs" / "consumer-v1"
 

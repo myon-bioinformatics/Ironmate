@@ -40,6 +40,9 @@ jobs:
 
   screenshot:
     runs-on: ubuntu-latest
+    env:
+      PLAYWRIGHT_VERSION: "1.55.0"
+      PLAYWRIGHT_BROWSER: "chromium"
     steps:
       - uses: actions/checkout@v4
 
@@ -48,7 +51,7 @@ jobs:
           node-version: "22"
 
       - name: Install Chromium
-        run: npx --yes playwright@1.55.0 install --with-deps chromium
+        run: npx --yes playwright@${PLAYWRIGHT_VERSION} install --with-deps chromium
 
       - name: Serve repository
         run: python3 -m http.server 8000 > /tmp/ironmate-http.log 2>&1 &
@@ -73,19 +76,23 @@ jobs:
 
       - name: Capture desktop screenshot
         run: |
-          npx --yes playwright@1.55.0 screenshot \
-            --browser=chromium \
+          npx --yes playwright@${PLAYWRIGHT_VERSION} screenshot \
+            --browser=${PLAYWRIGHT_BROWSER} \
             --viewport-size="1440,900" \
             http://127.0.0.1:8000/docs/mcp-stub.html \
             ironmate-mcp-stub-desktop-1440x900.png
 
       - name: Capture mobile screenshot
         run: |
-          npx --yes playwright@1.55.0 screenshot \
-            --browser=chromium \
+          npx --yes playwright@${PLAYWRIGHT_VERSION} screenshot \
+            --browser=${PLAYWRIGHT_BROWSER} \
             --viewport-size="390,844" \
             http://127.0.0.1:8000/docs/mcp-stub.html \
             ironmate-mcp-stub-mobile-390x844.png
+
+      - name: Show HTTP server log on failure
+        if: failure()
+        run: tail -n 20 /tmp/ironmate-http.log || true
 
       - uses: actions/upload-artifact@v4
         with:

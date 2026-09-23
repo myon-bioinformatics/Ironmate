@@ -19,6 +19,15 @@ class McpStubPageTest(unittest.TestCase):
             self.html,
         )
 
+    def test_uses_pinned_web_ui_contract(self):
+        self.assertNotIn("<style>", self.html)
+        self.assertIn('data-ui-theme="modern"', self.html)
+        self.assertIn("web-ui@77ae752599a59e50b6595233f6162a38ebc572b7/css/tokens.css", self.html)
+        for stylesheet in ("base.css", "components.css", "stub.css", "themes/modern.css"):
+            self.assertIn(stylesheet, self.html)
+        for class_name in ("ui-page", "ui-panel", "ui-grid", "ui-card", "ui-button", "ui-input"):
+            self.assertIn(class_name, self.html)
+
     def test_repository_catalog_fetch_avoids_stale_cache(self):
         self.assertIn('cache:"no-store"', self.html)
         self.assertIn("?t=${Date.now()}", self.html)

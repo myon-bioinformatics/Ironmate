@@ -7,10 +7,16 @@ web-ui assets and the published examples.
 from __future__ import annotations
 
 from pathlib import Path
+import sys
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    # Direct execution sets sys.path[0] to scripts/, not the repository root.
+    # Add the root explicitly before importing repository-local vendored modules.
+    sys.path.insert(0, str(ROOT))
 
 from vendor import ascii_artist, markdown
 
-ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_DIR = ROOT / "docs" / "consumer-v1"
 
 WEB_UI_SHA = "dfdbb26a76f71b147483f212ec49ca677384b936"

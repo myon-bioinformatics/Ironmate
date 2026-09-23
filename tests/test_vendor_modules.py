@@ -40,7 +40,8 @@ class VendorModuleIntegrationTest(unittest.TestCase):
             check=False,
         )
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertTrue((ROOT / "docs" / "consumer-v1" / "index.html").exists())
+        for name in ("index.html", "markdown.html", "ascii.html"):
+            self.assertTrue((ROOT / "docs" / "consumer-v1" / name).exists(), name)
 
     def test_generated_consumer_examples_use_v1_contract_and_pins(self):
         documents = build_documents()
@@ -50,9 +51,23 @@ class VendorModuleIntegrationTest(unittest.TestCase):
             self.assertIn('class="ui-page"', html, name)
             self.assertIn(f"web-ui@{WEB_UI_SHA}", html, name)
 
-        self.assertIn(MARKDOWN_SHA, documents["markdown.html"])
-        self.assertIn(ASCII_ARTIST_SHA, documents["ascii.html"])
+        provenance = (
+            f"web-ui={WEB_UI_SHA} "
+            f"markdown={MARKDOWN_SHA} ascii_artist={ASCII_ARTIST_SHA}"
+        )
+        self.assertIn(provenance, documents["markdown.html"])
+        self.assertIn(provenance, documents["ascii.html"])
         self.assertIn('class="ui-output"', documents["ascii.html"])
+
+        index = documents["index.html"]
+        self.assertIn('class="ui-grid"', index)
+        self.assertGreaterEqual(index.count('class="ui-card"'), 2)
+        self.assertIn('href="./markdown.html"', index)
+        self.assertIn('href="./ascii.html"', index)
+
+    def test_builder_propagates_invalid_theme(self):
+        with self.assertRaises(ValueError):
+            build_documents(theme="unknown")
 
     def test_generated_consumer_examples_remain_text_safe(self):
         markdown_html = markdown.markdown_to_web_ui_v1(

@@ -36,3 +36,59 @@ jobs:
       - run: python -m pip install -r requirements-mcp.txt
       - run: python -m py_compile ironmate_mcp.py github_catalog.py repository_metadata.py
       - run: python -m unittest tests/test_ironmate_mcp.py tests/test_repository_metadata.py tests/test_mcp_stub_page.py
+
+
+  screenshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Chromium
+        run: npx --yes playwright@1.55.0 install --with-deps chromium
+
+      - name: Serve repository
+        run: python3 -m http.server 8000 > /tmp/ironmate-http.log 2>&1 &
+
+      - name: Wait for MCP Stub
+        run: |
+          python3 - <<'PY'
+          import time
+          import urllib.request
+
+          url = "http://127.0.0.1:8000/docs/mcp-stub.html"
+          for attempt in range(50):
+              try:
+                  with urllib.request.urlopen(url, timeout=1) as response:
+                      if response.status == 200:
+                          break
+              except Exception:
+                  if attempt == 49:
+                      raise
+                  time.sleep(0.1)
+          PY
+
+      - name: Capture desktop screenshot
+        run: |
+          npx --yes playwright@1.55.0 screenshot \
+            --browser=chromium \
+            --viewport-size="1440,900" \
+            http://127.0.0.1:8000/docs/mcp-stub.html \
+            ironmate-mcp-stub-desktop-1440x900.png
+
+      - name: Capture mobile screenshot
+        run: |
+          npx --yes playwright@1.55.0 screenshot \
+            --browser=chromium \
+            --viewport-size="390,844" \
+            http://127.0.0.1:8000/docs/mcp-stub.html \
+            ironmate-mcp-stub-mobile-390x844.png
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ironmate-mcp-stub-screenshots
+          path: ironmate-mcp-stub-*.png
+          retention-days: 14

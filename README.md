@@ -239,6 +239,10 @@ repository-search semantics, evidence export, history, and MCP-specific behavior
 This migration is presentation-only: the existing MCP Stub search, history,
 export, and repository-source behavior are intentionally unchanged.
 
+The existing **Technology stack** summary is also preserved; it now lives inside
+the primary `stub-result` pane alongside repository details rather than in a
+separate top-level panel. Its `#stats` target and `renderStats()` behavior are unchanged.
+
 CI captures deterministic Chromium screenshots for:
 
 - desktop `1440x900`

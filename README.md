@@ -280,3 +280,7 @@ text escaping, and captures deterministic Chromium evidence in the
 This also records the exact upstream revisions in generated HTML comments, so a
 render can be traced back to the web-ui, markdown, and ascii_artist commits that
 produced it.
+
+When advancing the web-ui pin, update the MCP Stub stylesheet pin and the
+consumer-example `WEB_UI_SHA` together in the same PR so both presentation
+lanes remain on one contract revision.

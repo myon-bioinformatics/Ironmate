@@ -233,7 +233,7 @@ The static MCP Stub Explorer at `docs/mcp-stub.html` consumes the shared
 `myon-bioinformatics/web-ui` semantic contract and the Modern theme.
 
 Presentation is supplied by pinned `web-ui` CSS at commit
-`dfdbb26a76f71b147483f212ec49ca677384b936`. Ironmate continues to own
+`a0867e454bb2f7ecb4f69da9a46a2361b2438305`. Ironmate continues to own
 repository-search semantics, evidence export, history, and MCP-specific behavior.
 
 This migration is presentation-only: the existing MCP Stub search, history,
@@ -261,7 +261,7 @@ sibling libraries rather than only through hand-written Stub markup.
 
 - `vendor/markdown.py::markdown_to_web_ui_v1()`
 - `vendor/ascii_artist.py::to_web_ui_v1_html()`
-- pinned web-ui CSS at `dfdbb26a`
+- pinned web-ui CSS at `a0867e45`
 
 The libraries emit semantic HTML only. Ironmate remains responsible for loading
 the pinned presentation assets, which keeps the upstream libraries stdlib-only

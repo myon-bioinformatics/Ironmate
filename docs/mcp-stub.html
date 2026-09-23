@@ -5,20 +5,19 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Ironmate MCP Stub Explorer</title>
 <!--
-  web-ui contract pinned to dfdbb26a76f71b147483f212ec49ca677384b936.
+  web-ui contract pinned to a0867e454bb2f7ecb4f69da9a46a2361b2438305.
   Stylesheet order is intentional: tokens -> base -> components -> stub -> theme.
   No preload layer is used because these five files are the complete v1 CSS contract.
 -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/myon-bioinformatics/web-ui@dfdbb26a76f71b147483f212ec49ca677384b936/css/tokens.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/myon-bioinformatics/web-ui@dfdbb26a76f71b147483f212ec49ca677384b936/css/base.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/myon-bioinformatics/web-ui@dfdbb26a76f71b147483f212ec49ca677384b936/css/components.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/myon-bioinformatics/web-ui@dfdbb26a76f71b147483f212ec49ca677384b936/css/stub.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/myon-bioinformatics/web-ui@dfdbb26a76f71b147483f212ec49ca677384b936/css/themes/modern.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/myon-bioinformatics/web-ui@a0867e454bb2f7ecb4f69da9a46a2361b2438305/css/tokens.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/myon-bioinformatics/web-ui@a0867e454bb2f7ecb4f69da9a46a2361b2438305/css/base.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/myon-bioinformatics/web-ui@a0867e454bb2f7ecb4f69da9a46a2361b2438305/css/components.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/myon-bioinformatics/web-ui@a0867e454bb2f7ecb4f69da9a46a2361b2438305/css/stub.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/myon-bioinformatics/web-ui@a0867e454bb2f7ecb4f69da9a46a2361b2438305/css/themes/modern.css">
 </head>
 <body data-ui-theme="modern">
-<main class="ui-page">
-<h1 class="ui-title">MCP Stub Explorer</h1>
-<p class="ui-muted">Search, inspect, export evidence, and rerun a prior request.</p>
+<main class="ui-page stub-shell">
+<header class="stub-header"><div><h1 class="ui-title">MCP Stub Explorer</h1><p class="ui-muted">Search, inspect, export evidence, and rerun a prior request.</p></div><div class="stub-meta"><span class="ui-tag">mcp</span><span class="ui-tag">repository catalog</span></div></header>
 
 <section class="ui-panel">
   <div class="stub-toolbar">
@@ -29,19 +28,18 @@
   <p id="summary" class="ui-muted stub-status">Filter: — · matched: —</p>
 </section>
 
-<section class="ui-panel">
+<div class="stub-workspace">
+<section class="ui-panel stub-result">
   <h2>Repository details</h2>
   <div id="results" class="ui-grid"></div>
-</section>
-
-<section class="ui-panel">
   <h2>Technology stack</h2>
   <div id="stats" class="ui-grid"></div>
 </section>
 
-<section class="ui-panel">
+<aside aria-label="Supporting information">
+<section class="ui-card stub-evidence">
   <h2>Evidence export</h2>
-  <div class="stub-toolbar">
+  <div class="stub-actions">
     <button class="ui-button" id="copy-json" type="button">Copy JSON</button>
     <button class="ui-button" id="download-json" type="button">Download JSON</button>
     <button class="ui-button" id="download-md" type="button">Download Markdown</button>
@@ -49,10 +47,12 @@
   <pre class="ui-output" id="trace">Run a query to create a trace.</pre>
 </section>
 
-<section class="ui-panel">
+<section class="ui-card stub-history">
   <h2>Recent runs</h2>
   <div id="history" class="ui-grid"></div>
 </section>
+</aside>
+</div>
 </main>
 <script>
 const sourceUrl="https://raw.githubusercontent.com/myon-bioinformatics/myon-bioinformatics.github.io/main/api/repos.json",fields=["name","description","language","topics","readmeSummary"],historyKey="ironmate.mcp-stub.history.v1",maxHistory=12,timeoutMs=10000;let current,activeRunId=null;const $=id=>document.getElementById(id),publicItem=x=>Object.fromEntries(fields.map(f=>[f,x[f]??null])),text=x=>String(x??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])),markdownText=x=>String(x??"").split("").map(c=>(c===String.fromCharCode(92)||"`*_{}[]<>#+!|".includes(c)?String.fromCharCode(92)+c:c)).join("");

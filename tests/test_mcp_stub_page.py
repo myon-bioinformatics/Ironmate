@@ -6,7 +6,7 @@ import unittest
 
 
 PAGE = Path(__file__).resolve().parents[1] / "docs" / "mcp-stub.html"
-WEB_UI_PIN = "dfdbb26a76f71b147483f212ec49ca677384b936"
+WEB_UI_PIN = "a0867e454bb2f7ecb4f69da9a46a2361b2438305"
 
 
 class StylesheetParser(HTMLParser):
@@ -67,6 +67,24 @@ class McpStubPageTest(unittest.TestCase):
             "ui-output",
         ):
             self.assertIn(class_name, self.html)
+
+    def test_uses_shared_tool_workspace_structure(self):
+        for class_name in (
+            "stub-shell",
+            "stub-header",
+            "stub-meta",
+            "stub-toolbar",
+            "stub-workspace",
+            "stub-result",
+            "stub-evidence",
+            "stub-history",
+            "stub-actions",
+        ):
+            self.assertIn(class_name, self.html)
+        self.assertIn('<aside aria-label="Supporting information">', self.html)
+        self.assertIn('<div id="stats" class="ui-grid"></div>', self.html)
+        self.assertIn("function renderStats(items)", self.html)
+        self.assertLess(self.html.index('class="ui-panel stub-result"'), self.html.index('<aside aria-label="Supporting information">'))
 
     def test_repository_catalog_fetch_avoids_stale_cache(self):
         self.assertIn('cache:"no-store"', self.html)

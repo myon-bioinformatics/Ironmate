@@ -65,6 +65,11 @@ class VendorModuleIntegrationTest(unittest.TestCase):
         self.assertIn('href="./markdown.html"', index)
         self.assertIn('href="./ascii.html"', index)
 
+    def test_web_ui_pin_matches_mcp_stub(self):
+        stub = (ROOT / "docs" / "mcp-stub.html").read_text(encoding="utf-8")
+        self.assertIn(f"web-ui@{WEB_UI_SHA}/css/tokens.css", stub)
+        self.assertIn(f"web-ui contract pinned to {WEB_UI_SHA}", stub)
+
     def test_builder_propagates_invalid_theme(self):
         with self.assertRaises(ValueError):
             build_documents(theme="unknown")

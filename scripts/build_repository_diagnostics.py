@@ -12,6 +12,7 @@ import os
 from pathlib import Path
 import platform
 import subprocess
+import sys
 from typing import Any, Callable
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote
@@ -25,6 +26,9 @@ from repository_metadata_contract import (
 )
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 OUTPUT_JSON = ROOT / "docs" / "api" / "repository-diagnostics.json"
 OUTPUT_HTML = ROOT / "docs" / "repository-diagnostics.html"
 REPOSITORY = "myon-bioinformatics/Ironmate"

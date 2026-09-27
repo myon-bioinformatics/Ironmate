@@ -1,5 +1,5 @@
 # markdown.py
-# metadata: __all__=99 | base_sha=cae5618bd940ded29d4b61f71e4a11ee51faa9d9 | updated_at=2026-09-21T15:05:00Z
+# metadata: __all__=127 | base_sha=99b6a174a883f60a9c3ed01164a81fd7bd26ff76 | updated_at=2026-09-27T09:40:47Z
 """Stdlib-only Markdown utility functions.
 
 This module is intentionally a single file with no CLI / ``main`` entry point.
@@ -76,6 +76,21 @@ __all__ = [
     "inspect_to_markdown",
     "argparse_to_markdown",
     "distribution_to_markdown",
+    "calendar_to_markdown",
+    "platform_to_markdown",
+    "email_to_markdown",
+    "markdown_to_email",
+    "markdown_to_man",
+    "markdown_to_slack_mrkdwn",
+    "slack_mrkdwn_to_markdown",
+    "chat_messages_to_markdown",
+    "markdown_to_chat_messages",
+    "markdown_to_org",
+    "org_to_markdown",
+    "markdown_to_mediawiki",
+    "mediawiki_to_markdown",
+    "markdown_to_jira",
+    "jira_to_markdown",
     "table",
     "aligned_table",
     "markdown_table_to_rows",
@@ -93,6 +108,12 @@ __all__ = [
     "markdown_to_toml",
     "dotenv_to_markdown",
     "markdown_to_dotenv",
+    "markdown_to_directory_tree",
+    "directory_tree_to_markdown",
+    "directory_to_markdown",
+    "tree_text_to_markdown",
+    "markdown_to_tree_text",
+    "scaffold_from_markdown",
     "redis_snapshot_to_markdown",
     "sql_ddl_to_markdown",
     "markdown_to_sql_ddl",
@@ -112,15 +133,25 @@ __all__ = [
     "GITHUB_ALERT_KINDS",
     "QIITA_NOTE_KINDS",
     "ZENN_MESSAGE_KINDS",
+    "CHAT_ROLES",
+    "split_reasoning",
+    "compact_llm_output",
+    "llm_output_digest",
+    "extract_identifiers",
     "SUPPORTED",
     "UNSUPPORTED",
 ]
 
 import argparse
 import ast
+import calendar as calendar_module
 import configparser
 import csv
 import doctest
+import email as email_module
+import email.message as email_message
+import email.policy as email_policy
+import email.utils as email_utils
 import graphlib
 import html as html_module
 import importlib.metadata as importlib_metadata
@@ -128,8 +159,10 @@ import inspect
 import io
 import json
 import math
+import platform
 import re
 import statistics
+import sys
 import tokenize
 import unicodedata
 from dataclasses import dataclass
@@ -158,6 +191,11 @@ SUPPORTED = {
         "raw HTML tags (best-effort extraction)",
         "horizontal rules (--- *** ___)",
         "context helpers: extract_section / strip_prose_keep_structure / minify_markdown / safe_truncate",
+        "llm io: split_reasoning / compact_llm_output / llm_output_digest / "
+        "extract_identifiers (answer vs. <think>/<thinking>/<reasoning>/Open WebUI "
+        "<details type=reasoning> blocks, log-safe compaction, a JSON-able digest, "
+        "and UUID/URL/GitHub-ref/hex-SHA identifiers worth referencing instead of "
+        "embedding whole content)",
     ],
     "conversion": [
         "link/image builders",
@@ -187,6 +225,8 @@ SUPPORTED = {
         "(typed canonical Markdown table; reusable by INI/TOML adapters)",
         "INI / TOML / dotenv <-> canonical structured Markdown adapters "
         "(semantic round-trip; source comments/spacing/quote style are canonicalized)",
+        "directory tree <-> nested Markdown list (read-only directory listing, "
+        "tree-command text <-> list, traversal-safe non-overwriting scaffold creation)",
         "markdown_to_kramdown: Pandoc/PHP-Extra {#id .class key=value} on headings/paragraphs "
         "-> Kramdown block IAL ({: #id .class key=\"value\"}); ordinary Markdown left alone",
         "kramdown_to_markdown: strip known heading/paragraph IAL back to plain Markdown "
@@ -207,6 +247,12 @@ SUPPORTED = {
         "Python classes -> Mermaid classDiagram, Markdown links -> Graphviz DOT",
         "reference generators: inspect object -> API reference, argparse parser -> CLI reference, "
         "installed distribution metadata -> package reference",
+        "system formats: calendar month -> table, platform/interpreter facts -> table "
+        "(no host/user identity), RFC 5322 email <-> Markdown (multipart/alternative; "
+        "never sent, attachments listed not decoded), Markdown -> man(7) troff (request-injection safe)",
+        "dialects: Markdown <-> Slack mrkdwn / Org-mode / MediaWiki / Jira wiki on the markdown lite "
+        "subset (headings, lines, fences, nested lists, quotes, rules, bold/italic/strike/code/links); "
+        "LLM chat messages <-> ## Role sections (string content, known roles, ambiguity rejected)",
         "table / key_value_table",
         "md_table / md_kv (*args-friendly wrappers, no list/dict pre-building needed)",
         "status_line",
@@ -246,8 +292,18 @@ UNSUPPORTED = {
         "full Kramdown (extensions {::comment}/{::options}/{::nomarkdown}, math, "
         "TOC macros {:toc}, span IAL, IAL on lists/quotes/tables, attribute references)",
         "Liquid {% %} / {{ }}, YAML front matter, Jekyll tags / includes / baseurl",
+        "llm io helpers are a narrow heuristic, not a provider-format parser: only "
+        "<think>/<thinking>/<reasoning> and Open WebUI's <details type=\"reasoning\"> "
+        "are recognized as reasoning (other providers' own reasoning formats stay "
+        "literal answer text); extract_identifiers pattern-matches UUIDs/URLs/GitHub "
+        "refs/hex runs and does not validate them against a real repository, commit, "
+        "or hash algorithm",
     ],
     "conversion": [
+        "dialect conversions escape nothing inside plain text: literal markup characters "
+        "(e.g. a bare * in Jira/Slack text) may be read as markup; tables, raw HTML, "
+        "footnotes, Slack headings/ordered-list semantics/fence languages, internal "
+        "[[wiki]] links, templates, and Org drawers/keywords are not converted",
         "lossy round-trips for complex nested HTML",
         "browser DOM / HTML5 tree-construction fidelity (HtmlNode is a small normalized tree)",
         "JavaScript / SVG behavior preservation",
@@ -4885,3 +4941,1773 @@ def is_probably_url(value: str) -> bool:
     """Return True if ``value`` looks like an http(s) URL."""
     parsed = urlparse(value.strip())
     return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
+
+
+# === SECTION: directory tree ===
+# Directory trees <-> Markdown nested lists. A tree is plain data:
+# ``{name: subtree_dict}`` for a directory and ``{name: None}`` for a file,
+# in display order. Canonical Markdown marks directories with a trailing
+# ``/`` and nests children two spaces deeper.
+
+_TREE_LIST_ITEM_RE = re.compile(r"^( *)[-*+][ \t]+(.+?)[ \t]*$")
+_TREE_TEXT_BRANCH_RE = re.compile(r"(├──|└──|\|--|`--|\+--)[ \t]?")
+_TREE_TEXT_LEVEL_WIDTH = 4
+
+
+def _tree_entry_name(text: str) -> tuple[str, bool]:
+    """Split a list/tree label into ``(name, is_directory)``."""
+    name = text.strip()
+    if len(name) >= 2 and name.startswith("`") and name.endswith("`"):
+        name = name[1:-1].strip()
+    is_dir = name.endswith("/")
+    return name.rstrip("/"), is_dir
+
+
+_WINDOWS_RESERVED_NAMES = frozenset(
+    {"CON", "PRN", "AUX", "NUL"}
+    | {f"COM{i}" for i in range(1, 10)}
+    | {f"LPT{i}" for i in range(1, 10)}
+)
+_NON_PORTABLE_NAME_CHARS = frozenset('<>:"|?*')
+
+
+def _validate_tree_name(name: str, *, portable: bool = False) -> None:
+    """Reject names a Markdown tree cannot represent (and, if ``portable``, non-Windows-safe ones).
+
+    Representability applies everywhere: separators, ``.``/``..``, control
+    characters, leading/trailing spaces and code-span-looking names would
+    read back as a different tree. Portability applies only where files
+    are *created* (:func:`scaffold_from_markdown`): a scaffold that silently
+    creates ``a:b`` (an NTFS alternate data stream) or ``CON`` (a reserved
+    device) breaks the repository for Windows users later, while a
+    read-only listing of an existing POSIX directory must keep working.
+    """
+    if (
+        name in {"", ".", ".."}
+        or "/" in name
+        or "\\" in name
+        or any(ord(ch) < 32 or ord(ch) == 127 for ch in name)
+        or name[0] == " "
+        or name[-1] == " "
+        or (len(name) >= 2 and name[0] == "`" and name[-1] == "`")
+    ):
+        raise ValueError(f"invalid directory tree entry name: {name!r}")
+    if portable and (
+        any(ch in _NON_PORTABLE_NAME_CHARS for ch in name)
+        or name[-1] == "."
+        or name.split(".", 1)[0].rstrip(" ").upper() in _WINDOWS_RESERVED_NAMES
+    ):
+        raise ValueError(f"directory tree entry name is not portable to Windows: {name!r}")
+
+
+def _tree_insert(stack: list[tuple[int, dict[str, Any]]], depth: int, name: str, is_dir: bool) -> None:
+    while stack and stack[-1][0] >= depth:
+        stack.pop()
+    if not stack:
+        raise ValueError(f"directory tree entry {name!r} is nested under nothing")
+    parent = stack[-1][1]
+    _validate_tree_name(name)
+    if name in parent:
+        raise ValueError(f"duplicate directory tree entry: {name!r}")
+    parent[name] = {} if is_dir else None
+    if is_dir:
+        stack.append((depth, parent[name]))
+
+
+def markdown_to_directory_tree(content: str) -> dict[str, Any]:
+    """Parse a nested Markdown bullet list into a directory tree mapping.
+
+    Items ending in ``/`` (optionally wrapped in inline code) are
+    directories; an item with nested children is a directory too. Fenced
+    code and non-list lines are ignored. Names containing ``/``, ``\\``,
+    or equal to ``.`` / ``..`` raise ``ValueError`` so a tree can never
+    describe a path outside its root; so do control characters and
+    leading/trailing spaces, which would not read back unchanged.
+    Windows portability is checked only by :func:`scaffold_from_markdown`.
+    """
+    root: dict[str, Any] = {}
+    entries: list[tuple[int, str, bool]] = []
+    for item in _scan_lines(content.splitlines()):
+        if item.in_fenced_code:
+            continue
+        match = _TREE_LIST_ITEM_RE.match(item.text.expandtabs(4))
+        if not match:
+            continue
+        name, is_dir = _tree_entry_name(match.group(2))
+        entries.append((len(match.group(1)), name, is_dir))
+    # An entry followed by a deeper-indented entry is a directory.
+    for index, (indent, name, is_dir) in enumerate(entries):
+        if not is_dir and index + 1 < len(entries) and entries[index + 1][0] > indent:
+            entries[index] = (indent, name, True)
+    stack: list[tuple[int, dict[str, Any]]] = [(-1, root)]
+    for indent, name, is_dir in entries:
+        _tree_insert(stack, indent, name, is_dir)
+    return root
+
+
+def directory_tree_to_markdown(tree: dict[str, Any]) -> str:
+    """Render a directory tree mapping as a canonical nested Markdown list.
+
+    ``markdown_to_directory_tree(directory_tree_to_markdown(t)) == t`` for
+    any tree built from valid names (see :func:`markdown_to_directory_tree`).
+    """
+    lines: list[str] = []
+
+    def walk(node: dict[str, Any], depth: int) -> None:
+        for name, child in node.items():
+            _validate_tree_name(name)
+            if child is None:
+                lines.append(f"{'  ' * depth}- {name}")
+            elif isinstance(child, dict):
+                lines.append(f"{'  ' * depth}- {name}/")
+                walk(child, depth + 1)
+            else:
+                raise ValueError(f"directory tree values must be dict or None, got {type(child).__name__}")
+
+    if not isinstance(tree, dict):
+        raise ValueError("directory tree must be a dict")
+    walk(tree, 0)
+    return "\n".join(lines) + ("\n" if lines else "")
+
+
+def directory_to_markdown(
+    path: str | Path,
+    *,
+    include_hidden: bool = False,
+    max_depth: int | None = None,
+) -> str:
+    """Describe an existing directory as a canonical nested Markdown list.
+
+    Read-only: entries are listed by name (sorted), symlinks are listed but
+    never followed, and hidden (dot) entries are skipped unless
+    ``include_hidden``. ``max_depth=1`` lists only the top level. An entry
+    whose name the tree format cannot represent portably (see
+    :func:`markdown_to_directory_tree`) raises ``ValueError`` instead of
+    producing Markdown that would read back as a different tree.
+    """
+    base = Path(path)
+    if not base.is_dir():
+        raise ValueError(f"not a directory: {base}")
+
+    def walk(directory: Path, depth: int) -> dict[str, Any]:
+        node: dict[str, Any] = {}
+        for entry in sorted(directory.iterdir(), key=lambda p: p.name):
+            if not include_hidden and entry.name.startswith("."):
+                continue
+            if entry.is_dir() and not entry.is_symlink():
+                if max_depth is not None and depth + 1 >= max_depth:
+                    node[entry.name] = {}
+                else:
+                    node[entry.name] = walk(entry, depth + 1)
+            else:
+                node[entry.name] = None
+        return node
+
+    return directory_tree_to_markdown(walk(base, 0))
+
+
+def tree_text_to_markdown(text: str) -> str:
+    """Convert ``tree``-command style text into a canonical Markdown list.
+
+    Accepts Unicode (``├──`` / ``└──`` / ``│``) and ASCII (``|--`` /
+    ``\\`--``) connectors with 4-column levels. A leading root line without
+    a connector (e.g. ``.`` or ``project/``) is skipped. Summary lines such
+    as ``3 directories, 5 files`` and blank lines are ignored. Symlink
+    lines (``name -> target``) keep only the link name.
+    """
+    entries: list[tuple[int, str, bool]] = []
+    for raw in text.splitlines():
+        line = raw.rstrip()
+        match = _TREE_TEXT_BRANCH_RE.search(line)
+        if not match:
+            continue
+        depth, remainder = divmod(match.start(), _TREE_TEXT_LEVEL_WIDTH)
+        if remainder:
+            raise ValueError(f"tree line is not aligned to {_TREE_TEXT_LEVEL_WIDTH}-column levels: {raw!r}")
+        entry = line[match.end():]
+        if " -> " in entry:
+            # `tree` prints symlinks as "name -> target"; keep only the link name.
+            entry = entry.split(" -> ", 1)[0]
+        name, is_dir = _tree_entry_name(entry)
+        entries.append((depth, name, is_dir))
+    for index, (depth, name, is_dir) in enumerate(entries):
+        if not is_dir and index + 1 < len(entries) and entries[index + 1][0] > depth:
+            entries[index] = (depth, name, True)
+    root: dict[str, Any] = {}
+    stack: list[tuple[int, dict[str, Any]]] = [(-1, root)]
+    for depth, name, is_dir in entries:
+        _tree_insert(stack, depth, name, is_dir)
+    return directory_tree_to_markdown(root)
+
+
+def markdown_to_tree_text(content: str, *, root: str = ".") -> str:
+    """Render a Markdown directory list as ``tree``-command style text.
+
+    ``tree_text_to_markdown(markdown_to_tree_text(md)) == md`` for canonical
+    Markdown produced by :func:`directory_tree_to_markdown`.
+    """
+    tree = markdown_to_directory_tree(content)
+    lines = [root]
+
+    def walk(node: dict[str, Any], prefix: str) -> None:
+        items = list(node.items())
+        for index, (name, child) in enumerate(items):
+            last = index == len(items) - 1
+            label = f"{name}/" if isinstance(child, dict) else name
+            lines.append(f"{prefix}{'└── ' if last else '├── '}{label}")
+            if isinstance(child, dict):
+                walk(child, prefix + ("    " if last else "│   "))
+
+    walk(tree, "")
+    return "\n".join(lines) + "\n"
+
+
+def scaffold_from_markdown(content: str, root: str | Path) -> list[str]:
+    """Create the directories and empty files described by a Markdown list.
+
+    Existing files are never overwritten or truncated and existing
+    directories are reused. Every path is validated to stay inside
+    ``root`` (``..``, separators, absolute names, and names that are not
+    portable to Windows such as ``a:b`` or ``CON`` are rejected before
+    anything is created). Returns the POSIX-style relative paths that were
+    newly created, in creation order.
+    """
+    tree = markdown_to_directory_tree(content)
+    base = Path(root)
+    resolved_base = base.resolve()
+    created: list[str] = []
+
+    def plan(node: dict[str, Any], parts: tuple[str, ...]) -> None:
+        for name, child in node.items():
+            _validate_tree_name(name, portable=True)
+            target = resolved_base.joinpath(*parts, name).resolve()
+            rel = "/".join(parts + (name,))
+            if resolved_base not in target.parents:
+                raise ValueError(f"scaffold path escapes root: {rel}")
+            if isinstance(child, dict):
+                if target.exists() and not target.is_dir():
+                    raise FileExistsError(f"scaffold directory collides with a file: {rel}")
+                plan(child, parts + (name,))
+            elif target.is_dir():
+                raise FileExistsError(f"scaffold file collides with a directory: {rel}")
+
+    def build(node: dict[str, Any], parts: tuple[str, ...]) -> None:
+        for name, child in node.items():
+            target = base.joinpath(*parts, name)
+            rel = "/".join(parts + (name,))
+            if isinstance(child, dict):
+                if target.exists() and not target.is_dir():
+                    raise FileExistsError(f"scaffold directory collides with a file: {rel}")
+                if not target.exists():
+                    target.mkdir()
+                    created.append(rel + "/")
+                build(child, parts + (name,))
+            else:
+                if target.is_dir():
+                    raise FileExistsError(f"scaffold file collides with a directory: {rel}")
+                if not target.exists():
+                    target.touch()
+                    created.append(rel)
+
+    plan(tree, ())
+    base.mkdir(parents=True, exist_ok=True)
+    build(tree, ())
+    return created
+
+
+# === SECTION: markdown lite model ===
+# A deliberately small block/inline model of the Markdown subset that
+# one-way and dialect writers share: ATX headings, paragraphs (one physical
+# line at a time, never reflowed), fenced code, bullet/ordered list items,
+# ``>`` quote lines, thematic breaks, and inline code / links / images /
+# autolinks / bold / italic / strikethrough. Anything else (tables, raw
+# HTML, footnotes, ...) passes through as literal paragraph text.
+
+_LITE_LIST_RE = re.compile(r"^( *)([-*+]|\d+[.)])[ \t]+(.*)$")
+_LITE_QUOTE_RE = re.compile(r"^ {0,3}> ?(.*)$")
+_LITE_INLINE_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    ("image", re.compile(r"!\[([^\]]*)\]\(([^)\s]+)\)")),
+    ("link", re.compile(r"\[([^\]]+)\]\(([^)\s]+)\)")),
+    ("autolink", re.compile(r"<((?:https?|mailto):[^>\s]+)>")),
+    ("bold", re.compile(r"\*\*(?=\S)(.+?)(?<=\S)\*\*|__(?=\S)(.+?)(?<=\S)__")),
+    ("strike", re.compile(r"~~(?=\S)(.+?)(?<=\S)~~")),
+    ("italic", re.compile(r"\*(?=[^\s*])(.+?)(?<=[^\s*])\*|(?<![\w])_(?=\S)(.+?)(?<=\S)_(?![\w])")),
+)
+
+
+def _lite_blocks(content: str) -> list[tuple[Any, ...]]:
+    """Split Markdown into ``(kind, ...)`` blocks for the lite writers."""
+    blocks: list[tuple[Any, ...]] = []
+    lines = content.splitlines()
+    scanned = _scan_lines(lines)
+    list_indents: list[int] = []
+    index = 0
+    while index < len(lines):
+        item = scanned[index]
+        line = item.text
+        if item.is_fence_open:
+            match = _FENCE_RE.match(line)
+            info = match.group(2).strip() if match else ""
+            lang = info.split()[0] if info else ""
+            body: list[str] = []
+            index += 1
+            while index < len(lines) and not scanned[index].is_fence_close:
+                body.append(lines[index])
+                index += 1
+            index += 1
+            blocks.append(("code", lang, "\n".join(body)))
+            list_indents = []
+            continue
+        heading_match = _HEADING_RE.match(line)
+        list_match = _LITE_LIST_RE.match(line.expandtabs(4))
+        quote_match = _LITE_QUOTE_RE.match(line)
+        if not line.strip():
+            blocks.append(("blank",))
+        elif heading_match:
+            blocks.append(("heading", len(heading_match.group(1)), heading_match.group(2).strip().rstrip("#").strip()))
+            list_indents = []
+        elif _HR_RE.match(line) and not list_match:
+            blocks.append(("hr",))
+        elif list_match:
+            indent = len(list_match.group(1))
+            while list_indents and list_indents[-1] > indent:
+                list_indents.pop()
+            if not list_indents or list_indents[-1] < indent:
+                list_indents.append(indent)
+            ordered = list_match.group(2)[0].isdigit()
+            blocks.append(("list", ordered, len(list_indents) - 1, list_match.group(3)))
+        elif quote_match:
+            blocks.append(("quote", quote_match.group(1)))
+        else:
+            blocks.append(("para", line))
+            list_indents = []
+        index += 1
+    return blocks
+
+
+def _lite_inline(text: str) -> list[tuple[Any, ...]]:
+    """Tokenize one line of inline Markdown into nested ``(kind, ...)`` tokens."""
+    tokens: list[tuple[Any, ...]] = []
+    buffer: list[str] = []
+
+    def flush() -> None:
+        if buffer:
+            tokens.append(("text", "".join(buffer)))
+            buffer.clear()
+
+    index = 0
+    while index < len(text):
+        char = text[index]
+        if char == "\\" and index + 1 < len(text) and not text[index + 1].isalnum() and not text[index + 1].isspace():
+            buffer.append(text[index + 1])
+            index += 2
+            continue
+        if char == "`":
+            end = index
+            while end < len(text) and text[end] == "`":
+                end += 1
+            marker = text[index:end]
+            close = text.find(marker, end)
+            if close >= 0:
+                flush()
+                inner = text[end:close]
+                if len(inner) >= 2 and inner.startswith(" ") and inner.endswith(" ") and inner.strip():
+                    inner = inner[1:-1]
+                tokens.append(("code", inner))
+                index = close + len(marker)
+                continue
+            buffer.append(marker)
+            index = end
+            continue
+        matched = False
+        for kind, pattern in _LITE_INLINE_PATTERNS:
+            match = pattern.match(text, index)
+            if not match:
+                continue
+            flush()
+            if kind == "image":
+                if _sanitize_url_scheme(match.group(2)):
+                    tokens.append(("image", match.group(1), match.group(2)))
+                elif match.group(1):
+                    tokens.append(("text", match.group(1)))
+            elif kind == "link":
+                label = _lite_inline(match.group(1))
+                if _sanitize_url_scheme(match.group(2)):
+                    tokens.append(("link", label, match.group(2)))
+                else:
+                    # Same URL policy as the HTML path: a javascript:/data:/
+                    # shell: target is dropped and only its label survives.
+                    tokens.extend(label)
+            elif kind == "autolink":
+                tokens.append(("link", [("text", match.group(1))], match.group(1)))
+            else:
+                inner = next(group for group in match.groups() if group is not None)
+                tokens.append((kind, _lite_inline(inner)))
+            index = match.end()
+            matched = True
+            break
+        if matched:
+            continue
+        buffer.append(char)
+        index += 1
+    flush()
+    return tokens
+
+
+def _lite_plain(tokens: list[tuple[Any, ...]]) -> str:
+    """Flatten inline tokens to their visible text."""
+    parts: list[str] = []
+    for token in tokens:
+        kind = token[0]
+        if kind in {"text", "code"}:
+            parts.append(token[1])
+        elif kind == "image":
+            parts.append(token[1])
+        else:
+            parts.append(_lite_plain(token[1]))
+    return "".join(parts)
+
+
+# === SECTION: system formats ===
+# One-way/system-facing adapters from #24 P9: calendar and platform
+# snapshots as tables, RFC 5322 email <-> Markdown, and Markdown -> man(7).
+
+_ENGLISH_MONTHS = (
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+)
+_ENGLISH_WEEKDAYS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+
+
+def calendar_to_markdown(year: int, month: int, *, firstweekday: int = 0, title: str | None = None) -> str:
+    """Render one month as a heading plus a GFM table of day numbers.
+
+    Month/weekday names are fixed English strings (not the process locale)
+    so output is deterministic. ``firstweekday`` follows
+    :mod:`calendar` (0 = Monday, 6 = Sunday).
+    """
+    if not 1 <= month <= 12:
+        raise ValueError(f"month must be 1..12, got {month}")
+    if not 0 <= firstweekday <= 6:
+        raise ValueError(f"firstweekday must be 0..6, got {firstweekday}")
+    cal = calendar_module.Calendar(firstweekday)
+    headers = [_ENGLISH_WEEKDAYS[(firstweekday + offset) % 7] for offset in range(7)]
+    rows = [[str(day) if day else "" for day in week] for week in cal.monthdayscalendar(year, month)]
+    label = title if title is not None else f"{_ENGLISH_MONTHS[month - 1]} {year}"
+    return heading(label, 2) + "\n" + table(headers, rows)
+
+
+def platform_to_markdown(*, title: str = "Environment") -> str:
+    """Summarize the running interpreter/OS as a two-column Markdown table.
+
+    Reads only :mod:`platform` / :mod:`sys` facts useful for bug reports.
+    The host name, user name, and environment variables are deliberately
+    never included.
+    """
+    rows = [
+        ("Python", platform.python_version()),
+        ("Implementation", platform.python_implementation()),
+        ("Compiler", platform.python_compiler()),
+        ("System", platform.system() or "unknown"),
+        ("Release", platform.release() or "unknown"),
+        ("Machine", platform.machine() or "unknown"),
+        ("Platform", platform.platform(terse=True)),
+        ("Byte order", sys.byteorder),
+    ]
+    return heading(title, 2) + "\n" + table(["Key", "Value"], rows)
+
+
+_EMAIL_SUMMARY_HEADERS = ("From", "To", "Cc", "Date", "Subject")
+
+
+def email_to_markdown(message: str | bytes) -> str:
+    """Render an RFC 5322 / MIME message as Markdown without side effects.
+
+    Output: ``# Subject``, a header table (From/To/Cc/Date/Subject that are
+    present), the first ``text/plain`` body verbatim (or the first
+    ``text/html`` body through :func:`html_to_markdown` when there is no
+    plain part), then an attachment table (filename, content type, decoded
+    size). Attachments are never decoded to disk, opened, or executed.
+    """
+    policy = email_policy.default
+    parsed = (
+        email_module.message_from_bytes(message, policy=policy)
+        if isinstance(message, bytes)
+        else email_module.message_from_string(message, policy=policy)
+    )
+    subject = str(parsed.get("Subject", "") or "").strip() or "(no subject)"
+    rows = [(name, str(parsed[name])) for name in _EMAIL_SUMMARY_HEADERS if parsed.get(name) is not None]
+    out = [heading(subject, 1), "\n", table(["Header", "Value"], rows)]
+
+    body_part = parsed.get_body(preferencelist=("plain", "html"))
+    if body_part is not None:
+        try:
+            body = body_part.get_content()
+        except (LookupError, UnicodeDecodeError):
+            body = (body_part.get_payload(decode=True) or b"").decode("utf-8", "replace")
+        if body_part.get_content_type() == "text/html":
+            body = html_to_markdown(body)
+        body = body.replace("\r\n", "\n").strip("\n")
+        if body:
+            out += ["\n", body, "\n"]
+
+    attachments = []
+    for part in parsed.iter_attachments():
+        payload = part.get_payload(decode=True) or b""
+        attachments.append((part.get_filename() or "", part.get_content_type(), str(len(payload))))
+    if attachments:
+        out += ["\n", heading("Attachments", 2), "\n", table(["Filename", "Content-Type", "Size (bytes)"], attachments)]
+    return "".join(out)
+
+
+def markdown_to_email(
+    content: str,
+    *,
+    subject: str,
+    sender: str,
+    to: str | list[str],
+    date: Any = None,
+) -> str:
+    """Build (never send) a ``multipart/alternative`` email from Markdown.
+
+    The ``text/plain`` part is the Markdown source verbatim; the
+    ``text/html`` part is :func:`markdown_to_html` output. Header values
+    containing CR/LF are rejected by :mod:`email.policy` (no header
+    injection). ``date`` may be a :class:`datetime.datetime`; omitted means
+    no ``Date`` header, keeping output deterministic.
+    ``email_to_markdown()`` recovers the Markdown body unchanged.
+    """
+    msg = email_message.EmailMessage(policy=email_policy.default)
+    msg["Subject"] = subject
+    msg["From"] = sender
+    msg["To"] = ", ".join(to) if isinstance(to, (list, tuple)) else to
+    if date is not None:
+        msg["Date"] = email_utils.format_datetime(date)
+    body = content if content.endswith("\n") else content + "\n"
+    msg.set_content(body, subtype="plain", charset="utf-8")
+    msg.add_alternative(markdown_to_html(content), subtype="html", charset="utf-8")
+    return msg.as_string()
+
+
+def _man_escape(text: str) -> str:
+    return text.replace("\\", "\\e").replace("-", "\\-")
+
+
+def _man_inline(tokens: list[tuple[Any, ...]], font: str = "R") -> str:
+    parts: list[str] = []
+    for token in tokens:
+        kind = token[0]
+        if kind == "text":
+            parts.append(_man_escape(token[1]))
+        elif kind == "code":
+            parts.append(f"\\fB{_man_escape(token[1])}\\f{font}")
+        elif kind == "bold":
+            parts.append(f"\\fB{_man_inline(token[1], 'B')}\\f{font}")
+        elif kind == "italic":
+            parts.append(f"\\fI{_man_inline(token[1], 'I')}\\f{font}")
+        elif kind == "strike":
+            parts.append(_man_inline(token[1], font))
+        elif kind == "link":
+            label = _man_inline(token[1], font)
+            url = _man_escape(token[2])
+            parts.append(label if _lite_plain(token[1]) == token[2] else f"{label} <{url}>")
+        elif kind == "image":
+            parts.append(f"[{_man_escape(token[1])}] <{_man_escape(token[2])}>")
+    return "".join(parts)
+
+
+def _man_line(text: str) -> str:
+    """Guard a rendered text line so troff never reads it as a request."""
+    return "\\&" + text if text.startswith((".", "'")) else text
+
+
+def markdown_to_man(
+    content: str,
+    *,
+    name: str,
+    section: str = "1",
+    date: str = "",
+    source: str = "",
+    manual: str = "",
+) -> str:
+    """Render the Markdown lite subset as a man(7) troff page (one-way).
+
+    ``# H`` -> ``.SH`` (upper-cased), deeper headings -> ``.SS``, lines ->
+    ``.PP`` paragraphs, fenced code -> ``.EX``/``.EE``, lists -> ``.IP``,
+    quotes -> ``.RS``/``.RE``, bold/code -> ``\\fB``, italic -> ``\\fI``.
+    Backslashes and hyphens are escaped and any line that would start with
+    ``.`` or ``'`` is guarded with ``\\&``, so Markdown text can never
+    inject a troff request.
+    ``name``/``section``/``date``/``source``/``manual`` go on the ``.TH``
+    line, so control characters (including CR/LF) in them raise
+    ``ValueError`` rather than starting a new troff request line.
+    """
+    for label, value in (("name", name), ("section", section), ("date", date), ("source", source), ("manual", manual)):
+        if any(ord(ch) < 32 or ord(ch) == 127 for ch in value):
+            raise ValueError(f"markdown_to_man {label} must not contain control characters: {value!r}")
+
+    def quoted(value: str) -> str:
+        return '"' + _man_escape(value).replace('"', '\\(dq') + '"'
+
+    out = [f".TH {quoted(name.upper())} {quoted(section)} {quoted(date)} {quoted(source)} {quoted(manual)}"]
+    in_paragraph = False
+    in_quote = False
+    numberer = _MarkdownListNumberer()
+    for block in _lite_blocks(content):
+        kind = block[0]
+        if kind not in {"list", "blank"}:
+            numberer.reset()
+        if in_quote and kind != "quote":
+            out.append(".RE")
+            in_quote = False
+        if kind == "blank":
+            in_paragraph = False
+        elif kind == "heading":
+            tokens = _lite_inline(block[2])
+            if block[1] == 1:
+                out.append(".SH " + _man_escape(_lite_plain(tokens).upper()))
+            else:
+                out.append(".SS " + _man_inline(tokens))
+            in_paragraph = False
+        elif kind == "code":
+            out.append(".PP")
+            out.append(".EX")
+            out.extend(_man_line(_man_escape(line)) for line in block[2].split("\n"))
+            out.append(".EE")
+            in_paragraph = False
+        elif kind == "list":
+            ordered, depth, text = block[1], block[2], block[3]
+            count = numberer.count(depth, ordered)
+            bullet = f"{count}." if ordered else "\\(bu"
+            out.append(f".IP {bullet} {4 + depth * 2}")
+            out.append(_man_line(_man_inline(_lite_inline(text))))
+            in_paragraph = True
+        elif kind == "quote":
+            if not in_quote:
+                out.append(".RS 4")
+                in_quote = True
+            out.append(_man_line(_man_inline(_lite_inline(block[1]))))
+        elif kind == "hr":
+            out.append(".PP")
+            in_paragraph = False
+        else:
+            if not in_paragraph:
+                out.append(".PP")
+                in_paragraph = True
+            out.append(_man_line(_man_inline(_lite_inline(block[1]))))
+    if in_quote:
+        out.append(".RE")
+    return "\n".join(out) + "\n"
+
+
+# === SECTION: dialects ===
+# #24 P7 dialect conversions. Each text dialect declares a canonical
+# Markdown subset (the markdown lite model: ATX headings, one-line
+# paragraphs, fenced code, "-" bullets / "1." ordered items nested two
+# spaces per level, ">" quote lines, "---", and inline **bold** / *italic*
+# / ~~strike~~ / `code` / [label](url)). On that subset
+# ``dialect_to_markdown(markdown_to_dialect(md)) == md`` except where a
+# dialect has no equivalent construct (documented per function). Literal
+# markup characters inside plain text are not escaped for the target.
+
+# One private-use escape code point. Any literal occurrence in the input is
+# doubled to ESC+"E" first, so placeholders (ESC+"P<n>;") and emphasis
+# sentinels (ESC+"B"/"I"/"S") can never be forged by input text.
+_DIALECT_ESC = "\ue000"
+_DIALECT_MARK = {"bold": _DIALECT_ESC + "B", "italic": _DIALECT_ESC + "I", "strike": _DIALECT_ESC + "S"}
+_DIALECT_MD_MARK = {_DIALECT_ESC + "B": "**", _DIALECT_ESC + "I": "*", _DIALECT_ESC + "S": "~~"}
+_DIALECT_PLACEHOLDER_RE = re.compile(_DIALECT_ESC + r"P(\d+);")
+
+
+def _dialect_inline_to_markdown(
+    text: str,
+    *,
+    code: re.Pattern[str],
+    links: tuple[tuple[re.Pattern[str], Any], ...],
+    emphasis: tuple[tuple[re.Pattern[str], str], ...],
+    unescape: Any = None,
+) -> str:
+    """Convert one line of dialect inline markup to canonical Markdown.
+
+    Code spans and links are swapped for placeholders first so emphasis
+    rules never fire inside them; emphasis markers are written as private
+    sentinels and only turned into Markdown markers at the end, so one
+    rule's output can never be re-read by the next rule.
+    """
+    stash: list[str] = []
+
+    def keep(rendered: str) -> str:
+        stash.append(rendered)
+        return f"{_DIALECT_ESC}P{len(stash) - 1};"
+
+    text = text.replace(_DIALECT_ESC, _DIALECT_ESC + "E")
+    text = code.sub(
+        lambda m: keep(inline_code(unescape(m.group(1)) if unescape is not None else m.group(1))),
+        text,
+    )
+    for pattern, render in links:
+        text = pattern.sub(lambda m, render=render: keep(render(m)), text)
+    for pattern, kind in emphasis:
+        mark = _DIALECT_MARK[kind]
+        text = pattern.sub(lambda m, mark=mark: mark + m.group(1) + mark, text)
+    for sentinel, marker in _DIALECT_MD_MARK.items():
+        text = text.replace(sentinel, marker)
+    if unescape is not None:
+        text = unescape(text)
+    # Stashed renderings can nest (a link label holding a code placeholder).
+    # Input cannot forge a placeholder, so restoring until stable terminates.
+    while True:
+        restored = _DIALECT_PLACEHOLDER_RE.sub(lambda m: stash[int(m.group(1))], text)
+        if restored == text:
+            break
+        text = restored
+    return text.replace(_DIALECT_ESC + "E", _DIALECT_ESC)
+
+
+class _MarkdownListNumberer:
+    """Emit canonical Markdown list prefixes (2-space nesting, 1..n numbering)."""
+
+    def __init__(self) -> None:
+        self.counters: dict[int, tuple[bool, int]] = {}
+
+    def reset(self) -> None:
+        self.counters = {}
+
+    def count(self, depth: int, ordered: bool) -> int:
+        for level in [level for level in self.counters if level > depth]:
+            del self.counters[level]
+        was_ordered, count = self.counters.get(depth, (ordered, 0))
+        count = count + 1 if was_ordered == ordered else 1
+        self.counters[depth] = (ordered, count)
+        return count
+
+    def prefix(self, depth: int, ordered: bool) -> str:
+        count = self.count(depth, ordered)
+        return "  " * depth + (f"{count}. " if ordered else "- ")
+
+
+def _depth_from_indent(stack: list[int], indent: int) -> int:
+    while stack and stack[-1] > indent:
+        stack.pop()
+    if not stack or stack[-1] < indent:
+        stack.append(indent)
+    return len(stack) - 1
+
+
+def _dialect_code_block_lines(body: list[str], lang: str) -> list[str]:
+    return code_block("\n".join(body), lang).rstrip("\n").split("\n")
+
+
+def _render_with(inline: Any, tokens: list[tuple[Any, ...]]) -> str:
+    return "".join(inline(token) for token in tokens)
+
+
+# --- Slack mrkdwn -----------------------------------------------------------
+
+def _slack_escape(text: str) -> str:
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def _slack_token(token: tuple[Any, ...]) -> str:
+    kind = token[0]
+    if kind == "text":
+        return _slack_escape(token[1])
+    if kind == "code":
+        return f"`{_slack_escape(token[1])}`"
+    if kind in {"bold", "italic", "strike"}:
+        mark = {"bold": "*", "italic": "_", "strike": "~"}[kind]
+        return mark + _render_with(_slack_token, token[1]) + mark
+    if kind == "link":
+        label = _lite_plain(token[1]).replace("|", "¦")
+        return f"<{token[2]}>" if label == token[2] else f"<{token[2]}|{_slack_escape(label)}>"
+    if kind == "image":
+        return f"<{token[2]}|{_slack_escape(token[1] or token[2])}>"
+    return ""
+
+
+def markdown_to_slack_mrkdwn(content: str) -> str:
+    """Convert the Markdown lite subset to Slack ``mrkdwn`` text.
+
+    ``**b**`` -> ``*b*``, ``*i*`` -> ``_i_``, ``~~s~~`` -> ``~s~``, links ->
+    ``<url|label>``, bullets -> ``•`` (4 spaces per nesting level), and
+    ``&``/``<``/``>`` are entity-escaped as Slack requires. Slack has no
+    headings, ordered lists, or code-block languages: headings become a
+    bold line, ordered items keep their literal ``N.`` text, and the fence
+    language is dropped (all lossy by design).
+    """
+    out: list[str] = []
+    numberer = _MarkdownListNumberer()
+    for block in _lite_blocks(content):
+        kind = block[0]
+        if kind not in {"list", "blank"}:
+            numberer.reset()
+        if kind == "blank":
+            out.append("")
+        elif kind == "heading":
+            out.append("*" + _slack_escape(_lite_plain(_lite_inline(block[2]))) + "*")
+        elif kind == "code":
+            out.extend(["```", *[_slack_escape(line) for line in block[2].split("\n")], "```"])
+        elif kind == "list":
+            count = numberer.count(block[2], block[1])
+            bullet = f"{count}. " if block[1] else "\u2022 "
+            out.append("    " * block[2] + bullet + _render_with(_slack_token, _lite_inline(block[3])))
+        elif kind == "quote":
+            out.append("> " + _render_with(_slack_token, _lite_inline(block[1])))
+        elif kind == "hr":
+            out.append("---")
+        else:
+            out.append(_render_with(_slack_token, _lite_inline(block[1])))
+    return "\n".join(out) + ("\n" if out else "")
+
+
+_SLACK_CODE_RE = re.compile(r"`([^`\n]+)`")
+_SLACK_LINK_RE = re.compile(r"<((?:https?|mailto):[^|>\s]+)(?:\|([^>]*))?>")
+_SLACK_EMPHASIS = (
+    (re.compile(r"(?<![\w*])\*(?=\S)([^*\n]+?)(?<=\S)\*(?![\w*])"), "bold"),
+    (re.compile(r"(?<![\w_])_(?=\S)([^_\n]+?)(?<=\S)_(?![\w_])"), "italic"),
+    (re.compile(r"(?<![\w~])~(?=\S)([^~\n]+?)(?<=\S)~(?![\w~])"), "strike"),
+)
+_SLACK_BULLET_RE = re.compile("^( *)[\u2022\u25e6\u25aa-] +(.*)$")
+_SLACK_ORDERED_RE = re.compile(r"^( *)\d+[.)] +(.*)$")
+
+
+def _slack_unescape(text: str) -> str:
+    return text.replace("&lt;", "<").replace("&gt;", ">").replace("&amp;", "&")
+
+
+def _slack_link_to_markdown(match: re.Match[str]) -> str:
+    url, label = match.group(1), match.group(2)
+    if label is None or _slack_unescape(label) == url:
+        return f"<{url}>"
+    return f"[{_slack_unescape(label)}]({url})"
+
+
+def _slack_inline(text: str) -> str:
+    return _dialect_inline_to_markdown(
+        text,
+        code=_SLACK_CODE_RE,
+        links=((_SLACK_LINK_RE, _slack_link_to_markdown),),
+        emphasis=_SLACK_EMPHASIS,
+        unescape=_slack_unescape,
+    )
+
+
+def slack_mrkdwn_to_markdown(content: str) -> str:
+    """Convert Slack ``mrkdwn`` text to canonical Markdown.
+
+    Reverses :func:`markdown_to_slack_mrkdwn` for paragraphs, bullets,
+    ``1.`` items, ``>`` quotes, triple-backtick blocks, and inline
+    bold/italic/strike/code/links. User/channel mentions such as
+    ``<@U123>`` / ``<#C123>`` / ``<!here>`` are left as literal text.
+    """
+    out: list[str] = []
+    numberer = _MarkdownListNumberer()
+    indents: list[int] = []
+    lines = content.splitlines()
+    index = 0
+    while index < len(lines):
+        line = lines[index]
+        if line.strip() == "```":
+            body: list[str] = []
+            index += 1
+            while index < len(lines) and lines[index].strip() != "```":
+                body.append(_slack_unescape(lines[index]))
+                index += 1
+            index += 1
+            out.extend(_dialect_code_block_lines(body, ""))
+            numberer.reset()
+            indents = []
+            continue
+        bullet = _SLACK_BULLET_RE.match(line)
+        ordered = _SLACK_ORDERED_RE.match(line)
+        if bullet or ordered:
+            match = bullet or ordered
+            depth = _depth_from_indent(indents, len(match.group(1)))
+            out.append(numberer.prefix(depth, ordered is not None) + _slack_inline(match.group(2)))
+        elif line.startswith(">"):
+            out.append("> " + _slack_inline(line[1:].lstrip()))
+            numberer.reset()
+            indents = []
+        elif not line.strip():
+            out.append("")
+        elif line.strip() == "---":
+            out.append("---")
+        else:
+            out.append(_slack_inline(line))
+            numberer.reset()
+            indents = []
+        index += 1
+    return "\n".join(out) + ("\n" if out else "")
+
+
+# --- LLM chat messages ------------------------------------------------------
+
+CHAT_ROLES = ("system", "developer", "user", "assistant", "tool")
+_CHAT_HEADING_RE = re.compile(r"^## (" + "|".join(CHAT_ROLES) + r")[ \t]*$", re.IGNORECASE)
+
+
+def chat_messages_to_markdown(messages: Any) -> str:
+    """Render ``[{"role": ..., "content": ...}]`` as ``## Role`` sections.
+
+    Only string ``content`` and the roles in :data:`CHAT_ROLES` are
+    supported; extra keys (``name``, ``tool_calls``, ...) or multimodal
+    content raise ``ValueError`` rather than being silently dropped. A
+    message whose content contains a line that would itself parse as a
+    role heading outside fenced code is rejected as ambiguous, so
+    ``markdown_to_chat_messages(chat_messages_to_markdown(m)) == m`` for
+    every accepted list whose contents carry no leading/trailing newlines.
+    """
+    parts: list[str] = []
+    for position, message in enumerate(messages):
+        if not isinstance(message, dict) or set(message) != {"role", "content"}:
+            raise ValueError(f"message {position} must be a dict with exactly 'role' and 'content'")
+        role, text = message["role"], message["content"]
+        if role not in CHAT_ROLES:
+            raise ValueError(f"message {position} has unsupported role {role!r}")
+        if not isinstance(text, str):
+            raise ValueError(f"message {position} content must be a string")
+        scanned = _scan_lines(text.splitlines())
+        for item in scanned:
+            if not item.in_fenced_code and _CHAT_HEADING_RE.match(item.text):
+                raise ValueError(f"message {position} content contains a role heading line: {item.text!r}")
+        if sum(item.is_fence_open for item in scanned) != sum(item.is_fence_close for item in scanned):
+            raise ValueError(f"message {position} content contains an unclosed fenced code block")
+        section_text = f"## {role.capitalize()}\n"
+        if text:
+            section_text += f"\n{text}\n"
+        parts.append(section_text)
+    return "\n".join(parts)
+
+
+def markdown_to_chat_messages(content: str) -> list[dict[str, str]]:
+    """Parse ``## System`` / ``## User`` / ``## Assistant`` ... sections.
+
+    Role headings are exact ``## <role>`` lines (case-insensitive) outside
+    fenced code; any other heading (``## Summary``) is ordinary content.
+    Text before the first role heading raises ``ValueError``. Each
+    message's content has surrounding blank lines stripped.
+    """
+    sections: list[tuple[str, list[str]]] = []
+    for item in _scan_lines(content.splitlines()):
+        match = None if item.in_fenced_code else _CHAT_HEADING_RE.match(item.text)
+        if match:
+            sections.append((match.group(1).lower(), []))
+        elif sections:
+            sections[-1][1].append(item.text)
+        elif item.text.strip():
+            raise ValueError(f"text before the first role heading: {item.text!r}")
+    return [{"role": role, "content": "\n".join(lines).strip("\n")} for role, lines in sections]
+
+
+# --- Org-mode ---------------------------------------------------------------
+
+def _org_token(token: tuple[Any, ...]) -> str:
+    kind = token[0]
+    if kind == "text":
+        return token[1]
+    if kind == "code":
+        return f"~{token[1]}~"
+    if kind in {"bold", "italic", "strike"}:
+        mark = {"bold": "*", "italic": "/", "strike": "+"}[kind]
+        return mark + _render_with(_org_token, token[1]) + mark
+    if kind == "link":
+        label = _render_with(_org_token, token[1])
+        return f"[[{token[2]}]]" if _lite_plain(token[1]) == token[2] else f"[[{token[2]}][{label}]]"
+    if kind == "image":
+        return f"[[{token[2]}]]"
+    return ""
+
+
+def markdown_to_org(content: str) -> str:
+    """Convert the Markdown lite subset to Org-mode.
+
+    Headings -> ``*`` stars, ``**b**`` -> ``*b*``, ``*i*`` -> ``/i/``,
+    ``~~s~~`` -> ``+s+``, code -> ``~c~``, links -> ``[[url][label]]``,
+    fences -> ``#+BEGIN_SRC lang`` (lines starting with ``*`` / ``#+``
+    are comma-escaped per Org), ``>`` runs -> ``#+BEGIN_QUOTE``.
+    """
+    out: list[str] = []
+    in_quote = False
+    numberer = _MarkdownListNumberer()
+    for block in _lite_blocks(content):
+        kind = block[0]
+        if kind not in {"list", "blank"}:
+            numberer.reset()
+        if in_quote and kind != "quote":
+            out.append("#+END_QUOTE")
+            in_quote = False
+        if kind == "blank":
+            out.append("")
+        elif kind == "heading":
+            out.append("*" * block[1] + " " + _render_with(_org_token, _lite_inline(block[2])))
+        elif kind == "code":
+            out.append(("#+BEGIN_SRC " + block[1]).rstrip())
+            for line in block[2].split("\n") if block[2] else []:
+                out.append("," + line if line.startswith(("*", "#+", ",*", ",#+")) else line)
+            out.append("#+END_SRC")
+        elif kind == "list":
+            out.append(numberer.prefix(block[2], block[1]) + _render_with(_org_token, _lite_inline(block[3])))
+        elif kind == "quote":
+            if not in_quote:
+                out.append("#+BEGIN_QUOTE")
+                in_quote = True
+            out.append(_render_with(_org_token, _lite_inline(block[1])))
+        elif kind == "hr":
+            out.append("-----")
+        else:
+            out.append(_render_with(_org_token, _lite_inline(block[1])))
+    if in_quote:
+        out.append("#+END_QUOTE")
+    return "\n".join(out) + ("\n" if out else "")
+
+
+_ORG_CODE_RE = re.compile(r"(?<![\w~=])[~=](?=\S)([^~=\n]+?)(?<=\S)[~=](?![\w~=])")
+_ORG_LINK_RE = re.compile(r"\[\[([^\]\n]+)\](?:\[([^\]\n]+)\])?\]")
+_ORG_EMPHASIS = (
+    (re.compile(r"(?<![\w*])\*(?=[^\s*])([^*\n]+?)(?<=[^\s*])\*(?![\w*])"), "bold"),
+    (re.compile(r"(?<![\w/:])/(?=[^\s/])([^/\n]+?)(?<=[^\s/])/(?![\w/])"), "italic"),
+    (re.compile(r"(?<![\w+])\+(?=[^\s+])([^+\n]+?)(?<=[^\s+])\+(?![\w+])"), "strike"),
+)
+_ORG_HEADING_RE = re.compile(r"^(\*+)[ \t]+(.*?)[ \t]*$")
+_ORG_LIST_RE = re.compile(r"^( *)([-+]|\d+[.)])[ \t]+(.*)$")
+_ORG_BLOCK_RE = re.compile(r"^[ \t]*#\+(BEGIN|END)_(\w+)(?:[ \t]+(\S+))?", re.IGNORECASE)
+
+
+def _org_link_to_markdown(match: re.Match[str]) -> str:
+    target, label = match.group(1), match.group(2)
+    if not _sanitize_url_scheme(target):
+        return _org_inline(label) if label is not None else target
+    if label is None:
+        return f"<{target}>" if re.match(r"(?:https?|mailto):", target) else f"[{target}]({target})"
+    return f"[{_org_inline(label)}]({target})"
+
+
+def _org_inline(text: str) -> str:
+    return _dialect_inline_to_markdown(
+        text,
+        code=_ORG_CODE_RE,
+        links=((_ORG_LINK_RE, _org_link_to_markdown),),
+        emphasis=_ORG_EMPHASIS,
+    )
+
+
+def org_to_markdown(content: str) -> str:
+    """Convert Org-mode to canonical Markdown (the :func:`markdown_to_org` subset).
+
+    Supports ``*`` headings, ``-``/``+``/``1.`` lists, ``#+BEGIN_SRC`` /
+    ``#+BEGIN_EXAMPLE`` / ``#+BEGIN_QUOTE`` blocks, ``-----`` rules, and
+    ``*b*`` / ``/i/`` / ``+s+`` / ``~c~`` / ``=v=`` / ``[[url][label]]``.
+    Other ``#+KEYWORD:`` lines, drawers, tables, and underline ``_u_`` are
+    kept as literal text.
+    """
+    out: list[str] = []
+    numberer = _MarkdownListNumberer()
+    indents: list[int] = []
+    lines = content.splitlines()
+    index = 0
+    while index < len(lines):
+        line = lines[index]
+        block = _ORG_BLOCK_RE.match(line)
+        if block and block.group(1).upper() == "BEGIN":
+            name = block.group(2).upper()
+            body: list[str] = []
+            index += 1
+            while index < len(lines):
+                end = _ORG_BLOCK_RE.match(lines[index])
+                if end and end.group(1).upper() == "END" and end.group(2).upper() == name:
+                    break
+                body.append(lines[index])
+                index += 1
+            index += 1
+            if name == "QUOTE":
+                out.extend(("> " + _org_inline(item)).rstrip() if item.strip() else ">" for item in body)
+            else:
+                unescaped = [item[1:] if item.startswith((",*", ",#+", ",,")) else item for item in body]
+                lang = (block.group(3) or "") if name == "SRC" else ""
+                out.extend(_dialect_code_block_lines(unescaped, lang))
+            numberer.reset()
+            indents = []
+            continue
+        heading_match = _ORG_HEADING_RE.match(line)
+        list_match = _ORG_LIST_RE.match(line)
+        if heading_match:
+            out.append("#" * min(len(heading_match.group(1)), 6) + " " + _org_inline(heading_match.group(2)))
+            numberer.reset()
+            indents = []
+        elif re.match(r"^-{5,}[ \t]*$", line):
+            out.append("---")
+        elif list_match:
+            depth = _depth_from_indent(indents, len(list_match.group(1)))
+            ordered = list_match.group(2)[0].isdigit()
+            out.append(numberer.prefix(depth, ordered) + _org_inline(list_match.group(3)))
+        elif not line.strip():
+            out.append("")
+        else:
+            out.append(_org_inline(line))
+            numberer.reset()
+            indents = []
+        index += 1
+    return "\n".join(out) + ("\n" if out else "")
+
+
+# --- MediaWiki / Jira shared list prefixes -----------------------------------
+
+def _wiki_list_prefix(stack: list[str], depth: int, ordered: bool) -> str:
+    del stack[depth:]
+    while len(stack) < depth:
+        stack.append("*")
+    stack.append("#" if ordered else "*")
+    return "".join(stack)
+
+
+def _wiki_markup(content: str, token_fn: Any, rules: dict[str, Any]) -> str:
+    out: list[str] = []
+    stack: list[str] = []
+    for block in _lite_blocks(content):
+        kind = block[0]
+        if kind != "list":
+            stack = []
+        if kind == "blank":
+            out.append("")
+        elif kind == "heading":
+            out.append(rules["heading"](block[1], _render_with(token_fn, _lite_inline(block[2]))))
+        elif kind == "code":
+            out.extend(rules["code"](block[1], block[2].split("\n") if block[2] else []))
+        elif kind == "list":
+            prefix = _wiki_list_prefix(stack, block[2], block[1])
+            out.append(prefix + " " + _render_with(token_fn, _lite_inline(block[3])))
+        elif kind == "quote":
+            out.append(rules["quote"](_render_with(token_fn, _lite_inline(block[1]))))
+        elif kind == "hr":
+            out.append("----")
+        else:
+            out.append(_render_with(token_fn, _lite_inline(block[1])))
+    return "\n".join(out) + ("\n" if out else "")
+
+
+def _wiki_list_to_markdown(numberer: _MarkdownListNumberer, prefix: str, text: str) -> str:
+    return numberer.prefix(len(prefix) - 1, prefix[-1] == "#") + text
+
+
+# --- MediaWiki --------------------------------------------------------------
+
+def _mediawiki_token(token: tuple[Any, ...]) -> str:
+    kind = token[0]
+    if kind == "text":
+        return token[1]
+    if kind == "code":
+        return f"<code>{token[1]}</code>"
+    if kind == "bold":
+        return "'''" + _render_with(_mediawiki_token, token[1]) + "'''"
+    if kind == "italic":
+        return "''" + _render_with(_mediawiki_token, token[1]) + "''"
+    if kind == "strike":
+        return "<s>" + _render_with(_mediawiki_token, token[1]) + "</s>"
+    if kind == "link":
+        label = _render_with(_mediawiki_token, token[1])
+        return f"[{token[2]}]" if _lite_plain(token[1]) == token[2] else f"[{token[2]} {label}]"
+    if kind == "image":
+        return f"[{token[2]} {token[1]}]" if token[1] else f"[{token[2]}]"
+    return ""
+
+
+def _mediawiki_code(lang: str, body: list[str]) -> list[str]:
+    if lang:
+        return [f'<syntaxhighlight lang="{html_module.escape(lang, quote=True)}">', *body, "</syntaxhighlight>"]
+    return ["<pre>", *body, "</pre>"]
+
+
+def markdown_to_mediawiki(content: str) -> str:
+    """Convert the Markdown lite subset to MediaWiki markup.
+
+    Level-n headings -> ``=`` x n, ``**b**`` -> ``'''b'''``, ``*i*`` ->
+    ``''i''``, ``~~s~~`` -> ``<s>s</s>``, code -> ``<code>``, links ->
+    ``[url label]`` (external links only), lists -> ``*`` / ``#`` prefixes
+    (mixed nesting like ``*#``), fences -> ``<syntaxhighlight lang=...>`` or
+    ``<pre>``, quotes -> ``<blockquote>`` per line.
+    Round-trips hold for absolute (http/https/mailto) link URLs; a relative
+    link is written but reads back as plain text.
+    """
+    return _wiki_markup(
+        content,
+        _mediawiki_token,
+        {
+            "heading": lambda level, text: f"{'=' * level} {text} {'=' * level}",
+            "code": _mediawiki_code,
+            "quote": lambda text: f"<blockquote>{text}</blockquote>",
+        },
+    )
+
+
+_MEDIAWIKI_CODE_RE = re.compile(r"<(?:code|tt)>(.*?)</(?:code|tt)>")
+_MEDIAWIKI_EXT_LINK_RE = re.compile(r"(?<!\[)\[((?:https?|mailto):[^\s\]]+)(?:[ \t]+([^\]\n]+))?\](?!\])")
+_MEDIAWIKI_EMPHASIS = (
+    (re.compile(r"'''(?!')(.+?)(?<!')'''"), "bold"),
+    (re.compile(r"''(?!')(.+?)(?<!')''"), "italic"),
+    (re.compile(r"<(?:s|del|strike)>(.+?)</(?:s|del|strike)>"), "strike"),
+)
+_MEDIAWIKI_HEADING_RE = re.compile(r"^(={1,6})[ \t]*(.+?)[ \t]*\1[ \t]*$")
+_MEDIAWIKI_LIST_RE = re.compile(r"^([*#]+)[ \t]*(.*)$")
+_MEDIAWIKI_CODE_OPEN_RE = re.compile(r'^[ \t]*<(syntaxhighlight|source|pre)(?:[^>]*?\blang="?([\w+#.-]+)"?)?[^>]*>[ \t]*$')
+_MEDIAWIKI_QUOTE_RE = re.compile(r"^[ \t]*<blockquote>(.*)</blockquote>[ \t]*$")
+
+
+def _mediawiki_link_to_markdown(match: re.Match[str]) -> str:
+    url, label = match.group(1), match.group(2)
+    return f"<{url}>" if label is None else f"[{_mediawiki_inline(label)}]({url})"
+
+
+def _mediawiki_inline(text: str) -> str:
+    return _dialect_inline_to_markdown(
+        text,
+        code=_MEDIAWIKI_CODE_RE,
+        links=((_MEDIAWIKI_EXT_LINK_RE, _mediawiki_link_to_markdown),),
+        emphasis=_MEDIAWIKI_EMPHASIS,
+    )
+
+
+def mediawiki_to_markdown(content: str) -> str:
+    """Convert MediaWiki markup to canonical Markdown (narrow contract).
+
+    Supports ``=`` headings, ``*``/``#`` lists, ``<syntaxhighlight>`` /
+    ``<source>`` / ``<pre>`` blocks, one-line ``<blockquote>``, ``----``,
+    and ``'''b'''`` / ``''i''`` / ``<s>`` / ``<code>`` / external
+    ``[url label]`` links. Internal ``[[Page]]`` links, templates
+    ``{{...}}``, tables ``{|...|}``, and ``<ref>`` are kept literally.
+    """
+    out: list[str] = []
+    numberer = _MarkdownListNumberer()
+    lines = content.splitlines()
+    index = 0
+    while index < len(lines):
+        line = lines[index]
+        code_open = _MEDIAWIKI_CODE_OPEN_RE.match(line)
+        if code_open:
+            tag = code_open.group(1)
+            body: list[str] = []
+            index += 1
+            while index < len(lines) and lines[index].strip() != f"</{tag}>":
+                body.append(lines[index])
+                index += 1
+            index += 1
+            out.extend(_dialect_code_block_lines(body, code_open.group(2) or ""))
+            numberer.reset()
+            continue
+        heading_match = _MEDIAWIKI_HEADING_RE.match(line)
+        list_match = _MEDIAWIKI_LIST_RE.match(line)
+        quote_match = _MEDIAWIKI_QUOTE_RE.match(line)
+        if heading_match:
+            out.append("#" * len(heading_match.group(1)) + " " + _mediawiki_inline(heading_match.group(2)))
+            numberer.reset()
+        elif re.match(r"^-{4,}[ \t]*$", line):
+            out.append("---")
+            numberer.reset()
+        elif list_match:
+            out.append(_wiki_list_to_markdown(numberer, list_match.group(1), _mediawiki_inline(list_match.group(2))))
+        elif quote_match:
+            out.append(("> " + _mediawiki_inline(quote_match.group(1))).rstrip())
+            numberer.reset()
+        elif not line.strip():
+            out.append("")
+        else:
+            out.append(_mediawiki_inline(line))
+            numberer.reset()
+        index += 1
+    return "\n".join(out) + ("\n" if out else "")
+
+
+# --- Jira wiki markup -------------------------------------------------------
+
+def _jira_token(token: tuple[Any, ...]) -> str:
+    kind = token[0]
+    if kind == "text":
+        return token[1]
+    if kind == "code":
+        return "{{" + token[1] + "}}"
+    if kind in {"bold", "italic", "strike"}:
+        mark = {"bold": "*", "italic": "_", "strike": "-"}[kind]
+        return mark + _render_with(_jira_token, token[1]) + mark
+    if kind == "link":
+        label = _render_with(_jira_token, token[1])
+        return f"[{token[2]}]" if _lite_plain(token[1]) == token[2] else f"[{label}|{token[2]}]"
+    if kind == "image":
+        return f"!{token[2]}!"
+    return ""
+
+
+def _jira_code(lang: str, body: list[str]) -> list[str]:
+    return ["{code:" + lang + "}" if lang else "{code}", *body, "{code}"]
+
+
+def markdown_to_jira(content: str) -> str:
+    """Convert the Markdown lite subset to Jira wiki markup.
+
+    Headings -> ``hN.``, ``**b**`` -> ``*b*``, ``*i*`` -> ``_i_``,
+    ``~~s~~`` -> ``-s-``, code -> ``{{c}}``, links -> ``[label|url]``,
+    images -> ``!url!``, lists -> ``*`` / ``#`` prefixes, fences ->
+    ``{code:lang}``, quotes -> ``bq.`` lines.
+    Round-trips hold for absolute (http/https/mailto) link URLs; a relative
+    link is written but reads back as plain text.
+    """
+    return _wiki_markup(
+        content,
+        _jira_token,
+        {
+            "heading": lambda level, text: f"h{level}. {text}",
+            "code": _jira_code,
+            "quote": lambda text: f"bq. {text}",
+        },
+    )
+
+
+_JIRA_CODE_RE = re.compile(r"\{\{(.+?)\}\}")
+_JIRA_LINK_RE = re.compile(r"\[(?:([^\]|\n]+)\|)?((?:https?|mailto):[^\]\s|]+)\]")
+_JIRA_IMAGE_RE = re.compile(r"!((?:https?://[^!\s|]+)|(?:[^!\s|]+\.[A-Za-z0-9]{2,5}))(?:\|[^!\n]*)?!")
+_JIRA_EMPHASIS = (
+    (re.compile(r"(?<![\w*])\*(?=[^\s*])([^*\n]+?)(?<=[^\s*])\*(?![\w*])"), "bold"),
+    (re.compile(r"(?<![\w_])_(?=[^\s_])([^_\n]+?)(?<=[^\s_])_(?![\w_])"), "italic"),
+    (re.compile(r"(?<![\w-])-(?=[^\s-])([^\n]+?)(?<=[^\s-])-(?![\w-])"), "strike"),
+)
+_JIRA_HEADING_RE = re.compile(r"^h([1-6])\.[ \t]+(.*?)[ \t]*$")
+_JIRA_LIST_RE = re.compile(r"^([*#]+|-)[ \t]+(.*)$")
+_JIRA_CODE_OPEN_RE = re.compile(r"^[ \t]*\{(code|noformat)(?::([^}]*))?\}[ \t]*$")
+
+
+def _jira_link_to_markdown(match: re.Match[str]) -> str:
+    label, url = match.group(1), match.group(2)
+    return f"<{url}>" if label is None else f"[{_jira_inline(label)}]({url})"
+
+
+def _jira_inline(text: str) -> str:
+    return _dialect_inline_to_markdown(
+        text,
+        code=_JIRA_CODE_RE,
+        links=(
+            (_JIRA_LINK_RE, _jira_link_to_markdown),
+            (_JIRA_IMAGE_RE, lambda m: f"![]({m.group(1)})" if _sanitize_url_scheme(m.group(1)) else m.group(1)),
+        ),
+        emphasis=_JIRA_EMPHASIS,
+    )
+
+
+def jira_to_markdown(content: str) -> str:
+    """Convert Jira wiki markup to canonical Markdown (narrow contract).
+
+    Supports ``hN.`` headings, ``*``/``#``/``-`` lists, ``{code[:lang]}`` /
+    ``{noformat}`` / ``{quote}`` blocks, ``bq.`` lines, ``----``, and
+    ``*b*`` / ``_i_`` / ``-s-`` / ``{{c}}`` / ``[label|url]`` / ``!img!``.
+    Tables, panels, ``{color}``, mentions, and ``+u+`` / ``^sup^`` /
+    ``~sub~`` are kept literally.
+    """
+    out: list[str] = []
+    numberer = _MarkdownListNumberer()
+    lines = content.splitlines()
+    index = 0
+    while index < len(lines):
+        line = lines[index]
+        code_open = _JIRA_CODE_OPEN_RE.match(line)
+        if code_open or line.strip() == "{quote}":
+            tag = code_open.group(1) if code_open else "quote"
+            body: list[str] = []
+            index += 1
+            while index < len(lines) and lines[index].strip() != "{" + tag + "}":
+                body.append(lines[index])
+                index += 1
+            index += 1
+            if tag == "quote":
+                out.extend(("> " + _jira_inline(item)).rstrip() if item.strip() else ">" for item in body)
+            else:
+                options = (code_open.group(2) or "") if tag == "code" else ""
+                lang = options.split("|")[0]
+                lang = "" if "=" in lang else lang
+                for option in options.split("|"):
+                    if option.startswith("language="):
+                        lang = option.split("=", 1)[1]
+                out.extend(_dialect_code_block_lines(body, lang))
+            numberer.reset()
+            continue
+        heading_match = _JIRA_HEADING_RE.match(line)
+        list_match = _JIRA_LIST_RE.match(line)
+        if heading_match:
+            out.append("#" * int(heading_match.group(1)) + " " + _jira_inline(heading_match.group(2)))
+            numberer.reset()
+        elif re.match(r"^-{4,}[ \t]*$", line):
+            out.append("---")
+            numberer.reset()
+        elif list_match:
+            prefix = "*" if list_match.group(1) == "-" else list_match.group(1)
+            out.append(_wiki_list_to_markdown(numberer, prefix, _jira_inline(list_match.group(2))))
+        elif line.startswith("bq. "):
+            out.append("> " + _jira_inline(line[4:]))
+            numberer.reset()
+        elif not line.strip():
+            out.append("")
+        else:
+            out.append(_jira_inline(line))
+            numberer.reset()
+        index += 1
+    return "\n".join(out) + ("\n" if out else "")
+
+
+# === SECTION: llm io ===
+# LLM inputs/outputs are hard to read in logs and tests: a reasoning model
+# interleaves private "thinking" with the actual answer, a full response can
+# run thousands of characters, and assertions/log lines rarely need the whole
+# blob verbatim. These helpers separate reasoning from the answer, compress
+# an output for logs, summarize it for assertions, and find IDs (UUIDs,
+# URLs, GitHub refs, hex SHAs) worth referencing instead of embedding whole
+# content. They reuse the shared scanner/masking helpers, code_block's
+# adaptive fence, and the extract_* family rather than re-parsing fences or
+# code spans.
+
+_REASONING_TAG_NAMES = ("think", "thinking", "reasoning")
+_REASONING_OPEN_RE = re.compile(r"<(think|thinking|reasoning)\b[^>]*>", re.IGNORECASE)
+_REASONING_CLOSE_RE = {
+    name: re.compile(r"</" + name + r"\s*>", re.IGNORECASE) for name in _REASONING_TAG_NAMES
+}
+# Open WebUI streams reasoning as a collapsible <details type="reasoning">
+# block with a leading <summary> line (e.g. "Thought for 5 seconds") that is
+# not itself part of the reasoning content.
+_REASONING_DETAILS_OPEN_RE = re.compile(
+    r'<details\b(?=[^>]*\btype=["\']reasoning["\'])[^>]*>', re.IGNORECASE
+)
+_REASONING_DETAILS_CLOSE_RE = re.compile(r"</details\s*>", re.IGNORECASE)
+_REASONING_SUMMARY_RE = re.compile(
+    r"[ \t]*<summary\b[^>]*>.*?</summary>[ \t]*\n?", re.IGNORECASE | re.DOTALL
+)
+_LLM_UUID_RE = re.compile(
+    r"\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b"
+)
+_LLM_GITHUB_REPO_REF_RE = re.compile(
+    r"\b[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?/[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?#[0-9]+\b"
+)
+_LLM_GITHUB_BARE_REF_RE = re.compile(r"(?<![\w/])#[0-9]+\b")
+_LLM_HEX_RUN_RE = re.compile(r"(?<![0-9A-Za-z_])[0-9a-fA-F]+(?![0-9A-Za-z_])")
+
+
+def _mask_code_context(text: str, *, mask_inline: bool) -> str:
+    """Same-length ``text`` with fenced code, and optionally inline code, blanked.
+
+    Positions line up with ``text`` line by line, so offsets found by
+    scanning the result can slice ``text`` itself unchanged. Uses the shared
+    scanner contract (``_scan_lines`` for fence state, ``_mask_inline_code``
+    for balanced backtick spans) instead of a new ad hoc fence tracker.
+    """
+    lines = text.split("\n")
+    scanned = _scan_lines(lines)
+    masked_lines: list[str] = []
+    for line, item in zip(lines, scanned):
+        if item.in_fenced_code:
+            masked_lines.append(" " * len(line))
+        elif mask_inline:
+            masked_lines.append(_mask_inline_code(line))
+        else:
+            masked_lines.append(line)
+    return "\n".join(masked_lines)
+
+
+def _collapse_blank_runs(text: str, max_blank_lines: int) -> str:
+    """Collapse runs of blank lines outside fenced code to ``max_blank_lines``."""
+    lines = text.split("\n")
+    scanned = _scan_lines(lines)
+    out: list[str] = []
+    blank_run = 0
+    for line, item in zip(lines, scanned):
+        is_blank = not item.in_fenced_code and line.strip() == ""
+        if is_blank:
+            blank_run += 1
+            if blank_run > max_blank_lines:
+                continue
+        else:
+            blank_run = 0
+        out.append(line)
+    return "\n".join(out)
+
+
+def _truncate_code_blocks(text: str, max_code_lines: int) -> str:
+    """Shorten fenced code blocks over ``max_code_lines`` lines, fence-safe.
+
+    Walks lines with the shared scanner exactly like ``extract_code_blocks``,
+    but rewrites the block instead of only collecting it: kept lines are
+    followed by one ``... N more lines`` marker line, re-fenced with
+    ``code_block`` so its adaptive fence stays longer than any backtick run
+    left in the (possibly truncated) body.
+    """
+    lines = text.split("\n")
+    scanned = _scan_lines(lines)
+    out: list[str] = []
+    index = 0
+    total = len(lines)
+    while index < total:
+        if not scanned[index].is_fence_open:
+            out.append(lines[index])
+            index += 1
+            continue
+        match = _FENCE_RE.match(lines[index])
+        fence_char = match.group(1)[0] if match else "`"
+        info = match.group(2).strip() if match else ""
+        lang = info.split()[0] if info else ""
+        body: list[str] = []
+        index += 1
+        while index < total and not scanned[index].is_fence_close:
+            body.append(lines[index])
+            index += 1
+        if index < total:
+            index += 1  # consume the closing fence line itself
+        if len(body) > max_code_lines:
+            extra = len(body) - max_code_lines
+            body = body[:max_code_lines] + [f"… {extra} more lines"]
+        rendered = code_block("\n".join(body), lang, fence_char=fence_char).split("\n")
+        if rendered and rendered[-1] == "":
+            rendered.pop()
+        out.extend(rendered)
+    return "\n".join(out)
+
+
+def _dedupe_in_order(matches: list[tuple[int, str]]) -> list[str]:
+    """Sort ``(position, value)`` pairs by position and drop repeat values."""
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for _position, value in sorted(matches, key=lambda pair: pair[0]):
+        if value not in seen:
+            seen.add(value)
+            ordered.append(value)
+    return ordered
+
+
+def _mask_spans(text: str, spans: list[tuple[int, int]]) -> str:
+    """Blank ``text`` over each ``(start, end)`` span, keeping length/positions."""
+    if not spans:
+        return text
+    chars = list(text)
+    for start, end in spans:
+        for index in range(start, end):
+            chars[index] = " "
+    return "".join(chars)
+
+
+def _split_reasoning_raw(text: str) -> tuple[str, list[str], list[str]]:
+    """Remove reasoning blocks from ``text`` with no shaping applied yet.
+
+    Shared core for :func:`split_reasoning` and :func:`compact_llm_output`:
+    returns ``(raw_answer, reasoning, formats)`` where ``raw_answer`` is
+    ``text`` with every reasoning block cut out, but *not yet* blank-line
+    collapsed or whitespace-stripped -- each caller applies its own final
+    shaping (``split_reasoning`` always collapses to one blank line;
+    ``compact_llm_output`` collapses to its caller-chosen ``max_blank_lines``).
+
+    See :func:`split_reasoning` for the recognized tag formats and the
+    unclosed-tag / fenced-code / inline-code rules.
+    """
+    normalized = text.replace("\r\n", "\n").replace("\r", "\n")
+    mask = _mask_code_context(normalized, mask_inline=True)
+    length = len(normalized)
+
+    kept: list[str] = []
+    reasoning: list[str] = []
+    formats: list[str] = []
+    pos = 0
+    while True:
+        tag_match = _REASONING_OPEN_RE.search(mask, pos)
+        details_match = _REASONING_DETAILS_OPEN_RE.search(mask, pos)
+        candidates = [m for m in (tag_match, details_match) if m is not None]
+        if not candidates:
+            kept.append(normalized[pos:])
+            break
+        opening = min(candidates, key=lambda m: m.start())
+        kept.append(normalized[pos:opening.start()])
+
+        if opening is details_match:
+            fmt = "details"
+            close_match = _REASONING_DETAILS_CLOSE_RE.search(mask, opening.end())
+        else:
+            fmt = opening.group(1).lower()
+            close_match = _REASONING_CLOSE_RE[fmt].search(mask, opening.end())
+
+        if close_match is None:
+            block = normalized[opening.end():]
+            pos = length
+        else:
+            block = normalized[opening.end():close_match.start()]
+            pos = close_match.end()
+
+        if fmt == "details":
+            block = _REASONING_SUMMARY_RE.sub("", block, count=1)
+
+        reasoning.append(block.strip())
+        formats.append(fmt)
+
+        if close_match is None:
+            break
+
+    return "".join(kept), reasoning, formats
+
+
+def split_reasoning(text: str) -> dict[str, Any]:
+    """Split reasoning-model output into its answer and reasoning blocks.
+
+    Recognizes case-insensitive ``<think>``, ``<thinking>``, and
+    ``<reasoning>`` tags, plus Open WebUI's collapsible
+    ``<details type="reasoning" ...><summary>...</summary>...</details>``
+    (the summary line is dropped; the rest of that block is reasoning). Tags
+    inside fenced code or inline code spans are ignored and stay literal in
+    the answer, using the shared scanner/masking helpers rather than a
+    second fence tracker. An opening tag with no matching close (a stream
+    cut mid-thought) makes the rest of the text one final reasoning block.
+
+    Returns a dict with ``answer`` (the input with every reasoning block
+    removed, blank-line runs left behind collapsed to one, and outer
+    whitespace stripped -- a trailing ``"\\n"`` when non-empty, matching
+    this module's other converters), ``reasoning`` (each block's stripped
+    text, in order of appearance), and ``formats`` (one tag name per block,
+    parallel to ``reasoning``: ``"think"``, ``"thinking"``, ``"reasoning"``,
+    or ``"details"``).
+
+    :raises ValueError: if ``text`` is not a ``str``.
+    """
+    if not isinstance(text, str):
+        raise ValueError("text must be a string")
+    if not text:
+        return {"answer": "", "reasoning": [], "formats": []}
+
+    raw_answer, reasoning, formats = _split_reasoning_raw(text)
+    answer = _collapse_blank_runs(raw_answer, 1).strip()
+    return {
+        "answer": answer + "\n" if answer else "",
+        "reasoning": reasoning,
+        "formats": formats,
+    }
+
+
+def compact_llm_output(
+    text: str,
+    *,
+    keep_reasoning: bool = False,
+    max_code_lines: int = 40,
+    max_blank_lines: int = 1,
+) -> str:
+    """Deterministically compress LLM output for logs and test assertions.
+
+    Drops reasoning blocks (the same recognizer as :func:`split_reasoning`)
+    unless ``keep_reasoning`` is set. Blank-line runs outside fenced code
+    are collapsed to ``max_blank_lines`` -- this is applied directly to the
+    reasoning-stripped text rather than through ``split_reasoning``'s own
+    ``answer`` field, since that field always collapses to exactly one
+    blank line. A fenced code block longer than ``max_code_lines`` lines
+    keeps only its first ``max_code_lines`` lines, then a final
+    ``... N more lines`` marker line, re-fenced with :func:`code_block` so
+    its adaptive fence stays stable even when the kept lines contain their
+    own backtick runs. Code content is never otherwise altered.
+
+    :raises ValueError: if ``text`` is not a ``str``, or ``max_code_lines``
+        / ``max_blank_lines`` is negative.
+    """
+    if not isinstance(text, str):
+        raise ValueError("text must be a string")
+    if max_code_lines < 0:
+        raise ValueError("max_code_lines must be >= 0")
+    if max_blank_lines < 0:
+        raise ValueError("max_blank_lines must be >= 0")
+    if not text:
+        return ""
+
+    if keep_reasoning:
+        working = text
+    else:
+        working, _reasoning, _formats = _split_reasoning_raw(text)
+    normalized = working.replace("\r\n", "\n").replace("\r", "\n")
+    collapsed = _collapse_blank_runs(normalized, max_blank_lines)
+    truncated = _truncate_code_blocks(collapsed, max_code_lines)
+    result = truncated.strip()
+    return result + "\n" if result else ""
+
+
+def llm_output_digest(text: str) -> dict[str, Any]:
+    """Summarize LLM output as a small JSON-able dict for logs and assertions.
+
+    Splits off reasoning with :func:`split_reasoning` first, then reuses the
+    existing ``extract_*`` helpers on the remaining answer: ``headings``
+    (:func:`extract_sections` titles), ``code_blocks``
+    (:func:`extract_code_blocks` as ``{"lang", "lines"}``), and ``links``
+    (:func:`extract_urls`). ``has_table`` reuses :func:`markdown_table_to_rows`
+    rather than a second table sniffer.
+
+    Returns a dict with ``answer_chars``, ``reasoning_chars``,
+    ``reasoning_blocks``, ``headings``, ``code_blocks``, ``links``, and
+    ``has_table``.
+
+    :raises ValueError: if ``text`` is not a ``str``.
+    """
+    if not isinstance(text, str):
+        raise ValueError("text must be a string")
+
+    split = split_reasoning(text)
+    answer = split["answer"]
+    headers, _rows = markdown_table_to_rows(answer)
+    return {
+        "answer_chars": len(answer),
+        "reasoning_chars": sum(len(block) for block in split["reasoning"]),
+        "reasoning_blocks": len(split["reasoning"]),
+        "headings": [item["title"] for item in extract_sections(answer)],
+        "code_blocks": [
+            {"lang": block["language"], "lines": len(block["code"].splitlines())}
+            for block in extract_code_blocks(answer)
+        ],
+        "links": extract_urls(answer),
+        "has_table": bool(headers),
+    }
+
+
+def extract_identifiers(text: str) -> dict[str, Any]:
+    """Find IDs worth referencing instead of embedding whole content.
+
+    Looks for UUIDs, URLs (:func:`extract_urls`), GitHub issue/PR
+    references (``owner/repo#123`` and bare ``#123``), and bare hex "SHA"
+    runs (7-40 hex characters containing at least one letter and one digit,
+    and not part of an already-matched UUID or URL). Each list is
+    deduplicated in order of first appearance. Matches inside fenced code
+    are skipped, using the shared scanner rather than a second fence
+    tracker; inline code is scanned normally.
+
+    Returns a dict with ``uuids``, ``urls``, ``github_refs``, and ``shas``.
+
+    :raises ValueError: if ``text`` is not a ``str``.
+    """
+    if not isinstance(text, str):
+        raise ValueError("text must be a string")
+    if not text:
+        return {"uuids": [], "urls": [], "github_refs": [], "shas": []}
+
+    normalized = text.replace("\r\n", "\n").replace("\r", "\n")
+    masked = _mask_code_context(normalized, mask_inline=False)
+
+    uuid_hits = [(m.start(), m.end(), m.group(0)) for m in _LLM_UUID_RE.finditer(masked)]
+    uuids = _dedupe_in_order([(start, value) for start, _end, value in uuid_hits])
+
+    urls = extract_urls(masked)
+
+    repo_hits = [(m.start(), m.group(0)) for m in _LLM_GITHUB_REPO_REF_RE.finditer(masked)]
+    bare_hits = [(m.start(), m.group(0)) for m in _LLM_GITHUB_BARE_REF_RE.finditer(masked)]
+    github_refs = _dedupe_in_order(repo_hits + bare_hits)
+
+    # A SHA must not be carved out of an already-matched UUID or URL, so
+    # blank both before scanning for bare hex runs.
+    exclude_spans = [(start, end) for start, end, _value in uuid_hits]
+    for url in urls:
+        search_from = 0
+        while True:
+            found = masked.find(url, search_from)
+            if found < 0:
+                break
+            exclude_spans.append((found, found + len(url)))
+            search_from = found + len(url)
+    sha_source = _mask_spans(masked, exclude_spans)
+
+    sha_hits: list[tuple[int, str]] = []
+    for m in _LLM_HEX_RUN_RE.finditer(sha_source):
+        run = m.group(0)
+        if 7 <= len(run) <= 40 and any(c.isdigit() for c in run) and any(c.isalpha() for c in run):
+            sha_hits.append((m.start(), run))
+    shas = _dedupe_in_order(sha_hits)
+
+    return {"uuids": uuids, "urls": urls, "github_refs": github_refs, "shas": shas}

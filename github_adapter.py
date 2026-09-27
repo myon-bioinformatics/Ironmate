@@ -142,12 +142,13 @@ def parse_github_resource(value: str) -> GitHubResource:
 
 
 def fetch_json(url: str, *, token: str = "", timeout: int = 30) -> dict[str, Any]:
+    parsed_url = urlparse(url)
     headers = {
         "Accept": "application/vnd.github+json",
         "User-Agent": "Ironmate-github-adapter",
         "X-GitHub-Api-Version": "2022-11-28",
     }
-    if token:
+    if token and parsed_url.scheme == "https" and parsed_url.hostname == "api.github.com":
         headers["Authorization"] = f"Bearer {token}"
     try:
         with urlopen(Request(url, headers=headers), timeout=timeout) as response:

@@ -40,6 +40,8 @@ __all__ = [
     "markdown_to_web_ui_v1",
     "HtmlNode",
     "parse_html_dom",
+    "html_text_content",
+    "find_html_text",
     "dom_to_html",
     "dom_to_markdown",
     "markdown_to_dom",
@@ -3363,6 +3365,49 @@ def parse_html_dom(html: str) -> HtmlNode:
     parser.feed(html)
     parser.close()
     return parser.root
+
+
+def html_text_content(node: HtmlNode) -> str:
+    """Return decoded descendant text from a lightweight DOM node."""
+    if node.kind == "text":
+        return node.text
+    return "".join(html_text_content(child) for child in (node.children or []))
+
+
+def find_html_text(html: str, *, tag: str | None = None, attrs: dict[str, str] | None = None) -> str | None:
+    """Return textContent-like decoded text for the first matching safe element.
+
+    Matching is depth-first pre-order and attribute values use exact equality.
+    No separators are inserted between descendant text nodes. Filters apply to
+    the sanitized lightweight DOM; unsupported tags or filtered attributes
+    raise ValueError instead of being confused with a missing element.
+    """
+    wanted_tag = tag.lower() if tag is not None else None
+    wanted_attrs = attrs or {}
+    normalized_attrs = {key.lower(): value for key, value in wanted_attrs.items()}
+    if wanted_tag is not None and wanted_tag not in _DOM_SAFE_TAGS:
+        raise ValueError(f"unsupported HTML tag filter: {tag!r}")
+    unsupported_attrs = [key for key in wanted_attrs if key.lower() not in _DOM_COMMON_ATTRS and not key.lower().startswith("data-")]
+    if unsupported_attrs:
+        raise ValueError(f"unsupported HTML attribute filter(s): {', '.join(unsupported_attrs)}")
+    if wanted_tag == "input" and normalized_attrs and normalized_attrs.get("type", "").lower() != "checkbox":
+        raise ValueError("attribute filters for input require type=checkbox")
+    root = parse_html_dom(html)
+
+    def walk(node: HtmlNode) -> HtmlNode | None:
+        if node.kind == "element":
+            node_attrs = node.attrs or {}
+            if ((wanted_tag is None or node.tag == wanted_tag)
+                    and all(node_attrs.get(key.lower()) == value for key, value in wanted_attrs.items())):
+                return node
+        for child in node.children or []:
+            found = walk(child)
+            if found is not None:
+                return found
+        return None
+
+    found = walk(root)
+    return None if found is None else html_text_content(found)
 
 
 def dom_to_html(node: HtmlNode) -> str:

@@ -219,7 +219,7 @@ This avoids repeated model loading and is more reliable than routing every reque
 
 Ironmate keeps pinned source snapshots under `vendor/` instead of treating these helpers as runtime package dependencies.
 
-- `vendor/markdown.py` is sourced from [`myon-bioinformatics/markdown`](https://github.com/myon-bioinformatics/markdown), currently pinned to `83a325ce`.
+- `vendor/markdown.py` is sourced from [`myon-bioinformatics/markdown`](https://github.com/myon-bioinformatics/markdown), currently pinned to `99b6a174`.
 - `vendor/ascii_artist.py` is sourced from [`myon-bioinformatics/ascii_artist`](https://github.com/myon-bioinformatics/ascii_artist), currently pinned to `7c21bacf`.
 
 The sibling repositories are the upstream sources; changes should be developed there first and then intentionally refreshed in Ironmate.

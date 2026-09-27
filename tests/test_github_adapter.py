@@ -117,6 +117,30 @@ class GitHubAdapterTest(unittest.TestCase):
         self.assertEqual(result["status"], "error")
         self.assertEqual(result["error_type"], "URLError")
 
+    def test_fetch_token_is_scoped_to_https_github_api(self):
+        class Response:
+            headers = Message()
+            def __enter__(self):
+                return self
+            def __exit__(self, *args):
+                return False
+            def read(self):
+                return b'{}'
+
+        seen = []
+        def fake_urlopen(request, timeout):
+            seen.append(request)
+            return Response()
+
+        with patch("github_adapter.urlopen", side_effect=fake_urlopen):
+            fetch_json("https://api.github.com/repos/o/r", token="secret")
+            fetch_json("https://example.com/repos/o/r", token="secret")
+            fetch_json("http://api.github.com/repos/o/r", token="secret")
+
+        self.assertEqual(seen[0].get_header("Authorization"), "Bearer secret")
+        self.assertIsNone(seen[1].get_header("Authorization"))
+        self.assertIsNone(seen[2].get_header("Authorization"))
+
     def test_rejects_unknown_hosts_and_shapes(self):
         with self.assertRaises(ValueError):
             parse_github_resource("https://example.com/o/r")

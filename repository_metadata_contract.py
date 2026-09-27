@@ -15,6 +15,8 @@ SCHEMA_VERSION = "1.0"
 PUBLIC_FIELDS = ("schema_version", "repository", "head", "measurements", "tooling", "generated_at")
 _OWNER_RE = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$")
 _REPO_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
+_TOOL_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,31}$")
+_TOOL_VALUE_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._+ -]{0,31}$")
 
 
 def repository_identity(full_name: str) -> tuple[str, str]:
@@ -50,6 +52,16 @@ def _validate_measurements(measurements: dict[str, Any]) -> None:
         raise ValueError("measurements must be non-negative integers or null")
 
 
+def _validate_tooling(tooling: Any) -> None:
+    if not isinstance(tooling, dict):
+        raise ValueError("tooling must be an object")
+    for name, value in tooling.items():
+        if not isinstance(name, str) or not _TOOL_NAME_RE.fullmatch(name):
+            raise ValueError("invalid tooling name")
+        if not isinstance(value, str) or not _TOOL_VALUE_RE.fullmatch(value):
+            raise ValueError("tooling values must be short version labels")
+
+
 def _iso8601(value: str) -> str:
     parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
     if parsed.tzinfo is None:
@@ -82,6 +94,7 @@ def build_repository_record(
         "release_artifact_bytes": release_artifact_bytes,
     }
     _validate_measurements(sizes)
+    _validate_tooling(dict(tooling or {}))
     record = {
         "schema_version": SCHEMA_VERSION,
         "repository": {"full_name": full_name},
@@ -117,6 +130,7 @@ def validate_repository_record(record: dict[str, Any]) -> None:
         raise ValueError("invalid repository")
     repository_identity(record["repository"]["full_name"])
     _validate_measurements(record.get("measurements", {}))
+    _validate_tooling(record.get("tooling"))
 
 
 def format_commit_line(record: dict[str, Any]) -> str:

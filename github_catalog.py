@@ -29,30 +29,47 @@ PYTHON_SOURCE_LIMIT = max(1, int(os.environ.get("IRONMATE_PYTHON_SOURCE_LIMIT", 
 RATE_LIMIT = {"remaining": None, "limit": None, "reset": None}
 
 
-def _request_json(url: str) -> Any:
-    """Fetch through the shared adapter while preserving catalog failure semantics."""
-    result = fetch_json(url, token=TOKEN)
+def _record_rate_limit(result: dict[str, Any]) -> None:
     rate_limit = result.get("rate_limit")
-    if isinstance(rate_limit, dict):
-        RATE_LIMIT.update({key: rate_limit.get(key) for key in RATE_LIMIT})
+    if not isinstance(rate_limit, dict):
+        return
+    for key in RATE_LIMIT:
+        value = rate_limit.get(key)
+        if value is not None:
+            RATE_LIMIT[key] = value
+
+
+def _catalog_fetch(url: str) -> dict[str, Any]:
+    result = fetch_json(url, token=TOKEN)
+    _record_rate_limit(result)
+    return result
+
+
+def _request_json(url: str) -> Any:
+    """Fetch through the shared adapter while preserving useful failure details."""
+    result = _catalog_fetch(url)
     if result.get("status") == "detected":
         return result.get("value")
+    resolved_url = result.get("url") or url
     http_status = result.get("http_status")
     if http_status == 404:
-        raise LookupError("not_found")
-    raise RuntimeError(result.get("error_type") or "fetch_failed")
+        raise LookupError(f"not_found {http_status} {resolved_url}")
+    error_type = result.get("error_type") or "fetch_failed"
+    rate_limit = result.get("rate_limit")
+    if http_status == 403 and isinstance(rate_limit, dict) and rate_limit.get("remaining") == "0":
+        error_type = "rate_limited"
+    status = f" {http_status}" if http_status is not None else ""
+    raise RuntimeError(f"{error_type}{status} {resolved_url}")
 
 
 def _optional_json(url: str) -> tuple[str, Any]:
-    result = fetch_json(url, token=TOKEN)
-    rate_limit = result.get("rate_limit")
-    if isinstance(rate_limit, dict):
-        RATE_LIMIT.update({key: rate_limit.get(key) for key in RATE_LIMIT})
+    result = _catalog_fetch(url)
     if result.get("status") == "detected":
         return "detected", result.get("value")
     if result.get("http_status") == 404:
         return "not_found", None
     return "fetch_failed", None
+
 
 def _paged(url: str) -> list[dict[str, Any]]:
     items: list[dict[str, Any]] = []

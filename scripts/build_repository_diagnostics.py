@@ -18,16 +18,15 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
 
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 from repository_metadata_contract import (
     build_repository_record,
     pages_candidate_url,
     repository_identity,
-    to_json,
 )
-
-ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
 
 OUTPUT_JSON = ROOT / "docs" / "api" / "repository-diagnostics.json"
 OUTPUT_HTML = ROOT / "docs" / "repository-diagnostics.html"

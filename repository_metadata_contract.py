@@ -38,6 +38,18 @@ def pages_candidate_url(full_name: str) -> str:
 
 
 
+def _validate_measurements(measurements: dict[str, Any]) -> None:
+    expected = {"github_reported_size_bytes", "working_tree_bytes", "release_artifact_bytes"}
+    if set(measurements) != expected:
+        raise ValueError("invalid measurements")
+    if any(
+        value is not None and
+        (not isinstance(value, int) or isinstance(value, bool) or value < 0)
+        for value in measurements.values()
+    ):
+        raise ValueError("measurements must be non-negative integers or null")
+
+
 def _iso8601(value: str) -> str:
     parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
     if parsed.tzinfo is None:
@@ -69,8 +81,7 @@ def build_repository_record(
         "working_tree_bytes": working_tree_bytes,
         "release_artifact_bytes": release_artifact_bytes,
     }
-    if any(value is not None and (not isinstance(value, int) or isinstance(value, bool) or value < 0) for value in sizes.values()):
-        raise ValueError("measurements must be non-negative integers or null")
+    _validate_measurements(sizes)
     record = {
         "schema_version": SCHEMA_VERSION,
         "repository": {"full_name": full_name},
@@ -105,10 +116,7 @@ def validate_repository_record(record: dict[str, Any]) -> None:
     if set(record.get("repository", {})) != {"full_name"}:
         raise ValueError("invalid repository")
     repository_identity(record["repository"]["full_name"])
-    if set(record.get("measurements", {})) != {
-        "github_reported_size_bytes", "working_tree_bytes", "release_artifact_bytes"
-    }:
-        raise ValueError("invalid measurements")
+    _validate_measurements(record.get("measurements", {}))
 
 
 def format_commit_line(record: dict[str, Any]) -> str:

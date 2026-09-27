@@ -1,5 +1,6 @@
 from repository_metadata_contract import (
-    build_repository_record, format_commit_line, to_json, to_jsonl, validate_repository_record
+    build_repository_record, format_commit_line, pages_candidate_url,
+    repository_identity, to_json, to_jsonl, validate_repository_record,
 )
 import json
 import pytest
@@ -51,3 +52,14 @@ def test_rejects_negative_size_and_naive_time():
             timestamp="2026-09-27T19:09:22", subject="x",
             generated_at="2026-09-27T20:00:00+09:00", working_tree_bytes=-1,
         )
+
+
+@pytest.mark.parametrize("full_name", ["a.b/demo", "-bad/demo", "bad-/demo", "owner/..", "owner/."])
+def test_rejects_invalid_github_repository_identity(full_name):
+    with pytest.raises(ValueError):
+        repository_identity(full_name)
+
+
+def test_pages_candidate_url_handles_project_and_user_sites():
+    assert pages_candidate_url("octo/demo") == "https://octo.github.io/demo/"
+    assert pages_candidate_url("octo/octo.github.io") == "https://octo.github.io/"

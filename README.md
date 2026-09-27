@@ -298,8 +298,10 @@ lanes remain on one contract revision.
 **Parse → Build URL → Fetch → Normalize/inspect** so URL construction and fixture
 tests remain useful even when a runner cannot reach GitHub.
 
-Public resources can be inspected anonymously; `GITHUB_TOKEN` is optional
-rate-limit headroom rather than a requirement for URL construction. Consumers
+Public resources can be inspected anonymously; a token passed by the caller is
+optional rate-limit headroom rather than a requirement for URL construction.
+Bearer credentials are attached only to HTTPS requests for `api.github.com`
+and are stripped if a redirect leaves that host. Consumers
 may also call `inspect_public(..., fetch=False)` to produce canonical GitHub
 HTML and REST API URLs without any network request.
 
@@ -307,3 +309,19 @@ The adapter is intentionally small and stdlib-only. Future API/MCP adapters
 should use this shape as a reference rather than copying GitHub-specific request
 logic into each consumer. Live GitHub availability is not a normal CI
 requirement.
+
+
+### Catalog integration and Pages verification
+
+`github_catalog.py` now reuses `github_adapter.fetch_json()` for GitHub
+transport instead of maintaining a second request implementation. The catalog
+keeps its existing output vocabulary (`detected`, `not_found`,
+`fetch_failed`) at the consumer boundary; the adapter deliberately keeps the
+smaller transport outcome plus raw HTTP/error evidence.
+
+The GitHub Pages deploy remains the live integration lane. A deploy builds the
+catalog through the shared adapter and publishes the generated files under
+`docs/api/`. Normal adapter tests stay offline and deterministic; Pages is
+where the public GitHub fetch path is exercised. After deployment, verify that
+`api/catalog.min.json` is present and that repository metadata such as
+`api/repos/Ironmate.json` is refreshed for the deployed revision.

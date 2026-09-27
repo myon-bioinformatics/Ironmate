@@ -7,10 +7,9 @@ import json
 import os
 from pathlib import Path
 from typing import Any
-from urllib.error import HTTPError, URLError
 from urllib.parse import quote
-from urllib.request import Request, urlopen
 
+from github_adapter import fetch_json
 from repository_metadata import (
     availability,
     important_file_shas,
@@ -30,30 +29,46 @@ PYTHON_SOURCE_LIMIT = max(1, int(os.environ.get("IRONMATE_PYTHON_SOURCE_LIMIT", 
 RATE_LIMIT = {"remaining": None, "limit": None, "reset": None}
 
 
+def _record_rate_limit(result: dict[str, Any]) -> None:
+    rate_limit = result.get("rate_limit")
+    if not isinstance(rate_limit, dict):
+        return
+    for key in RATE_LIMIT:
+        value = rate_limit.get(key)
+        if value is not None:
+            RATE_LIMIT[key] = value
+
+
+def _catalog_fetch(url: str) -> dict[str, Any]:
+    result = fetch_json(url, token=TOKEN)
+    _record_rate_limit(result)
+    return result
+
+
 def _request_json(url: str) -> Any:
-    headers = {
-        "Accept": "application/vnd.github+json",
-        "User-Agent": "Ironmate-static-catalog",
-        "X-GitHub-Api-Version": "2022-11-28",
-    }
-    if TOKEN:
-        headers["Authorization"] = f"Bearer {TOKEN}"
-    with urlopen(Request(url, headers=headers), timeout=30) as response:
-        RATE_LIMIT["remaining"] = response.headers.get("X-RateLimit-Remaining")
-        RATE_LIMIT["limit"] = response.headers.get("X-RateLimit-Limit")
-        RATE_LIMIT["reset"] = response.headers.get("X-RateLimit-Reset")
-        return json.load(response)
+    """Fetch through the shared adapter while preserving useful failure details."""
+    result = _catalog_fetch(url)
+    if result.get("status") == "detected":
+        return result.get("value")
+    resolved_url = result.get("url") or url
+    http_status = result.get("http_status")
+    if http_status == 404:
+        raise LookupError(f"not_found {http_status} {resolved_url}")
+    error_type = result.get("error_type") or "fetch_failed"
+    rate_limit = result.get("rate_limit")
+    if http_status == 403 and isinstance(rate_limit, dict) and rate_limit.get("remaining") == "0":
+        error_type = "rate_limited"
+    status = f" {http_status}" if http_status is not None else ""
+    raise RuntimeError(f"{error_type}{status} {resolved_url}")
 
 
 def _optional_json(url: str) -> tuple[str, Any]:
-    try:
-        return "detected", _request_json(url)
-    except HTTPError as exc:
-        if exc.code == 404:
-            return "not_found", None
-        return "fetch_failed", None
-    except (URLError, TimeoutError, ValueError):
-        return "fetch_failed", None
+    result = _catalog_fetch(url)
+    if result.get("status") == "detected":
+        return "detected", result.get("value")
+    if result.get("http_status") == 404:
+        return "not_found", None
+    return "fetch_failed", None
 
 
 def _paged(url: str) -> list[dict[str, Any]]:

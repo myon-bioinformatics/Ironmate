@@ -288,3 +288,22 @@ produced it.
 When advancing the web-ui pin, update the MCP Stub stylesheet pin and the
 consumer-example `WEB_UI_SHA` together in the same PR so both presentation
 lanes remain on one contract revision.
+
+
+---
+
+## GitHub source adapter
+
+`github_adapter.py` is Ironmate's reference read-only source adapter. It separates
+**Parse → Build URL → Fetch → Normalize/inspect** so URL construction and fixture
+tests remain useful even when a runner cannot reach GitHub.
+
+Public resources can be inspected anonymously; `GITHUB_TOKEN` is optional
+rate-limit headroom rather than a requirement for URL construction. Consumers
+may also call `inspect_public(..., fetch=False)` to produce canonical GitHub
+HTML and REST API URLs without any network request.
+
+The adapter is intentionally small and stdlib-only. Future API/MCP adapters
+should use this shape as a reference rather than copying GitHub-specific request
+logic into each consumer. Live GitHub availability is not a normal CI
+requirement.

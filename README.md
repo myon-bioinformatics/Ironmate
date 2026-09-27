@@ -325,3 +325,15 @@ catalog through the shared adapter and publishes the generated files under
 where the public GitHub fetch path is exercised. After deployment, verify that
 `api/catalog.min.json` is present and that repository metadata such as
 `api/repos/Ironmate.json` is refreshed for the deployed revision.
+
+
+## Cross-repository anti-patterns
+
+Ironmate also keeps a discovery index for recurring CI/design failures across
+the sibling repositories:
+
+- [docs/antipatterns.md](docs/antipatterns.md)
+
+The owning repositories remain the source of truth for their detailed catalogs;
+Ironmate links and summarizes shared IDs so the same failure class is searchable
+across repository boundaries.

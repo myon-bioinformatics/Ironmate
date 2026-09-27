@@ -23,6 +23,7 @@ on:
       - "github_catalog.py"
       - "github_adapter.py"
       - "repository_metadata.py"
+      - "repository_metadata_contract.py"
       - "docs/mcp-stub.html"
       - "vendor/markdown.py"
       - "vendor/ascii_artist.py"

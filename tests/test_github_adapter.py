@@ -54,6 +54,20 @@ class GitHubAdapterTest(unittest.TestCase):
             "https://api.github.com/repos/o/r/actions/runs/3",
         )
 
+    def test_parse_normalizes_clone_suffix_and_subpaths(self):
+        self.assertEqual(parse_github_resource("o/r.git").repo, "r")
+        pull = parse_github_resource("https://github.com/o/r/pull/34/files")
+        self.assertEqual((pull.kind, pull.identifier), ("pull", "34"))
+
+    def test_rejects_non_numeric_identifiers(self):
+        for url in (
+            "https://github.com/o/r/issues/abc",
+            "https://github.com/o/r/pull/abc",
+            "https://github.com/o/r/actions/runs/abc",
+        ):
+            with self.subTest(url=url), self.assertRaises(ValueError):
+                parse_github_resource(url)
+
     def test_rejects_unknown_hosts_and_shapes(self):
         with self.assertRaises(ValueError):
             parse_github_resource("https://example.com/o/r")

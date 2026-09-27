@@ -46,7 +46,7 @@ def actions_run_html_url(owner: str, repo: str, run_id: int) -> str:
 
 
 def release_tag_html_url(owner: str, repo: str, tag: str) -> str:
-    return f"{repository_html_url(owner, repo)}/releases/tag/{_q(tag)}"
+    return f"{repository_html_url(owner, repo)}/releases/tag/{quote(tag, safe=\"/\")}"
 
 
 def content_api_url(owner: str, repo: str, path: str, *, ref: str | None = None) -> str:
@@ -54,18 +54,25 @@ def content_api_url(owner: str, repo: str, path: str, *, ref: str | None = None)
     return f"{url}?ref={_q(ref)}" if ref else url
 
 
+def _required_numeric_identifier(resource: "GitHubResource") -> int:
+    identifier = resource.identifier
+    if identifier is None or not identifier.isdigit():
+        raise ValueError(f"{resource.kind} identifier must be numeric")
+    return int(identifier)
+
+
 def resource_api_url(resource: "GitHubResource") -> str:
     root = repository_api_url(resource.owner, resource.repo)
     if resource.kind == "repository":
         return root
     if resource.kind == "issue":
-        return f"{root}/issues/{int(resource.identifier)}"
+        return f"{root}/issues/{_required_numeric_identifier(resource)}"
     if resource.kind == "pull":
-        return f"{root}/pulls/{int(resource.identifier)}"
+        return f"{root}/pulls/{_required_numeric_identifier(resource)}"
     if resource.kind == "commit":
         return f"{root}/commits/{_q(resource.identifier)}"
     if resource.kind == "actions_run":
-        return f"{root}/actions/runs/{int(resource.identifier)}"
+        return f"{root}/actions/runs/{_required_numeric_identifier(resource)}"
     if resource.kind == "release_tag":
         return f"{root}/releases/tags/{_q(resource.identifier)}"
     raise ValueError(f"unsupported GitHub resource kind: {resource.kind}")
@@ -83,13 +90,13 @@ class GitHubResource:
         if self.kind == "repository":
             return repository_html_url(self.owner, self.repo)
         if self.kind == "issue":
-            return issue_html_url(self.owner, self.repo, int(self.identifier or 0))
+            return issue_html_url(self.owner, self.repo, _required_numeric_identifier(self))
         if self.kind == "pull":
-            return pull_html_url(self.owner, self.repo, int(self.identifier or 0))
+            return pull_html_url(self.owner, self.repo, _required_numeric_identifier(self))
         if self.kind == "commit":
             return commit_html_url(self.owner, self.repo, self.identifier or "")
         if self.kind == "actions_run":
-            return actions_run_html_url(self.owner, self.repo, int(self.identifier or 0))
+            return actions_run_html_url(self.owner, self.repo, _required_numeric_identifier(self))
         if self.kind == "release_tag":
             return release_tag_html_url(self.owner, self.repo, self.identifier or "")
         raise ValueError(f"unsupported GitHub resource kind: {self.kind}")

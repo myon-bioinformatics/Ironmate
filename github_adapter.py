@@ -111,13 +111,22 @@ def parse_github_resource(value: str) -> GitHubResource:
     if len(parts) < 2:
         raise ValueError("expected owner/repo or a github.com resource URL")
     owner, repo = parts[0], parts[1]
+    if repo.endswith(".git"):
+        repo = repo[:-4]
+    if not owner or not repo:
+        raise ValueError("owner and repository must be non-empty")
     if len(parts) == 2:
         return GitHubResource(owner, repo)
     tail = parts[2:]
     if len(tail) >= 2 and tail[0] in {"issues", "pull", "commit"}:
         kind = {"issues": "issue", "pull": "pull", "commit": "commit"}[tail[0]]
-        return GitHubResource(owner, repo, kind, tail[1])
+        identifier = tail[1]
+        if kind in {"issue", "pull"} and not identifier.isdigit():
+            raise ValueError(f"{kind} identifier must be numeric")
+        return GitHubResource(owner, repo, kind, identifier)
     if len(tail) >= 3 and tail[:2] == ["actions", "runs"]:
+        if not tail[2].isdigit():
+            raise ValueError("actions run identifier must be numeric")
         return GitHubResource(owner, repo, "actions_run", tail[2])
     if len(tail) >= 3 and tail[:2] == ["releases", "tag"]:
         return GitHubResource(owner, repo, "release_tag", "/".join(tail[2:]))
@@ -145,9 +154,18 @@ def fetch_json(url: str, *, token: str = "", timeout: int = 30) -> dict[str, Any
                 },
             }
     except HTTPError as exc:
-        return {"status": "not_found" if exc.code == 404 else "http_error", "http_status": exc.code, "url": url}
+        return {
+            "status": "error",
+            "error_type": "http",
+            "http_status": exc.code,
+            "url": url,
+        }
     except (URLError, TimeoutError, ValueError) as exc:
-        return {"status": "fetch_failed", "error_type": type(exc).__name__, "url": url}
+        return {
+            "status": "error",
+            "error_type": type(exc).__name__,
+            "url": url,
+        }
 
 
 def inspect_public(value: str, *, token: str = "", fetch: bool = True) -> dict[str, Any]:

@@ -46,7 +46,8 @@ def actions_run_html_url(owner: str, repo: str, run_id: int) -> str:
 
 
 def release_tag_html_url(owner: str, repo: str, tag: str) -> str:
-    return f"{repository_html_url(owner, repo)}/releases/tag/{quote(tag, safe=\"/\")}"
+    encoded_tag = quote(tag, safe="/")
+    return f"{repository_html_url(owner, repo)}/releases/tag/{encoded_tag}"
 
 
 def content_api_url(owner: str, repo: str, path: str, *, ref: str | None = None) -> str:

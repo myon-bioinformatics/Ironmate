@@ -3,11 +3,13 @@ import unittest
 from email.message import Message
 from unittest.mock import patch
 from urllib.error import HTTPError, URLError
+from urllib.request import Request
 
 from github_adapter import (
     GitHubResource,
     actions_run_html_url,
     content_api_url,
+    _ScopedRedirect,
     fetch_json,
     inspect_public,
     parse_github_resource,
@@ -93,7 +95,7 @@ class GitHubAdapterTest(unittest.TestCase):
             def read(self):
                 return b'{"ok": true}'
 
-        with patch("github_adapter.urlopen", return_value=Response()):
+        with patch("github_adapter._opener.open", return_value=Response()):
             result = fetch_json("https://api.github.com/example")
         self.assertEqual(result["status"], "detected")
         self.assertEqual(result["value"], {"ok": True})
@@ -105,14 +107,14 @@ class GitHubAdapterTest(unittest.TestCase):
         http_error = HTTPError(
             "https://api.github.com/example", 403, "forbidden", error_headers, io.BytesIO()
         )
-        with patch("github_adapter.urlopen", side_effect=http_error):
+        with patch("github_adapter._opener.open", side_effect=http_error):
             result = fetch_json("https://api.github.com/example")
         self.assertEqual(result["status"], "error")
         self.assertEqual(result["http_status"], 403)
         self.assertEqual(result["rate_limit"]["remaining"], "0")
         self.assertEqual(result["rate_limit"]["reset"], "123")
 
-        with patch("github_adapter.urlopen", side_effect=URLError("offline")):
+        with patch("github_adapter._opener.open", side_effect=URLError("offline")):
             result = fetch_json("https://api.github.com/example")
         self.assertEqual(result["status"], "error")
         self.assertEqual(result["error_type"], "URLError")
@@ -128,11 +130,11 @@ class GitHubAdapterTest(unittest.TestCase):
                 return b'{}'
 
         seen = []
-        def fake_urlopen(request, timeout):
+        def fake_open(request, timeout):
             seen.append(request)
             return Response()
 
-        with patch("github_adapter.urlopen", side_effect=fake_urlopen):
+        with patch("github_adapter._opener.open", side_effect=fake_open):
             fetch_json("https://api.github.com/repos/o/r", token="secret")
             fetch_json("https://example.com/repos/o/r", token="secret")
             fetch_json("http://api.github.com/repos/o/r", token="secret")
@@ -140,6 +142,24 @@ class GitHubAdapterTest(unittest.TestCase):
         self.assertEqual(seen[0].get_header("Authorization"), "Bearer secret")
         self.assertIsNone(seen[1].get_header("Authorization"))
         self.assertIsNone(seen[2].get_header("Authorization"))
+
+    def test_redirect_strips_authorization_outside_github_api(self):
+        handler = _ScopedRedirect()
+        original = Request(
+            "https://api.github.com/repos/o/r",
+            headers={"Authorization": "Bearer secret"},
+        )
+        same_host = handler.redirect_request(
+            original, None, 302, "Found", Message(),
+            "https://api.github.com/repositories/1",
+        )
+        self.assertEqual(same_host.get_header("Authorization"), "Bearer secret")
+
+        external = handler.redirect_request(
+            original, None, 302, "Found", Message(),
+            "https://example.com/redirected",
+        )
+        self.assertIsNone(external.get_header("Authorization"))
 
     def test_rejects_unknown_hosts_and_shapes(self):
         with self.assertRaises(ValueError):

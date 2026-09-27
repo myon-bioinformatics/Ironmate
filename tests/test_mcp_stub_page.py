@@ -6,7 +6,7 @@ import unittest
 
 
 PAGE = Path(__file__).resolve().parents[1] / "docs" / "mcp-stub.html"
-WEB_UI_PIN = "a0867e454bb2f7ecb4f69da9a46a2361b2438305"
+WEB_UI_PIN = "adb23d7ba6ea94672b76457573f6655a081ee054"
 
 
 class StylesheetParser(HTMLParser):

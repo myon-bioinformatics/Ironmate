@@ -12,6 +12,7 @@ on:
       - "vendor/markdown.py"
       - "vendor/ascii_artist.py"
       - "scripts/build_web_ui_consumer_examples.py"
+      - "scripts/build_repository_diagnostics.py"
       - "tests/**"
       - "requirements-mcp.txt"
       - ".github/workflows/mcp-tests.yml"
@@ -22,10 +23,12 @@ on:
       - "github_catalog.py"
       - "github_adapter.py"
       - "repository_metadata.py"
+      - "repository_metadata_contract.py"
       - "docs/mcp-stub.html"
       - "vendor/markdown.py"
       - "vendor/ascii_artist.py"
       - "scripts/build_web_ui_consumer_examples.py"
+      - "scripts/build_repository_diagnostics.py"
       - "tests/**"
       - "requirements-mcp.txt"
       - ".github/workflows/mcp-tests.yml"
@@ -43,10 +46,10 @@ jobs:
           python-version: "3.12"
       - run: python -m pip install --upgrade pip
       - run: python -m pip install -r requirements-mcp.txt pytest
-      - run: python -m py_compile ironmate_mcp.py github_catalog.py github_adapter.py repository_metadata.py repository_metadata_contract.py vendor/markdown.py vendor/ascii_artist.py scripts/build_web_ui_consumer_examples.py
+      - run: python -m py_compile ironmate_mcp.py github_catalog.py github_adapter.py repository_metadata.py repository_metadata_contract.py scripts/build_repository_diagnostics.py vendor/markdown.py vendor/ascii_artist.py scripts/build_web_ui_consumer_examples.py
       - run: python -m unittest tests/test_ironmate_mcp.py tests/test_github_adapter.py tests/test_github_catalog.py tests/test_repository_metadata.py tests/test_mcp_stub_page.py tests/test_vendor_modules.py
       - name: Run repository metadata contract tests
-        run: python -m pytest -q tests/test_repository_metadata_contract.py
+        run: python -m pytest -q tests/test_repository_metadata_contract.py tests/test_repository_diagnostics_pages.py
 
 
   screenshot:
@@ -66,6 +69,8 @@ jobs:
 
       - name: Build web-ui consumer examples
         run: python3 scripts/build_web_ui_consumer_examples.py
+      - name: Build repository diagnostics fixture
+        run: python3 scripts/build_repository_diagnostics.py
 
       - name: Serve repository
         run: python3 -m http.server 8000 > /tmp/ironmate-http.log 2>&1 &
@@ -121,6 +126,11 @@ jobs:
             --viewport-size="390,844" \
             http://127.0.0.1:8000/docs/consumer-v1/ascii.html \
             ironmate-consumer-v1-ascii-mobile-390x844.png
+          npx --yes "playwright@${PLAYWRIGHT_VERSION}" screenshot \
+            --browser="${PLAYWRIGHT_BROWSER}" \
+            --viewport-size="1440,900" \
+            http://127.0.0.1:8000/docs/repository-diagnostics.html \
+            ironmate-repository-diagnostics-desktop-1440x900.png
 
       - name: Show HTTP server log on failure
         if: failure()

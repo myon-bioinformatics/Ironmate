@@ -11,10 +11,28 @@ from dataclasses import dataclass
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlparse
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 API_ROOT = "https://api.github.com"
 HTML_ROOT = "https://github.com"
+
+
+def _is_github_api_url(url: str) -> bool:
+    parsed = urlparse(url)
+    return parsed.scheme == "https" and parsed.hostname == "api.github.com"
+
+
+class _ScopedRedirect(HTTPRedirectHandler):
+    """Never forward GitHub Authorization outside the HTTPS API host."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        redirected = super().redirect_request(req, fp, code, msg, headers, newurl)
+        if redirected is not None and not _is_github_api_url(newurl):
+            redirected.remove_header("Authorization")
+        return redirected
+
+
+_opener = build_opener(_ScopedRedirect)
 
 
 def _q(value: str) -> str:
@@ -142,16 +160,15 @@ def parse_github_resource(value: str) -> GitHubResource:
 
 
 def fetch_json(url: str, *, token: str = "", timeout: int = 30) -> dict[str, Any]:
-    parsed_url = urlparse(url)
     headers = {
         "Accept": "application/vnd.github+json",
         "User-Agent": "Ironmate-github-adapter",
         "X-GitHub-Api-Version": "2022-11-28",
     }
-    if token and parsed_url.scheme == "https" and parsed_url.hostname == "api.github.com":
+    if token and _is_github_api_url(url):
         headers["Authorization"] = f"Bearer {token}"
     try:
-        with urlopen(Request(url, headers=headers), timeout=timeout) as response:
+        with _opener.open(Request(url, headers=headers), timeout=timeout) as response:
             return {
                 "status": "detected",
                 "value": json.load(response),

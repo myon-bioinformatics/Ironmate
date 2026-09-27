@@ -63,3 +63,30 @@ def test_rejects_invalid_github_repository_identity(full_name):
 def test_pages_candidate_url_handles_project_and_user_sites():
     assert pages_candidate_url("octo/demo") == "https://octo.github.io/demo/"
     assert pages_candidate_url("octo/octo.github.io") == "https://octo.github.io/"
+
+
+def test_validator_rejects_invalid_measurement_values_after_mutation():
+    record = sample()
+    record["measurements"]["working_tree_bytes"] = -5
+    with pytest.raises(ValueError):
+        validate_repository_record(record)
+    record = sample()
+    record["measurements"]["working_tree_bytes"] = "big"
+    with pytest.raises(ValueError):
+        validate_repository_record(record)
+
+
+@pytest.mark.parametrize(
+    "tooling",
+    [
+        {"python": "/home/runner/python"},
+        {"python": "https://example.invalid/tool"},
+        {"bad key": "3.12"},
+        {"python": {"version": "3.12"}},
+    ],
+)
+def test_tooling_is_limited_to_short_public_version_labels(tooling):
+    record = sample()
+    record["tooling"] = tooling
+    with pytest.raises(ValueError):
+        validate_repository_record(record)

@@ -3,7 +3,10 @@ from repository_metadata_contract import (
     repository_identity, to_json, to_jsonl, validate_repository_record,
 )
 import json
+from pathlib import Path
 import pytest
+
+FIXTURE = Path(__file__).parent / "fixtures" / "repository_metadata_v1.json"
 
 
 def sample():
@@ -90,3 +93,8 @@ def test_tooling_is_limited_to_short_public_version_labels(tooling):
     record["tooling"] = tooling
     with pytest.raises(ValueError):
         validate_repository_record(record)
+
+
+def test_shared_schema_fixture_matches_generator_output():
+    expected = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    assert sample() == expected

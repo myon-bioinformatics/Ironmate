@@ -7,10 +7,9 @@ import json
 import os
 from pathlib import Path
 from typing import Any
-from urllib.error import HTTPError, URLError
 from urllib.parse import quote
-from urllib.request import Request, urlopen
 
+from github_adapter import fetch_json
 from repository_metadata import (
     availability,
     important_file_shas,
@@ -31,30 +30,29 @@ RATE_LIMIT = {"remaining": None, "limit": None, "reset": None}
 
 
 def _request_json(url: str) -> Any:
-    headers = {
-        "Accept": "application/vnd.github+json",
-        "User-Agent": "Ironmate-static-catalog",
-        "X-GitHub-Api-Version": "2022-11-28",
-    }
-    if TOKEN:
-        headers["Authorization"] = f"Bearer {TOKEN}"
-    with urlopen(Request(url, headers=headers), timeout=30) as response:
-        RATE_LIMIT["remaining"] = response.headers.get("X-RateLimit-Remaining")
-        RATE_LIMIT["limit"] = response.headers.get("X-RateLimit-Limit")
-        RATE_LIMIT["reset"] = response.headers.get("X-RateLimit-Reset")
-        return json.load(response)
+    """Fetch through the shared adapter while preserving catalog failure semantics."""
+    result = fetch_json(url, token=TOKEN)
+    rate_limit = result.get("rate_limit")
+    if isinstance(rate_limit, dict):
+        RATE_LIMIT.update({key: rate_limit.get(key) for key in RATE_LIMIT})
+    if result.get("status") == "detected":
+        return result.get("value")
+    http_status = result.get("http_status")
+    if http_status == 404:
+        raise LookupError("not_found")
+    raise RuntimeError(result.get("error_type") or "fetch_failed")
 
 
 def _optional_json(url: str) -> tuple[str, Any]:
-    try:
-        return "detected", _request_json(url)
-    except HTTPError as exc:
-        if exc.code == 404:
-            return "not_found", None
-        return "fetch_failed", None
-    except (URLError, TimeoutError, ValueError):
-        return "fetch_failed", None
-
+    result = fetch_json(url, token=TOKEN)
+    rate_limit = result.get("rate_limit")
+    if isinstance(rate_limit, dict):
+        RATE_LIMIT.update({key: rate_limit.get(key) for key in RATE_LIMIT})
+    if result.get("status") == "detected":
+        return "detected", result.get("value")
+    if result.get("http_status") == 404:
+        return "not_found", None
+    return "fetch_failed", None
 
 def _paged(url: str) -> list[dict[str, Any]]:
     items: list[dict[str, Any]] = []

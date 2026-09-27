@@ -7,11 +7,35 @@ credentials, local absolute paths and private remotes.
 from __future__ import annotations
 
 import json
+import re
 from datetime import datetime
 from typing import Any
 
 SCHEMA_VERSION = "1.0"
 PUBLIC_FIELDS = ("schema_version", "repository", "head", "measurements", "tooling", "generated_at")
+_OWNER_RE = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$")
+_REPO_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
+
+
+def repository_identity(full_name: str) -> tuple[str, str]:
+    """Validate and split a public GitHub repository identity."""
+    if not isinstance(full_name, str) or full_name.count("/") != 1:
+        raise ValueError("full_name must be owner/name")
+    owner, name = full_name.split("/", 1)
+    if not _OWNER_RE.fullmatch(owner):
+        raise ValueError("owner must use GitHub-safe alphanumeric/hyphen form")
+    if not _REPO_RE.fullmatch(name) or name in {".", ".."}:
+        raise ValueError("repository name is invalid")
+    return owner, name
+
+
+def pages_candidate_url(full_name: str) -> str:
+    """Return the canonical GitHub Pages candidate URL, without claiming reachability."""
+    owner, name = repository_identity(full_name)
+    if name.lower() == f"{owner.lower()}.github.io":
+        return f"https://{owner}.github.io/"
+    return f"https://{owner}.github.io/{name}/"
+
 
 
 def _iso8601(value: str) -> str:
@@ -35,8 +59,9 @@ def build_repository_record(
     tooling: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build one canonical, public-safe repository metadata record."""
-    if "/" not in full_name or not sha or not branch or not subject:
-        raise ValueError("full_name, sha, branch and subject are required")
+    if not sha or not branch or not subject:
+        raise ValueError("sha, branch and subject are required")
+    repository_identity(full_name)
     _iso8601(timestamp)
     _iso8601(generated_at)
     sizes = {
@@ -79,6 +104,7 @@ def validate_repository_record(record: dict[str, Any]) -> None:
     _iso8601(record["generated_at"])
     if set(record.get("repository", {})) != {"full_name"}:
         raise ValueError("invalid repository")
+    repository_identity(record["repository"]["full_name"])
     if set(record.get("measurements", {})) != {
         "github_reported_size_bytes", "working_tree_bytes", "release_artifact_bytes"
     }:

@@ -166,6 +166,11 @@ def fetch_json(url: str, *, token: str = "", timeout: int = 30) -> dict[str, Any
             "error_type": "http",
             "http_status": exc.code,
             "url": url,
+            "rate_limit": {
+                "remaining": exc.headers.get("X-RateLimit-Remaining") if exc.headers else None,
+                "limit": exc.headers.get("X-RateLimit-Limit") if exc.headers else None,
+                "reset": exc.headers.get("X-RateLimit-Reset") if exc.headers else None,
+            },
         }
     except (URLError, TimeoutError, ValueError) as exc:
         return {

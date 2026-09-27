@@ -41,7 +41,7 @@ class GitHubAdapterTest(unittest.TestCase):
         self.assertEqual(actions_run_html_url("o", "r", 9), "https://github.com/o/r/actions/runs/9")
         self.assertEqual(
             release_tag_html_url("o", "r", "release/one"),
-            "https://github.com/o/r/releases/tag/release%2Fone",
+            "https://github.com/o/r/releases/tag/release/one",
         )
 
     def test_api_mapping(self):
@@ -68,11 +68,18 @@ class GitHubAdapterTest(unittest.TestCase):
             with self.subTest(url=url), self.assertRaises(ValueError):
                 parse_github_resource(url)
 
+    def test_missing_numeric_identifier_never_builds_zero_url(self):
+        for kind in ("issue", "pull", "actions_run"):
+            with self.subTest(kind=kind), self.assertRaises(ValueError):
+                _ = GitHubResource("o", "r", kind).html_url
+
     def test_rejects_unknown_hosts_and_shapes(self):
         with self.assertRaises(ValueError):
             parse_github_resource("https://example.com/o/r")
         with self.assertRaises(ValueError):
             parse_github_resource("https://github.com/o/r/settings")
+        with self.assertRaises(ValueError):
+            parse_github_resource("https://github.com/o/r/tree/main")
 
 
 if __name__ == "__main__":

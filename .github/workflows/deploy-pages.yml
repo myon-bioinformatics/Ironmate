@@ -10,6 +10,8 @@ on:
       - "github_catalog.py"
       - "github_adapter.py"
       - "repository_metadata.py"
+      - "repository_metadata_contract.py"
+      - "scripts/build_repository_diagnostics.py"
       - "ironmate_mcp.py"
       - ".github/workflows/deploy-pages.yml"
   schedule:
@@ -35,6 +37,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: python github_catalog.py
+      - name: Build repository diagnostics
+        run: python scripts/build_repository_diagnostics.py
       - name: Build web-ui v1 consumer examples
         run: python scripts/build_web_ui_consumer_examples.py
       - uses: actions/configure-pages@v5

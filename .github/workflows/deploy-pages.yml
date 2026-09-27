@@ -8,6 +8,7 @@ on:
       - "vendor/ascii_artist.py"
       - "scripts/build_web_ui_consumer_examples.py"
       - "github_catalog.py"
+      - "github_adapter.py"
       - "repository_metadata.py"
       - "ironmate_mcp.py"
       - ".github/workflows/deploy-pages.yml"

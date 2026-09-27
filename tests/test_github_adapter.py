@@ -1,9 +1,14 @@
+import io
 import unittest
+from email.message import Message
+from unittest.mock import patch
+from urllib.error import HTTPError, URLError
 
 from github_adapter import (
     GitHubResource,
     actions_run_html_url,
     content_api_url,
+    fetch_json,
     inspect_public,
     parse_github_resource,
     pull_html_url,
@@ -72,6 +77,45 @@ class GitHubAdapterTest(unittest.TestCase):
         for kind in ("issue", "pull", "actions_run"):
             with self.subTest(kind=kind), self.assertRaises(ValueError):
                 _ = GitHubResource("o", "r", kind).html_url
+
+    def test_fetch_json_normalizes_success_and_failures_offline(self):
+        headers = Message()
+        headers["X-RateLimit-Remaining"] = "59"
+        headers["X-RateLimit-Limit"] = "60"
+
+        class Response:
+            def __init__(self):
+                self.headers = headers
+            def __enter__(self):
+                return self
+            def __exit__(self, *args):
+                return False
+            def read(self):
+                return b'{"ok": true}'
+
+        with patch("github_adapter.urlopen", return_value=Response()):
+            result = fetch_json("https://api.github.com/example")
+        self.assertEqual(result["status"], "detected")
+        self.assertEqual(result["value"], {"ok": True})
+        self.assertEqual(result["rate_limit"]["remaining"], "59")
+
+        error_headers = Message()
+        error_headers["X-RateLimit-Remaining"] = "0"
+        error_headers["X-RateLimit-Reset"] = "123"
+        http_error = HTTPError(
+            "https://api.github.com/example", 403, "forbidden", error_headers, io.BytesIO()
+        )
+        with patch("github_adapter.urlopen", side_effect=http_error):
+            result = fetch_json("https://api.github.com/example")
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["http_status"], 403)
+        self.assertEqual(result["rate_limit"]["remaining"], "0")
+        self.assertEqual(result["rate_limit"]["reset"], "123")
+
+        with patch("github_adapter.urlopen", side_effect=URLError("offline")):
+            result = fetch_json("https://api.github.com/example")
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["error_type"], "URLError")
 
     def test_rejects_unknown_hosts_and_shapes(self):
         with self.assertRaises(ValueError):

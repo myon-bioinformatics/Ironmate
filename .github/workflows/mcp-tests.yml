@@ -24,6 +24,8 @@ on:
       - "github_adapter.py"
       - "repository_metadata.py"
       - "repository_metadata_contract.py"
+      - "security_nvd.py"
+      - "vendor/nvd_nist_known_vulns.py"
       - "docs/mcp-stub.html"
       - "vendor/markdown.py"
       - "vendor/ascii_artist.py"

@@ -9,6 +9,7 @@ from urllib.request import Request
 
 from github_adapter import (
     GitHubResource,
+    build_url,
     actions_run_html_url,
     content_api_url,
     _ScopedRedirect,
@@ -60,6 +61,12 @@ class GitHubAdapterTest(unittest.TestCase):
         self.assertEqual(
             release_tag_html_url("o", "r", "release/one"),
             "https://github.com/o/r/releases/tag/release/one",
+        )
+
+    def test_provider_neutral_url_builder(self):
+        self.assertEqual(
+            build_url("https://example.test/api/", "search", query={"q": "初音 ミク", "limit": 10, "skip": None}),
+            "https://example.test/api/search?q=%E5%88%9D%E9%9F%B3+%E3%83%9F%E3%82%AF&limit=10",
         )
 
     def test_collection_and_tree_url_builders(self):
@@ -177,6 +184,8 @@ class GitHubAdapterTest(unittest.TestCase):
         override = "https://api.github.com/repos/o/r/tags?per_page=1"
         self.assertEqual(normalize_tag(fixture["tag"], api_url=override)["api_url"], override)
         self.assertEqual(normalize_actions_run(fixture["actions_run"], api_url=override)["api_url"], override)
+        self.assertEqual(normalize_commit(fixture["commit"], api_url=override)["api_url"], override)
+        self.assertEqual(normalize_release(fixture["release"], api_url=override)["api_url"], override)
         source = "https://api.github.com/repos/o/r/tags?per_page=1"
         normalized = normalize_tag(fixture["tag"], source_url=source)
         self.assertIsNone(normalized["api_url"])

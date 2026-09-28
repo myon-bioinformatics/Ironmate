@@ -1,17 +1,14 @@
-import hashlib
 import importlib.util
 import unittest
 from pathlib import Path
+
+from provenance import git_blob_sha
 
 
 VENDOR = Path(__file__).resolve().parents[1] / "vendor" / "nvd_nist_known_vulns.py"
 UPSTREAM_COMMIT = "986e17192442b84adfae8e434ab4bf32bf2347af"
 UPSTREAM_VENDOR_BLOB = "16028101be84f6c1b9dd05afb8199280e721f069"
 
-
-def git_blob_sha(path):
-    data = path.read_bytes()
-    return hashlib.sha1(b"blob " + str(len(data)).encode("ascii") + b"\0" + data).hexdigest()
 
 
 class NvdNistKnownVulnsVendorTest(unittest.TestCase):

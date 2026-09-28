@@ -174,7 +174,7 @@ SECURITY_CPE_MANIFEST_SCHEMA = "ironmate-security-cpe/1"
 
 
 def load_cpe_manifest(text: str) -> dict[str, list[str]]:
-    """Parse Ironmate's explicit repository-to-CPE mapping."""
+    """Parse Ironmate's explicit repository-to-CPE mapping; raise ValueError on invalid input."""
     data = json.loads(text.lstrip("\ufeff"))
     if not isinstance(data, dict) or data.get("schema") != SECURITY_CPE_MANIFEST_SCHEMA:
         raise ValueError("unsupported security CPE manifest")
@@ -196,7 +196,7 @@ def load_cpe_manifest(text: str) -> dict[str, list[str]]:
 def repository_security_metadata(
     repository: str, manifest: dict[str, list[str]], records: Any, *, nvd_module: Any
 ) -> dict[str, Any]:
-    """Map upstream NVD JSONL evidence into Ironmate repository metadata."""
+    """Map upstream NVD evidence into metadata; upstream validation may raise ValueError."""
     cpes = manifest.get(repository)
     if cpes is None:
         return {

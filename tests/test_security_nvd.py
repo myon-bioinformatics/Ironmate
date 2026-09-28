@@ -1,4 +1,6 @@
 import contextlib
+import hashlib
+import importlib.util
 import io
 import json
 import tempfile
@@ -11,9 +13,14 @@ from security_nvd import load_cpe_manifest, load_path, parse_nvd_jsonl, security
 CPE = "cpe:2.3:a:example:example:1:*:*:*:*:*:*:*"
 CPE2 = "cpe:2.3:a:example:example:2:*:*:*:*:*:*:*"
 FIXTURE = Path(__file__).parent / "fixtures" / "nvd_summary.jsonl"
+VENDOR = Path(__file__).resolve().parents[1] / "vendor" / "nvd_nist_known_vulns.py"
 UPSTREAM_SAMPLE_COMMIT = "986e17192442b84adfae8e434ab4bf32bf2347af"
 UPSTREAM_SAMPLE_BLOB = "eb859fde7af74b59944c0aa8ee5797ca1f943a3b"
 
+
+def git_blob_sha(path):
+    data = path.read_bytes()
+    return hashlib.sha1(b"blob " + str(len(data)).encode("ascii") + b"\0" + data).hexdigest()
 
 
 def cve(cve_id, cpe=CPE, description=None):
@@ -39,6 +46,7 @@ class SecurityNvdTest(unittest.TestCase):
 
     def test_fixture_is_consumed_and_has_upstream_shape(self):
         # Exact sample_result.txt snapshot from nvd_nist_known_vulns at UPSTREAM_SAMPLE_COMMIT.
+        self.assertEqual(git_blob_sha(FIXTURE), UPSTREAM_SAMPLE_BLOB)
         rows = load_path(FIXTURE)
         self.assertEqual(rows[0]["id"], "CVE-EXAMPLE-0001")
         self.assertEqual(rows[1]["kind"], "query_complete")
@@ -77,6 +85,33 @@ class SecurityNvdTest(unittest.TestCase):
         self.assertEqual(result["status"], "not_measured")
         self.assertEqual(result["reason"], "completion_count_mismatch")
         self.assertEqual(result["mismatched_cpe_names"], [CPE])
+
+    def test_completion_count_lower_than_observed_is_not_measured(self):
+        rows = [cve("CVE-2026-0001"), complete(CPE, 0)]
+        result = security_metadata("owner/repo", {"owner/repo": [CPE]}, rows)
+        self.assertEqual(result["status"], "not_measured")
+        self.assertEqual(result["reason"], "completion_count_mismatch")
+
+    def test_vendored_producer_output_round_trips_through_consumer(self):
+        spec = importlib.util.spec_from_file_location("vendored_nvd_nist_known_vulns", VENDOR)
+        producer = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(producer)
+        record = {
+            "id":"CVE-2026-0001","description":"left\u2028right","cwe":[],
+            "cvss_v4":None,"cvss_v3":None,"cvss_v2":None,
+            "published":None,"last_modified":None,"source_identifier":None,
+        }
+        with tempfile.TemporaryDirectory() as d:
+            cfg=Path(d)/"c.ini"
+            cfg.write_text("[cpeName]\na="+CPE+"\n",encoding="utf-8")
+            output=io.StringIO()
+            from unittest import mock
+            with mock.patch.object(producer,"fetch_cves",return_value=[record]), contextlib.redirect_stdout(output):
+                self.assertEqual(producer.main(["--silent","--config",str(cfg)]),0)
+        rows=parse_nvd_jsonl(output.getvalue())
+        result=security_metadata("owner/repo",{"owner/repo":[CPE]},rows)
+        self.assertEqual(result["status"],"measured")
+        self.assertEqual(result["cve_ids"],["CVE-2026-0001"])
 
     def test_parser_rejects_unknown_kind_invalid_id_and_bad_completion_count(self):
         bad = [

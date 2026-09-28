@@ -79,6 +79,8 @@ class NvdNistKnownVulnsVendorTest(unittest.TestCase):
     def test_unmapped_repository_remains_not_measured(self):
         result = repository_security_metadata("owner/repo", {}, [], nvd_module=NVD)
         self.assertEqual(result["reason"], "no_explicit_cpe_mapping")
+        self.assertNotIn("cve_count", result)
+        self.assertEqual(result["schema"], NVD.SCHEMA_VERSION)
 
 
 if __name__ == "__main__":

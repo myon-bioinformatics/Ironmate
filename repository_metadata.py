@@ -168,3 +168,41 @@ def important_file_shas(
         {"path": path, "sha": item.get("sha"), "size": item.get("size")}
         for _, _, path, item in ranked[:limit]
     ]
+
+
+SECURITY_CPE_MANIFEST_SCHEMA = "ironmate-security-cpe/1"
+
+
+def load_cpe_manifest(text: str) -> dict[str, list[str]]:
+    """Parse Ironmate's explicit repository-to-CPE mapping."""
+    data = json.loads(text.lstrip("\ufeff"))
+    if not isinstance(data, dict) or data.get("schema") != SECURITY_CPE_MANIFEST_SCHEMA:
+        raise ValueError("unsupported security CPE manifest")
+    repos = data.get("repositories")
+    if not isinstance(repos, dict):
+        raise ValueError("repositories must be an object")
+    result: dict[str, list[str]] = {}
+    for repo, cpes in repos.items():
+        if (
+            not isinstance(repo, str) or not repo
+            or not isinstance(cpes, list) or not cpes
+            or not all(isinstance(cpe, str) and cpe.startswith("cpe:2.3:") for cpe in cpes)
+        ):
+            raise ValueError(f"invalid explicit CPE mapping for {repo!r}")
+        result[repo] = sorted(set(cpes))
+    return result
+
+
+def repository_security_metadata(
+    repository: str, manifest: dict[str, list[str]], records: Any, *, nvd_module: Any
+) -> dict[str, Any]:
+    """Map upstream NVD JSONL evidence into Ironmate repository metadata."""
+    cpes = manifest.get(repository)
+    if cpes is None:
+        return {
+            "status": "not_measured",
+            "schema": nvd_module.SCHEMA_VERSION,
+            "reason": "no_explicit_cpe_mapping",
+        }
+    result = nvd_module.select_cpe_records(records, cpes)
+    return {"schema": nvd_module.SCHEMA_VERSION, **result}

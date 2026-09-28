@@ -1,6 +1,8 @@
 # Source adapter to catalog boundary
 
-Status: design checkpoint for Issue #20 / PR #38.\n\nRecorded: 2026-09-28.
+Status: design checkpoint for Issue #20 / PR #38.
+
+Recorded: 2026-09-28.
 
 Ironmate separates provider transport semantics from catalog/index semantics.
 
@@ -22,7 +24,8 @@ source_adapter.py
 
 - A provider adapter owns provider-specific parsing, request construction, fetch policy, normalization, and provider-specific fields.
 - The shared source-adapter layer owns only primitives that are genuinely provider-neutral.
-- **Target boundary:** catalog/index consumes normalized records. It should not reconstruct provider request URLs or know provider authentication/rate-limit rules.\n- **Current known exception:** `github_catalog.py` still participates in request orchestration and carries GitHub token/rate-limit state. PR #38 removes the remaining hand-built item request URLs, but does not claim that the target boundary is fully implemented. Moving transport/auth/rate-limit ownership completely behind provider adapters is follow-up work.
+- **Target boundary:** catalog/index consumes normalized records. It should not reconstruct provider request URLs or know provider authentication/rate-limit rules.
+- **Current known exception:** `github_catalog.py` still participates in request orchestration and carries GitHub token/rate-limit state. PR #38 removes the remaining hand-built item request URLs, but does not claim that the target boundary is fully implemented. Moving transport/auth/rate-limit ownership completely behind provider adapters is follow-up work.
 - The existence of `github_catalog.py` does not imply one catalog module per provider.
 - Do not flatten unrelated provider fields into a single universal schema merely to make providers look identical.
 

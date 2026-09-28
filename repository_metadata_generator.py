@@ -6,8 +6,10 @@ Keep this file beside repository_metadata_contract.py when vendoring it.
 from __future__ import annotations
 
 import argparse
+from collections.abc import Mapping
 from datetime import datetime, timezone
 from pathlib import Path
+import os
 import subprocess
 
 from repository_metadata_contract import build_repository_record, to_json, to_jsonl
@@ -20,9 +22,21 @@ def git(*args: str, cwd: Path) -> str:
     return result.stdout.strip()
 
 
-def record_from_checkout(root: Path, full_name: str) -> dict:
+def record_from_checkout(
+    root: Path,
+    full_name: str,
+    *,
+    env: Mapping[str, str] | None = None,
+) -> dict:
+    env = os.environ if env is None else env
     sha = git("rev-parse", "HEAD", cwd=root)
-    branch = git("rev-parse", "--abbrev-ref", "HEAD", cwd=root)
+    branch = (
+        (env.get("GITHUB_HEAD_REF") or "").strip()
+        or (env.get("GITHUB_REF_NAME") or "").strip()
+        or git("rev-parse", "--abbrev-ref", "HEAD", cwd=root)
+    )
+    if branch == "HEAD":
+        branch = "detached"
     timestamp = git("show", "-s", "--format=%cI", "HEAD", cwd=root)
     subject = git("show", "-s", "--format=%s", "HEAD", cwd=root)
     generated_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")

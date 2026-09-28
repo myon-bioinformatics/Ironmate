@@ -1,9 +1,11 @@
 """Repository-wide source hygiene checks."""
 
 import py_compile
+import re
 import subprocess
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 
@@ -33,6 +35,15 @@ def repository_python_sources():
     return [ROOT / line for line in result.stdout.splitlines() if line]
 
 
+def workflow_structure_escape_failures(text):
+    """Find #42-style escaped newlines that splice YAML list entries."""
+    failures = []
+    for number, line in enumerate(text.splitlines(), 1):
+        if re.search(r'^\s*-\s+["\'][^"\']+["\']\\\\n\s+-\s+', line):
+            failures.append(number)
+    return failures
+
+
 class RepositoryHygieneTest(unittest.TestCase):
     def test_repository_python_files_compile(self):
         sources = repository_python_sources()
@@ -50,14 +61,25 @@ class RepositoryHygieneTest(unittest.TestCase):
                     failures.append(f"{relative}: {exc.msg}")
         self.assertEqual(failures, [], "\n".join(failures))
 
-    def test_workflow_files_have_no_literal_newline_escape_in_structure(self):
-        """Catch the exact corruption class that broke #42 without adding PyYAML."""
+    def test_workflow_files_have_no_spliced_list_entries(self):
+        """Catch the exact #42 list-entry corruption without banning valid \\n data."""
         failures = []
         for path in sorted((ROOT / ".github" / "workflows").glob("*.y*ml")):
-            for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
-                if "\\n" in line and not line.lstrip().startswith("#"):
-                    failures.append(f"{path.relative_to(ROOT)}:{number}: literal \\n")
+            for number in workflow_structure_escape_failures(path.read_text(encoding="utf-8")):
+                failures.append(f"{path.relative_to(ROOT)}:{number}: escaped newline joins list entries")
         self.assertEqual(failures, [], "\n".join(failures))
+
+    def test_workflow_structure_escape_detector_is_narrow(self):
+        broken = '      - "a.py"\\\\n      - "b.py"'
+        legitimate = "      run: printf 'a\\\\nb'"
+        self.assertEqual(workflow_structure_escape_failures(broken), [1])
+        self.assertEqual(workflow_structure_escape_failures(legitimate), [])
+
+    def test_repository_python_sources_falls_back_without_git(self):
+        with mock.patch("tests.test_repository_hygiene.subprocess.run", side_effect=FileNotFoundError):
+            sources = repository_python_sources()
+        self.assertIn(ROOT / "tests" / "test_repository_hygiene.py", sources)
+        self.assertTrue(all(path.suffix == ".py" for path in sources))
 
 
 if __name__ == "__main__":

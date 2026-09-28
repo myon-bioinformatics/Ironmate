@@ -63,7 +63,8 @@ def parse_nvd_jsonl(text: str) -> list[dict[str, Any]]:
             ):
                 raise ValueError(f"incomplete NVD completion record at line {line_number}")
         else:
-            raise ValueError(f"unsupported NVD record kind at line {line_number}")
+            # v1 permits additive record kinds; consumers ignore kinds they do not understand.
+            continue
         records.append(record)
     return sorted(records, key=lambda item: (item["query"]["cpe_name"], item.get("kind", "cve"), item.get("id", "")))
 

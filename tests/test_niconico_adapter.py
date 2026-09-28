@@ -8,7 +8,7 @@ from urllib.error import HTTPError
 
 from niconico_adapter import (
     build_search_url, classify_page, content_url, fetch_json, next_delay_seconds,
-    normalize_item, snapshot_consistent,
+    normalize_item, snapshot_consistent, completion_state,
 )
 
 
@@ -41,6 +41,9 @@ class NiconicoAdapterTest(unittest.TestCase):
                 build_search_url(q="", sort="-startTime", context=kwargs.pop("context", "Ironmate"), **kwargs)
         with self.assertRaises(ValueError):
             build_search_url(q="", sort="-startTime", context="Ironmate", fields=("contentId", "userId"))
+        for bad_filters in ({"fields": "contentId,userId,lastResBody"}, {"_context": "x" * 100}, {"_limit": 1000}):
+            with self.subTest(bad_filters=bad_filters), self.assertRaises(ValueError):
+                build_search_url(q="", sort="-startTime", context="Ironmate", filters=bad_filters)
 
     def test_content_url_is_conservative(self):
         self.assertEqual(content_url("sm12345"), "https://nico.ms/sm12345")
@@ -64,8 +67,16 @@ class NiconicoAdapterTest(unittest.TestCase):
         self.assertFalse(snapshot_consistent(fixture["version_before"], {"last_modified": "changed"}))
         self.assertTrue(classify_page(fixture["search"], offset=0, limit=10)["complete"])
         state = classify_page({"meta": {"totalCount": 100001}, "data": [{}]}, offset=99999, limit=1)
-        self.assertTrue(state["truncated"])
+        self.assertEqual(state["next_offset"], 100000)
         self.assertFalse(state["complete"])
+        final = classify_page({"meta": {"totalCount": 100001}, "data": [{}]}, offset=100000, limit=1)
+        self.assertTrue(final["complete"])
+        self.assertFalse(final["truncated"])
+        beyond = classify_page({"meta": {"totalCount": 100002}, "data": [{}]}, offset=100000, limit=1)
+        self.assertTrue(beyond["truncated"])
+        self.assertIsNone(beyond["next_offset"])
+        self.assertTrue(completion_state(fixture["version_before"], fixture["version_after"], final)["complete"])
+        self.assertFalse(completion_state(fixture["version_before"], {"last_modified": "changed"}, final)["complete"])
 
     def test_http_statuses_preserve_error_body_offline(self):
         headers = Message()

@@ -26,7 +26,7 @@ single file is copied without its repository.
   exact upstream commit from which a downstream copy was fetched.
 - When exact vendoring provenance matters, keep it separately (for example source commit,
   source blob SHA, and vendored-file SHA-256 in a provenance JSON file).
-- `updated_at` records the artifact update/synchronization time and must include a timezone.
+- `updated_at` records the source artifact refresh time and must include a timezone. Downstream copying preserves it; downstream vendor-sync time belongs in richer provenance evidence when needed.
 - Files without a literal `__all__` are not forced into this contract.
 - Repository-level SHA, CI, release, size, and branch information remain in repository
   metadata and must not be duplicated into this header.

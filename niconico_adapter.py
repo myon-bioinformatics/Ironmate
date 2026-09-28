@@ -76,6 +76,9 @@ def build_search_url(
         "_context": context,
     }
     if filters:
+        invalid = [key for key in filters if not key.startswith("filters[")]
+        if invalid:
+            raise ValueError("filters may only contain filters[...] keys")
         query.update(filters)
     return build_url(SEARCH_URL, query=query)
 
@@ -158,6 +161,7 @@ def snapshot_consistent(before: dict[str, Any], after: dict[str, Any]) -> bool:
 
 def next_delay_seconds(previous_elapsed_seconds: float, *, http_status: int | None = None) -> float:
     if http_status == 503:
+        # Snapshot Search API v2 guide (2026-04-15): wait five minutes after 503.
         return 300.0
     return max(0.0, float(previous_elapsed_seconds))
 

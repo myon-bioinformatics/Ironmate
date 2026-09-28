@@ -70,9 +70,13 @@ class RepositoryHygieneTest(unittest.TestCase):
         self.assertEqual(failures, [], "\n".join(failures))
 
     def test_workflow_structure_escape_detector_is_narrow(self):
+        # One backslash + n is the #42 corruption: two YAML list entries were spliced.
         broken = '      - "a.py"\\n      - "b.py"'
+        # Two backslashes are different data and must not be confused with that corruption.
+        double_backslash = '      - "a.py"\\\\n      - "b.py"'
         legitimate = "      run: printf 'a\\\\nb'"
         self.assertEqual(workflow_structure_escape_failures(broken), [1])
+        self.assertEqual(workflow_structure_escape_failures(double_backslash), [])
         self.assertEqual(workflow_structure_escape_failures(legitimate), [])
 
     def test_repository_python_sources_falls_back_without_git(self):

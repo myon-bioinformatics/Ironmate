@@ -65,7 +65,6 @@ def _request_json(url: str) -> Any:
     if http_status == 404:
         raise LookupError(f"not_found {http_status} {resolved_url}")
     error_type = result.get("error_type") or "fetch_failed"
-    rate_limit = result.get("rate_limit")
     if is_rate_limited(result):
         error_type = "rate_limited"
     status = f" {http_status}" if http_status is not None else ""
@@ -139,7 +138,7 @@ def _tag_metadata(repo_name: str) -> dict[str, Any]:
     if not isinstance(data, list) or not data:
         return availability("not_found")
     tag = data[0]
-    return availability("detected", normalize_tag(tag, api_url=url))
+    return availability("detected", normalize_tag(tag))
 
 
 def _ci_metadata(repo_name: str, default_branch: str) -> dict[str, Any]:
@@ -154,7 +153,7 @@ def _ci_metadata(repo_name: str, default_branch: str) -> dict[str, Any]:
     run = runs[0]
     return availability(
         "detected",
-        normalize_actions_run(run, api_url=url),
+        normalize_actions_run(run),
     )
 
 

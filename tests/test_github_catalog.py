@@ -106,6 +106,37 @@ class GitHubCatalogTransportTest(unittest.TestCase):
         self.assertEqual(normalized["api_url"], release_item)
         self.assertEqual(normalized["source_url"], release_source)
 
+    def test_tree_and_pull_collection_urls_preserve_catalog_scope(self):
+        tree_url = "https://api.github.com/repos/myon-bioinformatics/demo/git/trees/feature%2Fx?recursive=1"
+        with patch("github_catalog._optional_json", return_value=("detected", {"tree": []})) as optional:
+            status, tree = github_catalog._tree("demo", "feature/x")
+        self.assertEqual((status, tree), ("detected", []))
+        optional.assert_called_once_with(tree_url)
+
+        repos_url = "https://api.github.com/users/myon-bioinformatics/repos?type=owner&sort=full_name&direction=asc"
+        pulls_url = "https://api.github.com/repos/myon-bioinformatics/demo/pulls?state=all&sort=created&direction=desc"
+        repo = {
+            "name": "demo", "full_name": "myon-bioinformatics/demo", "private": False,
+            "fork": False, "default_branch": "main", "language": None,
+        }
+        with patch("github_catalog._paged", side_effect=[[repo], []]) as paged, \
+             patch("github_catalog._commit_metadata", return_value={"sha": "abc", "date": None}), \
+             patch("github_catalog._repository_enrichment", return_value={
+                 key: {"status": "not_found", "value": None}
+                 for key in ("version", "readme", "api", "important_files", "latest_release", "latest_tag", "ci")
+             }), \
+             patch.object(github_catalog, "OUTPUT_DIR", self._temporary_output_dir()):
+            github_catalog.build_catalog()
+        self.assertEqual(paged.call_args_list[0].args[0], repos_url)
+        self.assertEqual(paged.call_args_list[1].args[0], pulls_url)
+
+    def _temporary_output_dir(self):
+        import tempfile
+        from pathlib import Path
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        return Path(directory.name)
+
     def test_missing_rate_limit_headers_do_not_clear_last_known_values(self):
         github_catalog.RATE_LIMIT.update({"remaining": "12", "limit": "60", "reset": "789"})
         result = {"status": "error", "error_type": "URLError", "url": self.url}

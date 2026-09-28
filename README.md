@@ -221,6 +221,7 @@ Ironmate keeps pinned source snapshots under `vendor/` instead of treating these
 
 - `vendor/markdown.py` is sourced from [`myon-bioinformatics/markdown`](https://github.com/myon-bioinformatics/markdown), currently pinned to `fa518381`.
 - `vendor/ascii_artist.py` is sourced from [`myon-bioinformatics/ascii_artist`](https://github.com/myon-bioinformatics/ascii_artist), currently pinned to `7c21bacf`.
+- `vendor/nvd_nist_known_vulns.py` is an exact source snapshot from `myon-bioinformatics/nvd_nist_known_vulns` merge `986e17192442b84adfae8e434ab4bf32bf2347af` (Git blob `16028101be84f6c1b9dd05afb8199280e721f069`). Tests verify the blob identity before exercising the producer-to-consumer contract.
 
 The sibling repositories are the upstream sources; changes should be developed there first and then intentionally refreshed in Ironmate.
 
@@ -337,3 +338,23 @@ the sibling repositories:
 The owning repositories remain the source of truth for their detailed catalogs;
 Ironmate links and summarizes shared IDs so the same failure class is searchable
 across repository boundaries.
+
+
+---
+
+## NVD security metadata adapter
+
+`security_nvd.py` consumes the versioned `nvd-cve-summary/1` JSONL contract
+produced by `myon-bioinformatics/nvd_nist_known_vulns`. The consumer is
+stdlib-only and its normal tests use offline fixtures; CI does not call NVD.
+
+CPE mappings are deliberately explicit. Ironmate does **not** infer a CPE from a
+Python package, repository name, or other package-manager identifier. A
+repository without an explicit `ironmate-security-cpe/1` mapping is reported
+as `not_measured`, never as zero vulnerabilities or safe. A mapped CPE also remains
+`not_measured` unless the input contains its upstream `query_complete` evidence;
+the completion count must agree with the unique CVE rows for that CPE. This makes
+`measured` / zero distinguishable from an omitted, failed, truncated, or mixed
+query. The consumer contract therefore requires the NVD producer behavior merged
+at `986e171` or later. This keeps NVD evidence complementary to package-native
+advisory sources such as Dependabot instead of conflating their identifier systems.

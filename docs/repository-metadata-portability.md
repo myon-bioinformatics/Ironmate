@@ -8,7 +8,6 @@ Ironmate is the canonical contract and generator source for repository metadata 
 | --- | --- | --- |
 | JSON | canonical machine interchange | generated and validated by Python standard-library code |
 | JSONL | aggregate, history, and streaming records | one canonical JSON record per line |
-| TOML | optional human-authored input configuration | read with `tomllib` when available; not a generated interchange requirement |
 
 A missing measurement remains JSON `null`. Consumers must not replace it with guessed values.
 

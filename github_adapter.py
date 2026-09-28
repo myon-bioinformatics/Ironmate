@@ -13,6 +13,8 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlparse
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
+from source_adapter import build_url, provenance, quote_segment
+
 API_ROOT = "https://api.github.com"
 HTML_ROOT = "https://github.com"
 
@@ -36,7 +38,7 @@ _opener = build_opener(_ScopedRedirect)
 
 
 def _q(value: str) -> str:
-    return quote(value, safe="")
+    return quote_segment(value)
 
 
 def repository_html_url(owner: str, repo: str) -> str:
@@ -66,6 +68,18 @@ def actions_run_html_url(owner: str, repo: str, run_id: int) -> str:
 def release_tag_html_url(owner: str, repo: str, tag: str) -> str:
     encoded_tag = quote(tag, safe="/")
     return f"{repository_html_url(owner, repo)}/releases/tag/{encoded_tag}"
+
+
+def repositories_api_url(owner: str) -> str:
+    return build_url(API_ROOT, "users", owner, "repos")
+
+
+def repository_collection_api_url(owner: str, repo: str, collection: str) -> str:
+    return build_url(repository_api_url(owner, repo), *collection.strip("/").split("/"))
+
+
+def repository_tree_api_url(owner: str, repo: str, ref: str, *, recursive: bool = True) -> str:
+    return build_url(repository_api_url(owner, repo), "git", "trees", ref, query={"recursive": 1 if recursive else None})
 
 
 def content_api_url(owner: str, repo: str, path: str, *, ref: str | None = None) -> str:
@@ -199,6 +213,49 @@ def fetch_json(url: str, *, token: str = "", timeout: int = 30) -> dict[str, Any
         }
 
 
+def is_rate_limited(result: dict[str, Any]) -> bool:
+    """Classify GitHub primary/secondary rate-limit responses."""
+    status = result.get("http_status")
+    rate_limit = result.get("rate_limit")
+    remaining = rate_limit.get("remaining") if isinstance(rate_limit, dict) else None
+    return status == 429 or (status == 403 and remaining == "0")
+
+
+def normalize_commit(data: dict[str, Any], *, api_url: str | None = None, source_url: str | None = None) -> dict[str, Any]:
+    commit = data.get("commit") or {}
+    committer = commit.get("committer") or {}
+    author = commit.get("author") or {}
+    return {"sha": data.get("sha"), "date": committer.get("date") or author.get("date"),
+            "message": ((commit.get("message") or "").splitlines() or [""])[0],
+            **provenance(data, api_url=api_url, source_url=source_url)}
+
+
+def normalize_pull(pr: dict[str, Any], *, api_url: str | None = None, source_url: str | None = None) -> dict[str, Any]:
+    head, base = pr.get("head") or {}, pr.get("base") or {}
+    return {"number": pr.get("number"), "title": pr.get("title"), "state": pr.get("state"),
+            "draft": bool(pr.get("draft")), "head_sha": head.get("sha"), "base_sha": base.get("sha"),
+            "created_at": pr.get("created_at"), "updated_at": pr.get("updated_at"),
+            "closed_at": pr.get("closed_at"), "merged_at": pr.get("merged_at"),
+            **provenance(pr, api_url=api_url, source_url=source_url)}
+
+
+def normalize_release(data: dict[str, Any], *, api_url: str | None = None, source_url: str | None = None) -> dict[str, Any]:
+    return {"tag_name": data.get("tag_name"), "name": data.get("name"),
+            "published_at": data.get("published_at"),
+            **provenance(data, api_url=api_url, source_url=source_url)}
+
+
+def normalize_tag(data: dict[str, Any], *, api_url: str | None = None, source_url: str | None = None) -> dict[str, Any]:
+    return {"name": data.get("name"), "sha": (data.get("commit") or {}).get("sha"),
+            **provenance(data, api_url=api_url, source_url=source_url)}
+
+
+def normalize_actions_run(data: dict[str, Any], *, api_url: str | None = None, source_url: str | None = None) -> dict[str, Any]:
+    return {"name": data.get("name"), "status": data.get("status"), "conclusion": data.get("conclusion"),
+            "head_sha": data.get("head_sha"), "updated_at": data.get("updated_at"),
+            **provenance(data, api_url=api_url, source_url=source_url)}
+
+
 def inspect_public(value: str, *, token: str = "", fetch: bool = True) -> dict[str, Any]:
     resource = parse_github_resource(value)
     result: dict[str, Any] = {
@@ -212,6 +269,7 @@ def inspect_public(value: str, *, token: str = "", fetch: bool = True) -> dict[s
     }
     if fetch:
         result["fetch"] = fetch_json(resource.api_url, token=token)
+        result["fetch"]["rate_limited"] = is_rate_limited(result["fetch"])
     else:
         result["fetch"] = {"status": "skipped"}
     return result

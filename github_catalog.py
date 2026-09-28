@@ -1,4 +1,9 @@
-"""Build static, LLM-friendly repository metadata for GitHub Pages."""
+"""Build the current static, LLM-friendly GitHub repository catalog.
+
+This module is a consumer of source-adapter output, not a template for one
+catalog module per provider. Before adding another provider, define the shared
+normalized record/envelope and catalog/index boundary explicitly.
+"""
 from __future__ import annotations
 
 import base64
@@ -9,7 +14,22 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import quote
 
-from github_adapter import fetch_json
+from source_adapter import build_url
+
+from github_adapter import (
+    content_api_url,
+    fetch_json,
+    is_rate_limited,
+    normalize_actions_run,
+    normalize_commit,
+    normalize_pull,
+    normalize_release,
+    normalize_tag,
+    repository_api_url,
+    repositories_api_url,
+    repository_collection_api_url,
+    repository_tree_api_url,
+)
 from repository_metadata import (
     availability,
     important_file_shas,
@@ -23,7 +43,6 @@ from repository_metadata import (
 
 OWNER = os.environ.get("IRONMATE_GITHUB_OWNER", "myon-bioinformatics")
 OUTPUT_DIR = Path(os.environ.get("IRONMATE_CATALOG_DIR", "docs/api"))
-API_ROOT = "https://api.github.com"
 TOKEN = os.environ.get("GITHUB_TOKEN", "")
 PYTHON_SOURCE_LIMIT = max(1, int(os.environ.get("IRONMATE_PYTHON_SOURCE_LIMIT", "3")))
 RATE_LIMIT = {"remaining": None, "limit": None, "reset": None}
@@ -55,8 +74,7 @@ def _request_json(url: str) -> Any:
     if http_status == 404:
         raise LookupError(f"not_found {http_status} {resolved_url}")
     error_type = result.get("error_type") or "fetch_failed"
-    rate_limit = result.get("rate_limit")
-    if http_status == 403 and isinstance(rate_limit, dict) and rate_limit.get("remaining") == "0":
+    if is_rate_limited(result):
         error_type = "rate_limited"
     status = f" {http_status}" if http_status is not None else ""
     raise RuntimeError(f"{error_type}{status} {resolved_url}")
@@ -87,8 +105,7 @@ def _paged(url: str) -> list[dict[str, Any]]:
 
 def _content_text(repo_name: str, path: str, ref: str) -> tuple[str, str | None]:
     status, data = _optional_json(
-        f"{API_ROOT}/repos/{quote(OWNER)}/{quote(repo_name)}/contents/"
-        f"{quote(path, safe='/')}?ref={quote(ref)}"
+        content_api_url(OWNER, repo_name, path, ref=ref)
     )
     if status != "detected" or not isinstance(data, dict):
         return status, None
@@ -102,68 +119,41 @@ def _content_text(repo_name: str, path: str, ref: str) -> tuple[str, str | None]
 
 
 def _commit_metadata(repo_name: str, default_branch: str) -> dict[str, Any]:
-    data = _request_json(
-        f"{API_ROOT}/repos/{quote(OWNER)}/{quote(repo_name)}/commits/{quote(default_branch)}"
-    )
-    commit = data.get("commit", {}) if isinstance(data, dict) else {}
-    committer = commit.get("committer", {}) if isinstance(commit, dict) else {}
-    author = commit.get("author", {}) if isinstance(commit, dict) else {}
-    return {
-        "sha": data.get("sha") if isinstance(data, dict) else None,
-        "date": committer.get("date") or author.get("date"),
-        "message": (commit.get("message") or "").splitlines()[0] if isinstance(commit, dict) else "",
-    }
+    url = f"{repository_api_url(OWNER, repo_name)}/commits/{quote(default_branch, safe='')}"
+    data = _request_json(url)
+    return normalize_commit(data if isinstance(data, dict) else {}, source_url=url)
 
 
 def _pr_metadata(pr: dict[str, Any]) -> dict[str, Any]:
-    head = pr.get("head") or {}
-    base = pr.get("base") or {}
-    return {
-        "number": pr.get("number"),
-        "title": pr.get("title"),
-        "state": pr.get("state"),
-        "draft": bool(pr.get("draft")),
-        "head_sha": head.get("sha"),
-        "base_sha": base.get("sha"),
-        "created_at": pr.get("created_at"),
-        "updated_at": pr.get("updated_at"),
-        "closed_at": pr.get("closed_at"),
-        "merged_at": pr.get("merged_at"),
-        "html_url": pr.get("html_url"),
-    }
+    return normalize_pull(pr)
 
 
 def _release_metadata(repo_name: str) -> dict[str, Any]:
-    status, data = _optional_json(f"{API_ROOT}/repos/{quote(OWNER)}/{quote(repo_name)}/releases/latest")
+    url = f"{repository_api_url(OWNER, repo_name)}/releases/latest"
+    status, data = _optional_json(url)
     if status != "detected" or not isinstance(data, dict):
         return availability(status)
     return availability(
         "detected",
-        {
-            "tag_name": data.get("tag_name"),
-            "name": data.get("name"),
-            "published_at": data.get("published_at"),
-            "html_url": data.get("html_url"),
-        },
+        normalize_release(data, source_url=url),
     )
 
 
 def _tag_metadata(repo_name: str) -> dict[str, Any]:
-    status, data = _optional_json(f"{API_ROOT}/repos/{quote(OWNER)}/{quote(repo_name)}/tags?per_page=1")
+    url = f"{repository_api_url(OWNER, repo_name)}/tags?per_page=1"
+    status, data = _optional_json(url)
     if status != "detected":
         return availability(status)
     if not isinstance(data, list) or not data:
         return availability("not_found")
     tag = data[0]
-    return availability("detected", {"name": tag.get("name"), "sha": (tag.get("commit") or {}).get("sha")})
+    return availability("detected", normalize_tag(tag, source_url=url))
 
 
 def _ci_metadata(repo_name: str, default_branch: str) -> dict[str, Any]:
     """Return only the latest Actions workflow run on the default branch."""
-    status, data = _optional_json(
-        f"{API_ROOT}/repos/{quote(OWNER)}/{quote(repo_name)}/actions/runs"
-        f"?branch={quote(default_branch)}&per_page=1"
-    )
+    url = f"{repository_api_url(OWNER, repo_name)}/actions/runs?branch={quote(default_branch, safe='')}&per_page=1"
+    status, data = _optional_json(url)
     if status != "detected" or not isinstance(data, dict):
         return availability(status)
     runs = data.get("workflow_runs")
@@ -172,21 +162,13 @@ def _ci_metadata(repo_name: str, default_branch: str) -> dict[str, Any]:
     run = runs[0]
     return availability(
         "detected",
-        {
-            "name": run.get("name"),
-            "status": run.get("status"),
-            "conclusion": run.get("conclusion"),
-            "head_sha": run.get("head_sha"),
-            "updated_at": run.get("updated_at"),
-            "html_url": run.get("html_url"),
-        },
+        normalize_actions_run(run, source_url=url),
     )
 
 
 def _tree(repo_name: str, default_branch: str) -> tuple[str, list[dict[str, Any]]]:
     status, data = _optional_json(
-        f"{API_ROOT}/repos/{quote(OWNER)}/{quote(repo_name)}/git/trees/"
-        f"{quote(default_branch)}?recursive=1"
+        repository_tree_api_url(OWNER, repo_name, default_branch)
     )
     if status != "detected" or not isinstance(data, dict):
         return status, []
@@ -249,7 +231,7 @@ def _repository_enrichment(repo_name: str, default_branch: str, language: str | 
 def build_catalog() -> dict[str, Any]:
     generated_at = datetime.now(UTC).isoformat()
     repos = _paged(
-        f"{API_ROOT}/users/{quote(OWNER)}/repos?type=owner&sort=full_name&direction=asc"
+        build_url(repositories_api_url(OWNER), query={"type": "owner", "sort": "full_name", "direction": "asc"})
     )
     public_repos = [repo for repo in repos if not repo.get("private") and not repo.get("fork")]
 
@@ -265,8 +247,7 @@ def build_catalog() -> dict[str, Any]:
         default_branch = str(repo.get("default_branch") or "main")
         latest_commit = _commit_metadata(name, default_branch)
         pulls = _paged(
-            f"{API_ROOT}/repos/{quote(OWNER)}/{quote(name)}/pulls"
-            "?state=all&sort=created&direction=desc"
+            build_url(repository_collection_api_url(OWNER, name, "pulls"), query={"state": "all", "sort": "created", "direction": "desc"})
         )
         pr_items = [_pr_metadata(pr) for pr in pulls]
         # latest_pr is latest-created (greatest PR number); latest_updated_pr is

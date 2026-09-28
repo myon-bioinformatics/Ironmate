@@ -1,0 +1,53 @@
+{
+  "commit": {
+    "sha": "abc123",
+    "commit": {
+      "message": "fixture commit\nbody",
+      "committer": {
+        "date": "2026-01-01T00:00:00Z"
+      }
+    },
+    "html_url": "https://github.com/o/r/commit/abc123",
+    "url": "https://api.github.com/repos/o/r/commits/abc123"
+  },
+  "pull": {
+    "number": 7,
+    "title": "fixture",
+    "state": "open",
+    "draft": false,
+    "head": {
+      "sha": "head"
+    },
+    "base": {
+      "sha": "base"
+    },
+    "html_url": "https://github.com/o/r/pull/7",
+    "url": "https://api.github.com/repos/o/r/pulls/7",
+    "created_at": "2026-01-02T01:02:03Z",
+    "updated_at": "2026-01-03T04:05:06Z",
+    "closed_at": "2026-01-04T07:08:09Z",
+    "merged_at": "2026-01-04T07:08:10Z"
+  },
+  "release": {
+    "tag_name": "v1.0.0",
+    "name": "v1",
+    "html_url": "https://github.com/o/r/releases/tag/v1.0.0",
+    "url": "https://api.github.com/repos/o/r/releases/1",
+    "published_at": "2026-01-05T10:11:12Z"
+  },
+  "tag": {
+    "name": "v1.0.0",
+    "commit": {
+      "sha": "abc123"
+    }
+  },
+  "actions_run": {
+    "name": "CI",
+    "status": "completed",
+    "conclusion": "success",
+    "head_sha": "abc123",
+    "html_url": "https://github.com/o/r/actions/runs/1",
+    "url": "https://api.github.com/repos/o/r/actions/runs/1",
+    "updated_at": "2026-01-06T13:14:15Z"
+  }
+}

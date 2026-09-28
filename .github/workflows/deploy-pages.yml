@@ -9,6 +9,7 @@ on:
       - "scripts/build_web_ui_consumer_examples.py"
       - "github_catalog.py"
       - "github_adapter.py"
+      - "source_adapter.py"
       - "repository_metadata.py"
       - "repository_metadata_contract.py"
       - "scripts/build_repository_diagnostics.py"

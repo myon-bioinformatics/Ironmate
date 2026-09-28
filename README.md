@@ -371,3 +371,7 @@ completion remains `not_measured`, while a completed zero-CVE query is
 `measured` with count zero. Normal tests are offline and pin the vendored Git
 blob, so CI does not call NVD. NVD evidence remains complementary to package-native
 advisory sources such as Dependabot.
+
+### Unreviewed diagnostics
+
+`scripts/unreviewed.py` treats an item as reviewed only when a comment or review body contains a standalone `from: <reviewer>` line. Author identity alone is intentionally insufficient: bot-authored Action/error responses such as `claude[bot]` failures do not count as reviews unless that tag line is present.

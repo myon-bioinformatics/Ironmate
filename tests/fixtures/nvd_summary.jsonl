@@ -1,0 +1,1 @@
+{"schema":"nvd-cve-summary/1","query":{"cpe_name":"cpe:2.3:a:example:widget:1.0:*:*:*:*:*:*:*"},"id":"CVE-EXAMPLE-0001","description":"Offline illustrative fixture","cwe":["CWE-79"],"cvss_v4":null,"cvss_v3":null,"cvss_v2":null,"published":null,"last_modified":null,"source_identifier":"example"}

@@ -245,19 +245,19 @@ def normalize_pull(pr: dict[str, Any], *, api_url: str | None = None, source_url
 
 def normalize_release(data: dict[str, Any], *, api_url: str | None = None, source_url: str | None = None) -> dict[str, Any]:
     return {"tag_name": data.get("tag_name"), "name": data.get("name"),
-            "published_at": data.get("published_at"), "html_url": data.get("html_url"),
+            "published_at": data.get("published_at"),
             **_provenance(data, api_url=api_url, source_url=source_url)}
 
 
 def normalize_tag(data: dict[str, Any], *, api_url: str | None = None, source_url: str | None = None) -> dict[str, Any]:
     return {"name": data.get("name"), "sha": (data.get("commit") or {}).get("sha"),
-            "html_url": data.get("html_url"), "api_url": api_url or data.get("url")}
+            **_provenance(data, api_url=api_url, source_url=source_url)}
 
 
 def normalize_actions_run(data: dict[str, Any], *, api_url: str | None = None, source_url: str | None = None) -> dict[str, Any]:
     return {"name": data.get("name"), "status": data.get("status"), "conclusion": data.get("conclusion"),
             "head_sha": data.get("head_sha"), "updated_at": data.get("updated_at"),
-            "html_url": data.get("html_url"), "api_url": api_url or data.get("url")}
+            **_provenance(data, api_url=api_url, source_url=source_url)}
 
 
 def inspect_public(value: str, *, token: str = "", fetch: bool = True) -> dict[str, Any]:

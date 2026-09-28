@@ -177,7 +177,7 @@ def item_records(fetch: Fetcher, owner: str, repo: str, item: JsonObject) -> Ite
 
 
 def reviewer_pattern(reviewer: str) -> re.Pattern[str]:
-    return re.compile(rf"(?im)^[ \\t]*from:[ \\t]*{re.escape(reviewer)}[ \\t\\r]*$")
+    return re.compile(rf"(?im)^[ \t]*from:[ \t]*{re.escape(reviewer)}[ \t\r]*$")
 
 
 def record_is_reviewed(record: JsonObject, tagged: re.Pattern[str]) -> bool:

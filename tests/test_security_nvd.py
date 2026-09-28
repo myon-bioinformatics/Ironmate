@@ -113,9 +113,12 @@ class SecurityNvdTest(unittest.TestCase):
         self.assertEqual(result["status"],"measured")
         self.assertEqual(result["cve_ids"],["CVE-2026-0001"])
 
-    def test_parser_rejects_unknown_kind_invalid_id_and_bad_completion_count(self):
+    def test_parser_ignores_unknown_additive_kind(self):
+        future = {"schema":"nvd-cve-summary/1","kind":"future","query":{"cpe_name":CPE},"payload":"ignored"}
+        self.assertEqual(parse_nvd_jsonl(json.dumps(future)), [])
+
+    def test_parser_rejects_invalid_id_and_bad_completion_count(self):
         bad = [
-            {"schema":"nvd-cve-summary/1","kind":"future","query":{"cpe_name":CPE}},
             {"schema":"nvd-cve-summary/1","kind":"cve","query":{"cpe_name":CPE},"id":"GHSA-x"},
             {"schema":"nvd-cve-summary/1","kind":"query_complete","query":{"cpe_name":CPE},"cve_count":True},
             {"schema":"nvd-cve-summary/1","kind":"query_complete","query":{"cpe_name":CPE},"cve_count":-1},

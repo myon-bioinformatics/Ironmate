@@ -89,6 +89,23 @@ class GitHubCatalogTransportTest(unittest.TestCase):
         self.assertEqual(ci["api_url"], run["url"])
         self.assertEqual(ci["source_url"], run_url)
 
+    def test_catalog_commit_and_release_keep_item_and_source_urls(self):
+        commit_source = "https://api.github.com/repos/myon-bioinformatics/demo/commits/main"
+        commit_item = "https://api.github.com/repos/myon-bioinformatics/demo/commits/abc"
+        commit = {"sha": "abc", "url": commit_item, "commit": {"message": "m", "committer": {"date": "2026-01-01T00:00:00Z"}}}
+        with patch("github_catalog._request_json", return_value=commit):
+            normalized = github_catalog._commit_metadata("demo", "main")
+        self.assertEqual(normalized["api_url"], commit_item)
+        self.assertEqual(normalized["source_url"], commit_source)
+
+        release_source = "https://api.github.com/repos/myon-bioinformatics/demo/releases/latest"
+        release_item = "https://api.github.com/repos/myon-bioinformatics/demo/releases/9"
+        release = {"tag_name": "v1", "url": release_item}
+        with patch("github_catalog._optional_json", return_value=("detected", release)):
+            normalized = github_catalog._release_metadata("demo")["value"]
+        self.assertEqual(normalized["api_url"], release_item)
+        self.assertEqual(normalized["source_url"], release_source)
+
     def test_missing_rate_limit_headers_do_not_clear_last_known_values(self):
         github_catalog.RATE_LIMIT.update({"remaining": "12", "limit": "60", "reset": "789"})
         result = {"status": "error", "error_type": "URLError", "url": self.url}

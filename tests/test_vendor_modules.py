@@ -35,15 +35,22 @@ class VendorModuleIntegrationTest(unittest.TestCase):
 
     def test_builder_direct_execution_resolves_vendor(self):
         repository_output = ROOT / "docs" / "consumer-v1"
-        with tempfile.TemporaryDirectory() as directory:
-            temporary_root = Path(directory)
-            output_dir = temporary_root / "generated"
-            saved_repository_output = temporary_root / "saved-repository-output"
+        repository_output.parent.mkdir(parents=True, exist_ok=True)
+        stash = Path(
+            tempfile.mkdtemp(
+                prefix=".consumer-v1-stash-",
+                dir=repository_output.parent,
+            )
+        )
+        stash.rmdir()
+        had_repository_output = repository_output.exists()
 
-            if repository_output.exists():
-                repository_output.rename(saved_repository_output)
+        if had_repository_output:
+            repository_output.rename(stash)
 
-            try:
+        try:
+            with tempfile.TemporaryDirectory() as directory:
+                output_dir = Path(directory)
                 result = subprocess.run(
                     [
                         sys.executable,
@@ -63,11 +70,33 @@ class VendorModuleIntegrationTest(unittest.TestCase):
                     repository_output.exists(),
                     "builder wrote outside the requested output directory",
                 )
-            finally:
+        finally:
+            cleanup_error = None
+            try:
                 if repository_output.exists():
                     shutil.rmtree(repository_output)
-                if saved_repository_output.exists():
-                    saved_repository_output.rename(repository_output)
+            except OSError as exc:
+                cleanup_error = exc
+
+            if had_repository_output and stash.exists():
+                try:
+                    if repository_output.exists():
+                        raise RuntimeError(
+                            "cannot restore repository output because cleanup failed; "
+                            f"original files remain at {stash}"
+                        ) from cleanup_error
+                    stash.rename(repository_output)
+                except OSError as exc:
+                    raise RuntimeError(
+                        f"could not restore repository output; original files remain at {stash}"
+                    ) from exc
+            elif stash.exists():
+                stash.rmdir()
+
+            if cleanup_error is not None:
+                raise RuntimeError(
+                    "could not remove unexpected repository output after builder test"
+                ) from cleanup_error
 
     def test_generated_consumer_examples_use_v1_contract_and_pins(self):
         documents = build_documents()

@@ -179,20 +179,15 @@ def reviewer_pattern(reviewer: str) -> re.Pattern[str]:
     return re.compile(rf"(?im)^[ \t]*from:[ \t]*{re.escape(reviewer)}[ \t]*$")
 
 
-def record_is_reviewed(record: JsonObject, tagged: re.Pattern[str], author: str | None) -> bool:
+def record_is_reviewed(record: JsonObject, tagged: re.Pattern[str]) -> bool:
     body = record.get("body")
-    if isinstance(body, str) and tagged.search(body):
-        return True
-    login = (record.get("user") or {}).get("login")
-    return bool(author and isinstance(login, str) and login.casefold() == author.casefold())
+    return isinstance(body, str) and bool(tagged.search(body))
 
 
 def unreviewed(
     fetch: Fetcher,
     owner: str,
     reviewer: str,
-    *,
-    author: str | None = None,
 ) -> Iterator[tuple[str, str, int, str]]:
     tagged = reviewer_pattern(reviewer)
     quoted_owner = urllib.parse.quote(owner, safe="")
@@ -204,7 +199,7 @@ def unreviewed(
             items = paged(fetch, path)
             for item in items:
                 records = item_records(fetch, owner, repo, item)
-                if not any(record_is_reviewed(record, tagged, author) for record in records):
+                if not any(record_is_reviewed(record, tagged) for record in records):
                     kind = "PR" if "pull_request" in item else "IS"
                     yield repo, kind, int(item["number"]), str(item.get("title") or "")
         except GitHubApiError as exc:
@@ -217,10 +212,6 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("owner", help="GitHub organization or user")
     parser.add_argument("reviewer", help="reviewer tag used by 'from: <reviewer>'")
-    parser.add_argument(
-        "--author",
-        help="also count records authored by this exact GitHub login as reviewed",
-    )
     parser.add_argument("--api-root", default=API_ROOT, help="GitHub API root")
     parser.add_argument("--timeout", type=float, default=DEFAULT_TIMEOUT, help="HTTP timeout in seconds")
     return parser
@@ -230,7 +221,7 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
         fetch = make_fetcher(api_root=args.api_root, timeout=args.timeout)
-        for repo, kind, number, title in unreviewed(fetch, args.owner, args.reviewer, author=args.author):
+        for repo, kind, number, title in unreviewed(fetch, args.owner, args.reviewer):
             print(f"{repo}\t{kind}#{number}\t{title[:70]}")
     except GitHubApiError as exc:
         print(f"error: {exc}", file=sys.stderr)

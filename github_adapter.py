@@ -199,6 +199,49 @@ def fetch_json(url: str, *, token: str = "", timeout: int = 30) -> dict[str, Any
         }
 
 
+def is_rate_limited(result: dict[str, Any]) -> bool:
+    """Classify GitHub primary/secondary rate-limit responses."""
+    status = result.get("http_status")
+    rate_limit = result.get("rate_limit")
+    remaining = rate_limit.get("remaining") if isinstance(rate_limit, dict) else None
+    return status == 429 or (status == 403 and remaining == "0")
+
+
+def normalize_commit(data: dict[str, Any], *, api_url: str | None = None) -> dict[str, Any]:
+    commit = data.get("commit") or {}
+    committer = commit.get("committer") or {}
+    author = commit.get("author") or {}
+    return {"sha": data.get("sha"), "date": committer.get("date") or author.get("date"),
+            "message": (commit.get("message") or "").splitlines()[0],
+            "html_url": data.get("html_url"), "api_url": api_url or data.get("url")}
+
+
+def normalize_pull(pr: dict[str, Any], *, api_url: str | None = None) -> dict[str, Any]:
+    head, base = pr.get("head") or {}, pr.get("base") or {}
+    return {"number": pr.get("number"), "title": pr.get("title"), "state": pr.get("state"),
+            "draft": bool(pr.get("draft")), "head_sha": head.get("sha"), "base_sha": base.get("sha"),
+            "created_at": pr.get("created_at"), "updated_at": pr.get("updated_at"),
+            "closed_at": pr.get("closed_at"), "merged_at": pr.get("merged_at"),
+            "html_url": pr.get("html_url"), "api_url": api_url or pr.get("url")}
+
+
+def normalize_release(data: dict[str, Any], *, api_url: str | None = None) -> dict[str, Any]:
+    return {"tag_name": data.get("tag_name"), "name": data.get("name"),
+            "published_at": data.get("published_at"), "html_url": data.get("html_url"),
+            "api_url": api_url or data.get("url")}
+
+
+def normalize_tag(data: dict[str, Any], *, api_url: str | None = None) -> dict[str, Any]:
+    return {"name": data.get("name"), "sha": (data.get("commit") or {}).get("sha"),
+            "html_url": data.get("html_url"), "api_url": api_url or data.get("url")}
+
+
+def normalize_actions_run(data: dict[str, Any], *, api_url: str | None = None) -> dict[str, Any]:
+    return {"name": data.get("name"), "status": data.get("status"), "conclusion": data.get("conclusion"),
+            "head_sha": data.get("head_sha"), "updated_at": data.get("updated_at"),
+            "html_url": data.get("html_url"), "api_url": api_url or data.get("url")}
+
+
 def inspect_public(value: str, *, token: str = "", fetch: bool = True) -> dict[str, Any]:
     resource = parse_github_resource(value)
     result: dict[str, Any] = {
@@ -212,6 +255,7 @@ def inspect_public(value: str, *, token: str = "", fetch: bool = True) -> dict[s
     }
     if fetch:
         result["fetch"] = fetch_json(resource.api_url, token=token)
+        result["fetch"]["rate_limited"] = is_rate_limited(result["fetch"])
     else:
         result["fetch"] = {"status": "skipped"}
     return result

@@ -4,6 +4,7 @@ import io
 import json
 import unittest
 import urllib.error
+import urllib.request
 from unittest import mock
 
 from scripts.unreviewed import (
@@ -66,6 +67,12 @@ class UnreviewedDiagnosticsTest(unittest.TestCase):
 
         with self.assertRaises(GitHubApiError):
             list(owner_repositories(forbidden, "acme"))
+
+        def server_error(url):
+            raise GitHubApiError("server error", status=500)
+
+        with self.assertRaises(GitHubApiError):
+            list(owner_repositories(server_error, "acme"))
 
     def test_reviewer_pattern_is_exact_line_without_cross_line_whitespace(self):
         pattern = reviewer_pattern("Claude[bot]")

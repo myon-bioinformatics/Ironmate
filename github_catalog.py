@@ -12,7 +12,6 @@ import json
 import os
 from pathlib import Path
 from typing import Any
-from urllib.parse import quote
 
 from source_adapter import build_url
 
@@ -119,7 +118,7 @@ def _content_text(repo_name: str, path: str, ref: str) -> tuple[str, str | None]
 
 
 def _commit_metadata(repo_name: str, default_branch: str) -> dict[str, Any]:
-    url = f"{repository_api_url(OWNER, repo_name)}/commits/{quote(default_branch, safe='')}"
+    url = build_url(repository_api_url(OWNER, repo_name), "commits", default_branch)
     data = _request_json(url)
     return normalize_commit(data if isinstance(data, dict) else {}, source_url=url)
 
@@ -129,7 +128,7 @@ def _pr_metadata(pr: dict[str, Any]) -> dict[str, Any]:
 
 
 def _release_metadata(repo_name: str) -> dict[str, Any]:
-    url = f"{repository_api_url(OWNER, repo_name)}/releases/latest"
+    url = build_url(repository_api_url(OWNER, repo_name), "releases", "latest")
     status, data = _optional_json(url)
     if status != "detected" or not isinstance(data, dict):
         return availability(status)
@@ -140,7 +139,7 @@ def _release_metadata(repo_name: str) -> dict[str, Any]:
 
 
 def _tag_metadata(repo_name: str) -> dict[str, Any]:
-    url = f"{repository_api_url(OWNER, repo_name)}/tags?per_page=1"
+    url = build_url(repository_api_url(OWNER, repo_name), "tags", query={"per_page": 1})
     status, data = _optional_json(url)
     if status != "detected":
         return availability(status)
@@ -152,7 +151,7 @@ def _tag_metadata(repo_name: str) -> dict[str, Any]:
 
 def _ci_metadata(repo_name: str, default_branch: str) -> dict[str, Any]:
     """Return only the latest Actions workflow run on the default branch."""
-    url = f"{repository_api_url(OWNER, repo_name)}/actions/runs?branch={quote(default_branch, safe='')}&per_page=1"
+    url = build_url(repository_api_url(OWNER, repo_name), "actions", "runs", query={"branch": default_branch, "per_page": 1})
     status, data = _optional_json(url)
     if status != "detected" or not isinstance(data, dict):
         return availability(status)

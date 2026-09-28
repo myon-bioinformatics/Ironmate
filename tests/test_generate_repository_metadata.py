@@ -1,10 +1,11 @@
 import json
 import subprocess
 from pathlib import Path
+import sys
 
 import pytest
 
-from scripts.generate_repository_metadata import record_from_checkout, write_metadata
+from repository_metadata_generator import record_from_checkout, write_metadata
 
 
 def _git(root: Path, *args: str) -> str:
@@ -39,3 +40,38 @@ def test_checkout_generator_writes_equivalent_json_and_jsonl(tmp_path):
 def test_checkout_generator_rejects_non_repository(tmp_path):
     with pytest.raises(subprocess.CalledProcessError):
         record_from_checkout(tmp_path, "octo/demo")
+
+
+def test_generator_cli_runs_from_outside_repository(tmp_path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    _git(root, "init", "-b", "main")
+    _git(root, "config", "user.email", "test@example.invalid")
+    _git(root, "config", "user.name", "Test")
+    (root / "README.md").write_text("# demo\n", encoding="utf-8")
+    _git(root, "add", "README.md")
+    _git(root, "commit", "-m", "cli metadata fixture")
+
+    generator = Path(__file__).resolve().parents[1] / "repository_metadata_generator.py"
+    out = tmp_path / "out"
+    subprocess.run(
+        [
+            sys.executable,
+            str(generator),
+            "--repository",
+            "octo/demo",
+            "--root",
+            str(root),
+            "--output-dir",
+            str(out),
+        ],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert json.loads((out / "repository-metadata.json").read_text(encoding="utf-8"))[
+        "repository"
+    ]["full_name"] == "octo/demo"
+    assert (out / "repository-metadata.jsonl").read_text(encoding="utf-8").count("\n") == 1

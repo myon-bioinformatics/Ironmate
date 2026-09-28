@@ -77,9 +77,12 @@ class UnreviewedDiagnosticsTest(unittest.TestCase):
     def test_reviewer_pattern_is_exact_line_without_cross_line_whitespace(self):
         pattern = reviewer_pattern("Claude[bot]")
         self.assertTrue(pattern.search("note\n  FROM:\tclaude[bot]  \n"))
+        self.assertTrue(pattern.search("from: Claude[bot]\r\nto: cursor"))
+        self.assertTrue(pattern.search("x\r\nfrom: claude[bot]\r\n"))
         for value in (
             "quoted from: claude[bot] elsewhere",
-            "from: claude[bot]-extra",\n            "from: claude[bot] extra",
+            "from: claude[bot]-extra",
+            "from: claude[bot] extra",
             "from:\nclaude[bot]",
         ):
             self.assertFalse(pattern.search(value))

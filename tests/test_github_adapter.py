@@ -7,9 +7,10 @@ from unittest.mock import patch
 from urllib.error import HTTPError, URLError
 from urllib.request import Request
 
+from source_adapter import build_url
+
 from github_adapter import (
     GitHubResource,
-    build_url,
     actions_run_html_url,
     content_api_url,
     _ScopedRedirect,

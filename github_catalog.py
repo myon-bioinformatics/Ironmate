@@ -19,6 +19,9 @@ from github_adapter import (
     normalize_release,
     normalize_tag,
     repository_api_url,
+    repositories_api_url,
+    repository_collection_api_url,
+    repository_tree_api_url,
 )
 from repository_metadata import (
     availability,
@@ -112,7 +115,7 @@ def _content_text(repo_name: str, path: str, ref: str) -> tuple[str, str | None]
 def _commit_metadata(repo_name: str, default_branch: str) -> dict[str, Any]:
     url = f"{repository_api_url(OWNER, repo_name)}/commits/{quote(default_branch, safe='')}"
     data = _request_json(url)
-    return normalize_commit(data if isinstance(data, dict) else {}, api_url=url)
+    return normalize_commit(data if isinstance(data, dict) else {}, source_url=url)
 
 
 def _pr_metadata(pr: dict[str, Any]) -> dict[str, Any]:
@@ -126,7 +129,7 @@ def _release_metadata(repo_name: str) -> dict[str, Any]:
         return availability(status)
     return availability(
         "detected",
-        normalize_release(data, api_url=url),
+        normalize_release(data, source_url=url),
     )
 
 
@@ -138,7 +141,7 @@ def _tag_metadata(repo_name: str) -> dict[str, Any]:
     if not isinstance(data, list) or not data:
         return availability("not_found")
     tag = data[0]
-    return availability("detected", normalize_tag(tag, api_url=url))
+    return availability("detected", normalize_tag(tag, source_url=url))
 
 
 def _ci_metadata(repo_name: str, default_branch: str) -> dict[str, Any]:
@@ -153,14 +156,13 @@ def _ci_metadata(repo_name: str, default_branch: str) -> dict[str, Any]:
     run = runs[0]
     return availability(
         "detected",
-        normalize_actions_run(run),
+        normalize_actions_run(run, source_url=url),
     )
 
 
 def _tree(repo_name: str, default_branch: str) -> tuple[str, list[dict[str, Any]]]:
     status, data = _optional_json(
-        f"{API_ROOT}/repos/{quote(OWNER)}/{quote(repo_name)}/git/trees/"
-        f"{quote(default_branch)}?recursive=1"
+        repository_tree_api_url(OWNER, repo_name, default_branch)
     )
     if status != "detected" or not isinstance(data, dict):
         return status, []
@@ -223,7 +225,7 @@ def _repository_enrichment(repo_name: str, default_branch: str, language: str | 
 def build_catalog() -> dict[str, Any]:
     generated_at = datetime.now(UTC).isoformat()
     repos = _paged(
-        f"{API_ROOT}/users/{quote(OWNER)}/repos?type=owner&sort=full_name&direction=asc"
+        f"{repositories_api_url(OWNER)}?type=owner&sort=full_name&direction=asc"
     )
     public_repos = [repo for repo in repos if not repo.get("private") and not repo.get("fork")]
 
@@ -239,8 +241,7 @@ def build_catalog() -> dict[str, Any]:
         default_branch = str(repo.get("default_branch") or "main")
         latest_commit = _commit_metadata(name, default_branch)
         pulls = _paged(
-            f"{API_ROOT}/repos/{quote(OWNER)}/{quote(name)}/pulls"
-            "?state=all&sort=created&direction=desc"
+            f"{repository_collection_api_url(OWNER, name, 'pulls')}?state=all&sort=created&direction=desc"
         )
         pr_items = [_pr_metadata(pr) for pr in pulls]
         # latest_pr is latest-created (greatest PR number); latest_updated_pr is

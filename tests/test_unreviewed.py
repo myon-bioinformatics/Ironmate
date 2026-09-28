@@ -37,7 +37,13 @@ class UnreviewedDiagnosticsTest(unittest.TestCase):
         self.assertEqual(list(paged(fetch, "/items")), [{"id": 1}, {"id": 2}])
         self.assertEqual(calls, ["/items", "https://api.github.test/items?page=2"])
 
+        cycle_calls = 0
+
         def cycle(url):
+            nonlocal cycle_calls
+            cycle_calls += 1
+            if cycle_calls > 2:
+                self.fail("pagination cycle guard did not stop repeated fetches")
             return ([], {"link": f'<{url}>; rel="next"'})
 
         with self.assertRaisesRegex(GitHubApiError, "pagination cycle"):
@@ -66,7 +72,7 @@ class UnreviewedDiagnosticsTest(unittest.TestCase):
         self.assertTrue(pattern.search("note\n  FROM:\tclaude[bot]  \n"))
         for value in (
             "quoted from: claude[bot] elsewhere",
-            "from: claude[bot]-extra",
+            "from: claude[bot]-extra",\n            "from: claude[bot] extra",
             "from:\nclaude[bot]",
         ):
             self.assertFalse(pattern.search(value))
@@ -114,14 +120,14 @@ class UnreviewedDiagnosticsTest(unittest.TestCase):
                 return ([{"body": "from: bot"}], {})
             return ([], {})
 
-        self.assertEqual(list(unreviewed(fetch, "acme", "bot")), [])
+        self.assertEqual(list(unreviewed(fetch, "acme", "bot")), [])\n\n    def test_non_tagged_nonempty_issue_comment_does_not_count_as_reviewed(self):\n        def fetch(url):\n            if url.startswith("/orgs/acme/repos"):\n                return ([{"name": "demo"}], {})\n            if url == "/repos/acme/demo/issues?state=open&per_page=100":\n                return ([{"number": 1, "title": "pr", "pull_request": {}}], {})\n            if "/issues/1/comments" in url:\n                return ([{"body": "review failed; please retry"}], {})\n            return ([], {})\n\n        self.assertEqual(list(unreviewed(fetch, "acme", "bot")), [("demo", "PR", 1, "pr")])
 
     def test_fetcher_rejects_cross_origin_before_sending_token(self):
         fetch = make_fetcher(token="secret", api_root="https://api.github.test")
         with self.assertRaisesRegex(GitHubApiError, "cross-origin"):
             fetch("https://evil.example/items")
 
-    def test_fetcher_timeout_and_rate_limit_diagnostics(self):
+    def test_redirect_handler_rejects_cross_origin(self):\n        from scripts.unreviewed import _SameOriginRedirect\n\n        handler = _SameOriginRedirect(("https", "api.github.test"))\n        request = urllib.request.Request("https://api.github.test/items", headers={"Authorization": "Bearer secret"})\n        with self.assertRaisesRegex(GitHubApiError, "cross-origin redirect"):\n            handler.redirect_request(request, None, 302, "Found", {}, "https://evil.example/items")\n\n    def test_fetcher_timeout_and_rate_limit_diagnostics(self):
         response = io.BytesIO(json.dumps({"message": "secondary rate limit"}).encode())
         error = urllib.error.HTTPError(
             "https://api.github.test/items",

@@ -1,0 +1,41 @@
+import json
+import subprocess
+from pathlib import Path
+
+import pytest
+
+from scripts.generate_repository_metadata import record_from_checkout, write_metadata
+
+
+def _git(root: Path, *args: str) -> str:
+    return subprocess.run(["git", *args], cwd=root, check=True, capture_output=True, text=True).stdout.strip()
+
+
+def test_checkout_generator_writes_equivalent_json_and_jsonl(tmp_path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    _git(root, "init", "-b", "main")
+    _git(root, "config", "user.email", "test@example.invalid")
+    _git(root, "config", "user.name", "Test")
+    (root / "README.md").write_text("# demo\n", encoding="utf-8")
+    _git(root, "add", "README.md")
+    _git(root, "commit", "-m", "initial metadata fixture")
+
+    record = record_from_checkout(root, "octo/demo")
+    json_path, jsonl_path = write_metadata(record, tmp_path / "out")
+
+    assert json.loads(json_path.read_text(encoding="utf-8")) == record
+    assert json.loads(jsonl_path.read_text(encoding="utf-8")) == record
+    assert jsonl_path.read_text(encoding="utf-8").count("\n") == 1
+    assert record["head"]["sha"] == _git(root, "rev-parse", "HEAD")
+    assert record["head"]["branch"] == "main"
+    assert record["measurements"] == {
+        "github_reported_size_bytes": None,
+        "working_tree_bytes": None,
+        "release_artifact_bytes": None,
+    }
+
+
+def test_checkout_generator_rejects_non_repository(tmp_path):
+    with pytest.raises(subprocess.CalledProcessError):
+        record_from_checkout(tmp_path, "octo/demo")

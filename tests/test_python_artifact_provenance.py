@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 from python_artifact_provenance import (
@@ -82,3 +84,10 @@ def test_upsert_inserts_after_shebang():
     original = "#!/usr/bin/env python3\n__all__ = [\"x\"]\n"
     updated = upsert_header(original, base_sha=SHA, updated_at=WHEN)
     assert updated.splitlines()[1].startswith("# metadata: __all__=1")
+
+
+def test_real_vendored_markdown_preserves_valid_embedded_header():
+    path = Path(__file__).resolve().parents[1] / "vendor" / "markdown.py"
+    source = path.read_text(encoding="utf-8")
+    metadata = validate_source_header(source)
+    assert metadata["all_count"] == 127

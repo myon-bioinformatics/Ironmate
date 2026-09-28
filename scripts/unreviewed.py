@@ -171,12 +171,13 @@ def item_records(fetch: Fetcher, owner: str, repo: str, item: JsonObject) -> Ite
             yield from paged(fetch, endpoint)
         except GitHubApiError as exc:
             if exc.status in {404, 410}:
+                print(f"warning: skipped {endpoint}: HTTP {exc.status}", file=sys.stderr)
                 continue
             raise
 
 
 def reviewer_pattern(reviewer: str) -> re.Pattern[str]:
-    return re.compile(rf"(?im)^[ \t]*from:[ \t]*{re.escape(reviewer)}[ \t]*$")
+    return re.compile(rf"(?im)^[ \\t]*from:[ \\t]*{re.escape(reviewer)}[ \\t\\r]*$")
 
 
 def record_is_reviewed(record: JsonObject, tagged: re.Pattern[str]) -> bool:
@@ -204,6 +205,7 @@ def unreviewed(
                     yield repo, kind, int(item["number"]), str(item.get("title") or "")
         except GitHubApiError as exc:
             if exc.status == 410:
+                print(f"warning: skipped {repo}: issues unavailable (HTTP 410)", file=sys.stderr)
                 continue
             raise
 

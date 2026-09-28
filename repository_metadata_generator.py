@@ -27,6 +27,10 @@ def record_from_checkout(
     full_name: str,
     *,
     env: Mapping[str, str] | None = None,
+    github_reported_size_bytes: int | None = None,
+    working_tree_bytes: int | None = None,
+    release_artifact_bytes: int | None = None,
+    tooling: Mapping[str, str] | None = None,
 ) -> dict:
     env = os.environ if env is None else env
     sha = git("rev-parse", "HEAD", cwd=root)
@@ -47,6 +51,10 @@ def record_from_checkout(
         timestamp=timestamp,
         subject=subject,
         generated_at=generated_at,
+        github_reported_size_bytes=github_reported_size_bytes,
+        working_tree_bytes=working_tree_bytes,
+        release_artifact_bytes=release_artifact_bytes,
+        tooling=dict(tooling or {}),
     )
 
 

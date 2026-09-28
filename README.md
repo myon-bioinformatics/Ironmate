@@ -337,3 +337,19 @@ the sibling repositories:
 The owning repositories remain the source of truth for their detailed catalogs;
 Ironmate links and summarizes shared IDs so the same failure class is searchable
 across repository boundaries.
+
+
+---
+
+## NVD security metadata adapter
+
+`security_nvd.py` consumes the versioned `nvd-cve-summary/1` JSONL contract
+produced by `myon-bioinformatics/nvd_nist_known_vulns`. The consumer is
+stdlib-only and its normal tests use offline fixtures; CI does not call NVD.
+
+CPE mappings are deliberately explicit. Ironmate does **not** infer a CPE from a
+Python package, repository name, or other package-manager identifier. A
+repository without an explicit `ironmate-security-cpe/1` mapping is reported
+as `not_measured`, never as zero vulnerabilities or safe. This keeps NVD
+evidence complementary to package-native advisory sources such as Dependabot
+instead of conflating their identifier systems.

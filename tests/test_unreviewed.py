@@ -144,6 +144,33 @@ class UnreviewedDiagnosticsTest(unittest.TestCase):
 
         self.assertEqual(list(unreviewed(fetch, "acme", "bot")), [("demo", "PR", 1, "pr")])
 
+    def test_pr_issue_comment_surface_counts_and_skip_warnings_are_visible(self):
+        def fetch(url):
+            if url.startswith("/orgs/acme/repos"):
+                return ([{"name": "demo"}], {})
+            if url == "/repos/acme/demo/issues?state=open&per_page=100":
+                return ([{"number": 7, "title": "pr", "pull_request": {}}], {})
+            if "/issues/7/comments" in url:
+                return ([{"body": "from: bot"}], {})
+            if "/pulls/7/reviews" in url:
+                raise GitHubApiError("missing", status=404)
+            return ([], {})
+
+        stderr = io.StringIO()
+        with mock.patch("sys.stderr", stderr):
+            self.assertEqual(list(unreviewed(fetch, "acme", "bot")), [])
+        self.assertIn("warning: skipped", stderr.getvalue())
+        self.assertIn("HTTP 404", stderr.getvalue())
+
+    def test_repository_errors_other_than_410_are_not_swallowed(self):
+        def fetch(url):
+            if url.startswith("/orgs/acme/repos"):
+                return ([{"name": "demo"}], {})
+            raise GitHubApiError("boom", status=500)
+
+        with self.assertRaisesRegex(GitHubApiError, "boom"):
+            list(unreviewed(fetch, "acme", "bot"))
+
     def test_fetcher_rejects_cross_origin_before_sending_token(self):
         fetch = make_fetcher(token="secret", api_root="https://api.github.test")
         with self.assertRaisesRegex(GitHubApiError, "cross-origin"):

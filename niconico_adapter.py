@@ -18,7 +18,7 @@ from source_adapter import build_url
 API_ROOT = "https://snapshot.search.nicovideo.jp"
 SEARCH_URL = API_ROOT + "/api/v2/snapshot/video/contents/search"
 VERSION_URL = API_ROOT + "/api/v2/snapshot/version"
-CONTENT_ROOT = "https://www.nicovideo.jp/watch"
+CONTENT_ROOT = "https://nico.ms"
 
 DEFAULT_FIELDS = (
     "contentId", "title", "description", "tags", "categoryTags",
@@ -168,7 +168,7 @@ def snapshot_consistent(before: dict[str, Any], after: dict[str, Any]) -> bool:
 
 def next_delay_seconds(previous_elapsed_seconds: float, *, http_status: int | None = None) -> float:
     if http_status == 503:
-        # Project default (the API guide does not specify a 503 wait): back off five minutes.
+        # Snapshot Search API v2 guide (2026-04-15): wait at least five minutes after 503.
         return 300.0
     return max(0.0, float(previous_elapsed_seconds))
 

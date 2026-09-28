@@ -152,3 +152,30 @@ def test_checkout_generator_labels_detached_head(tmp_path):
     assert record["head"]["sha"] == sha
     assert record["head"]["branch"] == "detached"
 
+def test_checkout_generator_keeps_head_identity_coherent_across_commits(tmp_path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    _git(root, "init", "-b", "main")
+    _git(root, "config", "user.email", "test@example.invalid")
+    _git(root, "config", "user.name", "Test")
+    (root / "README.md").write_text("first\\n", encoding="utf-8")
+    _git(root, "add", "README.md")
+    _git(root, "commit", "-m", "first metadata fixture")
+    first_sha = _git(root, "rev-parse", "HEAD")
+
+    (root / "README.md").write_text("second\\n", encoding="utf-8")
+    _git(root, "add", "README.md")
+    _git(root, "commit", "-m", "second metadata fixture")
+    second_sha = _git(root, "rev-parse", "HEAD")
+
+    record = record_from_checkout(
+        root,
+        "octo/demo",
+        env={"GITHUB_SHA": first_sha},
+    )
+
+    assert first_sha != second_sha
+    assert record["head"]["sha"] == second_sha
+    assert record["head"]["timestamp"] == _git(root, "show", "-s", "--format=%cI", second_sha)
+    assert record["head"]["subject"] == "second metadata fixture"
+

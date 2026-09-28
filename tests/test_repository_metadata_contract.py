@@ -134,3 +134,11 @@ def test_accepts_sha256_object_id():
         generated_at="2026-09-27T20:00:00+09:00",
     )
     assert record["head"]["sha"] == "a" * 64
+
+
+def test_validator_rejects_invalid_sha_after_record_mutation():
+    record = sample()
+    record["head"]["sha"] = "abc"
+    record["head"]["short_sha"] = "abc"
+    with pytest.raises(ValueError):
+        validate_repository_record(record)

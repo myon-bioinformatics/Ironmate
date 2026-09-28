@@ -191,6 +191,12 @@ class GitHubAdapterTest(unittest.TestCase):
         self.assertIsNone(normalized["api_url"])
         self.assertEqual(normalized["source_url"], source)
 
+    def test_normalize_commit_falls_back_to_author_date(self):
+        result = normalize_commit({"sha": "x", "commit": {
+            "message": "m", "committer": {}, "author": {"date": "2026-02-03T04:05:06Z"}
+        }})
+        self.assertEqual(result["date"], "2026-02-03T04:05:06Z")
+
     def test_normalize_commit_accepts_empty_message(self):
         self.assertEqual(normalize_commit({"sha": "x", "commit": {"message": ""}})["message"], "")
 

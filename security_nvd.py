@@ -1,8 +1,8 @@
 """Stdlib-only consumer for nvd-cve-summary/1 JSONL records.
 
-Ironmate intentionally does not infer package names to CPEs.  Callers provide an
-explicit repository-to-CPE manifest and feed normalized records produced by the
-nvd_nist_known_vulns adapter.
+Ironmate intentionally does not infer package names to CPEs. Callers provide an
+explicit repository-to-CPE manifest and positive query-completion evidence from
+the nvd_nist_known_vulns adapter.
 """
 from __future__ import annotations
 
@@ -16,7 +16,9 @@ MANIFEST_SCHEMA = "ironmate-security-cpe/1"
 
 def load_cpe_manifest(text: str) -> dict[str, list[str]]:
     """Parse an explicit repo -> CPE manifest; reject ambiguous/invalid entries."""
-    data = json.loads(text)
+    data = json.loads(text.lstrip("\ufeff"))
+    if not isinstance(data, dict):
+        raise ValueError("manifest must be an object")
     if data.get("schema") != MANIFEST_SCHEMA:
         raise ValueError(f"unsupported manifest schema: {data.get('schema')!r}")
     repos = data.get("repositories")
@@ -33,9 +35,9 @@ def load_cpe_manifest(text: str) -> dict[str, list[str]]:
 
 
 def parse_nvd_jsonl(text: str) -> list[dict[str, Any]]:
-    """Validate and deterministically order normalized NVD JSONL records."""
+    """Validate NVD JSONL without treating Unicode line separators as JSONL boundaries."""
     records: list[dict[str, Any]] = []
-    for line_number, raw in enumerate(text.splitlines(), 1):
+    for line_number, raw in enumerate(text.lstrip("\ufeff").split("\n"), 1):
         if not raw.strip():
             continue
         try:
@@ -44,31 +46,59 @@ def parse_nvd_jsonl(text: str) -> list[dict[str, Any]]:
             raise ValueError(f"invalid JSONL at line {line_number}") from exc
         if not isinstance(record, dict) or record.get("schema") != SCHEMA:
             raise ValueError(f"unsupported NVD record at line {line_number}")
-        cve_id = record.get("id")
         query = record.get("query")
         cpe = query.get("cpe_name") if isinstance(query, dict) else None
-        if not isinstance(cve_id, str) or not cve_id.startswith("CVE-") or not isinstance(cpe, str):
+        if not isinstance(cpe, str):
             raise ValueError(f"incomplete NVD record at line {line_number}")
+        kind = record.get("kind", "cve")
+        if kind == "cve":
+            cve_id = record.get("id")
+            if not isinstance(cve_id, str) or not cve_id.startswith("CVE-"):
+                raise ValueError(f"incomplete NVD CVE record at line {line_number}")
+        elif kind == "query_complete":
+            if not isinstance(record.get("cve_count"), int) or record["cve_count"] < 0:
+                raise ValueError(f"incomplete NVD completion record at line {line_number}")
+        else:
+            raise ValueError(f"unsupported NVD record kind at line {line_number}")
         records.append(record)
-    return sorted(records, key=lambda item: (item["query"]["cpe_name"], item["id"]))
+    return sorted(records, key=lambda item: (item["query"]["cpe_name"], item.get("kind", "cve"), item.get("id", "")))
 
 
 def security_metadata(repository: str, manifest: dict[str, list[str]], records: Iterable[dict[str, Any]]) -> dict[str, Any]:
-    """Build deterministic repository security metadata from explicit CPE evidence."""
+    """Build metadata only when every explicitly mapped CPE has completion evidence."""
     cpes = manifest.get(repository)
     if cpes is None:
         return {"status": "not_measured", "schema": SCHEMA, "reason": "no_explicit_cpe_mapping"}
-    allowed = set(cpes)
-    matched = [record for record in records if record.get("query", {}).get("cpe_name") in allowed]
-    matched.sort(key=lambda item: (item["query"]["cpe_name"], item["id"]))
+    rows = list(records)
+    completed = {
+        row["query"]["cpe_name"]
+        for row in rows
+        if row.get("kind") == "query_complete" and row.get("query", {}).get("cpe_name") in cpes
+    }
+    missing = sorted(set(cpes) - completed)
+    if missing:
+        return {
+            "status": "not_measured",
+            "schema": SCHEMA,
+            "reason": "missing_query_completion",
+            "cpe_names": cpes,
+            "missing_cpe_names": missing,
+        }
+    # One CVE can match several CPEs. Repository-level counts are unique by CVE ID.
+    cve_ids = sorted({
+        row["id"]
+        for row in rows
+        if row.get("kind", "cve") == "cve"
+        and row.get("query", {}).get("cpe_name") in cpes
+    })
     return {
         "status": "measured",
         "schema": SCHEMA,
         "cpe_names": cpes,
-        "cve_count": len(matched),
-        "cve_ids": [item["id"] for item in matched],
+        "cve_count": len(cve_ids),
+        "cve_ids": cve_ids,
     }
 
 
 def load_path(path: str | Path) -> list[dict[str, Any]]:
-    return parse_nvd_jsonl(Path(path).read_text(encoding="utf-8"))
+    return parse_nvd_jsonl(Path(path).read_text(encoding="utf-8-sig"))

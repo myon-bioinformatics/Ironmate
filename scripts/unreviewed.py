@@ -114,7 +114,7 @@ def make_fetcher(
             if diagnostics:
                 detail += " (" + ", ".join(diagnostics) + ")"
             raise GitHubApiError(detail, status=exc.code) from exc
-        except (urllib.error.URLError, socket.timeout, TimeoutError, json.JSONDecodeError) as exc:
+        except (urllib.error.URLError, socket.timeout, TimeoutError, ValueError) as exc:
             raise GitHubApiError(f"GitHub API request failed: {url}: {exc}") from exc
 
     return fetch

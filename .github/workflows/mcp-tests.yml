@@ -59,7 +59,7 @@ jobs:
   screenshot:
     runs-on: ubuntu-latest
     env:
-      PLAYWRIGHT_VERSION: "1.55.0"
+      PLAYWRIGHT_VERSION: "1.63.0"
       PLAYWRIGHT_BROWSER: "chromium"
     steps:
       - uses: actions/checkout@v7

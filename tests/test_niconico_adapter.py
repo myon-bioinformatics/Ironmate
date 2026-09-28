@@ -82,5 +82,27 @@ class NiconicoAdapterTest(unittest.TestCase):
         self.assertEqual(next_delay_seconds(0.1, http_status=503), 300.0)
 
 
+    def test_required_negative_cases_and_user_agent_header(self):
+        with self.assertRaises(ValueError):
+            build_search_url(q="", sort="", context="Ironmate")
+        with self.assertRaises(ValueError):
+            build_search_url(q="", sort="-startTime", context="")
+        with self.assertRaises(ValueError):
+            fetch_json("https://example.test", user_agent="", opener=lambda *a, **k: None)
+
+        class Response:
+            def __enter__(self): return self
+            def __exit__(self, *args): return False
+            def read(self): return b'{}'
+
+        seen = {}
+        def opener(request, timeout):
+            seen["ua"] = request.get_header("User-agent")
+            return Response()
+        with patch("niconico_adapter.time.monotonic", side_effect=[1.0, 1.1]):
+            fetch_json("https://example.test", user_agent="Ironmate", opener=opener)
+        self.assertEqual(seen["ua"], "Ironmate")
+        self.assertFalse(snapshot_consistent({"last_modified": ""}, {"last_modified": ""}))
+
 if __name__ == "__main__":
     unittest.main()

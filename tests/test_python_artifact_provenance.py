@@ -91,3 +91,10 @@ def test_real_vendored_markdown_preserves_valid_embedded_header():
     source = path.read_text(encoding="utf-8")
     metadata = validate_source_header(source)
     assert metadata["all_count"] == 127
+
+
+def test_upsert_keeps_leading_python_filename_comment_first():
+    original = "# demo.py\n__all__ = [\"x\", \"y\"]\n"
+    updated = upsert_header(original, base_sha=SHA, updated_at=WHEN)
+    assert updated.splitlines()[0] == "# demo.py"
+    assert updated.splitlines()[1].startswith("# metadata: __all__=2")

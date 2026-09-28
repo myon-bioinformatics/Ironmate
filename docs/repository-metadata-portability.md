@@ -31,13 +31,12 @@ versioned contract deliberately when those fields are ready to become public com
 
 Initial migration targets:
 
-- `web-ui`: retire metadata collection from `js/repository-diagnostics.js`; retain only rendering as needed.
+- `web-ui`: keep `js/repository-diagnostics.js` as a renderer/consumer; move duplicated repository SHA/branch collection out of `tool/tooling_meta.py` and compose it with the canonical record.
 - `markdown`: replace metadata values distributed across README/module helpers with generated metadata where applicable.
 - `ascii_artist`: consume the same generated contract.
 - `mcp-toolcall-lab`: consume the same generated contract while keeping MCP-specific presentation separate.
 - `browser-test-kit`: consume the same generated contract.
-- `flutter_navigation_basic`: retire `tool/build_meta.dart` and metadata collection from
-  `lib/shared/diagnostics/build_metadata.dart`; read generated metadata instead.
+- `flutter_navigation_basic`: retire repository collection from `tool/build_meta.dart`; keep/shrink `lib/shared/diagnostics/build_metadata.dart` to a read-only model/consumer of generated metadata.
 
 `repository_metadata_generator.py` and `repository_metadata_contract.py` are intentionally a two-file vendorable pair; direct execution of the generator must work without relying on the source repository's import path.
 

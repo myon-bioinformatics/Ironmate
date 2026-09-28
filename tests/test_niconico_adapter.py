@@ -46,7 +46,7 @@ class NiconicoAdapterTest(unittest.TestCase):
                 build_search_url(q="", sort="-startTime", context="Ironmate", filters=bad_filters)
 
     def test_content_url_is_conservative(self):
-        self.assertEqual(content_url("sm12345"), "https://www.nicovideo.jp/watch/sm12345")
+        self.assertEqual(content_url("sm12345"), "https://nico.ms/sm12345")
         for value in ("", "sm/1", "初音"):
             with self.subTest(value=value), self.assertRaises(ValueError):
                 content_url(value)
@@ -56,7 +56,7 @@ class NiconicoAdapterTest(unittest.TestCase):
         source = build_search_url(q="", sort="-startTime", context="Ironmate")
         item = normalize_item(fixture["search"]["data"][0], source_url=source)
         self.assertEqual(item["identifier"], "sm12345")
-        self.assertEqual(item["html_url"], "https://www.nicovideo.jp/watch/sm12345")
+        self.assertEqual(item["html_url"], "https://nico.ms/sm12345")
         self.assertIsNone(item["api_url"])
         self.assertNotIn("userId", item["data"])
         self.assertNotIn("lastResBody", item["data"])

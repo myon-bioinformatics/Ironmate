@@ -1,5 +1,6 @@
 """Integration checks for pinned vendored sibling utilities."""
 
+import py_compile
 import shutil
 import subprocess
 import sys
@@ -19,6 +20,42 @@ from vendor import ascii_artist, markdown
 ROOT = Path(__file__).resolve().parents[1]
 
 class VendorModuleIntegrationTest(unittest.TestCase):
+    def test_repository_python_files_compile(self):
+        """Every tracked-style Python source must be syntactically compilable."""
+        excluded_parts = {
+            ".git",
+            ".venv",
+            "venv",
+            "__pycache__",
+            ".pytest_cache",
+            ".mypy_cache",
+            ".ruff_cache",
+            "build",
+            "dist",
+        }
+        sources = [
+            path
+            for path in ROOT.rglob("*.py")
+            if not excluded_parts.intersection(path.relative_to(ROOT).parts)
+        ]
+        self.assertTrue(sources, "no Python sources discovered")
+        with tempfile.TemporaryDirectory() as directory:
+            cache_root = Path(directory)
+            failures = []
+            for path in sources:
+                relative = path.relative_to(ROOT)
+                cache = cache_root / relative.with_suffix(".pyc")
+                cache.parent.mkdir(parents=True, exist_ok=True)
+                try:
+                    py_compile.compile(
+                        str(path),
+                        cfile=str(cache),
+                        doraise=True,
+                    )
+                except py_compile.PyCompileError as exc:
+                    failures.append(f"{relative}: {exc.msg}")
+        self.assertEqual(failures, [], "\n".join(failures))
+
     def test_vendor_ascii_artist_smoke(self):
         self.assertEqual(ascii_artist.generate_square(2), "**\n**")
         self.assertTrue(hasattr(ascii_artist, "to_web_ui_v1_html"))

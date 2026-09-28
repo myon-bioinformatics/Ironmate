@@ -1,4 +1,6 @@
 import io
+import json
+from pathlib import Path
 import unittest
 from email.message import Message
 from unittest.mock import patch
@@ -130,20 +132,47 @@ class GitHubAdapterTest(unittest.TestCase):
         self.assertTrue(is_rate_limited({"http_status": 403, "rate_limit": {"remaining": "0"}}))
         self.assertFalse(is_rate_limited({"http_status": 403, "rate_limit": {"remaining": "1"}}))
 
-    def test_normalizers_preserve_html_and_api_provenance(self):
-        cases = [
-            (normalize_commit, {"sha": "abc", "commit": {"message": "first\\nbody", "committer": {"date": "2026-01-01"}}, "html_url": "https://github.com/o/r/commit/abc", "url": "https://api.github.com/repos/o/r/commits/abc"}, "abc"),
-            (normalize_pull, {"number": 7, "head": {"sha": "h"}, "base": {"sha": "b"}, "html_url": "https://github.com/o/r/pull/7", "url": "https://api.github.com/repos/o/r/pulls/7"}, 7),
-            (normalize_release, {"tag_name": "v1", "html_url": "https://github.com/o/r/releases/tag/v1", "url": "https://api.github.com/repos/o/r/releases/1"}, "v1"),
-            (normalize_tag, {"name": "v1", "commit": {"sha": "abc"}, "url": "https://api.github.com/repos/o/r/git/refs/tags/v1"}, "v1"),
-            (normalize_actions_run, {"name": "CI", "status": "completed", "html_url": "https://github.com/o/r/actions/runs/1", "url": "https://api.github.com/repos/o/r/actions/runs/1"}, "CI"),
-        ]
-        for fn, payload, expected in cases:
-            with self.subTest(fn=fn.__name__):
-                value = fn(payload)
-                self.assertTrue(value["api_url"].startswith("https://api.github.com/"))
-                self.assertTrue(value.get("html_url") is None or value["html_url"].startswith("https://github.com/"))
-                self.assertIn(expected, value.values())
+    def test_normalizers_match_offline_fixture(self):
+        fixture = json.loads(
+            (Path(__file__).parent / "fixtures" / "github_adapter_normalization.json").read_text(encoding="utf-8")
+        )
+        expected = {
+            "commit": {"sha": "abc123", "date": "2026-01-01T00:00:00Z", "message": "fixture commit",
+                       "html_url": "https://github.com/o/r/commit/abc123",
+                       "api_url": "https://api.github.com/repos/o/r/commits/abc123"},
+            "pull": {"number": 7, "title": "fixture", "state": "open", "draft": False,
+                     "head_sha": "head", "base_sha": "base", "created_at": None, "updated_at": None,
+                     "closed_at": None, "merged_at": None, "html_url": "https://github.com/o/r/pull/7",
+                     "api_url": "https://api.github.com/repos/o/r/pulls/7"},
+            "release": {"tag_name": "v1.0.0", "name": "v1", "published_at": None,
+                        "html_url": "https://github.com/o/r/releases/tag/v1.0.0",
+                        "api_url": "https://api.github.com/repos/o/r/releases/1"},
+            "tag": {"name": "v1.0.0", "sha": "abc123", "html_url": None,
+                    "api_url": "https://api.github.com/repos/o/r/git/refs/tags/v1.0.0"},
+            "actions_run": {"name": "CI", "status": "completed", "conclusion": "success",
+                            "head_sha": "abc123", "updated_at": None,
+                            "html_url": "https://github.com/o/r/actions/runs/1",
+                            "api_url": "https://api.github.com/repos/o/r/actions/runs/1"},
+        }
+        normalizers = {"commit": normalize_commit, "pull": normalize_pull, "release": normalize_release,
+                       "tag": normalize_tag, "actions_run": normalize_actions_run}
+        for name, fn in normalizers.items():
+            with self.subTest(name=name):
+                self.assertEqual(fn(fixture[name]), expected[name])
+
+    def test_normalize_commit_accepts_empty_message(self):
+        self.assertEqual(normalize_commit({"sha": "x", "commit": {"message": ""}})["message"], "")
+
+    def test_inspect_public_exposes_rate_limit_classification(self):
+        for payload, expected in [
+            ({"status": "error", "http_status": 429, "error_type": "http"}, True),
+            ({"status": "error", "http_status": 403, "error_type": "http",
+              "rate_limit": {"remaining": "0"}}, True),
+            ({"status": "detected", "value": {}}, False),
+        ]:
+            with self.subTest(payload=payload), patch("github_adapter.fetch_json", return_value=payload.copy()):
+                result = inspect_public("o/r", fetch=True)
+                self.assertEqual(result["fetch"]["rate_limited"], expected)
 
     def test_fetch_token_is_scoped_to_https_github_api(self):
         class Response:

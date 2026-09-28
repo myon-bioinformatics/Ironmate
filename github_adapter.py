@@ -10,8 +10,10 @@ import json
 from dataclasses import dataclass
 from typing import Any
 from urllib.error import HTTPError, URLError
-from urllib.parse import quote, urlencode, urlparse
+from urllib.parse import quote, urlparse
 from urllib.request import HTTPRedirectHandler, Request, build_opener
+
+from source_adapter import build_url, provenance, quote_segment
 
 API_ROOT = "https://api.github.com"
 HTML_ROOT = "https://github.com"
@@ -36,19 +38,7 @@ _opener = build_opener(_ScopedRedirect)
 
 
 def _q(value: str) -> str:
-    return quote(value, safe="")
-
-
-def build_url(base_url: str, *segments: str, query: dict[str, Any] | None = None) -> str:
-    """Provider-neutral URL builder for read-only HTTP adapters."""
-    url = base_url.rstrip("/")
-    if segments:
-        url += "/" + "/".join(_q(str(segment).strip("/")) for segment in segments)
-    if query:
-        encoded = urlencode([(key, value) for key, value in query.items() if value is not None], doseq=True)
-        if encoded:
-            url += "?" + encoded
-    return url
+    return quote_segment(value)
 
 
 def repository_html_url(owner: str, repo: str) -> str:
@@ -231,18 +221,13 @@ def is_rate_limited(result: dict[str, Any]) -> bool:
     return status == 429 or (status == 403 and remaining == "0")
 
 
-def _provenance(data: dict[str, Any], *, api_url: str | None = None, source_url: str | None = None) -> dict[str, Any]:
-    """Keep canonical item identity separate from the endpoint/query that produced it."""
-    return {"html_url": data.get("html_url"), "api_url": api_url or data.get("url"), "source_url": source_url}
-
-
 def normalize_commit(data: dict[str, Any], *, api_url: str | None = None, source_url: str | None = None) -> dict[str, Any]:
     commit = data.get("commit") or {}
     committer = commit.get("committer") or {}
     author = commit.get("author") or {}
     return {"sha": data.get("sha"), "date": committer.get("date") or author.get("date"),
             "message": ((commit.get("message") or "").splitlines() or [""])[0],
-            **_provenance(data, api_url=api_url, source_url=source_url)}
+            **provenance(data, api_url=api_url, source_url=source_url)}
 
 
 def normalize_pull(pr: dict[str, Any], *, api_url: str | None = None, source_url: str | None = None) -> dict[str, Any]:
@@ -251,24 +236,24 @@ def normalize_pull(pr: dict[str, Any], *, api_url: str | None = None, source_url
             "draft": bool(pr.get("draft")), "head_sha": head.get("sha"), "base_sha": base.get("sha"),
             "created_at": pr.get("created_at"), "updated_at": pr.get("updated_at"),
             "closed_at": pr.get("closed_at"), "merged_at": pr.get("merged_at"),
-            **_provenance(pr, api_url=api_url, source_url=source_url)}
+            **provenance(pr, api_url=api_url, source_url=source_url)}
 
 
 def normalize_release(data: dict[str, Any], *, api_url: str | None = None, source_url: str | None = None) -> dict[str, Any]:
     return {"tag_name": data.get("tag_name"), "name": data.get("name"),
             "published_at": data.get("published_at"),
-            **_provenance(data, api_url=api_url, source_url=source_url)}
+            **provenance(data, api_url=api_url, source_url=source_url)}
 
 
 def normalize_tag(data: dict[str, Any], *, api_url: str | None = None, source_url: str | None = None) -> dict[str, Any]:
     return {"name": data.get("name"), "sha": (data.get("commit") or {}).get("sha"),
-            **_provenance(data, api_url=api_url, source_url=source_url)}
+            **provenance(data, api_url=api_url, source_url=source_url)}
 
 
 def normalize_actions_run(data: dict[str, Any], *, api_url: str | None = None, source_url: str | None = None) -> dict[str, Any]:
     return {"name": data.get("name"), "status": data.get("status"), "conclusion": data.get("conclusion"),
             "head_sha": data.get("head_sha"), "updated_at": data.get("updated_at"),
-            **_provenance(data, api_url=api_url, source_url=source_url)}
+            **provenance(data, api_url=api_url, source_url=source_url)}
 
 
 def inspect_public(value: str, *, token: str = "", fetch: bool = True) -> dict[str, Any]:

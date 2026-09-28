@@ -36,7 +36,6 @@ from repository_metadata import (
 
 OWNER = os.environ.get("IRONMATE_GITHUB_OWNER", "myon-bioinformatics")
 OUTPUT_DIR = Path(os.environ.get("IRONMATE_CATALOG_DIR", "docs/api"))
-API_ROOT = "https://api.github.com"
 TOKEN = os.environ.get("GITHUB_TOKEN", "")
 PYTHON_SOURCE_LIMIT = max(1, int(os.environ.get("IRONMATE_PYTHON_SOURCE_LIMIT", "3")))
 RATE_LIMIT = {"remaining": None, "limit": None, "reset": None}

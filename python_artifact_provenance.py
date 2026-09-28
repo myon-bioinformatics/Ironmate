@@ -124,6 +124,11 @@ def upsert_header(source: str, *, base_sha: str, updated_at: str) -> str:
         insert_at = 1
     if insert_at < len(lines) and re.match(r"^#.*coding[:=]", lines[insert_at]):
         insert_at += 1
+    if insert_at < len(lines) and re.fullmatch(
+        r"#\s+[^\r\n]+\.py\s*(?:\r?\n)?",
+        lines[insert_at],
+    ):
+        insert_at += 1
     ending = "\r\n" if lines and lines[0].endswith("\r\n") else "\n"
     lines.insert(insert_at, header + ending)
     return "".join(lines)

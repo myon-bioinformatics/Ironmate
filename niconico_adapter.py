@@ -126,16 +126,29 @@ def normalize_item(item: dict[str, Any], *, source_url: str) -> dict[str, Any]:
 
 
 def classify_page(payload: dict[str, Any], *, offset: int, limit: int) -> dict[str, Any]:
-    meta = payload.get("meta") or {}
-    data = payload.get("data") or []
-    total = int(meta.get("totalCount") or 0)
-    consumed = offset + len(data)
+    meta = payload.get("meta")
+    data = payload.get("data")
+    if not isinstance(meta, dict) or "totalCount" not in meta or not isinstance(data, list):
+        return {
+            "total_count": None, "returned": None, "complete": False,
+            "truncated": False, "next_offset": None, "status": "invalid",
+        }
+    total = int(meta["totalCount"])
+    returned = len(data)
+    consumed = offset + returned
+    if returned == 0 and offset < total:
+        return {
+            "total_count": total, "returned": 0, "complete": False,
+            "truncated": False, "next_offset": None, "status": "stalled",
+        }
+    complete = consumed >= total
+    next_offset = None
+    if not complete and consumed <= 100000:
+        next_offset = consumed
+    truncated = not complete and next_offset is None
     return {
-        "total_count": total,
-        "returned": len(data),
-        "complete": consumed >= total,
-        "truncated": consumed < total and consumed >= 100000,
-        "next_offset": None if consumed >= total or consumed >= 100000 else consumed,
+        "total_count": total, "returned": returned, "complete": complete,
+        "truncated": truncated, "next_offset": next_offset, "status": "ok",
     }
 
 
@@ -147,3 +160,8 @@ def next_delay_seconds(previous_elapsed_seconds: float, *, http_status: int | No
     if http_status == 503:
         return 300.0
     return max(0.0, float(previous_elapsed_seconds))
+
+def completion_state(before: dict[str, Any], after: dict[str, Any], page_state: dict[str, Any]) -> dict[str, Any]:
+    consistent = snapshot_consistent(before, after)
+    complete = consistent and bool(page_state.get("complete")) and not bool(page_state.get("truncated"))
+    return {"complete": complete, "snapshot_consistent": consistent, "page": page_state}

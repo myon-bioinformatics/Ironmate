@@ -89,6 +89,27 @@ class GitHubCatalogTransportTest(unittest.TestCase):
         self.assertEqual(ci["api_url"], run["url"])
         self.assertEqual(ci["source_url"], run_url)
 
+    def test_catalog_request_urls_use_shared_builder_semantics(self):
+        commit_url = "https://api.github.com/repos/myon-bioinformatics/demo/commits/feature%2Fx"
+        with patch("github_catalog._request_json", return_value={"sha": "abc", "commit": {}}) as request:
+            github_catalog._commit_metadata("demo", "feature/x")
+        request.assert_called_once_with(commit_url)
+
+        release_url = "https://api.github.com/repos/myon-bioinformatics/demo/releases/latest"
+        with patch("github_catalog._optional_json", return_value=("not_found", None)) as optional:
+            github_catalog._release_metadata("demo")
+        optional.assert_called_once_with(release_url)
+
+        tag_url = "https://api.github.com/repos/myon-bioinformatics/demo/tags?per_page=1"
+        with patch("github_catalog._optional_json", return_value=("not_found", None)) as optional:
+            github_catalog._tag_metadata("demo")
+        optional.assert_called_once_with(tag_url)
+
+        run_url = "https://api.github.com/repos/myon-bioinformatics/demo/actions/runs?branch=feature%2Fx&per_page=1"
+        with patch("github_catalog._optional_json", return_value=("not_found", None)) as optional:
+            github_catalog._ci_metadata("demo", "feature/x")
+        optional.assert_called_once_with(run_url)
+
     def test_catalog_commit_and_release_keep_item_and_source_urls(self):
         commit_source = "https://api.github.com/repos/myon-bioinformatics/demo/commits/main"
         commit_item = "https://api.github.com/repos/myon-bioinformatics/demo/commits/abc"

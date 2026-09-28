@@ -138,7 +138,7 @@ def _tag_metadata(repo_name: str) -> dict[str, Any]:
     if not isinstance(data, list) or not data:
         return availability("not_found")
     tag = data[0]
-    return availability("detected", normalize_tag(tag))
+    return availability("detected", normalize_tag(tag, api_url=url))
 
 
 def _ci_metadata(repo_name: str, default_branch: str) -> dict[str, Any]:

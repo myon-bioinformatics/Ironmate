@@ -212,7 +212,7 @@ def normalize_commit(data: dict[str, Any], *, api_url: str | None = None) -> dic
     committer = commit.get("committer") or {}
     author = commit.get("author") or {}
     return {"sha": data.get("sha"), "date": committer.get("date") or author.get("date"),
-            "message": (commit.get("message") or "").splitlines()[0],
+            "message": ((commit.get("message") or "").splitlines() or [""])[0],
             "html_url": data.get("html_url"), "api_url": api_url or data.get("url")}
 
 

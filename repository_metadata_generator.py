@@ -17,7 +17,12 @@ from repository_metadata_contract import build_repository_record, to_json, to_js
 
 def git(*args: str, cwd: Path) -> str:
     result = subprocess.run(
-        ["git", *args], cwd=cwd, check=True, capture_output=True, text=True
+        ["git", "-c", "i18n.logOutputEncoding=UTF-8", *args],
+        cwd=cwd,
+        check=True,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
     )
     return result.stdout.strip()
 

@@ -94,3 +94,26 @@ def test_checkout_generator_prefers_ci_branch_name(tmp_path):
         env={"GITHUB_HEAD_REF": "feat/portable-metadata"},
     )
     assert record["head"]["branch"] == "feat/portable-metadata"
+
+
+def test_checkout_generator_accepts_optional_measurements_and_tooling(tmp_path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    _git(root, "init", "-b", "main")
+    _git(root, "config", "user.email", "test@example.invalid")
+    _git(root, "config", "user.name", "Test")
+    (root / "README.md").write_text("# demo\n", encoding="utf-8")
+    _git(root, "add", "README.md")
+    _git(root, "commit", "-m", "enriched metadata fixture")
+
+    record = record_from_checkout(
+        root,
+        "octo/demo",
+        env={},
+        working_tree_bytes=1234,
+        release_artifact_bytes=5678,
+        tooling={"python": "3.12"},
+    )
+    assert record["measurements"]["working_tree_bytes"] == 1234
+    assert record["measurements"]["release_artifact_bytes"] == 5678
+    assert record["tooling"] == {"python": "3.12"}

@@ -328,6 +328,19 @@ where the public GitHub fetch path is exercised. After deployment, verify that
 `api/repos/Ironmate.json` is refreshed for the deployed revision.
 
 
+### Live read-only example
+
+Public resources can be inspected without a token when network access is intentionally requested:
+
+```python
+from github_adapter import inspect_public
+
+result = inspect_public("openai/openai-python", fetch=True)
+print(result["fetch"]["status"])
+```
+
+Normal CI remains fixture/offline-driven; this live form is for manual/browser validation. A token is optional rate-limit headroom, not a requirement for public resources.
+
 ## Cross-repository anti-patterns
 
 Ironmate also keeps a discovery index for recurring CI/design failures across

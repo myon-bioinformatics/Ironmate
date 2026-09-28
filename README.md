@@ -344,17 +344,17 @@ across repository boundaries.
 
 ## NVD security metadata adapter
 
-`security_nvd.py` consumes the versioned `nvd-cve-summary/1` JSONL contract
-produced by `myon-bioinformatics/nvd_nist_known_vulns`. The consumer is
-stdlib-only and its normal tests use offline fixtures; CI does not call NVD.
+`vendor/nvd_nist_known_vulns.py` is an unchanged snapshot of upstream
+`myon-bioinformatics/nvd_nist_known_vulns` merge `a3d8f18`. Upstream now owns
+both production and generic `nvd-cve-summary/1` JSONL consumption
+(`parse_jsonl`, `read_jsonl`, and `select_cpe_records`), so Ironmate no
+longer maintains a parallel `security_nvd.py` implementation.
 
-CPE mappings are deliberately explicit. Ironmate does **not** infer a CPE from a
-Python package, repository name, or other package-manager identifier. A
-repository without an explicit `ironmate-security-cpe/1` mapping is reported
-as `not_measured`, never as zero vulnerabilities or safe. A mapped CPE also remains
-`not_measured` unless the input contains its upstream `query_complete` evidence;
-the completion count must agree with the unique CVE rows for that CPE. This makes
-`measured` / zero distinguishable from an omitted, failed, truncated, or mixed
-query. The consumer contract therefore requires the NVD producer behavior merged
-at `986e171` or later. This keeps NVD evidence complementary to package-native
-advisory sources such as Dependabot instead of conflating their identifier systems.
+Ironmate keeps only its repository-specific boundary in `repository_metadata.py`:
+the explicit `ironmate-security-cpe/1` repository-to-CPE mapping and conversion
+of upstream selection results into repository metadata. It does **not** infer a
+CPE from a Python package or repository name. Missing mapping or incomplete query
+completion remains `not_measured`, while a completed zero-CVE query is
+`measured` with count zero. Normal tests are offline and pin the vendored Git
+blob, so CI does not call NVD. NVD evidence remains complementary to package-native
+advisory sources such as Dependabot.

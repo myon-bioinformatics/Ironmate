@@ -186,6 +186,87 @@ def fetch_cves(cpe_name: str, *, api_key: str | None = None, timeout: float = 30
     return [records[key] for key in sorted(records)]
 
 
+
+def parse_jsonl(text: str) -> list[dict[str, Any]]:
+    """Parse nvd-cve-summary/1 JSONL while preserving Unicode line separators."""
+    records: list[dict[str, Any]] = []
+    for line_number, raw in enumerate(text.lstrip("\ufeff").split("\n"), 1):
+        if not raw.strip():
+            continue
+        try:
+            record = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"invalid JSONL at line {line_number}") from exc
+        if not isinstance(record, dict) or record.get("schema") != SCHEMA_VERSION:
+            raise ValueError(f"unsupported NVD record at line {line_number}")
+        query = record.get("query")
+        cpe = query.get("cpe_name") if isinstance(query, dict) else None
+        if not isinstance(cpe, str) or not cpe:
+            raise ValueError(f"incomplete NVD record at line {line_number}")
+        kind = record.get("kind", "cve")
+        if kind == "cve":
+            cve_id = record.get("id")
+            if not isinstance(cve_id, str) or not cve_id.startswith("CVE-"):
+                raise ValueError(f"incomplete NVD CVE record at line {line_number}")
+        elif kind == "query_complete":
+            count = record.get("cve_count")
+            if isinstance(count, bool) or not isinstance(count, int) or count < 0:
+                raise ValueError(f"incomplete NVD completion record at line {line_number}")
+        else:
+            # v1 allows additive record kinds; old consumers must remain forward-compatible.
+            continue
+        records.append(record)
+    return sorted(records, key=lambda item: (
+        item["query"]["cpe_name"], item.get("kind", "cve"), item.get("id", "")
+    ))
+
+
+def read_jsonl(path: str | Path) -> list[dict[str, Any]]:
+    """Read a UTF-8 JSONL snapshot; UTF-8 BOM is accepted."""
+    return parse_jsonl(Path(path).read_text(encoding="utf-8-sig"))
+
+
+def select_cpe_records(
+    records: Iterable[dict[str, Any]], cpe_names: Iterable[str]
+) -> dict[str, Any]:
+    """Validate completion evidence and return deduplicated CVEs for selected CPEs."""
+    cpes = sorted(set(cpe_names))
+    if not cpes or not all(isinstance(cpe, str) and cpe.startswith("cpe:2.3:") for cpe in cpes):
+        raise ValueError("cpe_names must contain explicit CPE 2.3 names")
+    rows = list(records)
+    completions: dict[str, int] = {}
+    for row in rows:
+        if row.get("kind") == "query_complete" and row.get("query", {}).get("cpe_name") in cpes:
+            cpe = row["query"]["cpe_name"]
+            count = row["cve_count"]
+            if cpe in completions and completions[cpe] != count:
+                raise ValueError(f"conflicting completion records for {cpe}")
+            completions[cpe] = count
+    missing = sorted(set(cpes) - set(completions))
+    if missing:
+        return {"status": "not_measured", "reason": "missing_query_completion",
+                "cpe_names": cpes, "missing_cpe_names": missing}
+    mismatched: list[str] = []
+    for cpe in cpes:
+        observed = len({
+            row["id"] for row in rows
+            if row.get("kind", "cve") == "cve"
+            and row.get("query", {}).get("cpe_name") == cpe
+        })
+        if completions[cpe] != observed:
+            mismatched.append(cpe)
+    if mismatched:
+        return {"status": "not_measured", "reason": "completion_count_mismatch",
+                "cpe_names": cpes, "mismatched_cpe_names": sorted(mismatched)}
+    cve_ids = sorted({
+        row["id"] for row in rows
+        if row.get("kind", "cve") == "cve"
+        and row.get("query", {}).get("cpe_name") in cpes
+    })
+    return {"status": "measured", "cpe_names": cpes,
+            "cve_count": len(cve_ids), "cve_ids": cve_ids}
+
+
 def read_ini(path: str = "config.ini") -> list[str]:
     config = configparser.ConfigParser()
     if not config.read(path, encoding="utf-8"):

@@ -76,14 +76,20 @@ class UnreviewedDiagnosticsTest(unittest.TestCase):
 
     def test_reviewer_pattern_is_exact_line_without_cross_line_whitespace(self):
         pattern = reviewer_pattern("Claude[bot]")
-        self.assertTrue(pattern.search("note\n  FROM:\tclaude[bot]  \n"))
-        self.assertTrue(pattern.search("from: Claude[bot]\r\nto: cursor"))
-        self.assertTrue(pattern.search("x\r\nfrom: claude[bot]\r\n"))
+        self.assertTrue(pattern.search("note
+  FROM:\tclaude[bot]  
+"))
+        self.assertTrue(pattern.search("from: Claude[bot]\r
+to: cursor"))
+        self.assertTrue(pattern.search("x\r
+from: claude[bot]\r
+"))
         for value in (
             "quoted from: claude[bot] elsewhere",
             "from: claude[bot]-extra",
             "from: claude[bot] extra",
-            "from:\nclaude[bot]",
+            "from:
+claude[bot]",
         ):
             self.assertFalse(pattern.search(value))
 
@@ -130,14 +136,34 @@ class UnreviewedDiagnosticsTest(unittest.TestCase):
                 return ([{"body": "from: bot"}], {})
             return ([], {})
 
-        self.assertEqual(list(unreviewed(fetch, "acme", "bot")), [])\n\n    def test_non_tagged_nonempty_issue_comment_does_not_count_as_reviewed(self):\n        def fetch(url):\n            if url.startswith("/orgs/acme/repos"):\n                return ([{"name": "demo"}], {})\n            if url == "/repos/acme/demo/issues?state=open&per_page=100":\n                return ([{"number": 1, "title": "pr", "pull_request": {}}], {})\n            if "/issues/1/comments" in url:\n                return ([{"body": "review failed; please retry"}], {})\n            return ([], {})\n\n        self.assertEqual(list(unreviewed(fetch, "acme", "bot")), [("demo", "PR", 1, "pr")])
+        self.assertEqual(list(unreviewed(fetch, "acme", "bot")), [])
+
+    def test_non_tagged_nonempty_issue_comment_does_not_count_as_reviewed(self):
+        def fetch(url):
+            if url.startswith("/orgs/acme/repos"):
+                return ([{"name": "demo"}], {})
+            if url == "/repos/acme/demo/issues?state=open&per_page=100":
+                return ([{"number": 1, "title": "pr", "pull_request": {}}], {})
+            if "/issues/1/comments" in url:
+                return ([{"body": "review failed; please retry"}], {})
+            return ([], {})
+
+        self.assertEqual(list(unreviewed(fetch, "acme", "bot")), [("demo", "PR", 1, "pr")])
 
     def test_fetcher_rejects_cross_origin_before_sending_token(self):
         fetch = make_fetcher(token="secret", api_root="https://api.github.test")
         with self.assertRaisesRegex(GitHubApiError, "cross-origin"):
             fetch("https://evil.example/items")
 
-    def test_redirect_handler_rejects_cross_origin(self):\n        from scripts.unreviewed import _SameOriginRedirect\n\n        handler = _SameOriginRedirect(("https", "api.github.test"))\n        request = urllib.request.Request("https://api.github.test/items", headers={"Authorization": "Bearer secret"})\n        with self.assertRaisesRegex(GitHubApiError, "cross-origin redirect"):\n            handler.redirect_request(request, None, 302, "Found", {}, "https://evil.example/items")\n\n    def test_fetcher_timeout_and_rate_limit_diagnostics(self):
+    def test_redirect_handler_rejects_cross_origin(self):
+        from scripts.unreviewed import _SameOriginRedirect
+
+        handler = _SameOriginRedirect(("https", "api.github.test"))
+        request = urllib.request.Request("https://api.github.test/items", headers={"Authorization": "Bearer secret"})
+        with self.assertRaisesRegex(GitHubApiError, "cross-origin redirect"):
+            handler.redirect_request(request, None, 302, "Found", {}, "https://evil.example/items")
+
+    def test_fetcher_timeout_and_rate_limit_diagnostics(self):
         response = io.BytesIO(json.dumps({"message": "secondary rate limit"}).encode())
         error = urllib.error.HTTPError(
             "https://api.github.test/items",

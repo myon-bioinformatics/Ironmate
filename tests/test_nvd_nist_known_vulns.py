@@ -43,6 +43,7 @@ class NvdNistKnownVulnsVendorTest(unittest.TestCase):
         }))
         result = repository_security_metadata("owner/repo", manifest, rows, nvd_module=NVD)
         self.assertEqual(result["status"], "measured")
+        self.assertEqual(result["schema"], NVD.SCHEMA_VERSION)
         self.assertEqual(result["cve_ids"], ["CVE-2026-0001"])
 
     def test_manifest_rejects_invalid_shapes_and_accepts_bom(self):
@@ -78,6 +79,7 @@ class NvdNistKnownVulnsVendorTest(unittest.TestCase):
 
     def test_unmapped_repository_remains_not_measured(self):
         result = repository_security_metadata("owner/repo", {}, [], nvd_module=NVD)
+        self.assertEqual(result["status"], "not_measured")
         self.assertEqual(result["reason"], "no_explicit_cpe_mapping")
         self.assertNotIn("cve_count", result)
         self.assertEqual(result["schema"], NVD.SCHEMA_VERSION)

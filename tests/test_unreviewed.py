@@ -144,7 +144,7 @@ class UnreviewedDiagnosticsTest(unittest.TestCase):
 
         self.assertEqual(list(unreviewed(fetch, "acme", "bot")), [("demo", "PR", 1, "pr")])
 
-    def test_pr_issue_comment_surface_counts_and_skip_warnings_are_visible(self):
+    def test_pr_issue_comment_surface_counts_as_reviewed(self):
         def fetch(url):
             if url.startswith("/orgs/acme/repos"):
                 return ([{"name": "demo"}], {})
@@ -152,8 +152,23 @@ class UnreviewedDiagnosticsTest(unittest.TestCase):
                 return ([{"number": 7, "title": "pr", "pull_request": {}}], {})
             if "/issues/7/comments" in url:
                 return ([{"body": "from: bot"}], {})
+            return ([], {})
+
+        self.assertEqual(list(unreviewed(fetch, "acme", "bot")), [])
+
+    def test_pr_review_404_warns_and_continues_to_inline_comments(self):
+        """A missing review surface is skipped with a warning by contract."""
+        def fetch(url):
+            if url.startswith("/orgs/acme/repos"):
+                return ([{"name": "demo"}], {})
+            if url == "/repos/acme/demo/issues?state=open&per_page=100":
+                return ([{"number": 7, "title": "pr", "pull_request": {}}], {})
+            if "/issues/7/comments" in url:
+                return ([], {})
             if "/pulls/7/reviews" in url:
                 raise GitHubApiError("missing", status=404)
+            if "/pulls/7/comments" in url:
+                return ([{"body": "from: bot"}], {})
             return ([], {})
 
         stderr = io.StringIO()

@@ -2,6 +2,8 @@
 
 Specification baseline verified for Issue #39: 2026-04-15 revision.
 No catalog/Pages publication is performed by this module.
+Out of scope here: fetching/parsing the /api/v2/snapshot/version response; callers pass
+the before/after version dicts (with `last_modified`) to `completion_state`.
 """
 from __future__ import annotations
 
@@ -16,7 +18,7 @@ from source_adapter import build_url
 API_ROOT = "https://snapshot.search.nicovideo.jp"
 SEARCH_URL = API_ROOT + "/api/v2/snapshot/video/contents/search"
 VERSION_URL = API_ROOT + "/api/v2/snapshot/version"
-CONTENT_ROOT = "https://nico.ms"
+CONTENT_ROOT = "https://www.nicovideo.jp/watch"
 
 DEFAULT_FIELDS = (
     "contentId", "title", "description", "tags", "categoryTags",
@@ -131,6 +133,7 @@ def normalize_item(item: dict[str, Any], *, source_url: str) -> dict[str, Any]:
         "data": safe,
     }
 
+
 def classify_page(payload: dict[str, Any], *, offset: int, limit: int) -> dict[str, Any]:
     meta = payload.get("meta")
     data = payload.get("data")
@@ -165,9 +168,10 @@ def snapshot_consistent(before: dict[str, Any], after: dict[str, Any]) -> bool:
 
 def next_delay_seconds(previous_elapsed_seconds: float, *, http_status: int | None = None) -> float:
     if http_status == 503:
-        # Snapshot Search API v2 guide (2026-04-15): wait five minutes after 503.
+        # Project default (the API guide does not specify a 503 wait): back off five minutes.
         return 300.0
     return max(0.0, float(previous_elapsed_seconds))
+
 
 def completion_state(before: dict[str, Any], after: dict[str, Any], page_state: dict[str, Any]) -> dict[str, Any]:
     consistent = snapshot_consistent(before, after)

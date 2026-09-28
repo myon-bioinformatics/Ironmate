@@ -36,7 +36,7 @@ class NiconicoAdapterTest(unittest.TestCase):
             build_search_url(q="keyword", sort="-startTime", context="Ironmate")
 
     def test_bounds_context_and_excluded_fields(self):
-        for kwargs in ({"limit": 101}, {"offset": 100001}, {"context": "x" * 41}):
+        for kwargs in ({"limit": 0}, {"limit": 101}, {"offset": -1}, {"offset": 100001}, {"context": "x" * 41}):
             with self.subTest(kwargs=kwargs), self.assertRaises(ValueError):
                 build_search_url(q="", sort="-startTime", context=kwargs.pop("context", "Ironmate"), **kwargs)
         with self.assertRaises(ValueError):
@@ -46,7 +46,7 @@ class NiconicoAdapterTest(unittest.TestCase):
                 build_search_url(q="", sort="-startTime", context="Ironmate", filters=bad_filters)
 
     def test_content_url_is_conservative(self):
-        self.assertEqual(content_url("sm12345"), "https://nico.ms/sm12345")
+        self.assertEqual(content_url("sm12345"), "https://www.nicovideo.jp/watch/sm12345")
         for value in ("", "sm/1", "初音"):
             with self.subTest(value=value), self.assertRaises(ValueError):
                 content_url(value)
@@ -56,7 +56,7 @@ class NiconicoAdapterTest(unittest.TestCase):
         source = build_search_url(q="", sort="-startTime", context="Ironmate")
         item = normalize_item(fixture["search"]["data"][0], source_url=source)
         self.assertEqual(item["identifier"], "sm12345")
-        self.assertEqual(item["html_url"], "https://nico.ms/sm12345")
+        self.assertEqual(item["html_url"], "https://www.nicovideo.jp/watch/sm12345")
         self.assertIsNone(item["api_url"])
         self.assertNotIn("userId", item["data"])
         self.assertNotIn("lastResBody", item["data"])
@@ -91,6 +91,13 @@ class NiconicoAdapterTest(unittest.TestCase):
         for page in (beyond, stalled, invalid, {"status": "ok", "complete": False, "truncated": False}):
             with self.subTest(page=page):
                 self.assertFalse(completion_state(fixture["version_before"], fixture["version_after"], page)["complete"])
+
+    def test_invalid_meta_is_not_complete(self):
+        for meta in ({"status": 500, "totalCount": 1}, {"status": 200, "totalCount": None}, {"totalCount": "1"}, {}):
+            with self.subTest(meta=meta):
+                state = classify_page({"meta": meta, "data": [{}]}, offset=0, limit=1)
+                self.assertEqual(state["status"], "invalid")
+                self.assertFalse(state["complete"])
 
     def test_http_statuses_preserve_error_body_offline(self):
         headers = Message()

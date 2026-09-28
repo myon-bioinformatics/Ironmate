@@ -2,6 +2,7 @@
 
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -32,16 +33,23 @@ class VendorModuleIntegrationTest(unittest.TestCase):
         self.assertIn('class="ui-panel"', html)
 
     def test_builder_direct_execution_resolves_vendor(self):
-        result = subprocess.run(
-            [sys.executable, "scripts/build_web_ui_consumer_examples.py"],
-            cwd=ROOT,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        self.assertEqual(result.returncode, 0, result.stderr)
-        for name in ("index.html", "markdown.html", "ascii.html"):
-            self.assertTrue((ROOT / "docs" / "consumer-v1" / name).exists(), name)
+        with tempfile.TemporaryDirectory() as directory:
+            output_dir = Path(directory)
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    "scripts/build_web_ui_consumer_examples.py",
+                    "--output-dir",
+                    str(output_dir),
+                ],
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            for name in ("index.html", "markdown.html", "ascii.html"):
+                self.assertTrue((output_dir / name).exists(), name)
 
     def test_generated_consumer_examples_use_v1_contract_and_pins(self):
         documents = build_documents()

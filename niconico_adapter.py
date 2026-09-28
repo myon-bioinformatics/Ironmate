@@ -117,6 +117,10 @@ def fetch_json(
 def normalize_item(item: dict[str, Any], *, source_url: str) -> dict[str, Any]:
     content_id = item.get("contentId")
     safe = {key: value for key, value in item.items() if key not in EXCLUDED_PUBLIC_FIELDS}
+    try:
+        html_url = content_url(content_id) if isinstance(content_id, str) else None
+    except ValueError:
+        html_url = None
     return {
         "provider": "niconico",
         "kind": "video",
@@ -127,11 +131,11 @@ def normalize_item(item: dict[str, Any], *, source_url: str) -> dict[str, Any]:
         "data": safe,
     }
 
-
 def classify_page(payload: dict[str, Any], *, offset: int, limit: int) -> dict[str, Any]:
     meta = payload.get("meta")
     data = payload.get("data")
-    if (not isinstance(meta, dict) or meta.get("status", 200) != 200 or\n            not isinstance(meta.get("totalCount"), int) or not isinstance(data, list)):
+    if (not isinstance(meta, dict) or meta.get("status", 200) != 200 or
+            not isinstance(meta.get("totalCount"), int) or not isinstance(data, list)):
         return {
             "total_count": None, "returned": None, "complete": False,
             "truncated": False, "next_offset": None, "status": "invalid",
@@ -167,5 +171,6 @@ def next_delay_seconds(previous_elapsed_seconds: float, *, http_status: int | No
 
 def completion_state(before: dict[str, Any], after: dict[str, Any], page_state: dict[str, Any]) -> dict[str, Any]:
     consistent = snapshot_consistent(before, after)
-    complete = (consistent and page_state.get("status") == "ok" and\n                bool(page_state.get("complete")) and not bool(page_state.get("truncated")))
+    complete = (consistent and page_state.get("status") == "ok" and
+                bool(page_state.get("complete")) and not bool(page_state.get("truncated")))
     return {"complete": complete, "snapshot_consistent": consistent, "page": page_state}

@@ -56,7 +56,11 @@ def parse_nvd_jsonl(text: str) -> list[dict[str, Any]]:
             if not isinstance(cve_id, str) or not cve_id.startswith("CVE-"):
                 raise ValueError(f"incomplete NVD CVE record at line {line_number}")
         elif kind == "query_complete":
-            if not isinstance(record.get("cve_count"), int) or record["cve_count"] < 0:
+            if (
+                isinstance(record.get("cve_count"), bool)
+                or not isinstance(record.get("cve_count"), int)
+                or record["cve_count"] < 0
+            ):
                 raise ValueError(f"incomplete NVD completion record at line {line_number}")
         else:
             raise ValueError(f"unsupported NVD record kind at line {line_number}")
@@ -83,6 +87,29 @@ def security_metadata(repository: str, manifest: dict[str, list[str]], records: 
             "reason": "missing_query_completion",
             "cpe_names": cpes,
             "missing_cpe_names": missing,
+        }
+    completion_counts = {
+        row["query"]["cpe_name"]: row["cve_count"]
+        for row in rows
+        if row.get("kind") == "query_complete" and row.get("query", {}).get("cpe_name") in cpes
+    }
+    mismatched = []
+    for cpe in cpes:
+        observed = len({
+            row["id"]
+            for row in rows
+            if row.get("kind", "cve") == "cve"
+            and row.get("query", {}).get("cpe_name") == cpe
+        })
+        if completion_counts.get(cpe) != observed:
+            mismatched.append(cpe)
+    if mismatched:
+        return {
+            "status": "not_measured",
+            "schema": SCHEMA,
+            "reason": "completion_count_mismatch",
+            "cpe_names": cpes,
+            "mismatched_cpe_names": sorted(mismatched),
         }
     # One CVE can match several CPEs. Repository-level counts are unique by CVE ID.
     cve_ids = sorted({

@@ -74,6 +74,21 @@ class GitHubCatalogTransportTest(unittest.TestCase):
                         else:
                             self.assertTrue(message.startswith("URLError "))
 
+    def test_catalog_tag_and_actions_keep_source_provenance(self):
+        tag_url = "https://api.github.com/repos/myon-bioinformatics/demo/tags?per_page=1"
+        with patch("github_catalog._optional_json", return_value=("detected", [{"name": "v1", "commit": {"sha": "abc"}}])):
+            tag = github_catalog._tag_metadata("demo")["value"]
+        self.assertIsNone(tag["api_url"])
+        self.assertEqual(tag["source_url"], tag_url)
+
+        run_url = "https://api.github.com/repos/myon-bioinformatics/demo/actions/runs?branch=main&per_page=1"
+        run = {"name": "CI", "status": "completed", "conclusion": "success", "head_sha": "abc",
+               "url": "https://api.github.com/repos/myon-bioinformatics/demo/actions/runs/9"}
+        with patch("github_catalog._optional_json", return_value=("detected", {"workflow_runs": [run]})):
+            ci = github_catalog._ci_metadata("demo", "main")["value"]
+        self.assertEqual(ci["api_url"], run["url"])
+        self.assertEqual(ci["source_url"], run_url)
+
     def test_missing_rate_limit_headers_do_not_clear_last_known_values(self):
         github_catalog.RATE_LIMIT.update({"remaining": "12", "limit": "60", "reset": "789"})
         result = {"status": "error", "error_type": "URLError", "url": self.url}

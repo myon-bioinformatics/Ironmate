@@ -52,7 +52,12 @@ def test_generator_cli_runs_from_outside_repository(tmp_path):
     _git(root, "add", "README.md")
     _git(root, "commit", "-m", "cli metadata fixture")
 
-    generator = Path(__file__).resolve().parents[1] / "repository_metadata_generator.py"
+    source_root = Path(__file__).resolve().parents[1]
+    vendor_dir = tmp_path / "vendor"
+    vendor_dir.mkdir()
+    for name in ("repository_metadata_generator.py", "repository_metadata_contract.py"):
+        (vendor_dir / name).write_bytes((source_root / name).read_bytes())
+    generator = vendor_dir / "repository_metadata_generator.py"
     out = tmp_path / "out"
     subprocess.run(
         [
@@ -178,4 +183,23 @@ def test_checkout_generator_keeps_head_identity_coherent_across_commits(tmp_path
     assert record["head"]["sha"] == second_sha
     assert record["head"]["timestamp"] == _git(root, "show", "-s", "--format=%cI", second_sha)
     assert record["head"]["subject"] == "second metadata fixture"
+
+
+def test_checkout_generator_reads_non_ascii_subject_as_utf8(tmp_path, monkeypatch):
+    root = tmp_path / "repo"
+    root.mkdir()
+    _git(root, "init", "-b", "main")
+    _git(root, "config", "user.email", "test@example.invalid")
+    _git(root, "config", "user.name", "Test")
+    (root / "README.md").write_text("unicode\n", encoding="utf-8")
+    _git(root, "add", "README.md")
+    subject = "日本語 commit — ✓"
+    _git(root, "commit", "-m", subject)
+
+    monkeypatch.setenv("LC_ALL", "C")
+    monkeypatch.setenv("PYTHONUTF8", "0")
+    monkeypatch.setenv("PYTHONCOERCECLOCALE", "0")
+    record = record_from_checkout(root, "octo/demo", env={})
+
+    assert record["head"]["subject"] == subject
 

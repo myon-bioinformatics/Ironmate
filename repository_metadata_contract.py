@@ -17,6 +17,7 @@ _OWNER_RE = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$")
 _REPO_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
 _TOOL_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,31}$")
 _TOOL_VALUE_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._+ -]{0,31}$")
+_SHA_RE = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
 
 
 def repository_identity(full_name: str) -> tuple[str, str]:
@@ -83,8 +84,10 @@ def build_repository_record(
     tooling: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build one canonical, public-safe repository metadata record."""
-    if not sha or not branch or not subject:
-        raise ValueError("sha, branch and subject are required")
+    if not isinstance(sha, str) or not _SHA_RE.fullmatch(sha):
+        raise ValueError("sha must be a 40- or 64-character lowercase hexadecimal object id")
+    if not branch or not subject:
+        raise ValueError("branch and subject are required")
     repository_identity(full_name)
     _iso8601(timestamp)
     _iso8601(generated_at)
@@ -122,6 +125,8 @@ def validate_repository_record(record: dict[str, Any]) -> None:
     head = record.get("head", {})
     if set(head) != {"sha", "short_sha", "branch", "timestamp", "subject"}:
         raise ValueError("invalid head")
+    if not isinstance(head["sha"], str) or not _SHA_RE.fullmatch(head["sha"]):
+        raise ValueError("sha must be a 40- or 64-character lowercase hexadecimal object id")
     if head["short_sha"] != head["sha"][:8]:
         raise ValueError("short_sha must be the first 8 characters of sha")
     _iso8601(head["timestamp"])

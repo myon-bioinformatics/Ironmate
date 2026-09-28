@@ -1,4 +1,9 @@
-"""Build static, LLM-friendly repository metadata for GitHub Pages."""
+"""Build the current static, LLM-friendly GitHub repository catalog.
+
+This module is a consumer of source-adapter output, not a template for one
+catalog module per provider. Before adding another provider, define the shared
+normalized record/envelope and catalog/index boundary explicitly.
+"""
 from __future__ import annotations
 
 import base64

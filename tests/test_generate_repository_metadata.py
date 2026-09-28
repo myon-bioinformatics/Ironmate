@@ -117,3 +117,38 @@ def test_checkout_generator_accepts_optional_measurements_and_tooling(tmp_path):
     assert record["measurements"]["working_tree_bytes"] == 1234
     assert record["measurements"]["release_artifact_bytes"] == 5678
     assert record["tooling"] == {"python": "3.12"}
+
+def test_checkout_generator_uses_ref_name_when_head_ref_is_empty(tmp_path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    _git(root, "init", "-b", "main")
+    _git(root, "config", "user.email", "test@example.invalid")
+    _git(root, "config", "user.name", "Test")
+    (root / "README.md").write_text("# demo\n", encoding="utf-8")
+    _git(root, "add", "README.md")
+    _git(root, "commit", "-m", "ref metadata fixture")
+
+    record = record_from_checkout(
+        root,
+        "octo/demo",
+        env={"GITHUB_HEAD_REF": "", "GITHUB_REF_NAME": "release/test"},
+    )
+    assert record["head"]["branch"] == "release/test"
+
+
+def test_checkout_generator_labels_detached_head(tmp_path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    _git(root, "init", "-b", "main")
+    _git(root, "config", "user.email", "test@example.invalid")
+    _git(root, "config", "user.name", "Test")
+    (root / "README.md").write_text("# demo\n", encoding="utf-8")
+    _git(root, "add", "README.md")
+    _git(root, "commit", "-m", "detached metadata fixture")
+    sha = _git(root, "rev-parse", "HEAD")
+    _git(root, "checkout", "--detach", sha)
+
+    record = record_from_checkout(root, "octo/demo", env={})
+    assert record["head"]["sha"] == sha
+    assert record["head"]["branch"] == "detached"
+

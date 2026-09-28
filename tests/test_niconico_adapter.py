@@ -41,7 +41,7 @@ class NiconicoAdapterTest(unittest.TestCase):
                 build_search_url(q="", sort="-startTime", context=kwargs.pop("context", "Ironmate"), **kwargs)
         with self.assertRaises(ValueError):
             build_search_url(q="", sort="-startTime", context="Ironmate", fields=("contentId", "userId"))
-        for bad_filters in ({"fields": "contentId,userId,lastResBody"}, {"_context": "x" * 100}, {"_limit": 1000}):
+        for bad_filters in ({"fields": "contentId,userId,lastResBody"}, {"_context": "x" * 100}, {"_limit": 1000}, {"filtersX": 1}, {1: "x"}):
             with self.subTest(bad_filters=bad_filters), self.assertRaises(ValueError):
                 build_search_url(q="", sort="-startTime", context="Ironmate", filters=bad_filters)
 
@@ -59,7 +59,7 @@ class NiconicoAdapterTest(unittest.TestCase):
         self.assertEqual(item["html_url"], "https://nico.ms/sm12345")
         self.assertIsNone(item["api_url"])
         self.assertNotIn("userId", item["data"])
-        self.assertNotIn("lastResBody", item["data"])
+        self.assertNotIn("lastResBody", item["data"])\n        self.assertEqual(item["provider"], "niconico")\n        self.assertEqual(item["kind"], "video")\n        self.assertEqual(item["source_url"], source)\n        self.assertIsNone(normalize_item({"contentId": ""}, source_url=source)["html_url"])\n        self.assertIsNone(normalize_item({"contentId": "so-1"}, source_url=source)["html_url"])
 
     def test_snapshot_consistency_and_pagination(self):
         fixture = json.loads((Path(__file__).parent / "fixtures" / "niconico_snapshot_v2.json").read_text())
@@ -76,7 +76,7 @@ class NiconicoAdapterTest(unittest.TestCase):
         self.assertTrue(beyond["truncated"])
         self.assertIsNone(beyond["next_offset"])
         self.assertTrue(completion_state(fixture["version_before"], fixture["version_after"], final)["complete"])
-        self.assertFalse(completion_state(fixture["version_before"], {"last_modified": "changed"}, final)["complete"])
+        self.assertFalse(completion_state(fixture["version_before"], {"last_modified": "changed"}, final)["complete"])\n        stalled = classify_page({"meta": {"totalCount": 5}, "data": []}, offset=0, limit=10)\n        self.assertEqual(stalled["status"], "stalled")\n        self.assertIsNone(stalled["next_offset"])\n        invalid = classify_page({}, offset=0, limit=10)\n        self.assertEqual(invalid["status"], "invalid")\n        self.assertFalse(invalid["complete"])\n        for page in (beyond, stalled, invalid, {"status": "ok", "complete": False, "truncated": False}):\n            with self.subTest(page=page):\n                self.assertFalse(completion_state(fixture["version_before"], fixture["version_after"], page)["complete"])
 
     def test_http_statuses_preserve_error_body_offline(self):
         headers = Message()

@@ -1,5 +1,6 @@
 """Integration checks for pinned vendored sibling utilities."""
 
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -34,33 +35,39 @@ class VendorModuleIntegrationTest(unittest.TestCase):
 
     def test_builder_direct_execution_resolves_vendor(self):
         repository_output = ROOT / "docs" / "consumer-v1"
-        before = {
-            path.name: path.read_bytes()
-            for path in repository_output.glob("*.html")
-        }
         with tempfile.TemporaryDirectory() as directory:
-            output_dir = Path(directory)
-            result = subprocess.run(
-                [
-                    sys.executable,
-                    "scripts/build_web_ui_consumer_examples.py",
-                    "--output-dir",
-                    str(output_dir),
-                ],
-                cwd=ROOT,
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-            self.assertEqual(result.returncode, 0, result.stderr)
-            for name in ("index.html", "markdown.html", "ascii.html"):
-                self.assertTrue((output_dir / name).exists(), name)
+            temporary_root = Path(directory)
+            output_dir = temporary_root / "generated"
+            saved_repository_output = temporary_root / "saved-repository-output"
 
-        after = {
-            path.name: path.read_bytes()
-            for path in repository_output.glob("*.html")
-        }
-        self.assertEqual(after, before)
+            if repository_output.exists():
+                repository_output.rename(saved_repository_output)
+
+            try:
+                result = subprocess.run(
+                    [
+                        sys.executable,
+                        "scripts/build_web_ui_consumer_examples.py",
+                        "--output-dir",
+                        str(output_dir),
+                    ],
+                    cwd=ROOT,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+                for name in ("index.html", "markdown.html", "ascii.html"):
+                    self.assertTrue((output_dir / name).exists(), name)
+                self.assertFalse(
+                    repository_output.exists(),
+                    "builder wrote outside the requested output directory",
+                )
+            finally:
+                if repository_output.exists():
+                    shutil.rmtree(repository_output)
+                if saved_repository_output.exists():
+                    saved_repository_output.rename(repository_output)
 
     def test_generated_consumer_examples_use_v1_contract_and_pins(self):
         documents = build_documents()

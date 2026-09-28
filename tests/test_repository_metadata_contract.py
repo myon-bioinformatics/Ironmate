@@ -98,3 +98,39 @@ def test_tooling_is_limited_to_short_public_version_labels(tooling):
 def test_shared_schema_fixture_matches_generator_output():
     expected = json.loads(FIXTURE.read_text(encoding="utf-8"))
     assert sample() == expected
+
+
+@pytest.mark.parametrize(
+    "sha",
+    [
+        "abc",
+        "g" * 40,
+        "A" * 40,
+        "a" * 39,
+        "a" * 41,
+        "a" * 63,
+        "a" * 65,
+    ],
+)
+def test_rejects_noncanonical_object_id(sha):
+    with pytest.raises(ValueError):
+        build_repository_record(
+            full_name="a/b",
+            sha=sha,
+            branch="main",
+            timestamp="2026-09-27T19:09:22+09:00",
+            subject="x",
+            generated_at="2026-09-27T20:00:00+09:00",
+        )
+
+
+def test_accepts_sha256_object_id():
+    record = build_repository_record(
+        full_name="a/b",
+        sha="a" * 64,
+        branch="main",
+        timestamp="2026-09-27T19:09:22+09:00",
+        subject="x",
+        generated_at="2026-09-27T20:00:00+09:00",
+    )
+    assert record["head"]["sha"] == "a" * 64

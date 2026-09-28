@@ -71,7 +71,7 @@ class UnreviewedDiagnosticsTest(unittest.TestCase):
         ):
             self.assertFalse(pattern.search(value))
 
-    def test_unreviewed_checks_inline_comments_author_and_skips_410_repo(self):
+    def test_unreviewed_checks_inline_comments_and_skips_410_repo(self):
         def fetch(url):
             if url.startswith("/orgs/acme/repos"):
                 return ([{"name": "demo"}, {"name": "disabled"}], {})
@@ -82,7 +82,7 @@ class UnreviewedDiagnosticsTest(unittest.TestCase):
                     [
                         {"number": 1, "title": "plain issue"},
                         {"number": 2, "title": "inline reviewed pr", "pull_request": {}},
-                        {"number": 3, "title": "author reviewed pr", "pull_request": {}},
+                        {"number": 3, "title": "unreviewed bot-author pr", "pull_request": {}},
                     ],
                     {},
                 )
@@ -98,8 +98,8 @@ class UnreviewedDiagnosticsTest(unittest.TestCase):
             return mapping[url]
 
         self.assertEqual(
-            list(unreviewed(fetch, "acme", "bot", author="bot[bot]")),
-            [("demo", "IS", 1, "plain issue")],
+            list(unreviewed(fetch, "acme", "bot")),
+            [("demo", "IS", 1, "plain issue"), ("demo", "PR", 3, "unreviewed bot-author pr")],
         )
 
     def test_item_404_does_not_abort_other_comment_surfaces(self):

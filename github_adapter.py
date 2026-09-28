@@ -10,7 +10,7 @@ import json
 from dataclasses import dataclass
 from typing import Any
 from urllib.error import HTTPError, URLError
-from urllib.parse import quote, urlparse
+from urllib.parse import quote, urlencode, urlparse
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 API_ROOT = "https://api.github.com"
@@ -37,6 +37,18 @@ _opener = build_opener(_ScopedRedirect)
 
 def _q(value: str) -> str:
     return quote(value, safe="")
+
+
+def build_url(base_url: str, *segments: str, query: dict[str, Any] | None = None) -> str:
+    """Provider-neutral URL builder for read-only HTTP adapters."""
+    url = base_url.rstrip("/")
+    if segments:
+        url += "/" + "/".join(_q(str(segment).strip("/")) for segment in segments)
+    if query:
+        encoded = urlencode([(key, value) for key, value in query.items() if value is not None], doseq=True)
+        if encoded:
+            url += "?" + encoded
+    return url
 
 
 def repository_html_url(owner: str, repo: str) -> str:
@@ -69,16 +81,15 @@ def release_tag_html_url(owner: str, repo: str, tag: str) -> str:
 
 
 def repositories_api_url(owner: str) -> str:
-    return f"{API_ROOT}/users/{_q(owner)}/repos"
+    return build_url(API_ROOT, "users", owner, "repos")
 
 
 def repository_collection_api_url(owner: str, repo: str, collection: str) -> str:
-    return f"{repository_api_url(owner, repo)}/{quote(collection.strip('/'), safe='/')}"
+    return build_url(repository_api_url(owner, repo), *collection.strip("/").split("/"))
 
 
 def repository_tree_api_url(owner: str, repo: str, ref: str, *, recursive: bool = True) -> str:
-    url = f"{repository_api_url(owner, repo)}/git/trees/{_q(ref)}"
-    return f"{url}?recursive=1" if recursive else url
+    return build_url(repository_api_url(owner, repo), "git", "trees", ref, query={"recursive": 1 if recursive else None})
 
 
 def content_api_url(owner: str, repo: str, path: str, *, ref: str | None = None) -> str:

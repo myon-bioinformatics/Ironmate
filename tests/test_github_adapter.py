@@ -23,6 +23,9 @@ from github_adapter import (
     normalize_tag,
     pull_html_url,
     release_tag_html_url,
+    repository_tree_api_url,
+    repository_collection_api_url,
+    repositories_api_url,
 )
 
 
@@ -57,6 +60,14 @@ class GitHubAdapterTest(unittest.TestCase):
         self.assertEqual(
             release_tag_html_url("o", "r", "release/one"),
             "https://github.com/o/r/releases/tag/release/one",
+        )
+
+    def test_collection_and_tree_url_builders(self):
+        self.assertEqual(repositories_api_url("a b"), "https://api.github.com/users/a%20b/repos")
+        self.assertEqual(repository_collection_api_url("o", "r", "pulls"), "https://api.github.com/repos/o/r/pulls")
+        self.assertEqual(
+            repository_tree_api_url("o", "r", "feature/a b"),
+            "https://api.github.com/repos/o/r/git/trees/feature%2Fa%20b?recursive=1",
         )
 
     def test_api_mapping(self):
@@ -139,19 +150,19 @@ class GitHubAdapterTest(unittest.TestCase):
         expected = {
             "commit": {"sha": "abc123", "date": "2026-01-01T00:00:00Z", "message": "fixture commit",
                        "html_url": "https://github.com/o/r/commit/abc123",
-                       "api_url": "https://api.github.com/repos/o/r/commits/abc123"},
+                       "api_url": "https://api.github.com/repos/o/r/commits/abc123", "source_url": None},
             "pull": {"number": 7, "title": "fixture", "state": "open", "draft": False,
                      "head_sha": "head", "base_sha": "base", "created_at": "2026-01-02T01:02:03Z", "updated_at": "2026-01-03T04:05:06Z",
                      "closed_at": "2026-01-04T07:08:09Z", "merged_at": "2026-01-04T07:08:10Z", "html_url": "https://github.com/o/r/pull/7",
-                     "api_url": "https://api.github.com/repos/o/r/pulls/7"},
+                     "api_url": "https://api.github.com/repos/o/r/pulls/7", "source_url": None},
             "release": {"tag_name": "v1.0.0", "name": "v1", "published_at": "2026-01-05T10:11:12Z",
                         "html_url": "https://github.com/o/r/releases/tag/v1.0.0",
-                        "api_url": "https://api.github.com/repos/o/r/releases/1"},
-            "tag": {"name": "v1.0.0", "sha": "abc123", "html_url": None, "api_url": None},
+                        "api_url": "https://api.github.com/repos/o/r/releases/1", "source_url": None},
+            "tag": {"name": "v1.0.0", "sha": "abc123", "html_url": None, "api_url": None, "source_url": None},
             "actions_run": {"name": "CI", "status": "completed", "conclusion": "success",
                             "head_sha": "abc123", "updated_at": "2026-01-06T13:14:15Z",
                             "html_url": "https://github.com/o/r/actions/runs/1",
-                            "api_url": "https://api.github.com/repos/o/r/actions/runs/1"},
+                            "api_url": "https://api.github.com/repos/o/r/actions/runs/1", "source_url": None},
         }
         normalizers = {"commit": normalize_commit, "pull": normalize_pull, "release": normalize_release,
                        "tag": normalize_tag, "actions_run": normalize_actions_run}
@@ -166,6 +177,10 @@ class GitHubAdapterTest(unittest.TestCase):
         override = "https://api.github.com/repos/o/r/tags?per_page=1"
         self.assertEqual(normalize_tag(fixture["tag"], api_url=override)["api_url"], override)
         self.assertEqual(normalize_actions_run(fixture["actions_run"], api_url=override)["api_url"], override)
+        source = "https://api.github.com/repos/o/r/tags?per_page=1"
+        normalized = normalize_tag(fixture["tag"], source_url=source)
+        self.assertIsNone(normalized["api_url"])
+        self.assertEqual(normalized["source_url"], source)
 
     def test_normalize_commit_accepts_empty_message(self):
         self.assertEqual(normalize_commit({"sha": "x", "commit": {"message": ""}})["message"], "")

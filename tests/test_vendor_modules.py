@@ -33,6 +33,11 @@ class VendorModuleIntegrationTest(unittest.TestCase):
         self.assertIn('class="ui-panel"', html)
 
     def test_builder_direct_execution_resolves_vendor(self):
+        repository_output = ROOT / "docs" / "consumer-v1"
+        before = {
+            path.name: path.read_bytes()
+            for path in repository_output.glob("*.html")
+        }
         with tempfile.TemporaryDirectory() as directory:
             output_dir = Path(directory)
             result = subprocess.run(
@@ -50,6 +55,12 @@ class VendorModuleIntegrationTest(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             for name in ("index.html", "markdown.html", "ascii.html"):
                 self.assertTrue((output_dir / name).exists(), name)
+
+        after = {
+            path.name: path.read_bytes()
+            for path in repository_output.glob("*.html")
+        }
+        self.assertEqual(after, before)
 
     def test_generated_consumer_examples_use_v1_contract_and_pins(self):
         documents = build_documents()

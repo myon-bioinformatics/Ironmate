@@ -185,21 +185,27 @@ def test_checkout_generator_keeps_head_identity_coherent_across_commits(tmp_path
     assert record["head"]["subject"] == "second metadata fixture"
 
 
-def test_checkout_generator_reads_non_ascii_subject_as_utf8(tmp_path, monkeypatch):
-    root = tmp_path / "repo"
-    root.mkdir()
-    _git(root, "init", "-b", "main")
-    _git(root, "config", "user.email", "test@example.invalid")
-    _git(root, "config", "user.name", "Test")
-    (root / "README.md").write_text("unicode\n", encoding="utf-8")
-    _git(root, "add", "README.md")
-    subject = "日本語 commit — ✓"
-    _git(root, "commit", "-m", subject)
+def test_git_forces_utf8_log_output_and_decoding(monkeypatch, tmp_path):
+    import repository_metadata_generator
 
-    monkeypatch.setenv("LC_ALL", "C")
-    monkeypatch.setenv("PYTHONUTF8", "0")
-    monkeypatch.setenv("PYTHONCOERCECLOCALE", "0")
-    record = record_from_checkout(root, "octo/demo", env={})
+    observed = {}
 
-    assert record["head"]["subject"] == subject
+    class Result:
+        stdout = "日本語 commit — ✓\n"
+
+    def fake_run(command, **kwargs):
+        observed["command"] = command
+        observed["kwargs"] = kwargs
+        return Result()
+
+    monkeypatch.setattr(repository_metadata_generator.subprocess, "run", fake_run)
+
+    assert repository_metadata_generator.git(
+        "show", "-s", "--format=%s", "HEAD", cwd=tmp_path
+    ) == "日本語 commit — ✓"
+    assert observed["command"][:3] == [
+        "git", "-c", "i18n.logOutputEncoding=UTF-8"
+    ]
+    assert observed["kwargs"]["encoding"] == "utf-8"
+    assert observed["kwargs"]["text"] is True
 

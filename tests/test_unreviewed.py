@@ -24,7 +24,7 @@ class UnreviewedDiagnosticsTest(unittest.TestCase):
         self.assertEqual(_next_link(value), "https://api.github.test/items?page=3")
         self.assertIsNone(_next_link('<https://api.github.test/items?page=2>; rel="last"'))
 
-    def test_paged_follows_link_and_rejects_cycle(self):
+    def test_paged_follows_link_and_rejects_cycle_with_bounded_fake(self):
         calls = []
         responses = {
             "/items": ([{"id": 1}], {"link": '<https://api.github.test/items?page=2>; rel="next"'}),
@@ -41,6 +41,7 @@ class UnreviewedDiagnosticsTest(unittest.TestCase):
         cycle_calls = 0
 
         def cycle(url):
+            # Bound the fake itself so a regression in cycle detection fails instead of hanging.
             nonlocal cycle_calls
             cycle_calls += 1
             if cycle_calls > 2:
@@ -143,6 +144,48 @@ class UnreviewedDiagnosticsTest(unittest.TestCase):
             return ([], {})
 
         self.assertEqual(list(unreviewed(fetch, "acme", "bot")), [("demo", "PR", 1, "pr")])
+
+    def test_pr_issue_comment_surface_counts_as_reviewed(self):
+        def fetch(url):
+            if url.startswith("/orgs/acme/repos"):
+                return ([{"name": "demo"}], {})
+            if url == "/repos/acme/demo/issues?state=open&per_page=100":
+                return ([{"number": 7, "title": "pr", "pull_request": {}}], {})
+            if "/issues/7/comments" in url:
+                return ([{"body": "from: bot"}], {})
+            return ([], {})
+
+        self.assertEqual(list(unreviewed(fetch, "acme", "bot")), [])
+
+    def test_pr_review_404_warns_and_continues_to_inline_comments(self):
+        """A missing review surface is skipped with a warning by contract."""
+        def fetch(url):
+            if url.startswith("/orgs/acme/repos"):
+                return ([{"name": "demo"}], {})
+            if url == "/repos/acme/demo/issues?state=open&per_page=100":
+                return ([{"number": 7, "title": "pr", "pull_request": {}}], {})
+            if "/issues/7/comments" in url:
+                return ([], {})
+            if "/pulls/7/reviews" in url:
+                raise GitHubApiError("missing", status=404)
+            if "/pulls/7/comments" in url:
+                return ([{"body": "from: bot"}], {})
+            return ([], {})
+
+        stderr = io.StringIO()
+        with mock.patch("sys.stderr", stderr):
+            self.assertEqual(list(unreviewed(fetch, "acme", "bot")), [])
+        self.assertIn("warning: skipped", stderr.getvalue())
+        self.assertIn("HTTP 404", stderr.getvalue())
+
+    def test_repository_errors_other_than_410_are_not_swallowed(self):
+        def fetch(url):
+            if url.startswith("/orgs/acme/repos"):
+                return ([{"name": "demo"}], {})
+            raise GitHubApiError("boom", status=500)
+
+        with self.assertRaisesRegex(GitHubApiError, "boom"):
+            list(unreviewed(fetch, "acme", "bot"))
 
     def test_fetcher_rejects_cross_origin_before_sending_token(self):
         fetch = make_fetcher(token="secret", api_root="https://api.github.test")

@@ -23,7 +23,7 @@ versioned contract deliberately when those fields are ready to become public com
 
 ## Migration
 
-1. Generate and validate canonical JSON/JSONL with Ironmate's Python contract.
+1. Keep `repository_metadata_generator.py` beside `repository_metadata_contract.py`, then generate and validate canonical JSON/JSONL with that stdlib-only pair.
 2. Make the repository's existing UI/tooling consume those generated files.
 3. Compare rendered/observable behavior during migration.
 4. Delete redundant JavaScript/Dart metadata collectors after equivalence is established.
@@ -38,6 +38,8 @@ Initial migration targets:
 - `browser-test-kit`: consume the same generated contract.
 - `flutter_navigation_basic`: retire `tool/build_meta.dart` and metadata collection from
   `lib/shared/diagnostics/build_metadata.dart`; read generated metadata instead.
+
+`repository_metadata_generator.py` and `repository_metadata_contract.py` are intentionally a two-file vendorable pair; direct execution of the generator must work without relying on the source repository's import path.
 
 The target architecture is one producer contract and many read-only consumers, not parallel
 implementations in Python, JavaScript, and Dart.

@@ -39,7 +39,7 @@ def workflow_structure_escape_failures(text):
     """Find #42-style escaped newlines that splice YAML list entries."""
     failures = []
     for number, line in enumerate(text.splitlines(), 1):
-        if re.search(r'^\s*-\s+["\'][^"\']+["\']\\\\n\s+-\s+', line):
+        if re.search(r'^\s*-\s+["\'][^"\']+["\']\\n\s+-\s+', line):
             failures.append(number)
     return failures
 

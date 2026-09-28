@@ -22,7 +22,7 @@ def test_checkout_generator_writes_equivalent_json_and_jsonl(tmp_path):
     _git(root, "add", "README.md")
     _git(root, "commit", "-m", "initial metadata fixture")
 
-    record = record_from_checkout(root, "octo/demo")
+    record = record_from_checkout(root, "octo/demo", env={})
     json_path, jsonl_path = write_metadata(record, tmp_path / "out")
 
     assert json.loads(json_path.read_text(encoding="utf-8")) == record
@@ -57,6 +57,7 @@ def test_generator_cli_runs_from_outside_repository(tmp_path):
     subprocess.run(
         [
             sys.executable,
+            "-S",
             str(generator),
             "--repository",
             "octo/demo",
@@ -75,3 +76,21 @@ def test_generator_cli_runs_from_outside_repository(tmp_path):
         "repository"
     ]["full_name"] == "octo/demo"
     assert (out / "repository-metadata.jsonl").read_text(encoding="utf-8").count("\n") == 1
+
+
+def test_checkout_generator_prefers_ci_branch_name(tmp_path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    _git(root, "init", "-b", "main")
+    _git(root, "config", "user.email", "test@example.invalid")
+    _git(root, "config", "user.name", "Test")
+    (root / "README.md").write_text("# demo\n", encoding="utf-8")
+    _git(root, "add", "README.md")
+    _git(root, "commit", "-m", "branch metadata fixture")
+
+    record = record_from_checkout(
+        root,
+        "octo/demo",
+        env={"GITHUB_HEAD_REF": "feat/portable-metadata"},
+    )
+    assert record["head"]["branch"] == "feat/portable-metadata"

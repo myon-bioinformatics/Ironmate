@@ -10,6 +10,7 @@ from typing import Any
 from urllib.parse import quote
 
 from github_adapter import (
+    build_url,
     content_api_url,
     fetch_json,
     is_rate_limited,
@@ -224,7 +225,7 @@ def _repository_enrichment(repo_name: str, default_branch: str, language: str | 
 def build_catalog() -> dict[str, Any]:
     generated_at = datetime.now(UTC).isoformat()
     repos = _paged(
-        f"{repositories_api_url(OWNER)}?type=owner&sort=full_name&direction=asc"
+        build_url(repositories_api_url(OWNER), query={"type": "owner", "sort": "full_name", "direction": "asc"})
     )
     public_repos = [repo for repo in repos if not repo.get("private") and not repo.get("fork")]
 
@@ -240,7 +241,7 @@ def build_catalog() -> dict[str, Any]:
         default_branch = str(repo.get("default_branch") or "main")
         latest_commit = _commit_metadata(name, default_branch)
         pulls = _paged(
-            f"{repository_collection_api_url(OWNER, name, 'pulls')}?state=all&sort=created&direction=desc"
+            build_url(repository_collection_api_url(OWNER, name, "pulls"), query={"state": "all", "sort": "created", "direction": "desc"})
         )
         pr_items = [_pr_metadata(pr) for pr in pulls]
         # latest_pr is latest-created (greatest PR number); latest_updated_pr is

@@ -5,8 +5,8 @@ import re
 import subprocess
 import tempfile
 import unittest
-from unittest import mock
 from pathlib import Path
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -70,7 +70,7 @@ class RepositoryHygieneTest(unittest.TestCase):
         self.assertEqual(failures, [], "\n".join(failures))
 
     def test_workflow_structure_escape_detector_is_narrow(self):
-        broken = '      - "a.py"\\\\n      - "b.py"'
+        broken = '      - "a.py"\\n      - "b.py"'
         legitimate = "      run: printf 'a\\\\nb'"
         self.assertEqual(workflow_structure_escape_failures(broken), [1])
         self.assertEqual(workflow_structure_escape_failures(legitimate), [])

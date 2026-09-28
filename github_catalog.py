@@ -9,8 +9,9 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import quote
 
+from source_adapter import build_url
+
 from github_adapter import (
-    build_url,
     content_api_url,
     fetch_json,
     is_rate_limited,

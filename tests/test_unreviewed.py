@@ -24,7 +24,7 @@ class UnreviewedDiagnosticsTest(unittest.TestCase):
         self.assertEqual(_next_link(value), "https://api.github.test/items?page=3")
         self.assertIsNone(_next_link('<https://api.github.test/items?page=2>; rel="last"'))
 
-    def test_paged_follows_link_and_rejects_cycle(self):
+    def test_paged_follows_link_and_rejects_cycle_with_bounded_fake(self):
         calls = []
         responses = {
             "/items": ([{"id": 1}], {"link": '<https://api.github.test/items?page=2>; rel="next"'}),
@@ -41,6 +41,7 @@ class UnreviewedDiagnosticsTest(unittest.TestCase):
         cycle_calls = 0
 
         def cycle(url):
+            # Bound the fake itself so a regression in cycle detection fails instead of hanging.
             nonlocal cycle_calls
             cycle_calls += 1
             if cycle_calls > 2:

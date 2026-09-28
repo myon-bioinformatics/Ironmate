@@ -20,8 +20,12 @@ The header should appear within the first eight physical lines so it remains vis
 single file is copied without its repository.
 
 - `__all__` is the number of names in one literal top-level Python `__all__` list or tuple.
-- `base_sha` is the full source/upstream commit used to produce or synchronize the artifact.
-  It is not automatically the consumer repository HEAD.
+- `base_sha` is the full baseline commit recorded by the artifact source when that artifact
+  is refreshed. Downstream vendoring should preserve this embedded value verbatim.
+- `base_sha` is not the downstream consumer repository HEAD and does not have to equal the
+  exact upstream commit from which a downstream copy was fetched.
+- When exact vendoring provenance matters, keep it separately (for example source commit,
+  source blob SHA, and vendored-file SHA-256 in a provenance JSON file).
 - `updated_at` records the artifact update/synchronization time and must include a timezone.
 - Files without a literal `__all__` are not forced into this contract.
 - Repository-level SHA, CI, release, size, and branch information remain in repository
@@ -34,6 +38,6 @@ literal-`__all__` counting, and header insertion/replacement.
 
 Use this header for Python single-file artifacts such as `markdown.py`, `ascii_artist.py`,
 and pinned/vendored Python modules in sibling repositories when they expose a literal
-`__all__`. Preserve additional provenance files when they already carry useful upstream
-hashes or source URLs; the header is a compact human-visible summary, not a replacement for
-richer provenance evidence.
+`__all__`. Preserve additional provenance files when they carry the exact vendoring source commit,
+blob/hash, or source URL. The embedded header travels with the artifact and is a compact
+human-visible baseline summary; it does not replace richer vendoring provenance evidence.

@@ -13,6 +13,12 @@ from github_adapter import (
     fetch_json,
     inspect_public,
     parse_github_resource,
+    is_rate_limited,
+    normalize_actions_run,
+    normalize_commit,
+    normalize_pull,
+    normalize_release,
+    normalize_tag,
     pull_html_url,
     release_tag_html_url,
 )
@@ -118,6 +124,26 @@ class GitHubAdapterTest(unittest.TestCase):
             result = fetch_json("https://api.github.com/example")
         self.assertEqual(result["status"], "error")
         self.assertEqual(result["error_type"], "URLError")
+
+    def test_rate_limit_classification_includes_429(self):
+        self.assertTrue(is_rate_limited({"http_status": 429}))
+        self.assertTrue(is_rate_limited({"http_status": 403, "rate_limit": {"remaining": "0"}}))
+        self.assertFalse(is_rate_limited({"http_status": 403, "rate_limit": {"remaining": "1"}}))
+
+    def test_normalizers_preserve_html_and_api_provenance(self):
+        cases = [
+            (normalize_commit, {"sha": "abc", "commit": {"message": "first\\nbody", "committer": {"date": "2026-01-01"}}, "html_url": "https://github.com/o/r/commit/abc", "url": "https://api.github.com/repos/o/r/commits/abc"}, "abc"),
+            (normalize_pull, {"number": 7, "head": {"sha": "h"}, "base": {"sha": "b"}, "html_url": "https://github.com/o/r/pull/7", "url": "https://api.github.com/repos/o/r/pulls/7"}, 7),
+            (normalize_release, {"tag_name": "v1", "html_url": "https://github.com/o/r/releases/tag/v1", "url": "https://api.github.com/repos/o/r/releases/1"}, "v1"),
+            (normalize_tag, {"name": "v1", "commit": {"sha": "abc"}, "url": "https://api.github.com/repos/o/r/git/refs/tags/v1"}, "v1"),
+            (normalize_actions_run, {"name": "CI", "status": "completed", "html_url": "https://github.com/o/r/actions/runs/1", "url": "https://api.github.com/repos/o/r/actions/runs/1"}, "CI"),
+        ]
+        for fn, payload, expected in cases:
+            with self.subTest(fn=fn.__name__):
+                value = fn(payload)
+                self.assertTrue(value["api_url"].startswith("https://api.github.com/"))
+                self.assertTrue(value.get("html_url") is None or value["html_url"].startswith("https://github.com/"))
+                self.assertIn(expected, value.values())
 
     def test_fetch_token_is_scoped_to_https_github_api(self):
         class Response:

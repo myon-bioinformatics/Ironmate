@@ -1,11 +1,13 @@
 import contextlib
-import hashlib
 import importlib.util
 import io
 import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
+
+from provenance import git_blob_sha
 
 from security_nvd import load_cpe_manifest, load_path, parse_nvd_jsonl, security_metadata
 
@@ -17,10 +19,6 @@ VENDOR = Path(__file__).resolve().parents[1] / "vendor" / "nvd_nist_known_vulns.
 UPSTREAM_SAMPLE_COMMIT = "986e17192442b84adfae8e434ab4bf32bf2347af"
 UPSTREAM_SAMPLE_BLOB = "eb859fde7af74b59944c0aa8ee5797ca1f943a3b"
 
-
-def git_blob_sha(path):
-    data = path.read_bytes()
-    return hashlib.sha1(b"blob " + str(len(data)).encode("ascii") + b"\0" + data).hexdigest()
 
 
 def cve(cve_id, cpe=CPE, description=None):
@@ -105,7 +103,6 @@ class SecurityNvdTest(unittest.TestCase):
             cfg=Path(d)/"c.ini"
             cfg.write_text("[cpeName]\na="+CPE+"\n",encoding="utf-8")
             output=io.StringIO()
-            from unittest import mock
             with mock.patch.object(producer,"fetch_cves",return_value=[record]), contextlib.redirect_stdout(output):
                 self.assertEqual(producer.main(["--silent","--config",str(cfg)]),0)
         rows=parse_nvd_jsonl(output.getvalue())

@@ -34,6 +34,8 @@ def _validate_sha(value: str) -> str:
 
 
 def _header_indices(source: str) -> list[int]:
+    if source.startswith("\ufeff"):
+        source = source[1:]
     return [
         index
         for index, line in enumerate(source.splitlines())
@@ -147,8 +149,9 @@ def parse_header(line: str) -> dict[str, Any]:
 
 def find_header(source: str) -> tuple[int, str]:
     """Return (zero-based line index, line) for the unique header near the top."""
-    lines = source.splitlines()
-    indices = _header_indices(source)
+    body = source[1:] if source.startswith("\ufeff") else source
+    lines = body.splitlines()
+    indices = _header_indices(body)
     if len(indices) > 1:
         raise ValueError("expected exactly one Python artifact provenance header")
     if not indices:
@@ -183,7 +186,7 @@ def upsert_header(source: str, *, base_sha: str, updated_at: str) -> str:
     bom = "\ufeff" if source.startswith("\ufeff") else ""
     body = source[1:] if bom else source
     lines = body.splitlines(keepends=True)
-    indices = _header_indices(source)
+    indices = _header_indices(body)
     if len(indices) > 1:
         raise ValueError("expected at most one Python artifact provenance header")
     if indices:

@@ -28,6 +28,13 @@ single file is copied without its repository.
   source blob SHA, and vendored-file SHA-256 in a provenance JSON file).
 - `updated_at` records the source artifact refresh time and must include a timezone. Downstream copying preserves it; downstream vendor-sync time belongs in richer provenance evidence when needed.
 - Files without a literal `__all__` are not forced into this contract.
+- `__all__` is the public API source of truth for this artifact contract. Public top-level
+  functions/classes must be listed there; exported names must exist in the artifact.
+- Internal helpers use a leading underscore (for example `_parse_source`) and are not
+  exported through `__all__`.
+- Validation is intentionally static and simple. One literal top-level `__all__` declaration
+  is required; top-level `+=` / method mutation is rejected. Arbitrary runtime mutation inside
+  nested control flow is outside this contract and is not dynamically evaluated.
 - Repository-level SHA, CI, release, size, and branch information remain in repository
   metadata and must not be duplicated into this header.
 

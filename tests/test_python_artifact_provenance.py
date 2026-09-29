@@ -85,8 +85,8 @@ def test_validate_source_header_rejects_public_function_missing_from_all():
 
 def test_upsert_rejects_exported_name_without_implementation():
     text = (
-        "__all__ = [\\"a\\", \\"missing\\"]\\n"
-        "def a(): pass\\n"
+        '__all__ = ["a", "missing"]\n'
+        "def a(): pass\n"
     )
     with pytest.raises(ValueError, match="not implemented"):
         upsert_header(text, base_sha=SHA, updated_at=WHEN)
@@ -94,9 +94,9 @@ def test_upsert_rejects_exported_name_without_implementation():
 
 def test_upsert_rejects_private_helper_in_all():
     text = (
-        "__all__ = [\\"a\\", \\"_helper\\"]\\n"
-        "def a(): pass\\n"
-        "def _helper(): pass\\n"
+        '__all__ = ["a", "_helper"]\n'
+        "def a(): pass\n"
+        "def _helper(): pass\n"
     )
     with pytest.raises(ValueError, match="must not be exported"):
         upsert_header(text, base_sha=SHA, updated_at=WHEN)

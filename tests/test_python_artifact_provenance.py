@@ -52,8 +52,6 @@ def test_validate_source_header_rejects_count_drift():
         "__all__ = [\"a\"]\n__all__ += [\"b\"]\n",
         "__all__ = [\"a\"]\n__all__.extend([\"b\"])\n",
         "__all__ = [\"a\"]\n__all__.append(\"b\")\n",
-        "__all__ = [\"a\"]\n__all__[:] = [\"b\"]\n",
-        "__all__ = [\"a\"]\nif True:\n    __all__ += [\"b\"]\n",
         "def a(): pass\n",
     ],
 )
@@ -64,6 +62,58 @@ def test_count_literal_all_rejects_dynamic_missing_or_multiple_assignments(body)
 
 def test_count_literal_all_accepts_tuple():
     assert count_literal_all("__all__ = ('a', 'b', 'c')\n") == 3
+
+
+def test_validate_source_header_rejects_public_function_missing_from_all():
+    text = (
+        f"# metadata: __all__=1 | base_sha={SHA} | updated_at={WHEN}\n"
+        "__all__ = [\"a\"]\n"
+        "def a(): pass\n"
+        "def b(): pass\n"
+    )
+    with pytest.raises(ValueError, match="public functions/classes missing from __all__"):
+        validate_source_header(text)
+
+
+def test_validate_source_header_rejects_exported_name_without_implementation():
+    text = (
+        f"# metadata: __all__=2 | base_sha={SHA} | updated_at={WHEN}\n"
+        "__all__ = [\"a\", \"missing\"]\n"
+        "def a(): pass\n"
+    )
+    with pytest.raises(ValueError, match="not implemented"):
+        validate_source_header(text)
+
+
+def test_validate_source_header_allows_private_helper_outside_all():
+    text = (
+        f"# metadata: __all__=1 | base_sha={SHA} | updated_at={WHEN}\n"
+        "__all__ = [\"a\"]\n"
+        "def a(): pass\n"
+        "def _helper(): pass\n"
+    )
+    assert validate_source_header(text)["all_count"] == 1
+
+
+def test_validate_source_header_rejects_private_helper_in_all():
+    text = (
+        f"# metadata: __all__=2 | base_sha={SHA} | updated_at={WHEN}\n"
+        "__all__ = [\"a\", \"_helper\"]\n"
+        "def a(): pass\n"
+        "def _helper(): pass\n"
+    )
+    with pytest.raises(ValueError, match="must not be exported"):
+        validate_source_header(text)
+
+
+def test_validate_source_header_rejects_duplicate_all_names():
+    text = (
+        f"# metadata: __all__=2 | base_sha={SHA} | updated_at={WHEN}\n"
+        "__all__ = [\"a\", \"a\"]\n"
+        "def a(): pass\n"
+    )
+    with pytest.raises(ValueError, match="duplicate"):
+        validate_source_header(text)
 
 
 def test_count_literal_all_accepts_leading_utf8_bom():

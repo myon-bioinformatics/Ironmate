@@ -52,6 +52,8 @@ def test_validate_source_header_rejects_count_drift():
         "__all__ = [\"a\"]\n__all__ += [\"b\"]\n",
         "__all__ = [\"a\"]\n__all__.extend([\"b\"])\n",
         "__all__ = [\"a\"]\n__all__.append(\"b\")\n",
+        "__all__ = [\"a\"]\n__all__[:] = [\"b\"]\n",
+        "__all__ = [\"a\"]\nif True:\n    __all__ += [\"b\"]\n",
         "def a(): pass\n",
     ],
 )
@@ -62,6 +64,17 @@ def test_count_literal_all_rejects_dynamic_missing_or_multiple_assignments(body)
 
 def test_count_literal_all_accepts_tuple():
     assert count_literal_all("__all__ = ('a', 'b', 'c')\n") == 3
+
+
+def test_count_literal_all_accepts_leading_utf8_bom():
+    assert count_literal_all("\ufeff__all__ = [\"a\", \"b\"]\n") == 2
+
+
+def test_upsert_preserves_leading_utf8_bom():
+    original = "\ufeff__all__ = [\"x\"]\n"
+    updated = upsert_header(original, base_sha=SHA, updated_at=WHEN)
+    assert updated.startswith("\ufeff# metadata: __all__=1")
+    assert validate_source_header(updated)["all_count"] == 1
 
 
 @pytest.mark.parametrize(

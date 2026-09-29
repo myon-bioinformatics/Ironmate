@@ -41,30 +41,70 @@ def _header_indices(source: str) -> list[int]:
     ]
 
 
+def _parse_source(source: str) -> ast.Module:
+    """Parse source text, accepting a single leading UTF-8 BOM."""
+    if source.startswith("\ufeff"):
+        source = source[1:]
+    return ast.parse(source)
+
+
+def _is_all_name(node: ast.AST) -> bool:
+    return isinstance(node, ast.Name) and node.id == "__all__"
+
+
+def _targets_all(node: ast.AST) -> bool:
+    """Return whether an assignment target mutates __all__ directly or by subscript."""
+    if _is_all_name(node):
+        return True
+    if isinstance(node, ast.Subscript):
+        return _is_all_name(node.value)
+    if isinstance(node, (ast.Tuple, ast.List)):
+        return any(_targets_all(item) for item in node.elts)
+    return False
+
+
+def _reject_noncanonical_all_mutations(tree: ast.Module) -> None:
+    """Reject __all__ mutations outside the one canonical top-level assignment."""
+    canonical_assignments: set[int] = set()
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and any(_is_all_name(target) for target in node.targets):
+            canonical_assignments.add(id(node))
+        elif isinstance(node, ast.AnnAssign) and _is_all_name(node.target):
+            canonical_assignments.add(id(node))
+
+    for node in ast.walk(tree):
+        if id(node) in canonical_assignments:
+            continue
+        if isinstance(node, ast.Assign) and any(_targets_all(target) for target in node.targets):
+            raise ValueError("__all__ must not be reassigned or mutated outside its canonical assignment")
+        if isinstance(node, ast.AnnAssign) and _targets_all(node.target):
+            raise ValueError("__all__ must not be reassigned or mutated outside its canonical assignment")
+        if isinstance(node, ast.AugAssign) and _targets_all(node.target):
+            raise ValueError("__all__ must not use augmented assignment")
+        if isinstance(node, ast.NamedExpr) and _targets_all(node.target):
+            raise ValueError("__all__ must not use assignment expressions")
+        if isinstance(node, ast.Call):
+            func = node.func
+            if (
+                isinstance(func, ast.Attribute)
+                and _is_all_name(func.value)
+            ):
+                raise ValueError("__all__ must not be mutated by method calls")
+
+
 def count_literal_all(source: str) -> int:
     """Return the number of names in one literal top-level __all__ assignment."""
-    tree = ast.parse(source)
+    tree = _parse_source(source)
+    _reject_noncanonical_all_mutations(tree)
     values: list[Any] = []
     for node in tree.body:
         value_node = None
         if isinstance(node, ast.Assign):
-            if any(isinstance(target, ast.Name) and target.id == "__all__" for target in node.targets):
+            if any(_is_all_name(target) for target in node.targets):
                 value_node = node.value
         elif isinstance(node, ast.AnnAssign):
-            if isinstance(node.target, ast.Name) and node.target.id == "__all__":
+            if _is_all_name(node.target):
                 value_node = node.value
-        elif isinstance(node, ast.AugAssign):
-            if isinstance(node.target, ast.Name) and node.target.id == "__all__":
-                raise ValueError("__all__ must not use augmented assignment")
-        elif isinstance(node, ast.Expr):
-            call = node.value
-            if (
-                isinstance(call, ast.Call)
-                and isinstance(call.func, ast.Attribute)
-                and isinstance(call.func.value, ast.Name)
-                and call.func.value.id == "__all__"
-            ):
-                raise ValueError("__all__ must not be mutated by method calls")
         if value_node is not None:
             try:
                 values.append(ast.literal_eval(value_node))
@@ -140,7 +180,9 @@ def upsert_header(source: str, *, base_sha: str, updated_at: str) -> str:
         base_sha=base_sha,
         updated_at=updated_at,
     )
-    lines = source.splitlines(keepends=True)
+    bom = "\ufeff" if source.startswith("\ufeff") else ""
+    body = source[1:] if bom else source
+    lines = body.splitlines(keepends=True)
     indices = _header_indices(source)
     if len(indices) > 1:
         raise ValueError("expected at most one Python artifact provenance header")
@@ -153,7 +195,7 @@ def upsert_header(source: str, *, base_sha: str, updated_at: str) -> str:
         raw = lines[index]
         ending = "\r\n" if raw.endswith("\r\n") else "\n" if raw.endswith("\n") else ""
         lines[index] = header + ending
-        return "".join(lines)
+        return bom + "".join(lines)
 
     insert_at = 0
     seen: set[str] = set()
@@ -174,4 +216,4 @@ def upsert_header(source: str, *, base_sha: str, updated_at: str) -> str:
 
     ending = "\r\n" if lines and lines[0].endswith("\r\n") else "\n"
     lines.insert(insert_at, header + ending)
-    return "".join(lines)
+    return bom + "".join(lines)

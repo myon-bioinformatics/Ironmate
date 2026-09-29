@@ -209,7 +209,8 @@ def test_duplicate_headers_are_rejected():
     duplicate = (
         f"# metadata: __all__=1 | base_sha={SHA} | updated_at={WHEN}\n"
         f"# metadata: __all__=1 | base_sha={SHA} | updated_at={WHEN}\n"
-        "__all__ = [\"x\"]\n"
+        "__all__ = [\"exported_function\"]\n"
+        "def exported_function(): pass\n"
     )
     with pytest.raises(ValueError, match="exactly one"):
         find_header(duplicate)
@@ -221,7 +222,8 @@ def test_header_outside_scan_window_is_rejected_on_upsert():
     original = (
         "".join(f"# line {i}\n" for i in range(8))
         + f"# metadata: __all__=1 | base_sha={SHA} | updated_at={WHEN}\n"
-        + "__all__ = [\"x\"]\n"
+        + "__all__ = [\"exported_function\"]\n"
+        + "def exported_function(): pass\n"
     )
     with pytest.raises(ValueError, match="within the first 8 lines"):
         upsert_header(original, base_sha=SHA, updated_at=WHEN)

@@ -341,6 +341,25 @@ print(result["fetch"]["status"])
 
 Normal CI remains fixture/offline-driven; this live form is for manual/browser validation. A token is optional rate-limit headroom, not a requirement for public resources.
 
+
+## Python artifact provenance contract
+
+`python_artifact_provenance.py` is a stdlib-only static contract for standalone or vendored
+single-file Python artifacts. It is intentionally separate from repository metadata JSON/JSONL.
+
+The canonical `__all__` declaration must be one literal top-level list or tuple of strings.
+Top-level functions, classes, and assigned constants count as artifact implementations.
+Imported names and names defined only inside control-flow blocks such as `if` or `try` do
+not count as implementations for this static check, so re-exporting them is rejected.
+Public top-level functions/classes must be exported, while underscore-prefixed helpers must
+remain internal.
+
+Dynamic or nested mutation is outside the contract. In particular, slice assignment such as
+`__all__[:] = [...]` and mutations hidden inside control flow are not interpreted as a
+canonical declaration. Top-level `+=`, `.extend(...)`, and `.append(...)` are rejected
+rather than guessed.
+
+
 ## Cross-repository anti-patterns
 
 Ironmate also keeps a discovery index for recurring CI/design failures across

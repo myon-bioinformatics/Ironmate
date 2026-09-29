@@ -115,11 +115,13 @@ def test_upsert_preserves_valid_pep263_coding_position(original, coding_index):
     assert validate_source_header(updated)["all_count"] == 1
 
 
-def test_upsert_uses_pep263_coding_pattern_not_decoding_comment():
-    original = "# decoding: utf-8\n__all__ = [\"x\"]\n"
+def test_upsert_accepts_pep263_decoding_spelling():
+    original = "# decoding: latin-1\n__all__ = [\"x\"]\n"
     updated = upsert_header(original, base_sha=SHA, updated_at=WHEN)
-    assert updated.splitlines()[0].startswith("# metadata: __all__=1")
-    assert updated.splitlines()[1] == "# decoding: utf-8"
+    lines = updated.splitlines()
+    assert lines[0] == "# decoding: latin-1"
+    assert lines[1].startswith("# metadata: __all__=1")
+    assert validate_source_header(updated)["all_count"] == 1
 
 
 def test_duplicate_headers_are_rejected():

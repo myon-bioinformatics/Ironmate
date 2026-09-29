@@ -8,13 +8,13 @@ from typing import Any
 
 HEADER_PREFIX = "# metadata:"
 _HEADER_RE = re.compile(
-    r"^# metadata: __all__=(?P<count>[0-9]+) \\| "
-    r"base_sha=(?P<sha>(?:[0-9a-f]{40}|[0-9a-f]{64})) \\| "
-    r"updated_at=(?P<updated_at>\\S+)$"
+    r"^# metadata: __all__=(?P<count>[0-9]+) \| "
+    r"base_sha=(?P<sha>(?:[0-9a-f]{40}|[0-9a-f]{64})) \| "
+    r"updated_at=(?P<updated_at>\S+)$"
 )
 _HEADER_SCAN_LINES = 8
-_CODING_RE = re.compile(r"^[ \\t\\f]*#.*?coding[:=][ \\t]*[-\\w.]+")
-_FILENAME_COMMENT_RE = re.compile(r"#\\s+[^\\r\\n]+\\.py\\s*$")
+_CODING_RE = re.compile(r"^[ \t\f]*#.*?coding[:=][ \t]*[-\w.]+")
+_FILENAME_COMMENT_RE = re.compile(r"#\s+[^\r\n]+\.py\s*$")
 
 
 def _validate_timestamp(value: str) -> str:
@@ -93,7 +93,7 @@ def format_header(*, all_count: int, base_sha: str, updated_at: str) -> str:
 
 def parse_header(line: str) -> dict[str, Any]:
     """Parse and validate one canonical provenance header."""
-    match = _HEADER_RE.fullmatch(line.rstrip("\\r\\n"))
+    match = _HEADER_RE.fullmatch(line.rstrip("\r\n"))
     if match is None:
         raise ValueError("invalid Python artifact provenance header")
     result = {
@@ -151,14 +151,14 @@ def upsert_header(source: str, *, base_sha: str, updated_at: str) -> str:
                 f"existing provenance header must appear within the first {_HEADER_SCAN_LINES} lines"
             )
         raw = lines[index]
-        ending = "\\r\\n" if raw.endswith("\\r\\n") else "\\n" if raw.endswith("\\n") else ""
+        ending = "\r\n" if raw.endswith("\r\n") else "\n" if raw.endswith("\n") else ""
         lines[index] = header + ending
         return "".join(lines)
 
     insert_at = 0
     seen: set[str] = set()
     while insert_at < len(lines):
-        raw = lines[insert_at].rstrip("\\r\\n")
+        raw = lines[insert_at].rstrip("\r\n")
         kind = None
         if insert_at == 0 and raw.startswith("#!"):
             kind = "shebang"
@@ -172,6 +172,6 @@ def upsert_header(source: str, *, base_sha: str, updated_at: str) -> str:
         seen.add(kind)
         insert_at += 1
 
-    ending = "\\r\\n" if lines and lines[0].endswith("\\r\\n") else "\\n"
+    ending = "\r\n" if lines and lines[0].endswith("\r\n") else "\n"
     lines.insert(insert_at, header + ending)
     return "".join(lines)

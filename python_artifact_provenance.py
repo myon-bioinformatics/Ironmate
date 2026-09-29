@@ -54,71 +54,94 @@ def _is_all_name(node: ast.AST) -> bool:
     return isinstance(node, ast.Name) and node.id == "__all__"
 
 
-def _targets_all(node: ast.AST) -> bool:
-    """Return whether an assignment target mutates __all__ directly or by subscript."""
-    if _is_all_name(node):
-        return True
-    if isinstance(node, ast.Subscript):
-        return _is_all_name(node.value)
-    if isinstance(node, (ast.Tuple, ast.List)):
-        return any(_targets_all(item) for item in node.elts)
-    return False
-
-
-def _reject_noncanonical_all_mutations(tree: ast.Module) -> None:
-    """Reject __all__ mutations outside the one canonical top-level assignment."""
-    canonical_assignments: set[int] = set()
-    for node in tree.body:
-        if isinstance(node, ast.Assign) and any(_is_all_name(target) for target in node.targets):
-            canonical_assignments.add(id(node))
-        elif isinstance(node, ast.AnnAssign) and _is_all_name(node.target):
-            canonical_assignments.add(id(node))
-
-    for node in ast.walk(tree):
-        if id(node) in canonical_assignments:
-            continue
-        if isinstance(node, ast.Assign) and any(_targets_all(target) for target in node.targets):
-            raise ValueError("__all__ must not be reassigned or mutated outside its canonical assignment")
-        if isinstance(node, ast.AnnAssign) and _targets_all(node.target):
-            raise ValueError("__all__ must not be reassigned or mutated outside its canonical assignment")
-        if isinstance(node, ast.AugAssign) and _targets_all(node.target):
-            raise ValueError("__all__ must not use augmented assignment")
-        if isinstance(node, ast.NamedExpr) and _targets_all(node.target):
-            raise ValueError("__all__ must not use assignment expressions")
-        if isinstance(node, ast.Call):
-            func = node.func
-            if (
-                isinstance(func, ast.Attribute)
-                and _is_all_name(func.value)
-            ):
-                raise ValueError("__all__ must not be mutated by method calls")
-
-
-def count_literal_all(source: str) -> int:
-    """Return the number of names in one literal top-level __all__ assignment."""
-    tree = _parse_source(source)
-    _reject_noncanonical_all_mutations(tree)
-    values: list[Any] = []
+def _literal_all_names(tree: ast.Module) -> tuple[str, ...]:
+    """Return the one canonical literal top-level __all__ declaration."""
+    values: list[tuple[str, ...]] = []
     for node in tree.body:
         value_node = None
         if isinstance(node, ast.Assign):
             if any(_is_all_name(target) for target in node.targets):
                 value_node = node.value
-        elif isinstance(node, ast.AnnAssign):
-            if _is_all_name(node.target):
-                value_node = node.value
+        elif isinstance(node, ast.AnnAssign) and _is_all_name(node.target):
+            value_node = node.value
+        elif isinstance(node, ast.AugAssign) and _is_all_name(node.target):
+            raise ValueError("__all__ must use one literal top-level assignment")
+        elif isinstance(node, ast.Expr):
+            call = node.value
+            if (
+                isinstance(call, ast.Call)
+                and isinstance(call.func, ast.Attribute)
+                and _is_all_name(call.func.value)
+            ):
+                raise ValueError("__all__ must use one literal top-level assignment")
+
         if value_node is not None:
             try:
-                values.append(ast.literal_eval(value_node))
+                value = ast.literal_eval(value_node)
             except (ValueError, TypeError) as exc:
                 raise ValueError("__all__ must be a literal list or tuple of strings") from exc
+            if not isinstance(value, (list, tuple)) or not all(isinstance(item, str) for item in value):
+                raise ValueError("__all__ must be a literal list or tuple of strings")
+            values.append(tuple(value))
 
     if len(values) != 1:
         raise ValueError("expected exactly one top-level literal __all__ assignment")
-    value = values[0]
-    if not isinstance(value, (list, tuple)) or not all(isinstance(item, str) for item in value):
-        raise ValueError("__all__ must be a literal list or tuple of strings")
-    return len(value)
+
+    names = values[0]
+    if len(names) != len(set(names)):
+        raise ValueError("__all__ must not contain duplicate names")
+    return names
+
+
+def _defined_top_level_names(tree: ast.Module) -> set[str]:
+    """Return names implemented directly by the artifact, excluding imports."""
+    names: set[str] = set()
+    for node in tree.body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            names.add(node.name)
+        elif isinstance(node, ast.Assign):
+            for target in node.targets:
+                if isinstance(target, ast.Name) and target.id != "__all__":
+                    names.add(target.id)
+        elif isinstance(node, ast.AnnAssign):
+            if isinstance(node.target, ast.Name) and node.target.id != "__all__":
+                names.add(node.target.id)
+    return names
+
+
+def _validate_public_api(tree: ast.Module, exported: tuple[str, ...]) -> None:
+    """Keep __all__ aligned with public implementation names.
+
+    Underscored helpers are internal and intentionally excluded. Imported names are not
+    treated as artifact implementation. Runtime/dynamic mutation below nested control flow
+    is outside this static contract.
+    """
+    exported_set = set(exported)
+    defined = _defined_top_level_names(tree)
+
+    missing = sorted(name for name in exported if name not in defined)
+    if missing:
+        raise ValueError(f"__all__ contains names not implemented by the artifact: {missing}")
+
+    public_defs = {
+        node.name
+        for node in tree.body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+        and not node.name.startswith("_")
+    }
+    unexported = sorted(public_defs - exported_set)
+    if unexported:
+        raise ValueError(f"public functions/classes missing from __all__: {unexported}")
+
+    private_exports = sorted(name for name in exported if name.startswith("_"))
+    if private_exports:
+        raise ValueError(f"internal underscored names must not be exported: {private_exports}")
+
+
+def count_literal_all(source: str) -> int:
+    """Return the number of names in the canonical public __all__ declaration."""
+    tree = _parse_source(source)
+    return len(_literal_all_names(tree))
 
 
 def format_header(*, all_count: int, base_sha: str, updated_at: str) -> str:
@@ -165,10 +188,13 @@ def find_header(source: str) -> tuple[int, str]:
 
 
 def validate_source_header(source: str) -> dict[str, Any]:
-    """Validate the top header and ensure its __all__ count matches the source."""
+    """Validate provenance plus the artifact's static public API contract."""
     _, line = find_header(source)
     metadata = parse_header(line)
-    actual = count_literal_all(source)
+    tree = _parse_source(source)
+    exported = _literal_all_names(tree)
+    _validate_public_api(tree, exported)
+    actual = len(exported)
     if metadata["all_count"] != actual:
         raise ValueError(
             f"provenance __all__ count mismatch: header={metadata['all_count']} actual={actual}"

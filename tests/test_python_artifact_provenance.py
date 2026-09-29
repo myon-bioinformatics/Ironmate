@@ -83,6 +83,16 @@ def test_validate_source_header_rejects_public_function_missing_from_all():
         validate_source_header(text)
 
 
+def test_upsert_rejects_public_function_missing_from_all():
+    text = (
+        "__all__ = [\"a\"]\n"
+        "def a(): pass\n"
+        "def b(): pass\n"
+    )
+    with pytest.raises(ValueError, match="public functions/classes missing from __all__"):
+        upsert_header(text, base_sha=SHA, updated_at=WHEN)
+
+
 def test_validate_source_header_rejects_exported_name_without_implementation():
     text = (
         f"# metadata: __all__=2 | base_sha={SHA} | updated_at={WHEN}\n"

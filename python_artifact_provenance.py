@@ -204,8 +204,11 @@ def validate_source_header(source: str) -> dict[str, Any]:
 
 def upsert_header(source: str, *, base_sha: str, updated_at: str) -> str:
     """Insert or replace the canonical header while preserving the rest of the source."""
+    tree = _parse_source(source)
+    exported = _literal_all_names(tree)
+    _validate_public_api(tree, exported)
     header = format_header(
-        all_count=count_literal_all(source),
+        all_count=len(exported),
         base_sha=base_sha,
         updated_at=updated_at,
     )

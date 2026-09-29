@@ -4,6 +4,7 @@ import pytest
 
 from python_artifact_provenance import (
     count_literal_all,
+    find_header,
     format_header,
     parse_header,
     upsert_header,
@@ -48,6 +49,9 @@ def test_validate_source_header_rejects_count_drift():
     [
         "__all__ = make_exports()\n",
         "__all__ = [\"a\"]\n__all__ = [\"b\"]\n",
+        "__all__ = [\"a\"]\n__all__ += [\"b\"]\n",
+        "__all__ = [\"a\"]\n__all__.extend([\"b\"])\n",
+        "__all__ = [\"a\"]\n__all__.append(\"b\")\n",
         "def a(): pass\n",
     ],
 )
@@ -84,6 +88,60 @@ def test_upsert_inserts_after_shebang():
     original = "#!/usr/bin/env python3\n__all__ = [\"x\"]\n"
     updated = upsert_header(original, base_sha=SHA, updated_at=WHEN)
     assert updated.splitlines()[1].startswith("# metadata: __all__=1")
+
+
+@pytest.mark.parametrize(
+    ("original", "coding_index"),
+    [
+        (
+            "# demo.py\n# -*- coding: utf-8 -*-\n__all__ = [\"x\"]\n",
+            1,
+        ),
+        (
+            "# -*- coding: utf-8 -*-\n# demo.py\n__all__ = [\"x\"]\n",
+            0,
+        ),
+        (
+            "#!/usr/bin/env python3\n# -*- coding: utf-8 -*-\n# demo.py\n__all__ = [\"x\"]\n",
+            1,
+        ),
+    ],
+)
+def test_upsert_preserves_valid_pep263_coding_position(original, coding_index):
+    updated = upsert_header(original, base_sha=SHA, updated_at=WHEN)
+    lines = updated.splitlines()
+    assert "coding:" in lines[coding_index]
+    assert coding_index <= 1
+    assert validate_source_header(updated)["all_count"] == 1
+
+
+def test_upsert_uses_pep263_coding_pattern_not_decoding_comment():
+    original = "# decoding: utf-8\n__all__ = [\"x\"]\n"
+    updated = upsert_header(original, base_sha=SHA, updated_at=WHEN)
+    assert updated.splitlines()[0].startswith("# metadata: __all__=1")
+    assert updated.splitlines()[1] == "# decoding: utf-8"
+
+
+def test_duplicate_headers_are_rejected():
+    duplicate = (
+        f"# metadata: __all__=1 | base_sha={SHA} | updated_at={WHEN}\n"
+        f"# metadata: __all__=1 | base_sha={SHA} | updated_at={WHEN}\n"
+        "__all__ = [\"x\"]\n"
+    )
+    with pytest.raises(ValueError, match="exactly one"):
+        find_header(duplicate)
+    with pytest.raises(ValueError, match="at most one"):
+        upsert_header(duplicate, base_sha=SHA, updated_at=WHEN)
+
+
+def test_header_outside_scan_window_is_rejected_on_upsert():
+    original = (
+        "".join(f"# line {i}\n" for i in range(8))
+        + f"# metadata: __all__=1 | base_sha={SHA} | updated_at={WHEN}\n"
+        + "__all__ = [\"x\"]\n"
+    )
+    with pytest.raises(ValueError, match="within the first 8 lines"):
+        upsert_header(original, base_sha=SHA, updated_at=WHEN)
 
 
 def test_real_vendored_markdown_preserves_valid_embedded_header():

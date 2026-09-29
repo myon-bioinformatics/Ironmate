@@ -121,7 +121,7 @@ def test_count_literal_all_accepts_leading_utf8_bom():
 
 
 def test_upsert_preserves_leading_utf8_bom():
-    original = "\ufeff__all__ = [\"x\"]\n"
+    original = "\ufeff__all__ = [\"x\"]\ndef x(): pass\n"
     updated = upsert_header(original, base_sha=SHA, updated_at=WHEN)
     assert updated.startswith("\ufeff# metadata: __all__=1")
     assert validate_source_header(updated)["all_count"] == 1
@@ -157,15 +157,15 @@ def test_upsert_inserts_after_shebang():
     ("original", "coding_index"),
     [
         (
-            "# demo.py\n# -*- coding: utf-8 -*-\n__all__ = [\"x\"]\n",
+            "# demo.py\n# -*- coding: utf-8 -*-\n__all__ = [\"x\"]\ndef x(): pass\n",
             1,
         ),
         (
-            "# -*- coding: utf-8 -*-\n# demo.py\n__all__ = [\"x\"]\n",
+            "# -*- coding: utf-8 -*-\n# demo.py\n__all__ = [\"x\"]\ndef x(): pass\n",
             0,
         ),
         (
-            "#!/usr/bin/env python3\n# -*- coding: utf-8 -*-\n# demo.py\n__all__ = [\"x\"]\n",
+            "#!/usr/bin/env python3\n# -*- coding: utf-8 -*-\n# demo.py\n__all__ = [\"x\"]\ndef x(): pass\n",
             1,
         ),
     ],
@@ -179,7 +179,7 @@ def test_upsert_preserves_valid_pep263_coding_position(original, coding_index):
 
 
 def test_upsert_accepts_pep263_decoding_spelling():
-    original = "# decoding: latin-1\n__all__ = [\"x\"]\n"
+    original = "# decoding: latin-1\n__all__ = [\"x\"]\ndef x(): pass\n"
     updated = upsert_header(original, base_sha=SHA, updated_at=WHEN)
     lines = updated.splitlines()
     assert lines[0] == "# decoding: latin-1"

@@ -1,3 +1,4 @@
+import hashlib
 import json
 from pathlib import Path
 from urllib.error import HTTPError, URLError
@@ -98,3 +99,41 @@ def test_page_uses_pinned_repository_diagnostics_renderer():
     assert "/js/repository-diagnostics.js" in html
     assert "Unverified is not inaccessible." in html
     assert 'textContent = item.url' in html
+
+
+def test_git_inspector_provenance_matches_vendored_bytes():
+    root = Path(__file__).resolve().parents[1]
+    path = root / "vendor" / "git_inspector.py"
+    provenance = json.loads(
+        (root / "vendor" / "git_inspector.provenance.json").read_text(encoding="utf-8")
+    )
+    data = path.read_bytes()
+    blob = hashlib.sha1(
+        b"blob " + str(len(data)).encode("ascii") + bytes([0]) + data
+    ).hexdigest()
+    assert provenance["source_commit"] == "cffa7017c95634bfb6ed6b269d255d56680a894c"
+    assert blob == provenance["blob_sha"]
+    assert hashlib.sha256(data).hexdigest() == provenance["sha256"]
+
+
+def test_tracked_bytes_uses_shared_inventory(tmp_path, monkeypatch):
+    (tmp_path / "space 日本語.txt").write_bytes(b"abc")
+
+    class Inspector:
+        @staticmethod
+        def ls_files(root):
+            return {"paths": ["space 日本語.txt", "missing.txt"], "truncated": False}
+
+    monkeypatch.setattr(diagnostics, "_load_git_inspector", lambda: Inspector)
+    assert diagnostics._tracked_bytes(tmp_path) == 3
+
+
+def test_tracked_bytes_rejects_truncated_inventory(tmp_path, monkeypatch):
+    class Inspector:
+        @staticmethod
+        def ls_files(root):
+            return {"paths": ["partial"], "truncated": True}
+
+    monkeypatch.setattr(diagnostics, "_load_git_inspector", lambda: Inspector)
+    with pytest.raises(RuntimeError, match="truncated"):
+        diagnostics._tracked_bytes(tmp_path)

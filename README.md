@@ -219,11 +219,22 @@ This avoids repeated model loading and is more reliable than routing every reque
 
 Ironmate keeps pinned source snapshots under `vendor/` instead of treating these helpers as runtime package dependencies.
 
-- `vendor/markdown.py` is sourced from [`myon-bioinformatics/markdown`](https://github.com/myon-bioinformatics/markdown), currently pinned to `fa518381`.
+- `vendor/markdown.py` is sourced from [`myon-bioinformatics/markdown`](https://github.com/myon-bioinformatics/markdown), currently pinned to `c3063e08`.
 - `vendor/ascii_artist.py` is sourced from [`myon-bioinformatics/ascii_artist`](https://github.com/myon-bioinformatics/ascii_artist), currently pinned to `7c21bacf`.
 - `vendor/nvd_nist_known_vulns.py` is an exact source snapshot from `myon-bioinformatics/nvd_nist_known_vulns` merge `986e17192442b84adfae8e434ab4bf32bf2347af` (Git blob `16028101be84f6c1b9dd05afb8199280e721f069`). Tests verify the blob identity before exercising the producer-to-consumer contract.
 
 The sibling repositories are the upstream sources; changes should be developed there first and then intentionally refreshed in Ironmate.
+
+For a Markdown refresh, copy `markdown.py` from an explicit upstream commit and update
+`vendor/markdown.provenance.json`, the literals in `tests/test_vendor_markdown_provenance.py`,
+`MARKDOWN_SHA` in the consumer builder, and the README pin together. Verify the upstream
+commit/blob mapping during refresh; offline tests verify the recorded pins and local
+file hashes, not the remote commit history. The source file's embedded `base_sha` is
+upstream artifact-header metadata, distinct from the vendoring commit; preserve it
+so the snapshot stays byte-identical.
+
+The current snapshot includes markdown#78: input NUL is replaced with U+FFFD before
+all Markdown-to-HTML parsing paths. `html.escape` alone does not sanitize NUL.
 
 
 ---

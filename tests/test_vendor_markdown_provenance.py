@@ -5,16 +5,17 @@ import json
 from pathlib import Path
 
 from provenance import git_blob_sha
+from scripts.build_web_ui_consumer_examples import MARKDOWN_SHA
 
 
 ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_PROVENANCE = {
     "repository": "https://github.com/myon-bioinformatics/markdown",
     "path": "markdown.py",
-    "commit": "fa5183818cdec658d223a2dd3d127eccb76e04ba",
-    "blob_sha": "5b428826e03780036bac3a0439b62b2ad8a8403b",
-    "sha256": "14326092ea5d4dc03142e5254394c59723ce46b07112352d4d1f9f650dfc04e5",
-    "date": "2026-09-27",
+    "commit": "c3063e0887c6eb6a531ee774793682ceff8a164d",
+    "blob_sha": "a20c59e7e28d811e48152b7359275cb0888c304d",
+    "sha256": "a07648ec6ec6db6b431404e0735cc0b4947c62bc824f9adffbb0bf6c2b92040b",
+    "date": "2026-09-30",
 }
 
 
@@ -23,6 +24,7 @@ def test_vendor_markdown_matches_literal_provenance_pin():
         (ROOT / "vendor" / "markdown.provenance.json").read_text(encoding="utf-8")
     )
     assert manifest == EXPECTED_PROVENANCE
+    assert manifest["commit"] == MARKDOWN_SHA
 
     source = ROOT / "vendor" / "markdown.py"
     source_bytes = source.read_bytes()

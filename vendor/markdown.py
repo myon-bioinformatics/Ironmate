@@ -4581,6 +4581,9 @@ def markdown_to_html(content: str) -> str:
     unknown Obsidian types still parse as Obsidian callouts (matching
     Obsidian's custom-type support).
     """
+    # Sanitize before all parsing paths, including fenced code: html.escape
+    # leaves NUL intact, and input must not forge internal NUL placeholders.
+    content = content.replace("\x00", "\ufffd")
     source_lines = content.splitlines()
     lines, footnote_defs = _collect_footnote_definitions(source_lines)
     footnote_order: list[str] = []

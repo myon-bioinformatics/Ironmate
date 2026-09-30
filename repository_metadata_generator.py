@@ -27,7 +27,7 @@ _TOOL_COMMANDS = {
     "npx": ("--version",),
 }
 _CLI_VERSION = r"[0-9]+(?:\.[0-9]+)+(?:[-+._][0-9A-Za-z][0-9A-Za-z.-]*)?"
-_PACKAGE_VERSION = r"[0-9]+(?:\.[0-9]+)*(?:(?:a|b|rc|dev|post)[0-9]+)?(?:\+[0-9A-Za-z][0-9A-Za-z.-]*)?"
+_PACKAGE_VERSION = r"(?:[0-9]+!)?[0-9]+(?:\.[0-9]+)*(?:(?:a|b|rc)[0-9]+)?(?:\.post[0-9]+)?(?:\.dev[0-9]+)?(?:\+(?:[0-9A-Za-z][0-9A-Za-z.-]*)?)?"
 _TOOL_PATTERNS = {
     "git": re.compile(r"^git version (?P<version>" + _CLI_VERSION + r")(?:\s.*)?$"),
     "gh": re.compile(r"^gh version (?P<version>" + _CLI_VERSION + r")(?:\s.*)?$"),
@@ -52,19 +52,25 @@ def git(*args: str, cwd: Path) -> str:
     return result.stdout.strip()
 
 
-def normalize_version_output(tool: str, text: str) -> str | None:
-    """Return one short public version label, or None for unparseable output."""
+def _normalize_version_label(pattern: re.Pattern[str], text: str) -> str | None:
     if not isinstance(text, str):
         return None
     first = next((line.strip() for line in text.splitlines() if line.strip()), "")
     if not first or any(ord(char) < 32 for char in first):
         return None
-    pattern = _TOOL_PATTERNS.get(tool, _PLAIN_VERSION_RE)
     match = pattern.fullmatch(first)
     if not match:
         return None
     version = match.group("version")
     return version if len(version) <= 32 else None
+
+
+def normalize_version_output(tool: str, text: str) -> str | None:
+    """Return one short public CLI/runtime version label, or None."""
+    return _normalize_version_label(
+        _TOOL_PATTERNS.get(tool, _PLAIN_VERSION_RE),
+        text,
+    )
 
 
 def observe_command_version(command: str, *, timeout: float = _DEFAULT_TOOL_TIMEOUT) -> str | None:
@@ -100,7 +106,7 @@ def observe_package_version(distribution: str) -> str | None:
         value = importlib_metadata.version(distribution)
     except importlib_metadata.PackageNotFoundError:
         return None
-    return normalize_version_output(distribution, value)
+    return _normalize_version_label(_PLAIN_VERSION_RE, value)
 
 
 def _requested_tooling_keys(

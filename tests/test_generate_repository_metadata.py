@@ -225,6 +225,13 @@ def test_git_forces_utf8_log_output_and_decoding(monkeypatch, tmp_path):
         ("pytest", "2.0a1\n", "2.0a1"),
         ("pytest", "2024\n", "2024"),
         ("python", "3.14.0rc1\n", "3.14.0rc1"),
+        ("pytest", "1.0.post1\n", "1.0.post1"),
+        ("pytest", "1.0.dev0\n", "1.0.dev0"),
+        ("pytest", "0.1.dev5+g1a2b\n", "0.1.dev5+g1a2b"),
+        ("pytest", "1!2.0\n", "1!2.0"),
+        ("pytest", "1.0a1.post2\n", "1.0a1.post2"),
+        ("pytest", "1.0rc1.dev3\n", "1.0rc1.dev3"),
+        ("python", "3.13.0+\n", "3.13.0+"),
     ],
 )
 def test_normalize_version_output_is_tool_specific(tool, raw, expected):
@@ -402,3 +409,15 @@ def test_commands_reject_bare_string():
 
     with pytest.raises(TypeError, match="commands must be a sequence"):
         generator.collect_portable_tooling(commands="git")
+
+
+def test_distribution_named_like_cli_uses_package_version_syntax(monkeypatch):
+    import repository_metadata_generator as generator
+
+    monkeypatch.setattr(
+        generator.importlib_metadata,
+        "version",
+        lambda name: "2.51.0",
+    )
+    assert generator.observe_package_version("git") == "2.51.0"
+    assert generator.observe_package_version("node") == "2.51.0"

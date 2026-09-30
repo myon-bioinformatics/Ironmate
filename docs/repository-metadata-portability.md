@@ -33,6 +33,25 @@ matches before generating metadata; changing only a metadata SHA is not permitte
 `GITHUB_HEAD_REF`, then `GITHUB_REF_NAME`, then the checkout's abbreviated Git branch. A workflow that
 checks out an arbitrary ref can therefore have a branch label that is not derivable from the commit itself.
 
+### Portable tooling
+
+Portable tool versions are observed and normalized by the Python producer, not by JS/Dart consumers.
+
+- `python` comes from the Python runtime.
+- `git`, `gh`, `node`, `npm`, and `npx` come from explicitly requested CLI probes.
+- Python distributions are explicitly allowlisted by the caller and use `importlib.metadata`.
+- Each public tooling key has exactly one source. Colliding runtime/CLI/distribution/caller keys are an error.
+- Missing executables/packages, non-zero exits, timeouts, OS errors, empty output, malformed output, and
+  over-length labels are observational failures: the key is omitted from schema v1.
+- A successful command probe requires exit status zero before stdout/stderr is considered. Stdout is
+  preferred; stderr is considered only when stdout is empty.
+- Only normalized short version labels are public. Resolved executable paths, raw stderr, environment
+  dumps, credentials, and URLs are never emitted.
+- Consumers must not synthesize a fallback for an omitted canonical tooling key.
+
+The v1 `tooling` shape remains `{name: string}`; richer failure/status information requires an explicit
+future contract version rather than per-consumer conventions.
+
 Provider/API observations such as latest pull request, release/tag, and CI state should first be
 normalized by the producer. They must not be added ad hoc to the stable v1 public record. Extend the
 versioned contract deliberately when those fields are ready to become public compatibility promises.

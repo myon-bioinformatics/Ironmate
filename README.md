@@ -420,3 +420,11 @@ Missing/invalid PNGs fail the lane. Existing Stub and consumer artifacts, plus
 `ironmate-repository-diagnostics-screenshots`, preserve available captures even
 after failure, with 14-day retention. This lane measures Chromium desktop/mobile
 viewports; it does not yet produce multi-capture receipts or measure Firefox/WebKit.
+
+The screenshot lane now seals a current-run multi-image receipt via pinned
+browser-test-kit, requires all six PNGs and their recorded SHA-256/size, and
+checks the explicit tested head SHA plus run ID/attempt. Output is cleared before
+capture. Failed receipts are preserved but cannot cover required success. CI also
+mutates isolated copies of the real bundle to prove rejection of missing images,
+wrong hashes, stale run IDs and failed receipts. These are integrity/run checks;
+they add no screen-content or pixel-regression assertions.

@@ -75,11 +75,13 @@ jobs:
       PLAYWRIGHT_BROWSER: "chromium"
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - name: Check out pinned browser-test-kit validators
         uses: actions/checkout@v7
         with:
           repository: myon-bioinformatics/browser-test-kit
-          ref: 3a054c777a98300ee272e4458990b849c32a7ef0
+          ref: 6a2e32a4bbe49be5268e6b30040d665a89eecf66
           path: .browser-test-kit
           persist-credentials: false
 
@@ -87,6 +89,8 @@ jobs:
         with:
           node-version: "22"
 
+      - name: Clear prior capture evidence
+        run: rm -rf screenshot-evidence ironmate-mcp-stub-desktop-1440x900.png ironmate-mcp-stub-mobile-390x844.png ironmate-consumer-v1-index-desktop-1440x900.png ironmate-consumer-v1-markdown-mobile-390x844.png ironmate-consumer-v1-ascii-mobile-390x844.png ironmate-repository-diagnostics-desktop-1440x900.png
       - name: Install Chromium
         run: npx --yes "playwright@${PLAYWRIGHT_VERSION}" install --with-deps "${PLAYWRIGHT_BROWSER}"
 
@@ -155,15 +159,36 @@ jobs:
             http://127.0.0.1:8000/docs/repository-diagnostics.html \
             ironmate-repository-diagnostics-desktop-1440x900.png
 
-      - name: Validate every required screenshot with shared PNG checks
+      - name: Seal current-run capture receipt
+        if: always()
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          CAPTURE_STAGE: ${{ job.status == 'success' && 'complete' || 'failed' }}
         run: |
-          python3 -S .browser-test-kit/scripts/check_png.py \
-            ironmate-mcp-stub-desktop-1440x900.png \
-            ironmate-mcp-stub-mobile-390x844.png \
-            ironmate-consumer-v1-index-desktop-1440x900.png \
-            ironmate-consumer-v1-markdown-mobile-390x844.png \
-            ironmate-consumer-v1-ascii-mobile-390x844.png \
-            ironmate-repository-diagnostics-desktop-1440x900.png
+          mkdir -p screenshot-evidence
+          if [ -f ironmate-mcp-stub-desktop-1440x900.png ]; then cp ironmate-mcp-stub-desktop-1440x900.png screenshot-evidence/; fi
+          if [ -f ironmate-mcp-stub-mobile-390x844.png ]; then cp ironmate-mcp-stub-mobile-390x844.png screenshot-evidence/; fi
+          if [ -f ironmate-consumer-v1-index-desktop-1440x900.png ]; then cp ironmate-consumer-v1-index-desktop-1440x900.png screenshot-evidence/; fi
+          if [ -f ironmate-consumer-v1-markdown-mobile-390x844.png ]; then cp ironmate-consumer-v1-markdown-mobile-390x844.png screenshot-evidence/; fi
+          if [ -f ironmate-consumer-v1-ascii-mobile-390x844.png ]; then cp ironmate-consumer-v1-ascii-mobile-390x844.png screenshot-evidence/; fi
+          if [ -f ironmate-repository-diagnostics-desktop-1440x900.png ]; then cp ironmate-repository-diagnostics-desktop-1440x900.png screenshot-evidence/; fi
+          python3 -S .browser-test-kit/scripts/write_capture_evidence.py screenshot-evidence --project chromium --captures ironmate-mcp-stub-desktop-1440x900.png,ironmate-mcp-stub-mobile-390x844.png,ironmate-consumer-v1-index-desktop-1440x900.png,ironmate-consumer-v1-markdown-mobile-390x844.png,ironmate-consumer-v1-ascii-mobile-390x844.png,ironmate-repository-diagnostics-desktop-1440x900.png --sha "$EXPECTED_SHA" --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT" --stage "$CAPTURE_STAGE"
+      - name: Require all captures, hashes and current run identity
+        if: always()
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: python3 -S .browser-test-kit/scripts/check_capture_evidence.py screenshot-evidence --expect chromium --captures ironmate-mcp-stub-desktop-1440x900.png,ironmate-mcp-stub-mobile-390x844.png,ironmate-consumer-v1-index-desktop-1440x900.png,ironmate-consumer-v1-markdown-mobile-390x844.png,ironmate-consumer-v1-ascii-mobile-390x844.png,ironmate-repository-diagnostics-desktop-1440x900.png --sha "$EXPECTED_SHA" --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT"
+      - name: Prove rejection using copies of actual evidence
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: python3 -S .browser-test-kit/scripts/probe_capture_rejections.py screenshot-evidence --expect chromium --captures ironmate-mcp-stub-desktop-1440x900.png,ironmate-mcp-stub-mobile-390x844.png,ironmate-consumer-v1-index-desktop-1440x900.png,ironmate-consumer-v1-markdown-mobile-390x844.png,ironmate-consumer-v1-ascii-mobile-390x844.png,ironmate-repository-diagnostics-desktop-1440x900.png --sha "$EXPECTED_SHA" --run-id "$GITHUB_RUN_ID" --run-attempt "$GITHUB_RUN_ATTEMPT"
+      - name: Preserve complete or failed receipts and images
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: capture-receipts
+          path: screenshot-evidence
+          retention-days: 14
 
       - name: Show HTTP server log on failure
         if: failure()

@@ -35,7 +35,7 @@ markdown = _load_vendor("markdown")
 OUTPUT_DIR = ROOT / "docs" / "consumer-v1"
 
 WEB_UI_SHA = "adb23d7ba6ea94672b76457573f6655a081ee054"
-MARKDOWN_SHA = "fa5183818cdec658d223a2dd3d127eccb76e04ba"
+MARKDOWN_SHA = "c3063e0887c6eb6a531ee774793682ceff8a164d"
 ASCII_ARTIST_SHA = "7c21bacfac7b60327b77f9b31a87869ef7838a7e"
 
 _WEB_UI_BASE = (

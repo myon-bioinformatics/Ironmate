@@ -328,6 +328,38 @@ where the public GitHub fetch path is exercised. After deployment, verify that
 `api/repos/Ironmate.json` is refreshed for the deployed revision.
 
 
+### Live read-only example
+
+Public resources can be inspected without a token when network access is intentionally requested:
+
+```python
+from github_adapter import inspect_public
+
+result = inspect_public("openai/openai-python", fetch=True)
+print(result["fetch"]["status"])
+```
+
+Normal CI remains fixture/offline-driven; this live form is for manual/browser validation. A token is optional rate-limit headroom, not a requirement for public resources.
+
+
+## Python artifact provenance contract
+
+`python_artifact_provenance.py` is a stdlib-only static contract for standalone or vendored
+single-file Python artifacts. It is intentionally separate from repository metadata JSON/JSONL.
+
+The canonical `__all__` declaration must be one literal top-level list or tuple of strings.
+Top-level functions, classes, and assigned constants count as artifact implementations.
+Imported names and names defined only inside control-flow blocks such as `if` or `try` do
+not count as implementations for this static check, so re-exporting them is rejected.
+Public top-level functions/classes must be exported, while underscore-prefixed helpers must
+remain internal.
+
+Dynamic or nested mutation is outside the contract. In particular, slice assignment such as
+`__all__[:] = [...]` and mutations hidden inside control flow are not interpreted as a
+canonical declaration. Top-level `+=`, `.extend(...)`, and `.append(...)` are rejected
+rather than guessed.
+
+
 ## Cross-repository anti-patterns
 
 Ironmate also keeps a discovery index for recurring CI/design failures across
@@ -358,3 +390,12 @@ completion remains `not_measured`, while a completed zero-CVE query is
 `measured` with count zero. Normal tests are offline and pin the vendored Git
 blob, so CI does not call NVD. NVD evidence remains complementary to package-native
 advisory sources such as Dependabot.
+
+### Unreviewed diagnostics
+
+`scripts/unreviewed.py` treats an item as reviewed only when a comment or review body contains a standalone `from: <reviewer>` line. Author identity alone is intentionally insufficient: bot-authored Action/error responses such as `claude[bot]` failures do not count as reviews unless that tag line is present.
+
+
+### Repository metadata portability
+
+Repository metadata uses the stdlib-only Python producer and canonical JSON/JSONL contract documented in [docs/repository-metadata-portability.md](docs/repository-metadata-portability.md). UI/runtime consumers read generated records rather than reimplementing GitHub metadata collection.

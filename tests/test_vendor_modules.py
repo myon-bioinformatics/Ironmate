@@ -1,7 +1,9 @@
 """Integration checks for pinned vendored sibling utilities."""
 
+import shutil
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -32,16 +34,69 @@ class VendorModuleIntegrationTest(unittest.TestCase):
         self.assertIn('class="ui-panel"', html)
 
     def test_builder_direct_execution_resolves_vendor(self):
-        result = subprocess.run(
-            [sys.executable, "scripts/build_web_ui_consumer_examples.py"],
-            cwd=ROOT,
-            capture_output=True,
-            text=True,
-            check=False,
+        repository_output = ROOT / "docs" / "consumer-v1"
+        repository_output.parent.mkdir(parents=True, exist_ok=True)
+        stash = Path(
+            tempfile.mkdtemp(
+                prefix=".consumer-v1-stash-",
+                dir=repository_output.parent,
+            )
         )
-        self.assertEqual(result.returncode, 0, result.stderr)
-        for name in ("index.html", "markdown.html", "ascii.html"):
-            self.assertTrue((ROOT / "docs" / "consumer-v1" / name).exists(), name)
+        stash.rmdir()
+        had_repository_output = repository_output.exists()
+
+        if had_repository_output:
+            repository_output.rename(stash)
+
+        try:
+            with tempfile.TemporaryDirectory() as directory:
+                output_dir = Path(directory)
+                result = subprocess.run(
+                    [
+                        sys.executable,
+                        "scripts/build_web_ui_consumer_examples.py",
+                        "--output-dir",
+                        str(output_dir),
+                    ],
+                    cwd=ROOT,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+                for name in ("index.html", "markdown.html", "ascii.html"):
+                    self.assertTrue((output_dir / name).exists(), name)
+                self.assertFalse(
+                    repository_output.exists(),
+                    "builder wrote outside the requested output directory",
+                )
+        finally:
+            cleanup_error = None
+            try:
+                if repository_output.exists():
+                    shutil.rmtree(repository_output)
+            except OSError as exc:
+                cleanup_error = exc
+
+            if had_repository_output and stash.exists():
+                try:
+                    if repository_output.exists():
+                        raise RuntimeError(
+                            "cannot restore repository output because cleanup failed; "
+                            f"original files remain at {stash}"
+                        ) from cleanup_error
+                    stash.rename(repository_output)
+                except OSError as exc:
+                    raise RuntimeError(
+                        f"could not restore repository output; original files remain at {stash}"
+                    ) from exc
+            elif stash.exists():
+                stash.rmdir()
+
+            if cleanup_error is not None:
+                raise RuntimeError(
+                    "could not remove unexpected repository output after builder test"
+                ) from cleanup_error
 
     def test_generated_consumer_examples_use_v1_contract_and_pins(self):
         documents = build_documents()

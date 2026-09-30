@@ -6,6 +6,7 @@ web-ui assets and the published examples.
 
 from __future__ import annotations
 
+import argparse
 from pathlib import Path
 import sys
 
@@ -139,5 +140,18 @@ def write_documents(output_dir: Path = OUTPUT_DIR) -> None:
         (output_dir / name).write_text(content, encoding="utf-8")
 
 
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=OUTPUT_DIR,
+        help="directory for generated consumer HTML",
+    )
+    args = parser.parse_args(argv)
+    write_documents(args.output_dir)
+    return 0
+
+
 if __name__ == "__main__":
-    write_documents()
+    raise SystemExit(main())

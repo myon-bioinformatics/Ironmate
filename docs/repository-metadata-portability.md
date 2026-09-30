@@ -45,7 +45,7 @@ Portable tool versions are observed and normalized by the Python producer, not b
   over-length labels are observational failures: the key is omitted from schema v1.
 - A successful command probe requires exit status zero before stdout/stderr is considered. Stdout is
   preferred; stderr is considered only when stdout is empty.
-- Only normalized short version labels are public. Resolved executable paths, raw stderr, environment
+- Only normalized short version labels (at most 32 characters) are public. Resolved executable paths, raw stderr, environment
   dumps, credentials, and URLs are never emitted.
 - Consumers must not synthesize a fallback for an omitted canonical tooling key.
 

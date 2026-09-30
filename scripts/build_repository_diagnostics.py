@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 import http.client
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -33,6 +34,17 @@ OUTPUT_HTML = ROOT / "docs" / "repository-diagnostics.html"
 REPOSITORY = "myon-bioinformatics/Ironmate"
 WEB_UI_SHA = "adb23d7ba6ea94672b76457573f6655a081ee054"
 WEB_UI_BASE = f"https://cdn.jsdelivr.net/gh/myon-bioinformatics/web-ui@{WEB_UI_SHA}"
+GIT_INSPECTOR_PATH = ROOT / "vendor" / "git_inspector.py"
+
+
+def _load_git_inspector():
+    spec = importlib.util.spec_from_file_location("ironmate_vendor_git_inspector", GIT_INSPECTOR_PATH)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load Git inspector: {GIT_INSPECTOR_PATH}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
 
 
 def _git(root: Path, *args: str) -> str:
@@ -44,12 +56,12 @@ def _git(root: Path, *args: str) -> str:
 
 
 def _tracked_bytes(root: Path) -> int:
-    raw = subprocess.check_output(["git", "-C", str(root), "ls-files", "-z"])
+    observation = _load_git_inspector().ls_files(root)
+    if observation["truncated"]:
+        raise RuntimeError("tracked-file inventory was truncated")
     total = 0
-    for item in raw.split(b"\0"):
-        if not item:
-            continue
-        path = root / item.decode("utf-8", errors="surrogateescape")
+    for item in observation["paths"]:
+        path = root / item
         if path.is_file():
             total += path.stat().st_size
     return total

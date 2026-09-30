@@ -410,3 +410,13 @@ advisory sources such as Dependabot.
 ### Repository metadata portability
 
 Repository metadata uses the stdlib-only Python producer and canonical JSON/JSONL contract documented in [docs/repository-metadata-portability.md](docs/repository-metadata-portability.md). UI/runtime consumers read generated records rather than reimplementing GitHub metadata collection.
+
+## Shared screenshot checks
+
+The screenshot job checks all six named PNGs with browser-test-kit at
+`3a054c777a98300ee272e4458990b849c32a7ef0`, checked out separately in CI.
+See the [shared screenshot guide](https://github.com/myon-bioinformatics/browser-test-kit/blob/3a054c777a98300ee272e4458990b849c32a7ef0/docs/screenshot-evidence.md).
+Missing/invalid PNGs fail the lane. Existing Stub and consumer artifacts, plus
+`ironmate-repository-diagnostics-screenshots`, preserve available captures even
+after failure, with 14-day retention. This lane measures Chromium desktop/mobile
+viewports; it does not yet produce multi-capture receipts or measure Firefox/WebKit.

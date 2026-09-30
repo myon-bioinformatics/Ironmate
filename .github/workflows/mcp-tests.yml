@@ -75,6 +75,13 @@ jobs:
       PLAYWRIGHT_BROWSER: "chromium"
     steps:
       - uses: actions/checkout@v7
+      - name: Check out pinned browser-test-kit validators
+        uses: actions/checkout@v7
+        with:
+          repository: myon-bioinformatics/browser-test-kit
+          ref: 3a054c777a98300ee272e4458990b849c32a7ef0
+          path: .browser-test-kit
+          persist-credentials: false
 
       - uses: actions/setup-node@v7
         with:
@@ -148,18 +155,38 @@ jobs:
             http://127.0.0.1:8000/docs/repository-diagnostics.html \
             ironmate-repository-diagnostics-desktop-1440x900.png
 
+      - name: Validate every required screenshot with shared PNG checks
+        run: |
+          python3 -S .browser-test-kit/scripts/check_png.py \
+            ironmate-mcp-stub-desktop-1440x900.png \
+            ironmate-mcp-stub-mobile-390x844.png \
+            ironmate-consumer-v1-index-desktop-1440x900.png \
+            ironmate-consumer-v1-markdown-mobile-390x844.png \
+            ironmate-consumer-v1-ascii-mobile-390x844.png \
+            ironmate-repository-diagnostics-desktop-1440x900.png
+
       - name: Show HTTP server log on failure
         if: failure()
         run: tail -n 20 /tmp/ironmate-http.log || true
 
       - uses: actions/upload-artifact@v7
+        if: always()
         with:
           name: ironmate-mcp-stub-screenshots
           path: ironmate-mcp-stub-*.png
           retention-days: 14
 
       - uses: actions/upload-artifact@v7
+        if: always()
         with:
           name: ironmate-web-ui-consumer-screenshots
           path: ironmate-consumer-v1-*.png
+          retention-days: 14
+
+      - name: Upload repository diagnostics screenshot
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ironmate-repository-diagnostics-screenshots
+          path: ironmate-repository-diagnostics-*.png
           retention-days: 14

@@ -209,3 +209,215 @@ def test_git_forces_utf8_log_output_and_decoding(monkeypatch, tmp_path):
     assert observed["kwargs"]["encoding"] == "utf-8"
     assert observed["kwargs"]["text"] is True
 
+
+@pytest.mark.parametrize(
+    ("tool", "raw", "expected"),
+    [
+        ("git", "git version 2.51.0\n", "2.51.0"),
+        ("git", "git version 2.51.0.windows.1\n", "2.51.0.windows.1"),
+        ("gh", "gh version 2.80.0 (2026-09-01)\nhttps://example.invalid\n", "2.80.0"),
+        ("node", "v22.20.0\n", "22.20.0"),
+        ("npm", "10.9.3\n", "10.9.3"),
+        ("npx", "10.9.3\n", "10.9.3"),
+        ("pytest", "9.0.1\n", "9.0.1"),
+        ("pytest", "9.0.1+local.2\n", "9.0.1+local.2"),
+        ("pytest", "1.0rc1\n", "1.0rc1"),
+        ("pytest", "2.0a1\n", "2.0a1"),
+        ("pytest", "2024\n", "2024"),
+        ("python", "3.14.0rc1\n", "3.14.0rc1"),
+        ("pytest", "1.0.post1\n", "1.0.post1"),
+        ("pytest", "1.0.dev0\n", "1.0.dev0"),
+        ("pytest", "0.1.dev5+g1a2b\n", "0.1.dev5+g1a2b"),
+        ("pytest", "1!2.0\n", "1!2.0"),
+        ("pytest", "1.0a1.post2\n", "1.0a1.post2"),
+        ("pytest", "1.0rc1.dev3\n", "1.0rc1.dev3"),
+        ("python", "3.13.0+\n", "3.13.0+"),
+    ],
+)
+def test_normalize_version_output_is_tool_specific(tool, raw, expected):
+    import repository_metadata_generator as generator
+    assert generator.normalize_version_output(tool, raw) == expected
+
+
+@pytest.mark.parametrize(
+    "raw",
+    ["", "not a version", "https://user:token@example.invalid/x", "3.12\x00oops", "1." + "2" * 40],
+)
+def test_normalize_version_output_omits_malformed_or_unsafe_values(raw):
+    import repository_metadata_generator as generator
+    assert generator.normalize_version_output("pytest", raw) is None
+
+
+def test_command_probe_uses_stdout_then_stderr_only_after_success(monkeypatch):
+    import repository_metadata_generator as generator
+
+    monkeypatch.setattr(generator.shutil, "which", lambda name: "/private/bin/" + name)
+
+    class Result:
+        returncode = 0
+        stdout = ""
+        stderr = "node should not parse this"
+
+    def success_stderr(argv, **kwargs):
+        assert argv == ["/private/bin/git", "--version"]
+        Result.stderr = "git version 2.51.0\n"
+        return Result()
+
+    monkeypatch.setattr(generator.subprocess, "run", success_stderr)
+    assert generator.observe_command_version("git") == "2.51.0"
+
+    def nonzero(argv, **kwargs):
+        Result.returncode = 1
+        Result.stdout = ""
+        Result.stderr = "git version 9.9.9\n"
+        return Result()
+
+    monkeypatch.setattr(generator.subprocess, "run", nonzero)
+    assert generator.observe_command_version("git") is None
+
+
+@pytest.mark.parametrize("error", [OSError("boom"), subprocess.TimeoutExpired(["git"], 1)])
+def test_command_probe_failures_are_nonfatal(monkeypatch, error):
+    import repository_metadata_generator as generator
+    monkeypatch.setattr(generator.shutil, "which", lambda name: "/private/bin/" + name)
+
+    def fail(*args, **kwargs):
+        raise error
+
+    monkeypatch.setattr(generator.subprocess, "run", fail)
+    assert generator.observe_command_version("git") is None
+
+
+def test_missing_command_and_package_are_omitted(monkeypatch):
+    import repository_metadata_generator as generator
+
+    monkeypatch.setattr(generator.shutil, "which", lambda name: None)
+    assert generator.observe_command_version("gh") is None
+
+    def missing(name):
+        raise generator.importlib_metadata.PackageNotFoundError(name)
+
+    monkeypatch.setattr(generator.importlib_metadata, "version", missing)
+    assert generator.observe_package_version("not-installed") is None
+
+
+def test_collect_portable_tooling_is_collision_safe_and_deterministic(monkeypatch):
+    import repository_metadata_generator as generator
+
+    monkeypatch.setattr(generator.platform, "python_version", lambda: "3.14.0")
+    monkeypatch.setattr(generator, "observe_command_version", lambda name: {"git": "2.51.0", "node": "22.20.0"}[name])
+    monkeypatch.setattr(generator, "observe_package_version", lambda name: {"pytest": "9.0.1"}[name])
+
+    first = generator.collect_portable_tooling(
+        commands=("git", "node"), distributions=(("pytest", "pytest"),)
+    )
+    second = generator.collect_portable_tooling(
+        commands=("node", "git"), distributions=(("pytest", "pytest"),)
+    )
+    assert first == {"python": "3.14.0", "git": "2.51.0", "node": "22.20.0", "pytest": "9.0.1"}
+    assert first == second
+
+    with pytest.raises(ValueError, match="exactly one canonical source"):
+        generator.collect_portable_tooling(commands=("git",), distributions=(("git", "GitPython"),))
+    with pytest.raises(ValueError, match="exactly one canonical source"):
+        generator.collect_portable_tooling(distributions=(("python", "python"),))
+
+
+def test_record_rejects_caller_overlap_with_canonical_tooling(tmp_path, monkeypatch):
+    import repository_metadata_generator as generator
+
+    root = tmp_path / "repo"
+    root.mkdir()
+    _git(root, "init", "-b", "main")
+    _git(root, "config", "user.email", "test@example.invalid")
+    _git(root, "config", "user.name", "Test")
+    (root / "README.md").write_text("# demo\n", encoding="utf-8")
+    _git(root, "add", "README.md")
+    _git(root, "commit", "-m", "tooling collision fixture")
+
+    monkeypatch.setattr(
+        generator,
+        "collect_portable_tooling",
+        lambda **kwargs: {"python": "3.14.0"},
+    )
+    with pytest.raises(ValueError, match="overlaps canonical tooling"):
+        generator.record_from_checkout(
+            root,
+            "octo/demo",
+            env={},
+            tooling={"python": "3.13.0"},
+            include_python_tooling=True,
+        )
+
+
+def test_optional_tooling_failures_do_not_change_checkout_identity(tmp_path, monkeypatch):
+    import repository_metadata_generator as generator
+
+    root = tmp_path / "repo"
+    root.mkdir()
+    _git(root, "init", "-b", "main")
+    _git(root, "config", "user.email", "test@example.invalid")
+    _git(root, "config", "user.name", "Test")
+    (root / "README.md").write_text("# demo\n", encoding="utf-8")
+    _git(root, "add", "README.md")
+    _git(root, "commit", "-m", "identity fixture")
+
+    baseline = generator.record_from_checkout(root, "octo/demo", env={})
+    monkeypatch.setattr(generator, "observe_command_version", lambda name: None)
+    monkeypatch.setattr(generator.platform, "python_version", lambda: "")
+    observed = generator.record_from_checkout(
+        root,
+        "octo/demo",
+        env={},
+        tooling_commands=("git", "gh", "node", "npm", "npx"),
+    )
+    assert observed["tooling"] == {}
+    assert observed["head"] == baseline["head"]
+
+
+def test_caller_overlap_is_rejected_even_when_probe_would_be_omitted(tmp_path, monkeypatch):
+    import repository_metadata_generator as generator
+
+    root = tmp_path / "repo-overlap"
+    root.mkdir()
+    _git(root, "init", "-b", "main")
+    _git(root, "config", "user.email", "test@example.invalid")
+    _git(root, "config", "user.name", "Test")
+    (root / "README.md").write_text("# demo\n", encoding="utf-8")
+    _git(root, "add", "README.md")
+    _git(root, "commit", "-m", "requested ownership fixture")
+
+    called = []
+    monkeypatch.setattr(
+        generator,
+        "observe_command_version",
+        lambda name: called.append(name) or None,
+    )
+    with pytest.raises(ValueError, match="overlaps canonical tooling"):
+        generator.record_from_checkout(
+            root,
+            "octo/demo",
+            env={},
+            tooling={"git": "9.9.9"},
+            tooling_commands=("git",),
+        )
+    assert called == []
+
+
+def test_commands_reject_bare_string():
+    import repository_metadata_generator as generator
+
+    with pytest.raises(TypeError, match="commands must be a sequence"):
+        generator.collect_portable_tooling(commands="git")
+
+
+def test_distribution_named_like_cli_uses_package_version_syntax(monkeypatch):
+    import repository_metadata_generator as generator
+
+    monkeypatch.setattr(
+        generator.importlib_metadata,
+        "version",
+        lambda name: "2.51.0",
+    )
+    assert generator.observe_package_version("git") == "2.51.0"
+    assert generator.observe_package_version("node") == "2.51.0"

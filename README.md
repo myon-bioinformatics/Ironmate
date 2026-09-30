@@ -414,12 +414,12 @@ Repository metadata uses the stdlib-only Python producer and canonical JSON/JSON
 ## Shared screenshot checks
 
 The screenshot job checks all six named PNGs with browser-test-kit at
-`3a054c777a98300ee272e4458990b849c32a7ef0`, checked out separately in CI.
-See the [shared screenshot guide](https://github.com/myon-bioinformatics/browser-test-kit/blob/3a054c777a98300ee272e4458990b849c32a7ef0/docs/screenshot-evidence.md).
+`6a2e32a4bbe49be5268e6b30040d665a89eecf66`, checked out separately in CI.
+See the [shared screenshot guide](https://github.com/myon-bioinformatics/browser-test-kit/blob/6a2e32a4bbe49be5268e6b30040d665a89eecf66/docs/screenshot-evidence.md).
 Missing/invalid PNGs fail the lane. Existing Stub and consumer artifacts, plus
 `ironmate-repository-diagnostics-screenshots`, preserve available captures even
 after failure, with 14-day retention. This lane measures Chromium desktop/mobile
-viewports; it does not yet produce multi-capture receipts or measure Firefox/WebKit.
+viewports; Firefox/WebKit remain unmeasured.
 
 The screenshot lane now seals a current-run multi-image receipt via pinned
 browser-test-kit, requires all six PNGs and their recorded SHA-256/size, and

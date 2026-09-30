@@ -42,7 +42,7 @@ jobs:
         run: python scripts/build_repository_diagnostics.py
       - name: Build web-ui v1 consumer examples
         run: python scripts/build_web_ui_consumer_examples.py
-      - uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:
           path: docs

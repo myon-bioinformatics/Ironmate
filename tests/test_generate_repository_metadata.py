@@ -221,6 +221,10 @@ def test_git_forces_utf8_log_output_and_decoding(monkeypatch, tmp_path):
         ("npx", "10.9.3\n", "10.9.3"),
         ("pytest", "9.0.1\n", "9.0.1"),
         ("pytest", "9.0.1+local.2\n", "9.0.1+local.2"),
+        ("pytest", "1.0rc1\n", "1.0rc1"),
+        ("pytest", "2.0a1\n", "2.0a1"),
+        ("pytest", "2024\n", "2024"),
+        ("python", "3.14.0rc1\n", "3.14.0rc1"),
     ],
 )
 def test_normalize_version_output_is_tool_specific(tool, raw, expected):
@@ -362,3 +366,39 @@ def test_optional_tooling_failures_do_not_change_checkout_identity(tmp_path, mon
     )
     assert observed["tooling"] == {}
     assert observed["head"] == baseline["head"]
+
+
+def test_caller_overlap_is_rejected_even_when_probe_would_be_omitted(tmp_path, monkeypatch):
+    import repository_metadata_generator as generator
+
+    root = tmp_path / "repo-overlap"
+    root.mkdir()
+    _git(root, "init", "-b", "main")
+    _git(root, "config", "user.email", "test@example.invalid")
+    _git(root, "config", "user.name", "Test")
+    (root / "README.md").write_text("# demo\n", encoding="utf-8")
+    _git(root, "add", "README.md")
+    _git(root, "commit", "-m", "requested ownership fixture")
+
+    called = []
+    monkeypatch.setattr(
+        generator,
+        "observe_command_version",
+        lambda name: called.append(name) or None,
+    )
+    with pytest.raises(ValueError, match="overlaps canonical tooling"):
+        generator.record_from_checkout(
+            root,
+            "octo/demo",
+            env={},
+            tooling={"git": "9.9.9"},
+            tooling_commands=("git",),
+        )
+    assert called == []
+
+
+def test_commands_reject_bare_string():
+    import repository_metadata_generator as generator
+
+    with pytest.raises(TypeError, match="commands must be a sequence"):
+        generator.collect_portable_tooling(commands="git")

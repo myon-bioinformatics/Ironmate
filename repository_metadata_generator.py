@@ -102,16 +102,15 @@ def observe_package_version(distribution: str) -> str | None:
     return normalize_version_output(distribution, value)
 
 
-def collect_portable_tooling(
+def _requested_tooling_keys(
     *,
-    include_python: bool = True,
-    commands: Sequence[str] = (),
-    distributions: Sequence[tuple[str, str]] = (),
-) -> dict[str, str]:
-    """Collect canonical portable tooling with explicit, collision-safe ownership."""
-    requested: list[str] = []
-    if include_python:
-        requested.append("python")
+    include_python: bool,
+    commands: Sequence[str],
+    distributions: Sequence[tuple[str, str]],
+) -> tuple[str, ...]:
+    if isinstance(commands, (str, bytes)):
+        raise TypeError("commands must be a sequence of command names")
+    requested: list[str] = ["python"] if include_python else []
     for command in commands:
         if command not in _TOOL_COMMANDS:
             raise ValueError("unsupported tooling command: " + str(command))
@@ -124,7 +123,21 @@ def collect_portable_tooling(
         requested.append(key)
     if len(requested) != len(set(requested)):
         raise ValueError("tooling keys must have exactly one canonical source")
+    return tuple(requested)
 
+
+def collect_portable_tooling(
+    *,
+    include_python: bool = True,
+    commands: Sequence[str] = (),
+    distributions: Sequence[tuple[str, str]] = (),
+) -> dict[str, str]:
+    """Collect canonical portable tooling with explicit, collision-safe ownership."""
+    _requested_tooling_keys(
+        include_python=include_python,
+        commands=commands,
+        distributions=distributions,
+    )
     observed: dict[str, str] = {}
     if include_python:
         value = normalize_version_output("python", platform.python_version())
@@ -155,6 +168,16 @@ def record_from_checkout(
     tooling_distributions: Sequence[tuple[str, str]] = (),
 ) -> dict:
     env = os.environ if env is None else env
+    supplied = dict(tooling or {})
+    requested = set(_requested_tooling_keys(
+        include_python=include_python_tooling,
+        commands=tooling_commands,
+        distributions=tooling_distributions,
+    ))
+    overlap = set(supplied).intersection(requested)
+    if overlap:
+        raise ValueError("caller tooling overlaps canonical tooling: " + ", ".join(sorted(overlap)))
+
     sha = git("rev-parse", "HEAD", cwd=root)
     branch = (
         (env.get("GITHUB_HEAD_REF") or "").strip()
@@ -167,15 +190,11 @@ def record_from_checkout(
     subject = git("show", "-s", "--format=%s", "HEAD", cwd=root)
     generated_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
-    supplied = dict(tooling or {})
     canonical = collect_portable_tooling(
         include_python=include_python_tooling,
         commands=tooling_commands,
         distributions=tooling_distributions,
     ) if (include_python_tooling or tooling_commands or tooling_distributions) else {}
-    overlap = set(supplied).intersection(canonical)
-    if overlap:
-        raise ValueError("caller tooling overlaps canonical tooling: " + ", ".join(sorted(overlap)))
     supplied.update(canonical)
 
     return build_repository_record(

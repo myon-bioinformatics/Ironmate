@@ -26,16 +26,17 @@ _TOOL_COMMANDS = {
     "npm": ("--version",),
     "npx": ("--version",),
 }
-_VERSION = r"[0-9]+(?:\.[0-9]+)+(?:[-+._][0-9A-Za-z][0-9A-Za-z.-]*)?"
+_CLI_VERSION = r"[0-9]+(?:\.[0-9]+)+(?:[-+._][0-9A-Za-z][0-9A-Za-z.-]*)?"
+_PACKAGE_VERSION = r"[0-9]+(?:\.[0-9]+)*(?:(?:a|b|rc|dev|post)[0-9]+)?(?:\+[0-9A-Za-z][0-9A-Za-z.-]*)?"
 _TOOL_PATTERNS = {
-    "git": re.compile(r"^git version (?P<version>" + _VERSION + r")(?:\s.*)?$"),
-    "gh": re.compile(r"^gh version (?P<version>" + _VERSION + r")(?:\s.*)?$"),
-    "node": re.compile(r"^v(?P<version>" + _VERSION + r")$"),
-    "npm": re.compile(r"^(?P<version>" + _VERSION + r")$"),
-    "npx": re.compile(r"^(?P<version>" + _VERSION + r")$"),
-    "python": re.compile(r"^(?P<version>" + _VERSION + r")$"),
+    "git": re.compile(r"^git version (?P<version>" + _CLI_VERSION + r")(?:\s.*)?$"),
+    "gh": re.compile(r"^gh version (?P<version>" + _CLI_VERSION + r")(?:\s.*)?$"),
+    "node": re.compile(r"^v(?P<version>" + _CLI_VERSION + r")$"),
+    "npm": re.compile(r"^(?P<version>" + _CLI_VERSION + r")$"),
+    "npx": re.compile(r"^(?P<version>" + _CLI_VERSION + r")$"),
+    "python": re.compile(r"^(?P<version>" + _PACKAGE_VERSION + r")$"),
 }
-_PLAIN_VERSION_RE = re.compile(r"^(?P<version>" + _VERSION + r")$")
+_PLAIN_VERSION_RE = re.compile(r"^(?P<version>" + _PACKAGE_VERSION + r")$")
 _DEFAULT_TOOL_TIMEOUT = 5.0
 
 

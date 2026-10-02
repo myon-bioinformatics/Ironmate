@@ -1,14 +1,17 @@
 """Read-only niconico Snapshot Search API v2 source adapter.
 
-Specification baseline verified for Issue #39: 2026-04-15 revision.
+Specification baseline: 2026-04-15 revision, reverified 2026-10-02 at
+https://site.nicovideo.jp/search-api-docs/snapshot (no contract changes).
 No catalog/Pages publication is performed by this module.
-Out of scope here: fetching/parsing the /api/v2/snapshot/version response; callers pass
-the before/after version dicts (with `last_modified`) to `completion_state`.
+`paged_search` observes the version before/after the requested pages and returns
+normalized records suitable for a caller's export, plus completion evidence.
 """
 from __future__ import annotations
 
 import json
+import re
 import time
+from datetime import datetime
 from typing import Any, Callable
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -114,6 +117,105 @@ def fetch_json(
     except (URLError, TimeoutError, ValueError) as exc:
         return {"status": "error", "error_type": type(exc).__name__, "url": url,
                 "elapsed_seconds": max(0.0, time.monotonic() - started)}
+
+
+def fetch_version(
+    *, user_agent: str, timeout: int = 30, opener: Callable[..., Any] = urlopen,
+) -> dict[str, Any]:
+    """Fetch a version observation; only a valid documented JST timestamp counts.
+
+    Transport classification/timing is retained, including 400 and 503. Failed
+    observations have no `last_modified`, so they cannot establish consistency.
+    """
+    result = fetch_json(VERSION_URL, user_agent=user_agent, timeout=timeout, opener=opener)
+    payload = result.pop("value", None)
+    if result["status"] != "detected":
+        return result
+    stamp = payload.get("last_modified") if isinstance(payload, dict) else None
+    valid = isinstance(stamp, str) and re.fullmatch(
+        r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+09:00", stamp,
+    )
+    if valid:
+        try:
+            datetime.fromisoformat(stamp)
+        except ValueError:
+            valid = False
+    if not valid:
+        return {**result, "status": "error", "error_type": "invalid_version"}
+    return {**result, "last_modified": stamp}
+
+
+def paged_search(
+    *, q: str, sort: str, context: str, user_agent: str,
+    targets: str | None = None, fields: tuple[str, ...] = DEFAULT_FIELDS,
+    limit: int = 100, offset: int = 0, filters: dict[str, Any] | None = None,
+    max_pages: int | None = None, timeout: int = 30,
+    opener: Callable[..., Any] = urlopen, sleeper: Callable[[float], Any] = time.sleep,
+) -> dict[str, Any]:
+    """Collect requested pages for search/export with automatic version evidence.
+
+    Completeness applies from the requested offset. No automatic retries: a
+    failed initial version aborts without searching; otherwise the final version
+    is observed even after a page failure. Every subsequent request (including
+    the final observation) is paced, with 300 seconds after a 503. A final failed
+    observation exposes retry_delay_seconds for a caller's next request.
+    """
+    if max_pages is not None and (isinstance(max_pages, bool) or
+                                  not isinstance(max_pages, int) or max_pages < 1):
+        raise ValueError("max_pages must be a positive integer or None")
+    query = dict(q=q, sort=sort, context=context, targets=targets,
+                 fields=fields, limit=limit, filters=filters)
+    url = build_search_url(**query, offset=offset)
+    before = fetch_version(user_agent=user_agent, timeout=timeout, opener=opener)
+    previous = before
+    after: dict[str, Any] = {}
+    records: list[dict[str, Any]] = []
+    pages = 0
+    page_state: dict[str, Any] = {
+        "status": "not_started", "complete": False, "truncated": False,
+        "next_offset": None,
+    }
+
+    def wait_for_previous() -> None:
+        sleeper(next_delay_seconds(previous["elapsed_seconds"],
+                                   http_status=previous.get("http_status")))
+
+    if before["status"] == "detected":
+        while True:
+            wait_for_previous()
+            previous = fetch_json(url, user_agent=user_agent, timeout=timeout, opener=opener)
+            pages += 1
+            if previous["status"] != "detected":
+                page_state = {**page_state, "status": previous["status"],
+                              "complete": False, "next_offset": None,
+                              "fetch": previous}
+                break
+            payload = previous["value"]
+            page_state = classify_page(payload if isinstance(payload, dict) else {},
+                                       offset=offset, limit=limit)
+            if (page_state["status"] == "ok" and
+                    any(not isinstance(item, dict) for item in payload["data"])):
+                page_state = {**page_state, "status": "invalid", "complete": False,
+                              "next_offset": None}
+            if page_state["status"] != "ok":
+                break
+            records.extend(normalize_item(item, source_url=url) for item in payload["data"])
+            if page_state["next_offset"] is None:
+                break
+            if max_pages is not None and pages >= max_pages:
+                page_state = {**page_state, "status": "page_limit", "truncated": True}
+                break
+            offset = page_state["next_offset"]
+            url = build_search_url(**query, offset=offset)
+        wait_for_previous()
+        after = fetch_version(user_agent=user_agent, timeout=timeout, opener=opener)
+        previous = after
+    return {
+        "records": records, "pages_fetched": pages, "version_before": before,
+        "version_after": after, **completion_state(before, after, page_state),
+        "retry_delay_seconds": next_delay_seconds(previous["elapsed_seconds"],
+                                                   http_status=previous.get("http_status")),
+    }
 
 
 def normalize_item(item: dict[str, Any], *, source_url: str) -> dict[str, Any]:

@@ -5,10 +5,13 @@ import unittest
 from email.message import Message
 from unittest.mock import patch
 from urllib.error import HTTPError
+from urllib.error import URLError
+from urllib.parse import parse_qs, urlsplit
 
 from niconico_adapter import (
     build_search_url, classify_page, content_url, fetch_json, next_delay_seconds,
-    normalize_item, snapshot_consistent, completion_state,
+    normalize_item, snapshot_consistent, completion_state, fetch_version,
+    paged_search, VERSION_URL,
 )
 
 
@@ -135,6 +138,157 @@ class NiconicoAdapterTest(unittest.TestCase):
             fetch_json("https://example.test", user_agent="Ironmate", opener=opener)
         self.assertEqual(seen["ua"], "Ironmate")
         self.assertFalse(snapshot_consistent({"last_modified": ""}, {"last_modified": ""}))
+
+class VersionObservationTest(unittest.TestCase):
+    # Independently authored timestamps and content; no live API requests.
+    version = {"last_modified": "2026-10-01T05:00:00+09:00"}
+    changed = {"last_modified": "2026-10-02T05:00:00+09:00"}
+
+    def run_search(self, responses, **kwargs):
+        seen, events, waits = [], [], []
+        responses = iter(responses)
+
+        def opener(request, timeout):
+            seen.append(request)
+            events.append(("request", request.full_url))
+            self.assertEqual(request.get_header("User-agent"), "Ironmate-offline")
+            self.assertEqual(timeout, 7)
+            value = next(responses)
+            if isinstance(value, Exception):
+                raise value
+            return io.BytesIO(value if isinstance(value, bytes) else json.dumps(value).encode())
+
+        def sleeper(delay):
+            waits.append(delay)
+            events.append(("wait", delay))
+
+        # Each HTTP request takes exactly 1.25s in this deterministic clock.
+        with patch("niconico_adapter.time.monotonic", side_effect=[
+            t for i in range(20) for t in (i * 10.0, i * 10.0 + 1.25)
+        ]):
+            result = paged_search(q="", sort="-startTime", context="Ironmate-offline",
+                                  user_agent="Ironmate-offline", timeout=7,
+                                  opener=opener, sleeper=sleeper, **kwargs)
+        self.assertEqual([event[0] for event in events],
+                         ["request"] + [v for _ in waits for v in ("wait", "request")])
+        return result, seen, waits
+
+    @staticmethod
+    def page(ids, total):
+        return {"meta": {"status": 200, "totalCount": total},
+                "data": [{"contentId": ident, "title": "synthetic", "userId": 123}
+                         for ident in ids]}
+
+    @staticmethod
+    def http_error(code):
+        return HTTPError(VERSION_URL, code, "synthetic", Message(),
+                         io.BytesIO(b'{"meta":{"errorCode":"synthetic"}}'))
+
+    def test_same_version_surrounds_all_pages_and_preserves_provenance(self):
+        result, requests, waits = self.run_search([
+            self.version, self.page(["sm9001"], 2), self.page(["sm9002"], 2), self.version,
+        ], limit=1)
+        self.assertTrue(result["complete"])
+        self.assertTrue(result["snapshot_consistent"])
+        self.assertEqual(result["pages_fetched"], 2)
+        self.assertEqual(requests[0].full_url, VERSION_URL)
+        self.assertEqual(requests[-1].full_url, VERSION_URL)
+        self.assertEqual(waits, [1.25] * 3)
+        self.assertEqual(result["retry_delay_seconds"], 1.25)
+        self.assertEqual(result["version_before"]["last_modified"], self.version["last_modified"])
+        self.assertEqual(result["version_after"]["last_modified"], self.version["last_modified"])
+        for i, record in enumerate(result["records"]):
+            self.assertEqual(record["source_url"], requests[i + 1].full_url)
+            self.assertEqual(parse_qs(urlsplit(record["source_url"]).query)["_offset"], [str(i)])
+            self.assertNotIn("userId", record["data"])
+
+    def test_version_change_is_incomplete_even_when_pages_complete(self):
+        result, _, _ = self.run_search([self.version, self.page(["sm9001"], 1), self.changed])
+        self.assertTrue(result["page"]["complete"])
+        self.assertFalse(result["complete"])
+        self.assertFalse(result["snapshot_consistent"])
+
+    def test_http_version_failure_is_never_complete_before_or_after(self):
+        for code, status in ((400, "invalid_request"), (503, "maintenance"), (500, "error")):
+            for position in ("before", "after"):
+                with self.subTest(code=code, position=position):
+                    responses = [self.http_error(code)] if position == "before" else [
+                        self.version, self.page([], 0), self.http_error(code),
+                    ]
+                    result, requests, _ = self.run_search(responses)
+                    self.assertFalse(result["complete"])
+                    self.assertFalse(result["snapshot_consistent"])
+                    observation = result["version_" + position]
+                    self.assertEqual(observation["status"], status)
+                    self.assertEqual(observation["http_status"], code)
+                    self.assertNotIn("last_modified", observation)
+                    self.assertEqual(len(requests), 1 if position == "before" else 3)
+                    self.assertEqual(result["retry_delay_seconds"], 300.0 if code == 503 else 1.25)
+
+    def test_missing_last_modified_is_incomplete_before_or_after(self):
+        for position in ("before", "after"):
+            with self.subTest(position=position):
+                responses = [{}] if position == "before" else [self.version, self.page([], 0), {}]
+                result, _, _ = self.run_search(responses)
+                self.assertFalse(result["complete"])
+                self.assertEqual(result["version_" + position]["error_type"], "invalid_version")
+
+    def test_malformed_json_and_network_failure_are_incomplete(self):
+        for failure in (b'{', b'\xff', URLError("offline")):
+            for position in ("before", "after"):
+                with self.subTest(failure=failure, position=position):
+                    responses = [failure] if position == "before" else [
+                        self.version, self.page([], 0), failure,
+                    ]
+                    result, _, _ = self.run_search(responses)
+                    self.assertFalse(result["complete"])
+                    self.assertEqual(result["version_" + position]["status"], "error")
+
+    def test_version_helper_rejects_invalid_shapes_types_and_dates(self):
+        for payload in (None, [], "stamp", {"last_modified": None}, {"last_modified": 1},
+                        {"last_modified": []}, {"last_modified": ""},
+                        {"last_modified": "2026-02-30T05:00:00+09:00"},
+                        {"last_modified": "2026-10-01"},
+                        {"last_modified": "2026-10-01T05:00:00"}):
+            with self.subTest(payload=payload):
+                result = fetch_version(user_agent="offline", opener=lambda *a, **k:
+                                       io.BytesIO(json.dumps(payload).encode()))
+                self.assertEqual(result["status"], "error")
+                self.assertEqual(result["error_type"], "invalid_version")
+                self.assertNotIn("last_modified", result)
+
+    def test_page_http_failure_keeps_classification_and_paces_final_version(self):
+        for code, status in ((400, "invalid_request"), (503, "maintenance")):
+            with self.subTest(code=code):
+                result, requests, waits = self.run_search([
+                    self.version, self.http_error(code), self.version,
+                ])
+                self.assertFalse(result["complete"])
+                self.assertEqual(result["page"]["status"], status)
+                self.assertEqual(result["page"]["fetch"]["http_status"], code)
+                self.assertEqual(len(requests), 3)  # no search retry
+                self.assertEqual(waits, [1.25, 300.0 if code == 503 else 1.25])
+
+    def test_page_limit_and_invalid_pages_cannot_be_completed_by_matching_version(self):
+        result, _, _ = self.run_search([
+            self.version, self.page(["sm9001"], 2), self.version,
+        ], limit=1, max_pages=1)
+        self.assertFalse(result["complete"])
+        self.assertTrue(result["page"]["truncated"])
+        for payload in ([], {}, {"meta": {"totalCount": 1}, "data": [None]},
+                        self.page([], 1)):
+            with self.subTest(payload=payload):
+                result, _, _ = self.run_search([self.version, payload, self.version])
+                self.assertFalse(result["complete"])
+                self.assertEqual(result["records"], [])
+
+    def test_provider_offset_limit_is_still_truncated(self):
+        result, _, _ = self.run_search([
+            self.version, self.page(["sm9001"], 100002), self.version,
+        ], offset=100000, limit=1)
+        self.assertFalse(result["complete"])
+        self.assertTrue(result["page"]["truncated"])
+
 
 if __name__ == "__main__":
     unittest.main()

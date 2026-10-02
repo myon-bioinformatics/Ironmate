@@ -77,3 +77,25 @@ Initial migration targets:
 
 The target architecture is one producer contract and many read-only consumers, not parallel
 implementations in Python, JavaScript, and Dart.
+
+### Ironmate Pages diagnostics identity follow-up
+
+`scripts/build_repository_diagnostics.py::current_record()` delegates repository/HEAD identity,
+creation time and Python runtime tooling to `record_from_checkout()`. Tracked-file byte observation
+remains in the consumer via the existing pinned `vendor/git_inspector.py::ls_files()`; truncation
+fails before a record is generated. No identity responsibility moves into the inspector.
+
+The public schema v1, URL candidates and anonymous URL probing remain unchanged. The before/after
+fixture (`tests/fixtures/diagnostics_checkout_before.json`, captured from the pre-migration consumer;
+SHA and Python version are test placeholders) compares the complete unprobed Pages payload.
+Intentional canonical producer differences are:
+
+- `generated_at` now uses UTC `Z` instead of `+00:00`, representing the same instant. Commit
+  `head.timestamp` retains Git's `%cI` timezone representation.
+- CI branch labels are stripped before the existing head-ref/ref-name precedence is applied;
+  blank labels fall back, and a final label of `HEAD` becomes `detached`.
+- Python tooling uses the producer's version normalization and omission rules above.
+
+Detached checkout identity still comes from actual HEAD, even if `GITHUB_SHA` names another commit.
+The consumer runs with `python -S` without site packages. Fixtures cover detached HEAD, Actions
+ref labels, tracked-but-missing/untracked files, and fail-closed tracked inventory truncation.

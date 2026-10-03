@@ -209,3 +209,4 @@ __marimo__/
 # Generated consumer documentation
 docs/consumer-v1/
 docs/.consumer-v1-stash-*/
+.vendor-sync-tools/

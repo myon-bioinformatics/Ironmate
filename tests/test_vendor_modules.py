@@ -20,19 +20,25 @@ from scripts.build_web_ui_consumer_examples import (
 from vendor import ascii_artist, markdown
 
 
+def _locked(destination):
+    root = Path(__file__).resolve().parents[1]
+    lock = json.loads((root / "vendor.lock.json").read_text(encoding="utf-8"))
+    return next(e for e in lock["files"] if e["destination"] == destination)
+
+
 ROOT = Path(__file__).resolve().parents[1]
 ASCII_ARTIST_PROVENANCE = {
     "schema_version": "1.0",
     "source_repository": "myon-bioinformatics/ascii_artist",
     "source_path": "ascii_artist.py",
-    "source_commit": "505858627afc7e24dd6deb0a5c118e4d185d391e",
-    "blob_sha": "ca46470b4a52293d722d59db0a621fec789c3690",
-    "sha256": "a2ea789b38d3f8a3cc15029ec33733d472d25effee3effed795c2519bec249ea",
+    "source_commit": _locked('vendor/ascii_artist.py')['commit'],
+    "blob_sha": _locked('vendor/ascii_artist.py')['blob_sha'],
+    "sha256": _locked('vendor/ascii_artist.py')['sha256'],
     "license": {
         "source_path": "LICENSE",
         "vendored_path": "vendor/ascii_artist-LICENSE",
-        "blob_sha": "4ec4989b801bf1a3df6184d21f79e6e7ed5931f6",
-        "sha256": "15f66204c4a6a1ce0c94f0ed4319ff9400f872e85fd32c95f21695c2f231af59",
+        "blob_sha": _locked('vendor/ascii_artist-LICENSE')['blob_sha'],
+        "sha256": _locked('vendor/ascii_artist-LICENSE')['sha256'],
     },
 }
 

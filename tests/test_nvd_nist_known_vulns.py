@@ -11,9 +11,15 @@ from provenance import git_blob_sha
 from repository_metadata import load_cpe_manifest, repository_security_metadata
 
 
+def _locked(destination):
+    root = Path(__file__).resolve().parents[1]
+    lock = json.loads((root / "vendor.lock.json").read_text(encoding="utf-8"))
+    return next(e for e in lock["files"] if e["destination"] == destination)
+
+
 VENDOR = Path(__file__).resolve().parents[1] / "vendor" / "nvd_nist_known_vulns.py"
-UPSTREAM_COMMIT = "a3d8f1835e4a82bc6e50682d6a79e22a851c4c91"
-UPSTREAM_VENDOR_BLOB = "9daa3938dfa4226198e94273c18af5362c1ccb8b"
+UPSTREAM_COMMIT = _locked('vendor/nvd_nist_known_vulns.py')['commit']
+UPSTREAM_VENDOR_BLOB = _locked('vendor/nvd_nist_known_vulns.py')['blob_sha']
 CPE = "cpe:2.3:a:example:example:1:*:*:*:*:*:*:*"
 FIXTURE = Path(__file__).parent / "fixtures" / "nvd_summary.jsonl"
 UPSTREAM_SAMPLE_BLOB = "eb859fde7af74b59944c0aa8ee5797ca1f943a3b"

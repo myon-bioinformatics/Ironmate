@@ -152,3 +152,16 @@ def test_invalid_source_or_license_does_not_rewrite_any_provenance(tmp_path, lic
     with pytest.raises(ValueError, match='locked bytes mismatch'):
         _projector().project(tmp_path)
     assert before == {p:(tmp_path / p).read_bytes() for p in before}
+
+
+def test_projection_cli_help_and_unknown_options_do_not_need_or_write_sources(tmp_path):
+    # Help must succeed before reading any lock or running the projection.
+    helper = tmp_path / 'tool/sync_vendor_provenance.py'
+    helper.parent.mkdir()
+    shutil.copyfile(ROOT / HELPER, helper)
+    for option, expected in (('--help', 0), ('--unknown-option', 2)):
+        result = subprocess.run([sys.executable, '-S', str(helper), option],
+                                cwd=tmp_path, capture_output=True, text=True, timeout=30)
+        assert result.returncode == expected
+        assert 'usage:' in (result.stdout + result.stderr).lower()
+        assert set(tmp_path.rglob('*')) == {helper.parent, helper}

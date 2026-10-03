@@ -2,6 +2,7 @@
 
 No source acquisition, importing candidate modules, tokens or repository writes.
 """
+import argparse
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -84,6 +85,7 @@ def project(root):
 
 
 if __name__ == "__main__":
+    argparse.ArgumentParser(description=__doc__).parse_args()
     try:
         project(ROOT)
     except (ValueError, KeyError, OSError) as error:

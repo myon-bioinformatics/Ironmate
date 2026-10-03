@@ -1,0 +1,51 @@
+{
+  "metadata": {
+    "schema_version": "1.0",
+    "repository": {
+      "full_name": "myon-bioinformatics/Ironmate"
+    },
+    "head": {
+      "sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "short_sha": "aaaaaaaa",
+      "branch": "main",
+      "timestamp": "2026-09-30T12:34:56+09:00",
+      "subject": "diagnostics 日本語 fixture"
+    },
+    "measurements": {
+      "github_reported_size_bytes": null,
+      "working_tree_bytes": 3,
+      "release_artifact_bytes": null
+    },
+    "tooling": {
+      "python": "3.12.0"
+    },
+    "generated_at": "2026-10-01T01:02:03+00:00"
+  },
+  "resolver": {
+    "auth": "anonymous",
+    "status": "not_checked",
+    "candidates": [
+      {
+        "kind": "repository",
+        "url": "https://github.com/myon-bioinformatics/Ironmate"
+      },
+      {
+        "kind": "api",
+        "url": "https://api.github.com/repos/myon-bioinformatics/Ironmate"
+      },
+      {
+        "kind": "pages",
+        "url": "https://myon-bioinformatics.github.io/Ironmate/"
+      },
+      {
+        "kind": "raw",
+        "url": "https://raw.githubusercontent.com/myon-bioinformatics/Ironmate/main/README.md"
+      },
+      {
+        "kind": "contents_api",
+        "url": "https://api.github.com/repos/myon-bioinformatics/Ironmate/contents/README.md?ref=main"
+      }
+    ],
+    "observations": []
+  }
+}

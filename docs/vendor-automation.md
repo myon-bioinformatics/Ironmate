@@ -18,11 +18,7 @@ The projection is idempotent and rejected source/license bytes leave metadata
 untouched. Upstream embedded artifact headers are preserved verbatim.
 
 Source repositories that have LICENSE files carry their exact LICENSE bytes.
-The shared profile repository currently has no LICENSE file at either the pinned
-source revisions or shared tool pin; no sibling license is falsely attributed to
-it. Its existing inspector copy remains an explicit source entry. The owner has authorized MIT licensing in shared PR #39
-(https://github.com/myon-bioinformatics/myon-bioinformatics/pull/39). After it is
-merged, add that exact upstream LICENSE to this lock and artifact allowlist.
+The shared profile MIT LICENSE is explicitly enrolled from its merged license commit.
 
 The source/license/lock and compatibility records are retained in Actions both
 before and after testing with `if: always()` and missing-file errors. Failures
@@ -34,7 +30,7 @@ ALM agents can use the same mechanism in a disposable checkout:
 
 ```bash
 git clone https://github.com/myon-bioinformatics/myon-bioinformatics.git .vendor-sync-tools
-git -C .vendor-sync-tools checkout --detach 90bc069c33901bd4b5373eb02311026e0acf2e2e
+git -C .vendor-sync-tools checkout --detach 37f30d5acdc1906d4acbd103ce6f652bc13ca7eb
 python -S .vendor-sync-tools/vendor_sync.py check --manifest vendor.lock.json
 python -S .vendor-sync-tools/vendor_sync.py materialize --manifest vendor.lock.json
 python -S .vendor-sync-tools/vendor_sync.py update --manifest vendor.lock.json
@@ -70,9 +66,9 @@ Updates happen only when the existing workflow/change filters select the run.
 There is no upstream-only scheduler. Separate push and pull-request events are
 separate runs and can each resolve upstream once.
 
-The pinned shared tool's public-Git rate-limit fallback applies to `update`.
-Locked `materialize` currently fails nonzero on raw HTTP 403/429; it does not
-silently accept the baseline or bypass digest verification.
+The pinned shared tool uses anonymous public Git fallback for both `update`
+and locked `materialize` on HTTP 403/429. Locked placement preserves each entry's
+exact commit and verifies Git blob/SHA-256 before writing; other errors remain nonzero.
 
 The small projection adapter is consumer-owned because existing provenance
 schemas differ. Acquisition and verification stay in the shared pinned tool;
@@ -91,3 +87,6 @@ rebuilds that attribution in the public consumer examples.
 A legacy provenance `date` becomes the UTC resolution date when its source commit
 changes during CI. It is retained when the commit is unchanged; it is not the
 upstream commit timestamp or a claim that the checkout was committed that day.
+
+The shared profile MIT LICENSE is now explicitly locked at `443b8a94bbc6801332e0abd9f2e56da68173b38d`
+and included in resolved and locked evidence. Existing source pins and bytes are unchanged.

@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = '.github/workflows/mcp-tests.yml'
 TEST_JOB = 'test'
 HELPER = 'scripts/sync_vendor_provenance.py'
-SNAPSHOT = ['vendor.lock.json',
+SNAPSHOT = ['vendor/myon-bioinformatics-LICENSE', 'vendor.lock.json',
  'vendor/ascii_artist.py',
  'vendor/git_inspector.py',
  'vendor/markdown.py',
@@ -24,7 +24,8 @@ SNAPSHOT = ['vendor.lock.json',
  'vendor/ascii_artist.provenance.json',
  'vendor/git_inspector.provenance.json',
  'vendor/markdown.provenance.json']
-EXPECTED = {('myon-bioinformatics/ascii_artist', 'LICENSE', 'vendor/ascii_artist-LICENSE'),
+EXPECTED = {('myon-bioinformatics/myon-bioinformatics', 'LICENSE', 'vendor/myon-bioinformatics-LICENSE'),
+ ('myon-bioinformatics/ascii_artist', 'LICENSE', 'vendor/ascii_artist-LICENSE'),
  ('myon-bioinformatics/ascii_artist', 'ascii_artist.py', 'vendor/ascii_artist.py'),
  ('myon-bioinformatics/markdown', 'LICENSE', 'vendor/markdown-LICENSE'),
  ('myon-bioinformatics/markdown', 'markdown.py', 'vendor/markdown.py'),
@@ -121,7 +122,7 @@ def test_public_vendor_ci_updates_without_repository_writes():
         assert set(upload['with']['path'].splitlines()) == set(SNAPSHOT)
     pins = [s['with']['ref'] for steps in (resolve,test) for s in steps
             if s.get('with',{}).get('repository') == 'myon-bioinformatics/myon-bioinformatics']
-    assert pins == ['90bc069c33901bd4b5373eb02311026e0acf2e2e'] * 2
+    assert pins == ['37f30d5acdc1906d4acbd103ce6f652bc13ca7eb'] * 2
     for steps in (resolve,test):
         for step in steps:
             if step.get('uses','').startswith('actions/checkout@'):
@@ -257,11 +258,16 @@ def test_projection_cli_missing_license_record_is_exit_two(tmp_path):
     record = json.loads(path.read_text(encoding="utf-8"))
     record["license"] = {}
     path.write_text(json.dumps(record), encoding="utf-8")
+    lock_path = tmp_path / "vendor.lock.json"
+    lock = json.loads(lock_path.read_text(encoding="utf-8"))
+    lock["files"] = [entry for entry in lock["files"]
+                     if entry["destination"] != "vendor/myon-bioinformatics-LICENSE"]
+    lock_path.write_text(json.dumps(lock), encoding="utf-8")
     before = {p: (tmp_path / p).read_bytes() for p in SNAPSHOT if p.endswith(".json")}
     result = subprocess.run([sys.executable, "-S", str(helper)], cwd=tmp_path,
                             capture_output=True, text=True, timeout=30)
     assert result.returncode == 2
-    assert "missing LICENSE entry" in result.stderr
+    assert "unexpected source or destination" in result.stderr
     assert "Traceback" not in result.stderr
     assert before == {p: (tmp_path / p).read_bytes() for p in before}
 
@@ -287,7 +293,7 @@ def test_locked_baseline_runs_automatically_without_candidate_snapshot():
                     if s.get('name') == 'Recreate locked vendor files from GitHub')
     assert steps[recreate] == original
     tool = next(s for s in steps if s.get('name') == 'Fetch pinned shared vendor tool')
-    assert tool['with']['ref'] == '90bc069c33901bd4b5373eb02311026e0acf2e2e'
+    assert tool['with']['ref'] == '37f30d5acdc1906d4acbd103ce6f652bc13ca7eb'
     for step in steps:
         assert 'continue-on-error' not in step
         if step.get('uses', '').startswith('actions/checkout@'):

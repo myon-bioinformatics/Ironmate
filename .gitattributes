@@ -5,3 +5,4 @@ vendor/nvd_nist_known_vulns.py -text
 vendor/ascii_artist-LICENSE -text
 vendor/markdown-LICENSE -text
 vendor/nvd_nist_known_vulns-LICENSE -text
+vendor/myon-bioinformatics-LICENSE -text

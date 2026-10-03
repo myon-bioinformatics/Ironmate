@@ -170,12 +170,42 @@ jobs:
           python -S scripts/sync_vendor_provenance.py
       - run: python -m pip install --upgrade pip
       - run: python -m pip install -r requirements-mcp.txt -r tests/requirements.txt
+      - name: Check out pinned test-only JUnit importer
+        uses: actions/checkout@v7
+        with:
+          repository: myon-bioinformatics/xprobe
+          ref: 7e7015b2df69ad446b968f6fa49711b5b1dbdd3f
+          path: build/shared
+          persist-credentials: false
+          sparse-checkout: xprobe.py
+          sparse-checkout-cone-mode: false
       - name: Compile all tracked Python sources before test collection
+        id: compile
         run: |
           git ls-files '*.py' -z | xargs -0 python -m py_compile
       - run: python -m unittest tests/test_ironmate_mcp.py tests/test_github_adapter.py tests/test_niconico_adapter.py tests/test_github_catalog.py tests/test_repository_metadata.py tests/test_nvd_nist_known_vulns.py tests/test_mcp_stub_page.py tests/test_vendor_modules.py tests/test_unreviewed.py tests/test_repository_hygiene.py
       - name: Run default pytest suite (exclude heavy tests)
-        run: python -m pytest -q -m "not heavy"
+        # Still gather pytest evidence after a unittest failure; that job stays red.
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
+        env:
+          IRONMATE_FAILURE_EVIDENCE: build/controlled-failure
+        run: python -m pytest -q -m "not heavy" --junitxml=build/test-results/pytest-3.12.xml
+      - name: Preserve raw suite JUnit
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: junit-py3.12
+          path: build/test-results/pytest-3.12.xml
+          if-no-files-found: error
+          retention-days: 14
+      - name: Preserve controlled child evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: junit-controlled-py3.12
+          path: build/controlled-failure/
+          if-no-files-found: error
+          retention-days: 14
 
 
       - name: Preserve vendor lock used by this run
@@ -198,6 +228,18 @@ jobs:
             vendor/markdown.provenance.json
           if-no-files-found: error
           retention-days: 14
+
+  failure-identity:
+    needs: test
+    if: always()
+    permissions:
+      contents: read
+      actions: read
+    uses: myon-bioinformatics/myon-bioinformatics/.github/workflows/reusable-junit-identity.yml@4dfda95d6573250477f991a0421fa6acb9bc0258
+    with:
+      expected-reports: '["junit-py3.12/pytest-3.12.xml","junit-controlled-py3.12/junit.xml"]'
+      artifact-pattern: "junit-*"
+      output-artifact: "failure-identity"
 
   screenshot:
     runs-on: ubuntu-latest
@@ -382,6 +424,15 @@ jobs:
       run: python -S scripts/sync_vendor_provenance.py
     - run: python -m pip install --upgrade pip
     - run: python -m pip install -r requirements-mcp.txt -r tests/requirements.txt
+    - name: Check out pinned test-only JUnit importer
+      uses: actions/checkout@v7
+      with:
+        repository: myon-bioinformatics/xprobe
+        ref: 7e7015b2df69ad446b968f6fa49711b5b1dbdd3f
+        path: build/shared
+        persist-credentials: false
+        sparse-checkout: xprobe.py
+        sparse-checkout-cone-mode: false
     - name: Compile all tracked Python sources before test collection
       run: |
         git ls-files '*.py' -z | xargs -0 python -m py_compile

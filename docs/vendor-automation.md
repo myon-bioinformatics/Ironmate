@@ -1,8 +1,8 @@
 # Public vendor placement in CI
 
 Ordinary push/PR CI restores locked files and updates the explicit public source
-allowlist once in `resolve-vendor`. The primary Python test job (including its matrix variants) downloads the same
-verified snapshot. Existing documentation-only change detection is retained.
+allowlist once in `resolve-vendor`. The primary Python test job, including its
+matrix variants, downloads the same verified snapshot. Existing documentation-only change detection is retained.
 Dispatch defaults to `update`; `vendor-mode: locked` reproduces the baseline.
 No dedicated token, enable variable, scheduled update PR or main writeback is
 required. Source acquisition uses anonymous HTTP/public Git in the pinned shared
@@ -49,13 +49,22 @@ JUnit work remains tracked separately in myon-bioinformatics/myon-bioinformatics
 
 ## What a green run covers
 
-Ordinary CI tests the updated snapshot. It does not certify the checked-in vendor
-baseline shipped by Pages or Docker. Those consumers continue using checkout
-bytes; no updated source is written back to main. `vendor-mode: locked` explicitly
-tests the baseline with the primary suite. The resolve job's Actions summary lists
-changed source/LICENSE paths and the old/new commit for every entry, including
-unchanged, locked and failed-update runs. A failed update remains red; its summary
-does not certify the recorded candidate.
+The primary Python job tests the updated snapshot. A separate `test-locked` job
+now tests the checked-in baseline on one representative Python version on every
+selected push/PR run. It verifies local bytes, removes the allowlisted files,
+materializes their exact upstream commits, verifies again and projects provenance
+before running the existing Python suite. It never downloads the candidate
+snapshot or runs update. Locked evidence uses a `locked-` artifact prefix and is
+retained on failure; it is separate from candidate JUnit collection.
+
+Pages/Docker continue shipping checked-in bytes; no source is written back to
+main. Green `test-locked` covers that baseline on its one Python version, not the
+whole candidate matrix. `vendor-mode: locked` remains available for a full primary
+matrix baseline run, but no dispatch is required for routine baseline coverage.
+
+The resolve job's summary lists changed source/LICENSE paths and old/new commits.
+It describes the candidate only; baseline test results belong to `test-locked`.
+A failed update remains red even if the independent baseline job succeeds.
 
 Updates happen only when the existing workflow/change filters select the run.
 There is no upstream-only scheduler. Separate push and pull-request events are

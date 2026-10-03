@@ -344,3 +344,66 @@ jobs:
           name: ironmate-repository-diagnostics-screenshots
           path: ironmate-repository-diagnostics-*.png
           retention-days: 14
+
+  test-locked:
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        persist-credentials: false
+    - uses: actions/setup-python@v7
+      with:
+        python-version: '3.12'
+    - name: Fetch pinned shared vendor tool
+      uses: actions/checkout@v7
+      with:
+        repository: myon-bioinformatics/myon-bioinformatics
+        ref: 90bc069c33901bd4b5373eb02311026e0acf2e2e
+        path: .vendor-sync-tools
+        persist-credentials: false
+    - name: Verify checked-in vendor copies
+      run: python -S .vendor-sync-tools/vendor_sync.py check --manifest vendor.lock.json
+    - name: Recreate locked vendor files from GitHub
+      shell: bash
+      run: |
+        python -S - <<'PY'
+        import json
+        from pathlib import Path
+        for entry in json.loads(Path('vendor.lock.json').read_text(encoding='utf-8'))['files']:
+            Path(entry['destination']).unlink()
+        PY
+        python -S .vendor-sync-tools/vendor_sync.py materialize --manifest vendor.lock.json
+        python -S .vendor-sync-tools/vendor_sync.py check --manifest vendor.lock.json
+    - name: Refresh legacy provenance from the verified lock
+      run: python -S scripts/sync_vendor_provenance.py
+    - run: python -m pip install --upgrade pip
+    - run: python -m pip install -r requirements-mcp.txt -r tests/requirements.txt
+    - name: Compile all tracked Python sources before test collection
+      run: |
+        git ls-files '*.py' -z | xargs -0 python -m py_compile
+    - run: python -m unittest tests/test_ironmate_mcp.py tests/test_github_adapter.py tests/test_niconico_adapter.py tests/test_github_catalog.py tests/test_repository_metadata.py tests/test_nvd_nist_known_vulns.py tests/test_mcp_stub_page.py tests/test_vendor_modules.py tests/test_unreviewed.py tests/test_repository_hygiene.py
+    - name: Run default pytest suite (exclude heavy tests)
+      run: python -m pytest -q -m "not heavy"
+    - name: Preserve vendor lock used by this run
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: locked-vendor-lock-py3.12
+        path: |
+          vendor.lock.json
+          vendor/ascii_artist.py
+          vendor/git_inspector.py
+          vendor/markdown.py
+          vendor/nvd_nist_known_vulns.py
+          vendor/ascii_artist-LICENSE
+          vendor/markdown-LICENSE
+          vendor/nvd_nist_known_vulns-LICENSE
+          vendor/ascii_artist.provenance.json
+          vendor/git_inspector.provenance.json
+          vendor/markdown.provenance.json
+        if-no-files-found: error
+        retention-days: 14
+    name: Locked baseline
+    timeout-minutes: 20

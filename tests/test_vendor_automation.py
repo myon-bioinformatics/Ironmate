@@ -66,6 +66,7 @@ def test_public_vendor_ci_updates_without_repository_writes():
     ci = _workflow()
     assert {"push", "pull_request"} <= set(ci["on"])
     assert "schedule" not in ci["on"]
+    assert ci.get("permissions", {"contents": "read"}) == {"contents": "read"}
     jobs = ci["jobs"]
     for job in (jobs["resolve-vendor"], jobs[TEST_JOB]):
         assert "continue-on-error" not in job
@@ -239,7 +240,9 @@ def test_summary_reports_drift_without_claiming_baseline_success(tmp_path, outco
     assert "Update outcome: **" + outcome + "**" in text
     assert "not a baseline test result" in text
     assert "failed update remains a failed job" in text
-    assert old in text and entry["commit"] in text
+    row = "| `" + entry["destination"] + "` | `" + old + "` | `" + entry["commit"] + "` | "
+    row += ("yes" if changed else "no") + " |"
+    assert row in text.splitlines()
     expected = [entry["destination"]] if changed else []
     assert "Changed source/LICENSE paths: `" + json.dumps(expected) + "`" in text
     assert before == {p: (tmp_path / p).read_bytes() for p in SNAPSHOT}
@@ -261,3 +264,38 @@ def test_projection_cli_missing_license_record_is_exit_two(tmp_path):
     assert "missing LICENSE entry" in result.stderr
     assert "Traceback" not in result.stderr
     assert before == {p: (tmp_path / p).read_bytes() for p in before}
+
+
+def test_locked_baseline_runs_automatically_without_candidate_snapshot():
+    ci = _workflow()
+    job = ci['jobs']['test-locked']
+    assert job['permissions'] == {'contents': 'read'}
+    assert 'continue-on-error' not in job
+    assert job.get('needs') == ci['jobs']['resolve-vendor'].get('needs')
+    assert job.get('if') == ci['jobs']['resolve-vendor'].get('if')
+    matrix = job.get('strategy', {}).get('matrix', {})
+    assert all(len(values) == 1 for values in matrix.values())
+    steps = job['steps']
+    assert not any('vendor_sync.py update' in s.get('run', '') for s in steps)
+    assert not any(s.get('uses', '').startswith('actions/download-artifact@') for s in steps)
+    verify = next(i for i,s in enumerate(steps) if s.get('name') == 'Verify checked-in vendor copies')
+    recreate = next(i for i,s in enumerate(steps) if s.get('name') == 'Recreate locked vendor files from GitHub')
+    project = next(i for i,s in enumerate(steps) if s.get('name') == 'Refresh legacy provenance from the verified lock')
+    tests = [i for i,s in enumerate(steps) if 'pytest ' in s.get('run', '')]
+    assert tests and verify < recreate < project < min(tests)
+    original = next(s for s in ci['jobs']['resolve-vendor']['steps']
+                    if s.get('name') == 'Recreate locked vendor files from GitHub')
+    assert steps[recreate] == original
+    tool = next(s for s in steps if s.get('name') == 'Fetch pinned shared vendor tool')
+    assert tool['with']['ref'] == '90bc069c33901bd4b5373eb02311026e0acf2e2e'
+    for step in steps:
+        assert 'continue-on-error' not in step
+        if step.get('uses', '').startswith('actions/checkout@'):
+            assert step['with']['persist-credentials'] == 'false'
+        if step.get('uses', '').startswith('actions/upload-artifact@'):
+            assert step['with']['name'].startswith('locked-')
+            if step['with']['name'].startswith(('locked-vendor-', 'locked-junit-', 'locked-controlled-')):
+                assert step['if'] == 'always()'
+            assert step['with']['if-no-files-found'] == 'error'
+    lock = next(s for s in steps if s.get('name') == 'Preserve vendor lock used by this run')
+    assert set(lock['with']['path'].splitlines()) == set(SNAPSHOT)

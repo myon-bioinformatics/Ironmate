@@ -1,5 +1,7 @@
 """Integration checks for pinned vendored sibling utilities."""
 
+import hashlib
+import json
 import shutil
 import subprocess
 import sys
@@ -7,6 +9,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from provenance import git_blob_sha
+from python_artifact_provenance import validate_source_header
 from scripts.build_web_ui_consumer_examples import (
     ASCII_ARTIST_SHA,
     MARKDOWN_SHA,
@@ -17,8 +21,43 @@ from vendor import ascii_artist, markdown
 
 
 ROOT = Path(__file__).resolve().parents[1]
+ASCII_ARTIST_PROVENANCE = {
+    "schema_version": "1.0",
+    "source_repository": "myon-bioinformatics/ascii_artist",
+    "source_path": "ascii_artist.py",
+    "source_commit": "505858627afc7e24dd6deb0a5c118e4d185d391e",
+    "blob_sha": "ca46470b4a52293d722d59db0a621fec789c3690",
+    "sha256": "a2ea789b38d3f8a3cc15029ec33733d472d25effee3effed795c2519bec249ea",
+    "license": {
+        "source_path": "LICENSE",
+        "vendored_path": "vendor/ascii_artist-LICENSE",
+        "blob_sha": "4ec4989b801bf1a3df6184d21f79e6e7ed5931f6",
+        "sha256": "15f66204c4a6a1ce0c94f0ed4319ff9400f872e85fd32c95f21695c2f231af59",
+    },
+}
 
 class VendorModuleIntegrationTest(unittest.TestCase):
+    def test_vendor_ascii_artist_source_and_license_provenance(self):
+        manifest = json.loads(
+            (ROOT / "vendor/ascii_artist.provenance.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(manifest, ASCII_ARTIST_PROVENANCE)
+        self.assertEqual(ASCII_ARTIST_SHA, ASCII_ARTIST_PROVENANCE["source_commit"])
+        for path, expected in (
+            ("vendor/ascii_artist.py", ASCII_ARTIST_PROVENANCE),
+            ("vendor/ascii_artist-LICENSE", ASCII_ARTIST_PROVENANCE["license"]),
+        ):
+            with self.subTest(path=path):
+                source = ROOT / path
+                self.assertEqual(git_blob_sha(source), expected["blob_sha"])
+                self.assertEqual(hashlib.sha256(source.read_bytes()).hexdigest(), expected["sha256"])
+
+    def test_vendor_ascii_artist_preserves_upstream_header(self):
+        source = (ROOT / "vendor/ascii_artist.py").read_text(encoding="utf-8")
+        header = validate_source_header(source)
+        self.assertEqual(header["base_sha"], "7c21bacfac7b60327b77f9b31a87869ef7838a7e")
+        self.assertNotEqual(header["base_sha"], ASCII_ARTIST_SHA)
+
     def test_vendor_ascii_artist_smoke(self):
         self.assertEqual(ascii_artist.generate_square(2), "**\n**")
         self.assertTrue(hasattr(ascii_artist, "to_web_ui_v1_html"))

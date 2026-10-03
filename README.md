@@ -220,7 +220,7 @@ This avoids repeated model loading and is more reliable than routing every reque
 Ironmate keeps pinned source snapshots under `vendor/` instead of treating these helpers as runtime package dependencies.
 
 - `vendor/markdown.py` is sourced from [`myon-bioinformatics/markdown`](https://github.com/myon-bioinformatics/markdown), currently pinned to `c3063e08`.
-- `vendor/ascii_artist.py` is sourced from [`myon-bioinformatics/ascii_artist`](https://github.com/myon-bioinformatics/ascii_artist), currently pinned to `7c21bacf`.
+- `vendor/ascii_artist.py` is sourced from [`myon-bioinformatics/ascii_artist`](https://github.com/myon-bioinformatics/ascii_artist), currently pinned to `50585862`; exact source and license hashes are in `vendor/ascii_artist.provenance.json`.
 - `vendor/nvd_nist_known_vulns.py` is an exact source snapshot from `myon-bioinformatics/nvd_nist_known_vulns` merge `986e17192442b84adfae8e434ab4bf32bf2347af` (Git blob `16028101be84f6c1b9dd05afb8199280e721f069`). Tests verify the blob identity before exercising the producer-to-consumer contract.
 
 The sibling repositories are the upstream sources; changes should be developed there first and then intentionally refreshed in Ironmate.
@@ -235,6 +235,18 @@ so the snapshot stays byte-identical.
 
 The current snapshot includes markdown#78: input NUL is replaced with U+FFFD before
 all Markdown-to-HTML parsing paths. `html.escape` alone does not sanitize NUL.
+
+For an ASCII artist refresh, copy `ascii_artist.py` and `LICENSE` from the same
+explicit upstream commit to `vendor/ascii_artist.py` and `vendor/ascii_artist-LICENSE`.
+Update `vendor/ascii_artist.provenance.json`, its literal expectations in
+`tests/test_vendor_modules.py`, `ASCII_ARTIST_SHA` in the consumer builder, and the
+README pin together. Verify commit-to-blob mappings against upstream during refresh;
+offline tests verify the pinned local bytes and the shared artifact-header contract.
+Preserve upstream's embedded `base_sha` and timestamp verbatim: they describe the
+artifact baseline, not this downstream copy's fetch commit. The 2026-10-03 refresh
+changes only the source header; the function bodies are unchanged. Future updates
+will migrate to the shared vendor automation tracked in
+[myon-bioinformatics#35](https://github.com/myon-bioinformatics/myon-bioinformatics/issues/35).
 
 
 ---

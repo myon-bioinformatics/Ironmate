@@ -36,7 +36,7 @@ OUTPUT_DIR = ROOT / "docs" / "consumer-v1"
 
 WEB_UI_SHA = "adb23d7ba6ea94672b76457573f6655a081ee054"
 MARKDOWN_SHA = "c3063e0887c6eb6a531ee774793682ceff8a164d"
-ASCII_ARTIST_SHA = "7c21bacfac7b60327b77f9b31a87869ef7838a7e"
+ASCII_ARTIST_SHA = "505858627afc7e24dd6deb0a5c118e4d185d391e"
 
 _WEB_UI_BASE = (
     "https://cdn.jsdelivr.net/gh/myon-bioinformatics/"

@@ -9,10 +9,7 @@ from datetime import UTC, datetime
 import http.client
 import importlib.util
 import json
-import os
 from pathlib import Path
-import platform
-import subprocess
 import sys
 from typing import Any, Callable
 from urllib.error import HTTPError, URLError
@@ -24,10 +21,11 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from repository_metadata_contract import (
-    build_repository_record,
     pages_candidate_url,
     repository_identity,
 )
+
+from repository_metadata_generator import record_from_checkout
 
 OUTPUT_JSON = ROOT / "docs" / "api" / "repository-diagnostics.json"
 OUTPUT_HTML = ROOT / "docs" / "repository-diagnostics.html"
@@ -45,14 +43,6 @@ def _load_git_inspector():
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     return module
-
-
-def _git(root: Path, *args: str) -> str:
-    return subprocess.check_output(
-        ["git", "-C", str(root), *args],
-        text=True,
-        encoding="utf-8",
-    ).strip()
 
 
 def _tracked_bytes(root: Path) -> int:
@@ -185,25 +175,11 @@ def diagnostics_payload(
 
 
 def current_record(root: Path = ROOT) -> dict[str, Any]:
-    sha = _git(root, "rev-parse", "HEAD")
-    branch = (
-        os.environ.get("GITHUB_HEAD_REF")
-        or os.environ.get("GITHUB_REF_NAME")
-        or _git(root, "branch", "--show-current")
-        or "detached"
-    )
-    timestamp = _git(root, "show", "-s", "--format=%cI", "HEAD")
-    subject = _git(root, "show", "-s", "--format=%s", "HEAD")
-    generated_at = datetime.now(UTC).isoformat()
-    return build_repository_record(
-        full_name=REPOSITORY,
-        sha=sha,
-        branch=branch,
-        timestamp=timestamp,
-        subject=subject,
-        generated_at=generated_at,
+    return record_from_checkout(
+        root,
+        REPOSITORY,
         working_tree_bytes=_tracked_bytes(root),
-        tooling={"python": platform.python_version()},
+        include_python_tooling=True,
     )
 
 

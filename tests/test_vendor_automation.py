@@ -249,15 +249,11 @@ def test_summary_reports_drift_without_claiming_baseline_success(tmp_path, outco
     assert before == {p: (tmp_path / p).read_bytes() for p in SNAPSHOT}
 
 
-def test_projection_cli_missing_license_record_is_exit_two(tmp_path):
+def test_projection_cli_missing_required_license_lock_entry_is_exit_two(tmp_path):
     _copy_snapshot(tmp_path)
     helper = tmp_path / HELPER
     helper.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(ROOT / HELPER, helper)
-    path = tmp_path / "vendor/git_inspector.provenance.json"
-    record = json.loads(path.read_text(encoding="utf-8"))
-    record["license"] = {}
-    path.write_text(json.dumps(record), encoding="utf-8")
     lock_path = tmp_path / "vendor.lock.json"
     lock = json.loads(lock_path.read_text(encoding="utf-8"))
     lock["files"] = [entry for entry in lock["files"]

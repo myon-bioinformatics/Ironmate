@@ -81,7 +81,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: myon-bioinformatics/myon-bioinformatics
-          ref: 90bc069c33901bd4b5373eb02311026e0acf2e2e
+          ref: 37f30d5acdc1906d4acbd103ce6f652bc13ca7eb
           path: .vendor-sync-tools
           persist-credentials: false
       - name: Verify checked-in vendor copies
@@ -125,6 +125,7 @@ jobs:
           name: vendor-snapshot
           path: |
             vendor.lock.json
+            vendor/myon-bioinformatics-LICENSE
             vendor/ascii_artist.py
             vendor/git_inspector.py
             vendor/markdown.py
@@ -154,7 +155,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: myon-bioinformatics/myon-bioinformatics
-          ref: 90bc069c33901bd4b5373eb02311026e0acf2e2e
+          ref: 37f30d5acdc1906d4acbd103ce6f652bc13ca7eb
           path: .vendor-sync-tools
           persist-credentials: false
       - name: Download resolved vendor snapshot
@@ -184,6 +185,7 @@ jobs:
           name: vendor-lock-py3.12
           path: |
             vendor.lock.json
+            vendor/myon-bioinformatics-LICENSE
             vendor/ascii_artist.py
             vendor/git_inspector.py
             vendor/markdown.py
@@ -360,7 +362,7 @@ jobs:
       uses: actions/checkout@v7
       with:
         repository: myon-bioinformatics/myon-bioinformatics
-        ref: 90bc069c33901bd4b5373eb02311026e0acf2e2e
+        ref: 37f30d5acdc1906d4acbd103ce6f652bc13ca7eb
         path: .vendor-sync-tools
         persist-credentials: false
     - name: Verify checked-in vendor copies
@@ -393,6 +395,7 @@ jobs:
         name: locked-vendor-lock-py3.12
         path: |
           vendor.lock.json
+          vendor/myon-bioinformatics-LICENSE
           vendor/ascii_artist.py
           vendor/git_inspector.py
           vendor/markdown.py

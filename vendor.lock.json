@@ -63,6 +63,15 @@
       "destination": "vendor/nvd_nist_known_vulns-LICENSE",
       "blob_sha": "4bbe6322176d602c5318351abaf131c64b8f5957",
       "sha256": "0d84822e8471db747bd63b9dd5377980f9169b44427c773da6cac3691f53aa99"
+    },
+    {
+      "repository": "myon-bioinformatics/myon-bioinformatics",
+      "ref": "refs/heads/main",
+      "commit": "443b8a94bbc6801332e0abd9f2e56da68173b38d",
+      "source": "LICENSE",
+      "destination": "vendor/myon-bioinformatics-LICENSE",
+      "blob_sha": "4ec4989b801bf1a3df6184d21f79e6e7ed5931f6",
+      "sha256": "15f66204c4a6a1ce0c94f0ed4319ff9400f872e85fd32c95f21695c2f231af59"
     }
   ]
 }

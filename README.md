@@ -426,5 +426,8 @@ mutates isolated copies of the real bundle to prove rejection of missing images,
 wrong hashes, stale run IDs and failed receipts. These are integrity/run checks;
 they add no screen-content or pixel-regression assertions.
 
-
 Public source placement and automatic Python CI updates: [vendor automation](docs/vendor-automation.md).
+
+Consumer Pages attribution displays the acquisition commit recorded in vendor
+provenance (ASCII: `50585862`), rather than the artifact header base SHA
+(`7c21bacf`). The deployment rebuilds these labels from checked-in baseline files.

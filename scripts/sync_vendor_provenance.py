@@ -75,7 +75,9 @@ def project(root):
         if "date" in record and old_commit != record["commit"]:
             record["date"] = datetime.now(timezone.utc).date().isoformat()
         if "license" in record:
-            license_entry = next(e for e in entries.values() if e["repository"] == entry["repository"] and e["source"] == "LICENSE")
+            license_entry = next((e for e in entries.values() if e["repository"] == entry["repository"] and e["source"] == "LICENSE"), None)
+            if license_entry is None:
+                raise ValueError("missing LICENSE entry for " + entry["repository"])
             record["license"] = {"source_path": "LICENSE", "vendored_path": license_entry["destination"],
                                  "blob_sha": license_entry["blob_sha"], "sha256": license_entry["sha256"]}
         pending[path] = record
@@ -84,10 +86,42 @@ def project(root):
         (root / path).write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
 
 
+
+def summarize(root, baseline, output, outcome):
+    """Describe recorded lock drift; this report never certifies a failed update."""
+    old = json.loads(baseline.read_text(encoding="utf-8"))["files"]
+    new = json.loads((root / "vendor.lock.json").read_text(encoding="utf-8"))["files"]
+    previous = {entry["destination"]: entry for entry in old}
+    changed = [entry["destination"] for entry in new
+               if any(entry[key] != previous[entry["destination"]][key]
+                      for key in ("blob_sha", "sha256"))]
+    lines = ["## Public vendor snapshot", "", "Update outcome: **" + outcome + "**.",
+             "A failed update remains a failed job; recorded bytes are not a successful candidate.",
+             "Primary Python tests use this run's snapshot. Pages/Docker ship the checked-in baseline.",
+             "This summary is not a baseline test result.", "",
+             "Changed source/LICENSE paths: `" + json.dumps(changed) + "`", "",
+             "| Destination | Checked-in commit | Recorded snapshot commit | Bytes changed |",
+             "| --- | --- | --- | --- |"]
+    for entry in new:
+        path = entry["destination"]
+        lines.append("| `" + path + "` | `" + previous[path]["commit"] + "` | `" +
+                     entry["commit"] + "` | " + ("yes" if path in changed else "no") + " |")
+    with output.open("a", encoding="utf-8") as stream:
+        stream.write("\n".join(lines) + "\n")
+
 if __name__ == "__main__":
-    argparse.ArgumentParser(description=__doc__).parse_args()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--summary-baseline", type=Path)
+    parser.add_argument("--summary-output", type=Path)
+    parser.add_argument("--update-outcome", choices=("success", "failure", "skipped", "cancelled", ""), default="")
+    args = parser.parse_args()
+    if bool(args.summary_baseline) != bool(args.summary_output):
+        parser.error("--summary-baseline and --summary-output must be used together")
     try:
-        project(ROOT)
+        if args.summary_baseline:
+            summarize(ROOT, args.summary_baseline, args.summary_output, args.update_outcome)
+        else:
+            project(ROOT)
     except (ValueError, KeyError, OSError) as error:
         print("vendor-provenance: " + str(error), file=sys.stderr)
         raise SystemExit(2)

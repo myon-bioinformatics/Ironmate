@@ -1,7 +1,7 @@
 # Public vendor placement in CI
 
 Ordinary push/PR CI restores locked files and updates the explicit public source
-allowlist once in `resolve-vendor`. Each Python test job downloads the same
+allowlist once in `resolve-vendor`. The primary Python test job (including its matrix variants) downloads the same
 verified snapshot. Existing documentation-only change detection is retained.
 Dispatch defaults to `update`; `vendor-mode: locked` reproduces the baseline.
 No dedicated token, enable variable, scheduled update PR or main writeback is
@@ -20,8 +20,9 @@ untouched. Upstream embedded artifact headers are preserved verbatim.
 Source repositories that have LICENSE files carry their exact LICENSE bytes.
 The shared profile repository currently has no LICENSE file at either the pinned
 source revisions or shared tool pin; no sibling license is falsely attributed to
-it. Its existing inspector copy remains an explicit source entry. License policy
-for that source is a separate upstream decision.
+it. Its existing inspector copy remains an explicit source entry. The owner has authorized MIT licensing in shared PR #39
+(https://github.com/myon-bioinformatics/myon-bioinformatics/pull/39). After it is
+merged, add that exact upstream LICENSE to this lock and artifact allowlist.
 
 The source/license/lock and compatibility records are retained in Actions both
 before and after testing with `if: always()` and missing-file errors. Failures
@@ -44,4 +45,40 @@ python -S scripts/sync_vendor_provenance.py
 Run the existing Python suite with its test-only dependencies after projection.
 The shared tool rejects edited baseline copies before contacting upstream.
 Cross-repository rollout: myon-bioinformatics/myon-bioinformatics#35. Existing
-JUnit work remains tracked separately in #22.
+JUnit work remains tracked separately in myon-bioinformatics/myon-bioinformatics#22.
+
+## What a green run covers
+
+Ordinary CI tests the updated snapshot. It does not certify the checked-in vendor
+baseline shipped by Pages or Docker. Those consumers continue using checkout
+bytes; no updated source is written back to main. `vendor-mode: locked` explicitly
+tests the baseline with the primary suite. The resolve job's Actions summary lists
+changed source/LICENSE paths and the old/new commit for every entry, including
+unchanged, locked and failed-update runs. A failed update remains red; its summary
+does not certify the recorded candidate.
+
+Updates happen only when the existing workflow/change filters select the run.
+There is no upstream-only scheduler. Separate push and pull-request events are
+separate runs and can each resolve upstream once.
+
+The pinned shared tool's public-Git rate-limit fallback applies to `update`.
+Locked `materialize` currently fails nonzero on raw HTTP 403/429; it does not
+silently accept the baseline or bypass digest verification.
+
+The small projection adapter is consumer-owned because existing provenance
+schemas differ. Acquisition and verification stay in the shared pinned tool;
+unifying projection needs an explicit schema contract rather than guessed aliases.
+
+The `screenshot` job deliberately builds and captures the checked-in baseline,
+matching Pages deployment inputs. It does not validate the updated pytest snapshot.
+The existing `paths` trigger means upstream-only changes wait for a matching
+consumer change (or dispatch).
+
+Pages attribution now displays the upstream **acquisition commit** from provenance,
+not the artifact header’s `base_sha`. For ASCII this changes `7c21bacf` to
+`50585862` on the baseline. The Pages workflow is unchanged, but merging this PR
+rebuilds that attribution in the public consumer examples.
+
+A legacy provenance `date` becomes the UTC resolution date when its source commit
+changes during CI. It is retained when the commit is unchanged; it is not the
+upstream commit timestamp or a claim that the checkout was committed that day.

@@ -64,7 +64,11 @@ def test_vendor_lock_has_explicit_sources_and_verified_bytes():
 
 def test_public_vendor_ci_updates_without_repository_writes():
     ci = _workflow()
+    assert {"push", "pull_request"} <= set(ci["on"])
+    assert "schedule" not in ci["on"]
     jobs = ci["jobs"]
+    for job in (jobs["resolve-vendor"], jobs[TEST_JOB]):
+        assert "continue-on-error" not in job
     resolve = jobs["resolve-vendor"]["steps"]
     test = jobs[TEST_JOB]["steps"]
     assert jobs['resolve-vendor']['permissions'] == jobs[TEST_JOB]['permissions'] == {'contents': 'read'}
@@ -75,6 +79,25 @@ def test_public_vendor_ci_updates_without_repository_writes():
     assert update['run'].splitlines() == [
         'python -S .vendor-sync-tools/vendor_sync.py update --manifest vendor.lock.json',
         'python -S .vendor-sync-tools/vendor_sync.py check --manifest vendor.lock.json']
+    recreate = next(s for s in resolve if s.get("name") == "Recreate locked vendor files from GitHub")
+    assert recreate["shell"] == "bash"
+    assert recreate["run"].splitlines() == [
+        "python -S - <<'PY'", "import json", "from pathlib import Path",
+        "for entry in json.loads(Path('vendor.lock.json').read_text(encoding='utf-8'))['files']:",
+        "    Path(entry['destination']).unlink()", "PY",
+        "python -S .vendor-sync-tools/vendor_sync.py materialize --manifest vendor.lock.json",
+        "python -S .vendor-sync-tools/vendor_sync.py check --manifest vendor.lock.json"]
+    save = next(i for i, s in enumerate(resolve) if s.get("name") == "Save checked-in vendor identities")
+    assert resolve[save]["run"] == "cp vendor.lock.json .vendor-baseline.lock.json"
+    assert save < resolve.index(recreate) < resolve.index(update)
+    summary = next(s for s in resolve if s.get("name") == "Summarize snapshot and checked-in baseline")
+    assert summary["if"] == "always()"
+    assert summary["shell"] == "bash"
+    assert summary["env"] == {"VENDOR_UPDATE_OUTCOME": "${{ steps.vendor-update.outcome }}"}
+    assert update["id"] == "vendor-update"
+    assert summary["run"] == ('python -S ' + HELPER +
+        ' --summary-baseline .vendor-baseline.lock.json --summary-output "$GITHUB_STEP_SUMMARY"'
+        ' --update-outcome "$VENDOR_UPDATE_OUTCOME"')
     assert ci['on']['workflow_dispatch']['inputs']['vendor-mode']['default'] == 'update'
     needs = jobs[TEST_JOB]['needs']
     assert 'resolve-vendor' in ([needs] if isinstance(needs, str) else needs)
@@ -105,7 +128,7 @@ def test_public_vendor_ci_updates_without_repository_writes():
             assert not any(x in step.get('run','') for x in ('|| true','|| :','set +e','git push','git commit','gh pr'))
             assert 'continue-on-error' not in step
     text = (ROOT / WORKFLOW).read_text(encoding='utf-8')
-    assert not any(x in text for x in ('VENDOR_UPDATE_TOKEN','VENDOR_UPDATES_ENABLED','GH_TOKEN'))
+    assert not any(x in text for x in ('secrets.', 'VENDOR_UPDATE_TOKEN','VENDOR_UPDATES_ENABLED','GH_TOKEN'))
 
 
 def test_failed_update_does_not_reach_successful_check(tmp_path):
@@ -165,3 +188,76 @@ def test_projection_cli_help_and_unknown_options_do_not_need_or_write_sources(tm
         assert result.returncode == expected
         assert 'usage:' in (result.stdout + result.stderr).lower()
         assert set(tmp_path.rglob('*')) == {helper.parent, helper}
+
+
+@pytest.mark.parametrize("mutation", ["blob", "sha256", "extra", "ref", "commit"])
+def test_projection_cli_rejects_invalid_lock_before_metadata_writes(tmp_path, mutation):
+    _copy_snapshot(tmp_path)
+    helper = tmp_path / HELPER
+    helper.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(ROOT / HELPER, helper)
+    path = tmp_path / "vendor.lock.json"
+    lock = json.loads(path.read_text(encoding="utf-8"))
+    entry = lock["files"][0]
+    if mutation == "blob":
+        entry["blob_sha"] = "0" * 40
+    elif mutation == "sha256":
+        entry["sha256"] = "0" * 64
+    elif mutation == "extra":
+        lock["files"].append(dict(entry))
+    elif mutation == "ref":
+        entry["ref"] = "refs/heads/unexpected"
+    else:
+        entry["commit"] = "short-sha"
+    path.write_text(json.dumps(lock), encoding="utf-8")
+    before = {p: (tmp_path / p).read_bytes() for p in SNAPSHOT if p.endswith(".json")}
+    result = subprocess.run([sys.executable, "-S", str(helper)], cwd=tmp_path,
+                            capture_output=True, text=True, timeout=30)
+    assert result.returncode == 2
+    assert "vendor-provenance:" in result.stderr
+    assert "Traceback" not in result.stderr
+    assert before == {p: (tmp_path / p).read_bytes() for p in before}
+
+
+@pytest.mark.parametrize("outcome,changed", [("success", True), ("success", False),
+                                           ("failure", False), ("skipped", False)])
+def test_summary_reports_drift_without_claiming_baseline_success(tmp_path, outcome, changed):
+    _copy_snapshot(tmp_path)
+    baseline = tmp_path / ".vendor-baseline.lock.json"
+    path = tmp_path / "vendor.lock.json"
+    baseline.write_bytes(path.read_bytes())
+    lock = json.loads(path.read_text(encoding="utf-8"))
+    entry = lock["files"][0]
+    old = entry["commit"]
+    if changed:
+        entry.update(commit="a" * 40, sha256="b" * 64)
+        path.write_text(json.dumps(lock), encoding="utf-8")
+    before = {p: (tmp_path / p).read_bytes() for p in SNAPSHOT}
+    output = tmp_path / "summary.md"
+    _projector().summarize(tmp_path, baseline, output, outcome)
+    text = output.read_text(encoding="utf-8")
+    assert "Update outcome: **" + outcome + "**" in text
+    assert "not a baseline test result" in text
+    assert "failed update remains a failed job" in text
+    assert old in text and entry["commit"] in text
+    expected = [entry["destination"]] if changed else []
+    assert "Changed source/LICENSE paths: `" + json.dumps(expected) + "`" in text
+    assert before == {p: (tmp_path / p).read_bytes() for p in SNAPSHOT}
+
+
+def test_projection_cli_missing_license_record_is_exit_two(tmp_path):
+    _copy_snapshot(tmp_path)
+    helper = tmp_path / HELPER
+    helper.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(ROOT / HELPER, helper)
+    path = tmp_path / "vendor/git_inspector.provenance.json"
+    record = json.loads(path.read_text(encoding="utf-8"))
+    record["license"] = {}
+    path.write_text(json.dumps(record), encoding="utf-8")
+    before = {p: (tmp_path / p).read_bytes() for p in SNAPSHOT if p.endswith(".json")}
+    result = subprocess.run([sys.executable, "-S", str(helper)], cwd=tmp_path,
+                            capture_output=True, text=True, timeout=30)
+    assert result.returncode == 2
+    assert "missing LICENSE entry" in result.stderr
+    assert "Traceback" not in result.stderr
+    assert before == {p: (tmp_path / p).read_bytes() for p in before}

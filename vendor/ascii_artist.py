@@ -1,5 +1,5 @@
 # ascii_artist.py
-# __all__: 32
+# metadata: __all__=32 | base_sha=7c21bacfac7b60327b77f9b31a87869ef7838a7e | updated_at=2026-09-23T05:39:43Z
 
 __all__ = [
     "generate_square",

@@ -7,6 +7,7 @@ web-ui assets and the published examples.
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 import sys
 
@@ -35,8 +36,8 @@ markdown = _load_vendor("markdown")
 OUTPUT_DIR = ROOT / "docs" / "consumer-v1"
 
 WEB_UI_SHA = "adb23d7ba6ea94672b76457573f6655a081ee054"
-MARKDOWN_SHA = "c3063e0887c6eb6a531ee774793682ceff8a164d"
-ASCII_ARTIST_SHA = "7c21bacfac7b60327b77f9b31a87869ef7838a7e"
+MARKDOWN_SHA = json.loads((ROOT / "vendor/markdown.provenance.json").read_text(encoding="utf-8"))["commit"]
+ASCII_ARTIST_SHA = json.loads((ROOT / "vendor/ascii_artist.provenance.json").read_text(encoding="utf-8"))["source_commit"]
 
 _WEB_UI_BASE = (
     "https://cdn.jsdelivr.net/gh/myon-bioinformatics/"

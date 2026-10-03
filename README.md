@@ -217,24 +217,21 @@ This avoids repeated model loading and is more reliable than routing every reque
 
 ## Vendored utilities
 
-Ironmate keeps pinned source snapshots under `vendor/` instead of treating these helpers as runtime package dependencies.
+Ironmate keeps exact source snapshots under `vendor/` instead of treating these
+helpers as runtime package dependencies. `vendor.lock.json` records the source
+commit, Git blob and SHA-256 for markdown, ascii_artist, NVD and git_inspector.
+The current checked-in NVD source is `a3d8f1835e4a82bc6e50682d6a79e22a851c4c91`
+(blob `9daa3938dfa4226198e94273c18af5362c1ccb8b`); the previous README named a
+different snapshot. The ASCII source header is now preserved verbatim and its
+LICENSE is included, as described by the original provenance preparation.
 
-- `vendor/markdown.py` is sourced from [`myon-bioinformatics/markdown`](https://github.com/myon-bioinformatics/markdown), currently pinned to `c3063e08`.
-- `vendor/ascii_artist.py` is sourced from [`myon-bioinformatics/ascii_artist`](https://github.com/myon-bioinformatics/ascii_artist), currently pinned to `7c21bacf`.
-- `vendor/nvd_nist_known_vulns.py` is an exact source snapshot from `myon-bioinformatics/nvd_nist_known_vulns` merge `986e17192442b84adfae8e434ab4bf32bf2347af` (Git blob `16028101be84f6c1b9dd05afb8199280e721f069`). Tests verify the blob identity before exercising the producer-to-consumer contract.
-
-The sibling repositories are the upstream sources; changes should be developed there first and then intentionally refreshed in Ironmate.
-
-For a Markdown refresh, copy `markdown.py` from an explicit upstream commit and update
-`vendor/markdown.provenance.json`, the literals in `tests/test_vendor_markdown_provenance.py`,
-`MARKDOWN_SHA` in the consumer builder, and the README pin together. Verify the upstream
-commit/blob mapping during refresh; offline tests verify the recorded pins and local
-file hashes, not the remote commit history. The source file's embedded `base_sha` is
-upstream artifact-header metadata, distinct from the vendoring commit; preserve it
-so the snapshot stays byte-identical.
-
-The current snapshot includes markdown#78: input NUL is replaced with U+FFFD before
-all Markdown-to-HTML parsing paths. `html.escape` alone does not sanitize NUL.
+Ordinary Python CI updates that allowlist once, validates every selected source
+and available LICENSE, projects compatible provenance records, and tests the
+same downloaded snapshot. Source headers describe their upstream artifact
+baseline; they do not become the consumer HEAD or the downstream fetch commit.
+See [vendor automation](docs/vendor-automation.md) for CI and ALM commands.
+The existing NUL replacement and producer/consumer behavior remain covered by
+regression tests.
 
 
 ---
@@ -428,3 +425,9 @@ capture. Failed receipts are preserved but cannot cover required success. CI als
 mutates isolated copies of the real bundle to prove rejection of missing images,
 wrong hashes, stale run IDs and failed receipts. These are integrity/run checks;
 they add no screen-content or pixel-regression assertions.
+
+Public source placement and automatic Python CI updates: [vendor automation](docs/vendor-automation.md).
+
+Consumer Pages attribution displays the acquisition commit recorded in vendor
+provenance (ASCII: `50585862`), rather than the artifact header base SHA
+(`7c21bacf`). The deployment rebuilds these labels from checked-in baseline files.

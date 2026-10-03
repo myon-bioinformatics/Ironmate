@@ -8,6 +8,12 @@ import pytest
 from scripts import build_repository_diagnostics as diagnostics
 
 
+def _locked(destination):
+    root = Path(__file__).resolve().parents[1]
+    lock = json.loads((root / "vendor.lock.json").read_text(encoding="utf-8"))
+    return next(e for e in lock["files"] if e["destination"] == destination)
+
+
 FIXTURE = Path(__file__).parent / "fixtures" / "repository_metadata_v1.json"
 
 
@@ -111,7 +117,7 @@ def test_git_inspector_provenance_matches_vendored_bytes():
     blob = hashlib.sha1(
         b"blob " + str(len(data)).encode("ascii") + bytes([0]) + data
     ).hexdigest()
-    assert provenance["source_commit"] == "cffa7017c95634bfb6ed6b269d255d56680a894c"
+    assert provenance["source_commit"] == _locked('vendor/git_inspector.py')['commit']
     assert blob == provenance["blob_sha"]
     assert hashlib.sha256(data).hexdigest() == provenance["sha256"]
 

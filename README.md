@@ -350,6 +350,47 @@ print(result["fetch"]["status"])
 Normal CI remains fixture/offline-driven; this live form is for manual/browser validation. A token is optional rate-limit headroom, not a requirement for public resources.
 
 
+## Live PR observation consumer
+
+`github_pr.py` consumes browser-test-kit's vendored `gh_ops.py` for one-shot PR
+observations, saved-snapshot diffs and explicitly requested PR comments. It runs
+with `python -S` and uses `GITHUB_TOKEN` / `GH_TOKEN` when provided.
+
+```bash
+python -S github_pr.py observe OWNER/REPO 42 --min-checks 6 --snapshot pr-42.json
+# Repeat to compare with the last successful observation and replace its snapshot.
+python -S github_pr.py observe OWNER/REPO 42 --min-checks 6 --snapshot pr-42.json
+python -S github_pr.py diff before.json after.json  # offline
+python -S github_pr.py comment OWNER/REPO 42 --body-file note.md          # preview
+python -S github_pr.py comment OWNER/REPO 42 --body-file note.md --write  # post once
+```
+
+Output is JSON. `observe` returns `observation`, `diff` and `snapshot_saved`;
+the first observation has `diff: null`. `ok: true` means observation succeeded;
+inspect `observation.checks.state` for CI status. Zero/fewer-than-minimum checks
+are pending, never green. Choose the expected minimum for the target repository.
+A head change during collection is rejected as stale. Failed/stale observations
+preserve the previous snapshot, while a complete pending/failed CI observation
+can replace it. The snapshot contains the producer's observation schema, so it
+can also be read by upstream `pr-diff`. Invalid/wrong-PR saved snapshots fail
+before HTTP. Create the parent directory first and serialize invocations sharing
+one path; replacement is atomic, but this is not a concurrent state store.
+Snapshots may contain private repository metadata; keep them in an appropriate
+local location rather than a public Pages directory.
+
+Comment results preserve `posted` / `verified` and the producer's uncertainty
+message. Exit codes are 0 for a successful operation (including preview), 1 for
+an unsuccessful result, and 2 for input/I/O/transport errors. Posting is never
+automatically retried; after an uncertain write, inspect GitHub before deciding
+to retry. The API returns the producer comment result unchanged and the CLI
+preserves the UTF-8 body including its trailing newline.
+
+This consumer performs no scheduling, notifications, semantic Blocking/Should
+classification or automatic comment/merge action. The static metadata MCP
+remains a separate interface. Source/LICENSE bytes are recorded in
+`vendor.lock.json` and participate in the existing locked/update CI lanes;
+GitHub REST collection and diff logic stay in the upstream producer.
+
 ## GitHub comment one-liner
 
 `github_comment.py` posts a comment to an issue or pull request and prints the

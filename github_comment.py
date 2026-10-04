@@ -40,7 +40,10 @@ def post_comment(repo: str, number: int, body: str, run: Callable = subprocess.r
     if not body.strip():
         raise ValueError("comment body is empty")
     cmd = comment_command(repo, number)
-    done = run(cmd, input=json.dumps({"body": body}), capture_output=True, text=True)
+    try:
+        done = run(cmd, input=json.dumps({"body": body}), capture_output=True, text=True)
+    except OSError as exc:
+        raise RuntimeError(f"failed to launch gh: {exc}") from exc
     if done.returncode != 0:
         raise RuntimeError((done.stderr or done.stdout or "gh api failed").strip())
     try:

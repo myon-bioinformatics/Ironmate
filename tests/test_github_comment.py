@@ -68,6 +68,14 @@ class GithubCommentTest(unittest.TestCase):
             self.assertEqual(code, 2, argv)
             self.assertEqual(run.calls, [], argv)
 
+    def test_gh_launch_failure_is_exit_1(self):
+        def missing_gh(cmd, **kwargs):
+            raise FileNotFoundError(2, "No such file or directory", cmd[0])
+
+        code, out, err = run_main(["o/r", "1", "--body", "x"], run=missing_gh)
+        self.assertEqual((code, out), (1, ""))
+        self.assertIn("failed to launch gh", err)
+
     def test_gh_failure_is_exit_1_with_its_message(self):
         code, out, err = run_main(["o/r", "1", "--body", "x"], run=FakeRun(returncode=1, stdout="", stderr="HTTP 404"))
         self.assertEqual((code, out), (1, ""))

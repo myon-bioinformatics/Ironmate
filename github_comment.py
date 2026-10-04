@@ -41,7 +41,7 @@ def post_comment(repo: str, number: int, body: str, run: Callable = subprocess.r
         raise ValueError("comment body is empty")
     cmd = comment_command(repo, number)
     try:
-        done = run(cmd, input=json.dumps({"body": body}), capture_output=True, text=True)
+        done = run(cmd, input=json.dumps({"body": body}), capture_output=True, text=True, encoding="utf-8")
     except OSError as exc:
         raise RuntimeError(f"failed to launch gh: {exc}") from exc
     if done.returncode != 0:
@@ -50,7 +50,10 @@ def post_comment(repo: str, number: int, body: str, run: Callable = subprocess.r
         data = json.loads(done.stdout)
         return {"id": data["id"], "url": data["html_url"]}
     except (ValueError, KeyError, TypeError) as exc:
-        raise RuntimeError(f"unexpected response from gh: {done.stdout[:200]!r}") from exc
+        raise RuntimeError(
+            "gh reported success but its response could not be parsed; the comment may already "
+            f"have been posted, so check GitHub before retrying: {done.stdout[:200]!r}"
+        ) from exc
 
 
 def read_body(args: argparse.Namespace, stdin=sys.stdin) -> str:

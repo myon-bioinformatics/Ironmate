@@ -72,6 +72,24 @@
       "destination": "vendor/myon-bioinformatics-LICENSE",
       "blob_sha": "4ec4989b801bf1a3df6184d21f79e6e7ed5931f6",
       "sha256": "15f66204c4a6a1ce0c94f0ed4319ff9400f872e85fd32c95f21695c2f231af59"
+    },
+    {
+      "repository": "myon-bioinformatics/browser-test-kit",
+      "ref": "refs/heads/main",
+      "commit": "de5bd0f5d81721bb54f0fbb8747d2f6b56d6b720",
+      "source": "scripts/gh_ops.py",
+      "destination": "vendor/gh_ops.py",
+      "blob_sha": "08f82d77d1beaace0d0d5a128788bb92459f9a73",
+      "sha256": "9f3e4d955cbd71b27fae85a2a017cf58a329ad1f66d17aa5e987feaf6859ed41"
+    },
+    {
+      "repository": "myon-bioinformatics/browser-test-kit",
+      "ref": "refs/heads/main",
+      "commit": "de5bd0f5d81721bb54f0fbb8747d2f6b56d6b720",
+      "source": "LICENSE",
+      "destination": "vendor/browser-test-kit-LICENSE",
+      "blob_sha": "4ec4989b801bf1a3df6184d21f79e6e7ed5931f6",
+      "sha256": "15f66204c4a6a1ce0c94f0ed4319ff9400f872e85fd32c95f21695c2f231af59"
     }
   ]
 }

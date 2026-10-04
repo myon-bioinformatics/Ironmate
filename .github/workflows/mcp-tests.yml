@@ -6,6 +6,7 @@ on:
       - "ironmate_mcp.py"
       - "github_catalog.py"
       - "github_adapter.py"
+      - "github_pr.py"
       - "source_adapter.py"
       - "niconico_adapter.py"
       - "repository_metadata.py"
@@ -32,6 +33,7 @@ on:
       - "ironmate_mcp.py"
       - "github_catalog.py"
       - "github_adapter.py"
+      - "github_pr.py"
       - "source_adapter.py"
       - "niconico_adapter.py"
       - "repository_metadata.py"
@@ -128,6 +130,8 @@ jobs:
             vendor/myon-bioinformatics-LICENSE
             vendor/ascii_artist.py
             vendor/git_inspector.py
+            vendor/gh_ops.py
+            vendor/browser-test-kit-LICENSE
             vendor/markdown.py
             vendor/nvd_nist_known_vulns.py
             vendor/ascii_artist-LICENSE
@@ -218,6 +222,8 @@ jobs:
             vendor/myon-bioinformatics-LICENSE
             vendor/ascii_artist.py
             vendor/git_inspector.py
+            vendor/gh_ops.py
+            vendor/browser-test-kit-LICENSE
             vendor/markdown.py
             vendor/nvd_nist_known_vulns.py
             vendor/ascii_artist-LICENSE
@@ -449,6 +455,8 @@ jobs:
           vendor/myon-bioinformatics-LICENSE
           vendor/ascii_artist.py
           vendor/git_inspector.py
+          vendor/gh_ops.py
+          vendor/browser-test-kit-LICENSE
           vendor/markdown.py
           vendor/nvd_nist_known_vulns.py
           vendor/ascii_artist-LICENSE

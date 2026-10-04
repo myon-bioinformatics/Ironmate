@@ -90,3 +90,10 @@ upstream commit timestamp or a claim that the checkout was committed that day.
 
 The shared profile MIT LICENSE is now explicitly locked at `443b8a94bbc6801332e0abd9f2e56da68173b38d`
 and included in resolved and locked evidence. Existing source pins and bytes are unchanged.
+
+The PR observation consumer also enrolls browser-test-kit `scripts/gh_ops.py`
+and its MIT LICENSE in the same allowlist. Its checked-in baseline is the #42
+squash commit `de5bd0f5d81721bb54f0fbb8747d2f6b56d6b720`; CI may resolve newer
+main bytes through the existing update lane, while the locked lane validates
+the shipped copy. This source uses the lock directly rather than adding a
+second legacy provenance format.

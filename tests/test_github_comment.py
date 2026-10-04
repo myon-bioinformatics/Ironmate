@@ -39,6 +39,17 @@ class GithubCommentTest(unittest.TestCase):
         self.assertEqual(cmd, ["gh", "api", "repos/o/r/issues/1/comments", "--method", "POST", "--input", "-"])
         self.assertEqual(json.loads(kwargs["input"]), {"body": body})   # 改行・引用符・Markdown はそのまま届く
 
+    def test_gh_response_is_explicitly_decoded_as_utf8(self):
+        response = json.dumps(
+            {"id": 8, "html_url": "https://github.com/o/r/issues/1#issuecomment-8", "body": "日本語 🧪"},
+            ensure_ascii=False,
+        )
+        run = FakeRun(stdout=response)
+        code, out, err = run_main(["o/r", "1", "--body", "日本語 🧪"], run=run)
+        self.assertEqual((code, out, err), (0, "https://github.com/o/r/issues/1#issuecomment-8\n", ""))
+        self.assertEqual(run.calls[0][1]["encoding"], "utf-8")
+        self.assertTrue(run.calls[0][1]["text"])
+
     def test_body_from_file_or_stdin_and_json_output(self):
         with tempfile.TemporaryDirectory() as d:
             path = Path(d) / "reply.md"
@@ -82,7 +93,8 @@ class GithubCommentTest(unittest.TestCase):
         self.assertIn("HTTP 404", err)
         code, _, err = run_main(["o/r", "1", "--body", "x"], run=FakeRun(stdout="not json"))
         self.assertEqual(code, 1)
-        self.assertIn("unexpected response", err)
+        self.assertIn("comment may already have been posted", err)
+        self.assertIn("check GitHub before retrying", err)
 
 
 if __name__ == "__main__":

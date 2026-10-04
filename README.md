@@ -350,6 +350,23 @@ print(result["fetch"]["status"])
 Normal CI remains fixture/offline-driven; this live form is for manual/browser validation. A token is optional rate-limit headroom, not a requirement for public resources.
 
 
+## GitHub comment one-liner
+
+`github_comment.py` posts a comment to an issue or pull request and prints the
+comment URL, in one command. It writes through the GitHub CLI (`gh api`), so
+authentication stays with `gh`; the module never reads a token. The body goes to
+GitHub as JSON on stdin, so newlines, quotes and Markdown arrive unchanged.
+Unlike `github_adapter.py` (read-only), this module writes, so it is kept separate.
+
+```bash
+python github_comment.py OWNER/REPO 1 --body-file reply.md          # prints the comment URL
+cat reply.md | python github_comment.py OWNER/REPO 1 --body-file -  # from stdin
+python github_comment.py OWNER/REPO 1 --body "text" --json          # {"id": ..., "url": ...}
+python github_comment.py OWNER/REPO 1 --body-file reply.md --dry-run  # show, do not post
+```
+
+Exit codes: 0 posted (or shown), 1 `gh` failed (its message on stderr), 2 bad arguments.
+
 ## Python artifact provenance contract
 
 `python_artifact_provenance.py` is a stdlib-only static contract for standalone or vendored

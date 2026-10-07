@@ -13,6 +13,7 @@ import sys
 import tempfile
 
 from vendor import gh_ops
+from github_adapter import local_identity_from_repository_metadata, compare_pull_head_identity
 
 
 def _load_snapshot(path: Path) -> dict:
@@ -39,7 +40,8 @@ def _save_snapshot(path: Path, observation: dict) -> None:
 
 
 def observe_pr(repo: str, number: int, *, snapshot: str | Path | None = None,
-               min_checks: int = 1, client: gh_ops.Client | None = None) -> dict:
+               min_checks: int = 1, local_metadata: str | Path | None = None,
+               client: gh_ops.Client | None = None) -> dict:
     """Observe once; optionally compare and replace a last-successful local snapshot.
 
     First observation has no diff (not a CI transition). Stale/read failures leave
@@ -56,13 +58,22 @@ def observe_pr(repo: str, number: int, *, snapshot: str | Path | None = None,
         if previous is not None and (previous.get("repo"), previous.get("number")) != (repo, number):
             raise ValueError("snapshot belongs to a different pull request")
     current = gh_ops.pr_observe(repo, number, min_checks=min_checks, client=client)
+    identity = None
+    if local_metadata is not None:
+        record = json.loads(Path(local_metadata).read_text(encoding="utf-8"))
+        local = local_identity_from_repository_metadata(record)
+        identity = compare_pull_head_identity(
+            {"number": number, "head": {"sha": current.get("head_sha")}, "base": {}},
+            local,
+        )
     if not current["ok"]:
-        return {"ok": False, "observation": current, "diff": None, "snapshot_saved": False}
+        return {"ok": False, "observation": current, "diff": None, "snapshot_saved": False,
+                "identity": identity}
     difference = gh_ops.pr_observation_diff(previous, current) if previous is not None else None
     if path is not None:
         _save_snapshot(path, current)
     return {"ok": True, "observation": current, "diff": difference,
-            "snapshot_saved": path is not None}
+            "snapshot_saved": path is not None, "identity": identity}
 
 
 def compare_pr_snapshots(before: str | Path, after: str | Path) -> dict:
@@ -84,6 +95,7 @@ def main(argv: list[str] | None = None, *, client: gh_ops.Client | None = None) 
     observe.add_argument("number", type=int)
     observe.add_argument("--snapshot", type=Path)
     observe.add_argument("--min-checks", type=int, default=1)
+    observe.add_argument("--local-metadata", type=Path)
     diff = commands.add_parser("diff", help="compare two saved snapshots offline")
     diff.add_argument("before", type=Path)
     diff.add_argument("after", type=Path)
@@ -96,7 +108,8 @@ def main(argv: list[str] | None = None, *, client: gh_ops.Client | None = None) 
     try:
         if args.command == "observe":
             result = observe_pr(args.repo, args.number, snapshot=args.snapshot,
-                                min_checks=args.min_checks, client=client)
+                                min_checks=args.min_checks, local_metadata=args.local_metadata,
+                                client=client)
         elif args.command == "diff":
             result = compare_pr_snapshots(args.before, args.after)
         else:

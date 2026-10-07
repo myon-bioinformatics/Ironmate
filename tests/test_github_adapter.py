@@ -22,6 +22,7 @@ from github_adapter import (
     normalize_commit,
     normalize_pull,
     compare_pull_head_identity,
+    local_identity_from_repository_metadata,
     normalize_release,
     normalize_tag,
     pull_html_url,
@@ -279,6 +280,31 @@ class GitHubAdapterTest(unittest.TestCase):
         self.assertFalse(result["comparable"])
         self.assertIsNone(result["same"])
         self.assertEqual(result["remote_sha"], "c" * 40)
+
+
+    def test_repository_metadata_becomes_ghi_local_identity_without_git(self):
+        record = {"head": {"sha": "a" * 40, "branch": "feature/test",
+                           "short_sha": "aaaaaaaa", "timestamp": "2026-10-07T00:00:00Z",
+                           "subject": "fixture"}}
+        identity = local_identity_from_repository_metadata(record)
+        self.assertEqual(identity["schema"], "gh-identity-local/1")
+        self.assertEqual(identity["sha"], "a" * 40)
+        self.assertEqual(identity["ref"], "feature/test")
+        self.assertIsNone(identity["dirty"])
+        self.assertEqual(identity["source"], "repository-metadata")
+
+    def test_repository_metadata_identity_flows_into_pull_comparison(self):
+        record = {"head": {"sha": "b" * 40, "branch": "feature/test"}}
+        local = local_identity_from_repository_metadata(record)
+        pr = {"number": 9, "head": {"sha": "B" * 40}, "base": {"sha": "c" * 40}}
+        result = compare_pull_head_identity(pr, local)
+        self.assertTrue(result["comparable"])
+        self.assertTrue(result["same"])
+        self.assertEqual(result["local_sha"], "b" * 40)
+
+    def test_repository_metadata_without_head_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "head is required"):
+            local_identity_from_repository_metadata({})
 
 
 if __name__ == "__main__":

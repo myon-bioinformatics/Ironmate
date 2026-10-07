@@ -6,3 +6,5 @@ vendor/ascii_artist-LICENSE -text
 vendor/markdown-LICENSE -text
 vendor/nvd_nist_known_vulns-LICENSE -text
 vendor/myon-bioinformatics-LICENSE -text
+vendor/gh_identity.py -text
+vendor/gh_identity-LICENSE -text

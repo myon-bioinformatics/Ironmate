@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = '.github/workflows/mcp-tests.yml'
 TEST_JOB = 'test'
 HELPER = 'scripts/sync_vendor_provenance.py'
-SNAPSHOT = ['vendor/gh_ops.py', 'vendor/browser-test-kit-LICENSE', 'vendor/myon-bioinformatics-LICENSE', 'vendor.lock.json',
+SNAPSHOT = ['vendor/gh_ops.py', 'vendor/gh_identity.py', 'vendor/gh_identity-LICENSE', 'vendor/browser-test-kit-LICENSE', 'vendor/myon-bioinformatics-LICENSE', 'vendor.lock.json',
  'vendor/ascii_artist.py',
  'vendor/git_inspector.py',
  'vendor/markdown.py',
@@ -24,7 +24,9 @@ SNAPSHOT = ['vendor/gh_ops.py', 'vendor/browser-test-kit-LICENSE', 'vendor/myon-
  'vendor/ascii_artist.provenance.json',
  'vendor/git_inspector.provenance.json',
  'vendor/markdown.provenance.json']
-EXPECTED = {('myon-bioinformatics/browser-test-kit', 'scripts/gh_ops.py', 'vendor/gh_ops.py'),
+EXPECTED = {('myon-bioinformatics/gh_identity', 'gh_identity.py', 'vendor/gh_identity.py'),
+ ('myon-bioinformatics/gh_identity', 'LICENSE', 'vendor/gh_identity-LICENSE'),
+ ('myon-bioinformatics/browser-test-kit', 'scripts/gh_ops.py', 'vendor/gh_ops.py'),
  ('myon-bioinformatics/browser-test-kit', 'LICENSE', 'vendor/browser-test-kit-LICENSE'),
  ('myon-bioinformatics/myon-bioinformatics', 'LICENSE', 'vendor/myon-bioinformatics-LICENSE'),
  ('myon-bioinformatics/ascii_artist', 'LICENSE', 'vendor/ascii_artist-LICENSE'),

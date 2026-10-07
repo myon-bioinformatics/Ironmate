@@ -90,6 +90,24 @@
       "destination": "vendor/browser-test-kit-LICENSE",
       "blob_sha": "4ec4989b801bf1a3df6184d21f79e6e7ed5931f6",
       "sha256": "15f66204c4a6a1ce0c94f0ed4319ff9400f872e85fd32c95f21695c2f231af59"
+    },
+    {
+      "repository": "myon-bioinformatics/gh_identity",
+      "ref": "refs/heads/main",
+      "commit": "3efe04b1c62d97fc2582fbd90f999bcf426c9ea3",
+      "source": "gh_identity.py",
+      "destination": "vendor/gh_identity.py",
+      "blob_sha": "6c1d7119f94c0eac04b80b4a8071f0f26fb2dabf",
+      "sha256": "9eb2a59c4c7656fcfc597644a4fb6449fae4784d2a0014ef2867d0006d493d2b"
+    },
+    {
+      "repository": "myon-bioinformatics/gh_identity",
+      "ref": "refs/heads/main",
+      "commit": "3efe04b1c62d97fc2582fbd90f999bcf426c9ea3",
+      "source": "LICENSE",
+      "destination": "vendor/gh_identity-LICENSE",
+      "blob_sha": "4ec4989b801bf1a3df6184d21f79e6e7ed5931f6",
+      "sha256": "15f66204c4a6a1ce0c94f0ed4319ff9400f872e85fd32c95f21695c2f231af59"
     }
   ]
 }

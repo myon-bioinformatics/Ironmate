@@ -241,6 +241,20 @@ def normalize_pull(pr: dict[str, Any], *, api_url: str | None = None, source_url
 
 
 
+
+def local_identity_from_repository_metadata(record: dict[str, Any]) -> dict[str, Any]:
+    """Adapt canonical repository-metadata head identity into GHI without re-running git."""
+    head = record.get("head")
+    if not isinstance(head, dict):
+        raise ValueError("repository metadata head is required")
+    return gh_identity.local_identity(identity={
+        "sha": head.get("sha"),
+        "ref": head.get("branch"),
+        "dirty": None,
+        "source": "repository-metadata",
+    })
+
+
 def compare_pull_head_identity(pr: dict[str, Any], local: dict[str, Any]) -> dict[str, Any]:
     """Compare a normalized/local identity with a pull request head SHA via GHI."""
     normalized = normalize_pull(pr)

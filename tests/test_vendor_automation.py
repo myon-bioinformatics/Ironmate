@@ -83,7 +83,8 @@ def test_public_vendor_ci_updates_without_repository_writes():
     assert update["shell"] == "bash"
     assert 'continue-on-error' not in update
     assert update['run'].splitlines() == [
-        'python -S .vendor-sync-tools/vendor_sync.py update --manifest vendor.lock.json',
+        'python -S .vendor-sync-tools/vendor_sync.py promote --manifest vendor.lock.json | tee vendor-promotion.json',
+        'python -S -m json.tool vendor-promotion.json > /dev/null',
         'python -S .vendor-sync-tools/vendor_sync.py check --manifest vendor.lock.json']
     recreate = next(s for s in resolve if s.get("name") == "Recreate locked vendor files from GitHub")
     assert recreate["shell"] == "bash"
@@ -107,7 +108,7 @@ def test_public_vendor_ci_updates_without_repository_writes():
     assert ci['on']['workflow_dispatch']['inputs']['vendor-mode']['default'] == 'update'
     needs = jobs[TEST_JOB]['needs']
     assert 'resolve-vendor' in ([needs] if isinstance(needs, str) else needs)
-    assert sum('vendor_sync.py update' in s.get('run', '') for steps in (resolve,test) for s in steps) == 1
+    assert sum('vendor_sync.py promote' in s.get('run', '') for steps in (resolve,test) for s in steps) == 1
     download = next(i for i,s in enumerate(test) if s.get('name') == 'Download resolved vendor snapshot')
     verify = next(i for i,s in enumerate(test) if s.get('name') == 'Verify resolved vendor snapshot')
     tests = [i for i,s in enumerate(test) if 'pytest ' in s.get('run','')]
@@ -123,7 +124,10 @@ def test_public_vendor_ci_updates_without_repository_writes():
         upload = next(s for s in steps if s.get('name') == name)
         assert upload['if'] == 'always()'
         assert upload['with']['if-no-files-found'] == 'error'
-        assert set(upload['with']['path'].splitlines()) == set(SNAPSHOT)
+        expected = set(SNAPSHOT)
+        if steps is resolve:
+            expected.add('vendor-promotion.json')
+        assert set(upload['with']['path'].splitlines()) == expected
     pins = [s['with']['ref'] for steps in (resolve,test) for s in steps
             if s.get('with',{}).get('repository') == 'myon-bioinformatics/myon-bioinformatics']
     assert pins == ['08dc3757deeb930c950bdcc6bd55ec3112ba49fc'] * 2
@@ -137,12 +141,12 @@ def test_public_vendor_ci_updates_without_repository_writes():
     assert not any(x in text for x in ('secrets.', 'VENDOR_UPDATE_TOKEN','VENDOR_UPDATES_ENABLED','GH_TOKEN'))
 
 
-def test_failed_update_does_not_reach_successful_check(tmp_path):
+def test_failed_promotion_does_not_reach_receipt_validation_or_check(tmp_path):
     update = next(s for s in _workflow()['jobs']['resolve-vendor']['steps']
                   if s.get('name') == 'Update public vendor files for this run')
     tool = tmp_path / '.vendor-sync-tools/vendor_sync.py'
     tool.parent.mkdir()
-    tool.write_text("import pathlib, sys\nif sys.argv[1] == 'update': sys.exit(2)\npathlib.Path('check-reached').touch()\n", encoding='utf-8')
+    tool.write_text("import pathlib, sys\nif sys.argv[1] == 'promote': sys.exit(2)\npathlib.Path('check-reached').touch()\n", encoding='utf-8')
     script = tmp_path / 'update.sh'
     script.write_text(update['run'].replace('python -S ', shlex.quote(sys.executable)+' -S '), encoding='utf-8')
     result = subprocess.run([shutil.which('bash'),'--noprofile','--norc','-e','-o','pipefail',str(script)],

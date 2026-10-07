@@ -157,6 +157,34 @@ def test_uncertain_comment_is_not_retried(tmp_path, capsys, verify, missing_id):
     assert sum(method == 'POST' for method, _, _ in calls) == 1
 
 
+
+def test_observation_can_attach_repository_metadata_identity(tmp_path):
+    metadata = tmp_path / "repository.json"
+    metadata.write_text(json.dumps({"head": {"sha": HEAD, "branch": "feature"}}), encoding="utf-8")
+    result = github_pr.observe_pr(REPO, 11, local_metadata=metadata, client=client_for()[0])
+    assert result["ok"]
+    assert result["identity"]["schema"] == "gh-identity-comparison/1"
+    assert result["identity"]["same"] is True
+    assert result["identity"]["local_sha"] == HEAD
+    assert result["identity"]["remote_sha"] == HEAD
+
+
+def test_observation_without_local_metadata_preserves_optional_contract():
+    result = github_pr.observe_pr(REPO, 11, client=client_for()[0])
+    assert result["ok"]
+    assert result["identity"] is None
+
+
+def test_local_metadata_mismatch_is_reported_not_folded_into_ci_status(tmp_path):
+    metadata = tmp_path / "repository.json"
+    metadata.write_text(json.dumps({"head": {"sha": OTHER, "branch": "feature"}}), encoding="utf-8")
+    result = github_pr.observe_pr(REPO, 11, local_metadata=metadata, client=client_for()[0])
+    assert result["ok"]
+    assert result["observation"]["checks"]["ok"]
+    assert result["identity"]["comparable"]
+    assert result["identity"]["same"] is False
+
+
 def test_stdlib_cli_diff_offline(tmp_path):
     first, second = tmp_path / 'before.json', tmp_path / 'after.json'
     github_pr.observe_pr(REPO, 11, snapshot=first, client=client_for(checks=0)[0])

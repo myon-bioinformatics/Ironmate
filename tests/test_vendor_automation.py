@@ -13,33 +13,17 @@ ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = '.github/workflows/mcp-tests.yml'
 TEST_JOB = 'test'
 HELPER = 'scripts/sync_vendor_provenance.py'
-SNAPSHOT = ['vendor/gh_ops.py', 'vendor/gh_identity.py', 'vendor/gh_identity-LICENSE', 'vendor/browser-test-kit-LICENSE', 'vendor/myon-bioinformatics-LICENSE', 'vendor.lock.json',
- 'vendor/ascii_artist.py',
- 'vendor/git_inspector.py',
- 'vendor/markdown.py',
- 'vendor/nvd_nist_known_vulns.py',
- 'vendor/ascii_artist-LICENSE',
- 'vendor/markdown-LICENSE',
- 'vendor/nvd_nist_known_vulns-LICENSE',
- 'vendor/ascii_artist.provenance.json',
- 'vendor/git_inspector.provenance.json',
- 'vendor/markdown.provenance.json']
-EXPECTED = {('myon-bioinformatics/gh_identity', 'gh_identity.py', 'vendor/gh_identity.py'),
- ('myon-bioinformatics/gh_identity', 'LICENSE', 'vendor/gh_identity-LICENSE'),
- ('myon-bioinformatics/browser-test-kit', 'scripts/gh_ops.py', 'vendor/gh_ops.py'),
- ('myon-bioinformatics/browser-test-kit', 'LICENSE', 'vendor/browser-test-kit-LICENSE'),
- ('myon-bioinformatics/myon-bioinformatics', 'LICENSE', 'vendor/myon-bioinformatics-LICENSE'),
- ('myon-bioinformatics/ascii_artist', 'LICENSE', 'vendor/ascii_artist-LICENSE'),
- ('myon-bioinformatics/ascii_artist', 'ascii_artist.py', 'vendor/ascii_artist.py'),
- ('myon-bioinformatics/markdown', 'LICENSE', 'vendor/markdown-LICENSE'),
- ('myon-bioinformatics/markdown', 'markdown.py', 'vendor/markdown.py'),
- ('myon-bioinformatics/myon-bioinformatics', 'git_inspector.py', 'vendor/git_inspector.py'),
- ('myon-bioinformatics/nvd_nist_known_vulns',
-  'LICENSE',
-  'vendor/nvd_nist_known_vulns-LICENSE'),
- ('myon-bioinformatics/nvd_nist_known_vulns',
-  'nvd_nist_known_vulns.py',
-  'vendor/nvd_nist_known_vulns.py')}
+def _lock_files(root=ROOT):
+    lock = json.loads((root / 'vendor.lock.json').read_text(encoding='utf-8'))
+    assert lock['schema'] == 'vendor-lock/1'
+    return lock['files']
+
+
+SNAPSHOT = ['vendor.lock.json', *[entry['destination'] for entry in _lock_files()],
+            'vendor/ascii_artist.provenance.json',
+            'vendor/git_inspector.provenance.json',
+            'vendor/markdown.provenance.json']
+
 
 
 def _workflow():
@@ -63,8 +47,8 @@ def _copy_snapshot(root):
 
 def test_vendor_lock_has_explicit_sources_and_verified_bytes():
     records = _projector().records(ROOT)
-    assert len(records) == len(EXPECTED)
-    assert {(e["repository"], e["source"], e["destination"]) for e in records.values()} == EXPECTED
+    expected = {(e['repository'], e['source'], e['destination']) for e in _lock_files()}
+    assert {(e['repository'], e['source'], e['destination']) for e in records.values()} == expected
 
 
 

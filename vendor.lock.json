@@ -13,20 +13,20 @@
     {
       "repository": "myon-bioinformatics/myon-bioinformatics",
       "ref": "refs/heads/main",
-      "commit": "cffa7017c95634bfb6ed6b269d255d56680a894c",
+      "commit": "08dc3757deeb930c950bdcc6bd55ec3112ba49fc",
       "source": "git_inspector.py",
       "destination": "vendor/git_inspector.py",
-      "blob_sha": "abda0ba458c939240b9a9a6f0e4c8d640c76cf43",
-      "sha256": "b445c7c188892c1c2fad7e68a9d9f2174cc2d0e5c7100d27011a414bda1122b8"
+      "blob_sha": "9f6d88101688e2578a3ca45e7eaf7c805fe6f1bd",
+      "sha256": "7b960e0851b23ca7ca64d8f917dd8e56aa0509ca6332d191309a7895cf382641"
     },
     {
       "repository": "myon-bioinformatics/markdown",
       "ref": "refs/heads/main",
-      "commit": "c3063e0887c6eb6a531ee774793682ceff8a164d",
+      "commit": "57a49168266617db438538c8fe81e6683a08b879",
       "source": "markdown.py",
       "destination": "vendor/markdown.py",
-      "blob_sha": "a20c59e7e28d811e48152b7359275cb0888c304d",
-      "sha256": "a07648ec6ec6db6b431404e0735cc0b4947c62bc824f9adffbb0bf6c2b92040b"
+      "blob_sha": "53dd61c4ce90a258e49db0fae647547c9679368b",
+      "sha256": "36dea3a29cdabe972224f0018c140d5c0e9b21c282f8ba44f879561bc1f46d9d"
     },
     {
       "repository": "myon-bioinformatics/nvd_nist_known_vulns",
@@ -49,7 +49,7 @@
     {
       "repository": "myon-bioinformatics/markdown",
       "ref": "refs/heads/main",
-      "commit": "c3063e0887c6eb6a531ee774793682ceff8a164d",
+      "commit": "57a49168266617db438538c8fe81e6683a08b879",
       "source": "LICENSE",
       "destination": "vendor/markdown-LICENSE",
       "blob_sha": "4ec4989b801bf1a3df6184d21f79e6e7ed5931f6",
@@ -67,7 +67,7 @@
     {
       "repository": "myon-bioinformatics/myon-bioinformatics",
       "ref": "refs/heads/main",
-      "commit": "443b8a94bbc6801332e0abd9f2e56da68173b38d",
+      "commit": "08dc3757deeb930c950bdcc6bd55ec3112ba49fc",
       "source": "LICENSE",
       "destination": "vendor/myon-bioinformatics-LICENSE",
       "blob_sha": "4ec4989b801bf1a3df6184d21f79e6e7ed5931f6",
@@ -94,16 +94,16 @@
     {
       "repository": "myon-bioinformatics/gh_identity",
       "ref": "refs/heads/main",
-      "commit": "3efe04b1c62d97fc2582fbd90f999bcf426c9ea3",
+      "commit": "a6550f718b55d415d519f4131775525fe83c61fb",
       "source": "gh_identity.py",
       "destination": "vendor/gh_identity.py",
-      "blob_sha": "6c1d7119f94c0eac04b80b4a8071f0f26fb2dabf",
-      "sha256": "9eb2a59c4c7656fcfc597644a4fb6449fae4784d2a0014ef2867d0006d493d2b"
+      "blob_sha": "abbd987780d9afceb7312611a5ee7f28c194b1cd",
+      "sha256": "326ed00be5193e20edaca97db201327ad679a356b986ee44b436e8675c9d26f7"
     },
     {
       "repository": "myon-bioinformatics/gh_identity",
       "ref": "refs/heads/main",
-      "commit": "3efe04b1c62d97fc2582fbd90f999bcf426c9ea3",
+      "commit": "a6550f718b55d415d519f4131775525fe83c61fb",
       "source": "LICENSE",
       "destination": "vendor/gh_identity-LICENSE",
       "blob_sha": "4ec4989b801bf1a3df6184d21f79e6e7ed5931f6",

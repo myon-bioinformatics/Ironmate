@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = '.github/workflows/mcp-tests.yml'
 TEST_JOB = 'test'
 HELPER = 'scripts/sync_vendor_provenance.py'
-SNAPSHOT = ['vendor/gh_ops.py', 'vendor/gh_identity.py', 'vendor/gh_identity-LICENSE', 'vendor/browser-test-kit-LICENSE', 'vendor/myon-bioinformatics-LICENSE', 'vendor.lock.json',
+SNAPSHOT = ['vendor-promotion.json', 'vendor/gh_ops.py', 'vendor/gh_identity.py', 'vendor/gh_identity-LICENSE', 'vendor/browser-test-kit-LICENSE', 'vendor/myon-bioinformatics-LICENSE', 'vendor.lock.json',
  'vendor/ascii_artist.py',
  'vendor/git_inspector.py',
  'vendor/markdown.py',

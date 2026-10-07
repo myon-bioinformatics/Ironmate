@@ -67,6 +67,17 @@ def test_vendor_lock_has_explicit_sources_and_verified_bytes():
     assert {(e["repository"], e["source"], e["destination"]) for e in records.values()} == EXPECTED
 
 
+
+def test_canonical_vendor_evidence_membership_is_derived_from_lock():
+    """New enrollments must not require another manually maintained membership list."""
+    lock = json.loads((ROOT / 'vendor.lock.json').read_text(encoding='utf-8'))
+    destinations = [entry['destination'] for entry in lock['files']]
+    assert len(destinations) == len(set(path.casefold() for path in destinations))
+    locked = sorted(['vendor.lock.json', *destinations], key=lambda p: (p.casefold(), p))
+    assert 'vendor-promotion.json' not in locked
+    assert set(locked) == {'vendor.lock.json', *(entry['destination'] for entry in lock['files'])}
+    assert all((ROOT / path).is_file() for path in locked)
+
 def test_public_vendor_ci_updates_without_repository_writes():
     ci = _workflow()
     assert {"push", "pull_request"} <= set(ci["on"])

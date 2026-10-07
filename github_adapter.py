@@ -14,6 +14,7 @@ from urllib.parse import quote, urlparse
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 from source_adapter import build_url, provenance, quote_segment
+from vendor import gh_identity
 
 API_ROOT = "https://api.github.com"
 HTML_ROOT = "https://github.com"
@@ -237,6 +238,14 @@ def normalize_pull(pr: dict[str, Any], *, api_url: str | None = None, source_url
             "created_at": pr.get("created_at"), "updated_at": pr.get("updated_at"),
             "closed_at": pr.get("closed_at"), "merged_at": pr.get("merged_at"),
             **provenance(pr, api_url=api_url, source_url=source_url)}
+
+
+
+def compare_pull_head_identity(pr: dict[str, Any], local: dict[str, Any]) -> dict[str, Any]:
+    """Compare a normalized/local identity with a pull request head SHA via GHI."""
+    normalized = normalize_pull(pr)
+    result = gh_identity.compare_sha(local, normalized.get("head_sha"))
+    return {**result, "pull_number": normalized.get("number")}
 
 
 def normalize_release(data: dict[str, Any], *, api_url: str | None = None, source_url: str | None = None) -> dict[str, Any]:

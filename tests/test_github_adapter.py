@@ -21,6 +21,7 @@ from github_adapter import (
     normalize_actions_run,
     normalize_commit,
     normalize_pull,
+    compare_pull_head_identity,
     normalize_release,
     normalize_tag,
     pull_html_url,
@@ -261,6 +262,23 @@ class GitHubAdapterTest(unittest.TestCase):
             parse_github_resource("https://github.com/o/r/settings")
         with self.assertRaises(ValueError):
             parse_github_resource("https://github.com/o/r/tree/main")
+
+
+    def test_pull_head_identity_uses_ghi_comparison_contract(self):
+        sha = "A" * 40
+        pr = {"number": 7, "head": {"sha": sha}, "base": {"sha": "b" * 40}}
+        result = compare_pull_head_identity(pr, {"sha": "a" * 40})
+        self.assertEqual(result["schema"], "gh-identity-comparison/1")
+        self.assertTrue(result["comparable"])
+        self.assertTrue(result["same"])
+        self.assertEqual(result["pull_number"], 7)
+
+    def test_pull_head_identity_preserves_unknown_local_identity(self):
+        pr = {"number": 8, "head": {"sha": "c" * 40}, "base": {"sha": "d" * 40}}
+        result = compare_pull_head_identity(pr, {"sha": None})
+        self.assertFalse(result["comparable"])
+        self.assertIsNone(result["same"])
+        self.assertEqual(result["remote_sha"], "c" * 40)
 
 
 if __name__ == "__main__":

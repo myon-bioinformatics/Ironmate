@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = '.github/workflows/mcp-tests.yml'
 TEST_JOB = 'test'
 HELPER = 'scripts/sync_vendor_provenance.py'
-SNAPSHOT = ['vendor-promotion.json', 'vendor/gh_ops.py', 'vendor/gh_identity.py', 'vendor/gh_identity-LICENSE', 'vendor/browser-test-kit-LICENSE', 'vendor/myon-bioinformatics-LICENSE', 'vendor.lock.json',
+SNAPSHOT = ['vendor/gh_ops.py', 'vendor/gh_identity.py', 'vendor/gh_identity-LICENSE', 'vendor/browser-test-kit-LICENSE', 'vendor/myon-bioinformatics-LICENSE', 'vendor.lock.json',
  'vendor/ascii_artist.py',
  'vendor/git_inspector.py',
  'vendor/markdown.py',
@@ -124,7 +124,10 @@ def test_public_vendor_ci_updates_without_repository_writes():
         upload = next(s for s in steps if s.get('name') == name)
         assert upload['if'] == 'always()'
         assert upload['with']['if-no-files-found'] == 'error'
-        assert set(upload['with']['path'].splitlines()) == set(SNAPSHOT)
+        expected = set(SNAPSHOT)
+        if steps is resolve:
+            expected.add('vendor-promotion.json')
+        assert set(upload['with']['path'].splitlines()) == expected
     pins = [s['with']['ref'] for steps in (resolve,test) for s in steps
             if s.get('with',{}).get('repository') == 'myon-bioinformatics/myon-bioinformatics']
     assert pins == ['08dc3757deeb930c950bdcc6bd55ec3112ba49fc'] * 2

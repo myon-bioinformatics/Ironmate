@@ -131,6 +131,8 @@ jobs:
             vendor/ascii_artist.py
             vendor/git_inspector.py
             vendor/gh_ops.py
+            vendor/gh_identity.py
+            vendor/gh_identity-LICENSE
             vendor/browser-test-kit-LICENSE
             vendor/markdown.py
             vendor/nvd_nist_known_vulns.py

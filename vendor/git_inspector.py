@@ -17,10 +17,11 @@ from __future__ import annotations
 
 import os
 import subprocess
+import threading
 from pathlib import Path
 
 __version__ = "0.1.0"
-__all__ = ["status", "ls_files", "diff", "log", "show", "blame",
+__all__ = ["status", "ls_files", "diff", "log", "log_numstat", "show", "blame",
            "grep", "check_ignore"]
 
 
@@ -56,6 +57,29 @@ def _ref(value):
     return value
 
 
+def _spawn(command, **kwargs):
+    return subprocess.Popen(command, **kwargs)
+
+
+def _drain_bounded(stream, max_bytes, result):
+    """Drain one child pipe fully while retaining at most max_bytes bytes."""
+    kept = bytearray()
+    truncated = False
+    try:
+        while True:
+            chunk = stream.read(64 * 1024)
+            if not chunk:
+                break
+            room = max_bytes - len(kept)
+            if room > 0:
+                kept.extend(chunk[:room])
+            if len(chunk) > max(room, 0):
+                truncated = True
+    finally:
+        stream.close()
+    result.append((bytes(kept), truncated))
+
+
 def _run(root, args, *, max_bytes=1_000_000, ok=(0,), input_bytes=None):
     _positive(max_bytes, "max_bytes")
     if input_bytes is not None and not isinstance(input_bytes, bytes):
@@ -82,24 +106,48 @@ def _run(root, args, *, max_bytes=1_000_000, ok=(0,), input_bytes=None):
     env["GIT_CONFIG_SYSTEM"] = os.devnull
     env["GIT_CONFIG_NOSYSTEM"] = "1"
     try:
-        kwargs = {"stdout": subprocess.PIPE, "stderr": subprocess.PIPE,
-                  "check": False, "shell": False, "env": env}
-        if input_bytes is None:
-            kwargs["stdin"] = subprocess.DEVNULL
-        else:
-            kwargs["input"] = input_bytes
-        proc = subprocess.run(command, **kwargs)
+        proc = _spawn(
+            command,
+            stdin=subprocess.PIPE if input_bytes is not None else subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            shell=False,
+            env=env,
+        )
     except FileNotFoundError as error:
         raise GitInspectionError("git executable not found") from error
     except OSError as error:
         raise GitInspectionError(type(error).__name__) from error
-    if proc.returncode not in ok:
-        raise GitInspectionError("git exited with status " + str(proc.returncode))
-    raw = proc.stdout
-    truncated = len(raw) > max_bytes
-    raw = raw[:max_bytes]
-    return raw, truncated, proc.returncode
 
+    stdout_result = []
+    stderr_result = []
+    stdout_thread = threading.Thread(
+        target=_drain_bounded, args=(proc.stdout, max_bytes, stdout_result),
+        daemon=True,
+    )
+    stderr_thread = threading.Thread(
+        target=_drain_bounded, args=(proc.stderr, max_bytes, stderr_result),
+        daemon=True,
+    )
+    stdout_thread.start()
+    stderr_thread.start()
+    if input_bytes is not None:
+        try:
+            proc.stdin.write(input_bytes)
+            proc.stdin.close()
+        except BrokenPipeError:
+            pass
+    returncode = proc.wait()
+    stdout_thread.join()
+    stderr_thread.join()
+
+    raw, truncated = stdout_result[0]
+    # stderr is deliberately drained and bounded even though the public
+    # contract does not expose command stderr.
+    _stderr, _stderr_truncated = stderr_result[0]
+    if returncode not in ok:
+        raise GitInspectionError("git exited with status " + str(returncode))
+    return raw, truncated, returncode
 
 def _decode(raw):
     # Results are JSON-compatible observations. Invalid or byte-truncated UTF-8
@@ -154,10 +202,23 @@ def status(root=".", *, max_bytes=1_000_000):
         index += 1
     return {"clean": not records and not truncated, "records": records, "truncated": truncated}
 
-def ls_files(root=".", *, max_files=10_000, max_bytes=1_000_000):
-    """Return a bounded NUL-safe tracked-file inventory."""
+def ls_files(root=".", *, include_untracked=False, max_files=10_000,
+             max_bytes=1_000_000):
+    """Return a bounded NUL-safe file inventory.
+
+    The default is tracked-only. include_untracked=True additionally observes
+    untracked-but-not-ignored entries without weakening existing consumers.
+    Combined mode preserves Git's output order; a truncated prefix is not
+    guaranteed to contain any tracked path. Nested untracked repositories may
+    appear as directory entries, and tracked paths may be absent in the worktree.
+    """
+    if not isinstance(include_untracked, bool):
+        raise TypeError("include_untracked must be bool")
     _positive(max_files, "max_files")
-    raw, byte_truncated, _ = _run(root, ["ls-files", "-z"], max_bytes=max_bytes)
+    args = ["ls-files", "-z"]
+    if include_untracked:
+        args.extend(["--cached", "--others", "--exclude-standard"])
+    raw, byte_truncated, _ = _run(root, args, max_bytes=max_bytes)
     paths = [_decode(item) for item in _complete_fields(raw, b"\0", byte_truncated)]
     record_truncated = len(paths) > max_files
     return {"paths": paths[:max_files],
@@ -205,6 +266,85 @@ def log(root=".", *, max_count=50, path=None, max_bytes=1_000_000):
             rows.append(dict(zip(("commit", "authored_at", "author", "subject"),
                                  fields)))
     return {"commits": rows, "truncated": truncated}
+
+
+def log_numstat(root=".", *, since=None, max_count=10_000,
+                max_bytes=1_000_000):
+    """Return bounded per-commit file churn using NUL-safe numstat output.
+
+    Dates are committer dates (Git %cs), matching repo_overview's existing
+    display. Binary counts are None. Renames retain both paths. Git's usual
+    history/merge/rename semantics are preserved. A byte-truncated final commit
+    is omitted in full; truncated never masquerades as complete history.
+    """
+    _positive(max_count, "max_count")
+    if since is not None:
+        if not isinstance(since, str):
+            raise TypeError("since must be a string or None")
+        if not since or "\x00" in since:
+            raise ValueError("since must be non-empty without NUL")
+    args = ["log", "--no-ext-diff", "--no-textconv", "--no-color",
+            "-z", "--numstat", "--format=%x00%H%x00%cs",
+            "--max-count=" + str(max_count + 1)]
+    if since is not None:
+        args.append("--since=" + since)
+    args.append("--")
+    raw, byte_truncated, _ = _run(root, args, max_bytes=max_bytes)
+    fields = _complete_fields(raw, b"\0", byte_truncated)
+    commits = []
+    current = None
+    index = 0
+    while index < len(fields):
+        field = fields[index]
+        if field == b"":
+            if current is not None:
+                commits.append(current)
+                current = None
+            if index + 2 >= len(fields):
+                if byte_truncated:
+                    break
+                raise GitInspectionError("incomplete numstat commit header")
+            sha, date = fields[index + 1:index + 3]
+            if (len(sha) not in (40, 64) or any(c not in b"0123456789abcdef" for c in sha)
+                    or len(date) != 10 or date[4:5] != b"-" or date[7:8] != b"-"
+                    or not date.replace(b"-", b"").isdigit()):
+                raise GitInspectionError("malformed numstat commit header")
+            current = {"commit": _decode(sha), "date": _decode(date), "files": []}
+            index += 3
+            continue
+        if current is None:
+            raise GitInspectionError("numstat record without commit")
+        # Git separates the header from stats with a newline. Split only the
+        # two count separators; tabs/newlines inside the filename are data.
+        parts = field.lstrip(b"\n").split(b"\t", 2)
+        if len(parts) != 3:
+            raise GitInspectionError("malformed numstat file record")
+        added, deleted, path = parts
+        if (added == b"-") != (deleted == b"-") or any(
+                count != b"-" and not count.isdigit() for count in (added, deleted)):
+            raise GitInspectionError("malformed numstat counts")
+        orig_path = None
+        if not path:
+            if index + 2 >= len(fields):
+                if byte_truncated:
+                    current = None
+                    break
+                raise GitInspectionError("incomplete numstat rename")
+            orig_path, path = fields[index + 1:index + 3]
+            if not orig_path or not path:
+                raise GitInspectionError("empty numstat rename path")
+            index += 2
+        current["files"].append({
+            "path": _decode(path),
+            "orig_path": _decode(orig_path) if orig_path is not None else None,
+            "added": None if added == b"-" else int(added),
+            "deleted": None if deleted == b"-" else int(deleted),
+        })
+        index += 1
+    if current is not None and not byte_truncated:
+        commits.append(current)
+    return {"commits": commits[:max_count],
+            "truncated": byte_truncated or len(commits) > max_count}
 
 
 def show(root=".", revision="HEAD", *, path=None, max_bytes=1_000_000):

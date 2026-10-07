@@ -437,7 +437,11 @@ def _scan_lines(lines: list[str]) -> list[_ScannedLine]:
     """Classify lines as ordinary text or fenced-code context.
 
     This is deliberately lexical and dependency-free. It preserves the
-    repository's existing ``_FENCE_RE`` contract.
+    repository's existing ``_FENCE_RE`` contract: while a fence is open, a
+    line beginning with its marker closes it even if text follows. For
+    example, a line with the active triple-backtick marker followed by
+    ``inner`` closes it. Callers that require strict Markdown validation
+    should reject such malformed input separately.
     """
     active_fence: str | None = None
     scanned: list[_ScannedLine] = []
@@ -5083,11 +5087,15 @@ def directory_to_markdown(
 
     Read-only: entries are listed by name (sorted), symlinks are listed but
     never followed, and hidden (dot) entries are skipped unless
-    ``include_hidden``. ``max_depth=1`` lists only the top level. An entry
+    ``include_hidden``. ``max_depth=1`` lists only the top level;
+    ``max_depth=0`` and negative values are rejected, while ``None`` means
+    unlimited depth. An entry
     whose name the tree format cannot represent portably (see
     :func:`markdown_to_directory_tree`) raises ``ValueError`` instead of
     producing Markdown that would read back as a different tree.
     """
+    if max_depth is not None and max_depth < 1:
+        raise ValueError("max_depth must be >= 1 or None")
     base = Path(path)
     if not base.is_dir():
         raise ValueError(f"not a directory: {base}")
@@ -5116,7 +5124,8 @@ def tree_text_to_markdown(text: str) -> str:
     ``\\`--``) connectors with 4-column levels. A leading root line without
     a connector (e.g. ``.`` or ``project/``) is skipped. Summary lines such
     as ``3 directories, 5 files`` and blank lines are ignored. Symlink
-    lines (``name -> target``) keep only the link name.
+    lines (``name -> target``) keep only the link name. Literal `` -> `` in
+    an entry name is ambiguous and is interpreted as a symlink delimiter.
     """
     entries: list[tuple[int, str, bool]] = []
     for raw in text.splitlines():
@@ -5478,7 +5487,8 @@ def markdown_to_email(
     containing CR/LF are rejected by :mod:`email.policy` (no header
     injection). ``date`` may be a :class:`datetime.datetime`; omitted means
     no ``Date`` header, keeping output deterministic.
-    ``email_to_markdown()`` recovers the Markdown body unchanged.
+    ``email_to_markdown()`` trims leading and trailing blank lines from the
+    recovered body, so those surrounding blank lines are not byte-verbatim.
     """
     msg = email_message.EmailMessage(policy=email_policy.default)
     msg["Subject"] = subject
@@ -5493,7 +5503,7 @@ def markdown_to_email(
 
 
 def _man_escape(text: str) -> str:
-    return text.replace("\\", "\\e").replace("-", "\\-")
+    return text.replace("\x00", "\uFFFD").replace("\\", "\\e").replace("-", "\\-")
 
 
 def _man_inline(tokens: list[tuple[Any, ...]], font: str = "R") -> str:
@@ -5538,7 +5548,8 @@ def markdown_to_man(
     ``# H`` -> ``.SH`` (upper-cased), deeper headings -> ``.SS``, lines ->
     ``.PP`` paragraphs, fenced code -> ``.EX``/``.EE``, lists -> ``.IP``,
     quotes -> ``.RS``/``.RE``, bold/code -> ``\\fB``, italic -> ``\\fI``.
-    Backslashes and hyphens are escaped and any line that would start with
+    NUL in the Markdown body is replaced with U+FFFD. Backslashes and
+    hyphens are escaped and any line that would start with
     ``.`` or ``'`` is guarded with ``\\&``, so Markdown text can never
     inject a troff request.
     ``name``/``section``/``date``/``source``/``manual`` go on the ``.TH``
@@ -5846,7 +5857,7 @@ def slack_mrkdwn_to_markdown(content: str) -> str:
 # --- LLM chat messages ------------------------------------------------------
 
 CHAT_ROLES = ("system", "developer", "user", "assistant", "tool")
-_CHAT_HEADING_RE = re.compile(r"^## (" + "|".join(CHAT_ROLES) + r")[ \t]*$", re.IGNORECASE)
+_CHAT_HEADING_RE = re.compile(r"^## (" + "|".join(CHAT_ROLES) + r")[ \t]*\r?$", re.IGNORECASE)
 
 
 def chat_messages_to_markdown(messages: Any) -> str:
@@ -5887,11 +5898,13 @@ def markdown_to_chat_messages(content: str) -> list[dict[str, str]]:
 
     Role headings are exact ``## <role>`` lines (case-insensitive) outside
     fenced code; any other heading (``## Summary``) is ordinary content.
-    Text before the first role heading raises ``ValueError``. Each
-    message's content has surrounding blank lines stripped.
+    Text before the first role heading raises ``ValueError``. Lines are
+    split only on LF, so CR and other Unicode line separators inside message
+    content remain unchanged. Each
+    message's content has surrounding LF characters stripped after parsing.
     """
     sections: list[tuple[str, list[str]]] = []
-    for item in _scan_lines(content.splitlines()):
+    for item in _scan_lines(content.split("\n")):
         match = None if item.in_fenced_code else _CHAT_HEADING_RE.match(item.text)
         if match:
             sections.append((match.group(1).lower(), []))
@@ -6374,9 +6387,10 @@ _REASONING_CLOSE_RE = {
 _REASONING_DETAILS_OPEN_RE = re.compile(
     r'<details\b(?=[^>]*\btype=["\']reasoning["\'])[^>]*>', re.IGNORECASE
 )
-_REASONING_DETAILS_CLOSE_RE = re.compile(r"</details\s*>", re.IGNORECASE)
+_DETAILS_TAG_RE = re.compile(r"</?details\b[^>]*>", re.IGNORECASE)
 _REASONING_SUMMARY_RE = re.compile(
-    r"[ \t]*<summary\b[^>]*>.*?</summary>[ \t]*\n?", re.IGNORECASE | re.DOTALL
+    r"\A[ \t\n]*<summary\b[^>]*>.*?</summary>[ \t]*\n?",
+    re.IGNORECASE | re.DOTALL,
 )
 _LLM_UUID_RE = re.compile(
     r"\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b"
@@ -6449,7 +6463,6 @@ def _truncate_code_blocks(text: str, max_code_lines: int) -> str:
         match = _FENCE_RE.match(lines[index])
         fence_char = match.group(1)[0] if match else "`"
         info = match.group(2).strip() if match else ""
-        lang = info.split()[0] if info else ""
         body: list[str] = []
         index += 1
         while index < total and not scanned[index].is_fence_close:
@@ -6457,10 +6470,16 @@ def _truncate_code_blocks(text: str, max_code_lines: int) -> str:
             index += 1
         if index < total:
             index += 1  # consume the closing fence line itself
-        if len(body) > max_code_lines:
+        marker = re.fullmatch(r"… (\d+) more lines", body[-1]) if body else None
+        already_compacted = (
+            marker is not None
+            and int(marker.group(1)) > 0
+            and len(body) == max_code_lines + 1
+        )
+        if len(body) > max_code_lines and not already_compacted:
             extra = len(body) - max_code_lines
             body = body[:max_code_lines] + [f"… {extra} more lines"]
-        rendered = code_block("\n".join(body), lang, fence_char=fence_char).split("\n")
+        rendered = code_block("\n".join(body), info, fence_char=fence_char).split("\n")
         if rendered and rendered[-1] == "":
             rendered.pop()
         out.extend(rendered)
@@ -6487,6 +6506,20 @@ def _mask_spans(text: str, spans: list[tuple[int, int]]) -> str:
         for index in range(start, end):
             chars[index] = " "
     return "".join(chars)
+
+
+def _matching_details_close(mask: str, start: int) -> re.Match[str] | None:
+    """Find the closing tag balanced with the details block opened at start."""
+    depth = 1
+    for match in _DETAILS_TAG_RE.finditer(mask, start):
+        tag = match.group(0)
+        if tag.startswith("</"):
+            depth -= 1
+        elif not tag.rstrip().endswith("/>"):
+            depth += 1
+        if depth == 0:
+            return match
+    return None
 
 
 def _split_reasoning_raw(text: str) -> tuple[str, list[str], list[str]]:
@@ -6522,7 +6555,7 @@ def _split_reasoning_raw(text: str) -> tuple[str, list[str], list[str]]:
 
         if opening is details_match:
             fmt = "details"
-            close_match = _REASONING_DETAILS_CLOSE_RE.search(mask, opening.end())
+            close_match = _matching_details_close(mask, opening.end())
         else:
             fmt = opening.group(1).lower()
             close_match = _REASONING_CLOSE_RE[fmt].search(mask, opening.end())

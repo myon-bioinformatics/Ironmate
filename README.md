@@ -219,7 +219,8 @@ This avoids repeated model loading and is more reliable than routing every reque
 
 Ironmate keeps exact source snapshots under `vendor/` instead of treating these
 helpers as runtime package dependencies. `vendor.lock.json` records the source
-commit, Git blob and SHA-256 for markdown, ascii_artist, NVD and git_inspector.
+commit, Git blob and SHA-256 for every enrolled source and LICENSE, including
+markdown, ascii_artist, NVD, git_inspector, gh_ops and gh_identity.
 The current checked-in NVD source is `a3d8f1835e4a82bc6e50682d6a79e22a851c4c91`
 (blob `9daa3938dfa4226198e94273c18af5362c1ccb8b`); the previous README named a
 different snapshot. The ASCII source header is now preserved verbatim and its
@@ -274,7 +275,7 @@ sibling libraries rather than only through hand-written Stub markup.
 
 - `vendor/markdown.py::markdown_to_web_ui_v1()`
 - `vendor/ascii_artist.py::to_web_ui_v1_html()`
-- pinned web-ui CSS at `a0867e45`
+- pinned web-ui CSS at `adb23d7ba6ea94672b76457573f6655a081ee054`
 
 The libraries emit semantic HTML only. Ironmate remains responsible for loading
 the pinned presentation assets, which keeps the upstream libraries stdlib-only
@@ -489,3 +490,27 @@ Public source placement and automatic Python CI updates: [vendor automation](doc
 Consumer Pages attribution displays the acquisition commit recorded in vendor
 provenance (ASCII: `50585862`), rather than the artifact header base SHA
 (`7c21bacf`). The deployment rebuilds these labels from checked-in baseline files.
+
+## Shared-tool ownership and cleanup
+
+The parent [myon-bioinformatics repository](https://github.com/myon-bioinformatics/myon-bioinformatics)
+owns `git_inspector.py`, `gh_ops.py`, `vendor_sync.py`, `vendor_stage.py`, and the
+reusable JUnit collector. Ironmate should consume those canonical sources and
+retain only its integration and repository-specific behavior.
+
+The checked-in `vendor/gh_ops.py` currently still uses the historical
+browser-test-kit source pin in `vendor.lock.json`; migration to the parent source
+and its enrolled dependencies is a follow-up, not a completed deletion.
+Likewise, `scripts/stage_vendor_evidence.py` currently stages files locally using
+the parent's evidence membership output; it has not yet been replaced by direct
+use of the parent `vendor_stage.py`.
+
+`repository_metadata_generator.py`, `repository_metadata_contract.py`, and the
+artifact-provenance contract remain Ironmate-owned in the current parent tree.
+Do not describe them as already transferred. Browser capture and screenshot
+receipt validation also remain consumer-side: the parent's browser-evidence
+contract does not yet provide an engine runner.
+
+When removing a transferred implementation, migrate its imports, CLI callers,
+workflow paths, lock/LICENSE entries and tests in the same change. Preserve
+consumer integration checks and actual evidence before deleting the old path.

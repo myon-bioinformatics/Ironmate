@@ -16,7 +16,7 @@ from typing import Any, Callable
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-from source_adapter import build_url
+from .source_adapter import build_url
 
 API_ROOT = "https://snapshot.search.nicovideo.jp"
 SEARCH_URL = API_ROOT + "/api/v2/snapshot/video/contents/search"

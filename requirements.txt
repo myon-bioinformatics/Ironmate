@@ -1,3 +1,2 @@
-# Core prototypes use the Python standard library.
+# Retained adapters use the Python standard library.
 # Tests: python -m pip install -r tests/requirements.txt
-# Optional metadata MCP: python -m pip install -r requirements-mcp.txt

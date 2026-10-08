@@ -1,4 +1,4 @@
-"""Kept prototypes must import without the retired model/UI dependencies."""
+"""Retained adapters and future root utilities must import without the retired model/UI dependencies."""
 from pathlib import Path
 import subprocess
 import sys
@@ -6,7 +6,7 @@ import sys
 
 def test_all_root_prototypes_import_without_site_packages():
     root = Path(__file__).resolve().parents[1]
-    names = sorted(path.stem for path in root.glob('*.py'))
+    names = ['adapters.source_adapter', 'adapters.niconico_adapter'] + sorted(path.stem for path in root.glob('*.py'))
     result = subprocess.run(
         [sys.executable, '-S', '-c',
          'import importlib; ' + '; '.join(f'importlib.import_module({name!r})' for name in names)],

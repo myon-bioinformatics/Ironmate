@@ -1,3 +1,5 @@
+> Historical design: the root prototypes and associated demos were retired in cleanup stage two. See [current ownership](cleanup-stage-two.md). Commands below describe the retired implementation.
+
 # cleanup-stage-one.md
 
 # 第一段階：旧アシスタント構成の整理

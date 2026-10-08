@@ -1,3 +1,5 @@
+> Historical design: the root prototypes and associated demos were retired in cleanup stage two. See [current ownership](cleanup-stage-two.md). Commands below describe the retired implementation.
+
 # Source adapter to catalog boundary
 
 Status: design checkpoint for Issue #20 / PR #38.

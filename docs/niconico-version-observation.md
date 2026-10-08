@@ -18,7 +18,7 @@ form. Failed observations retain transport status/timing but have no
 ## Search/export entry point
 
 ```python
-from niconico_adapter import paged_search
+from adapters.niconico_adapter import paged_search
 
 result = paged_search(
     q="synthetic query", targets="title", sort="-startTime",

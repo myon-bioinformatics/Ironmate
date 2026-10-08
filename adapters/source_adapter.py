@@ -1,6 +1,6 @@
 """Provider-neutral primitives for read-only source adapters.
 
-Provider adapters such as github_adapter.py and a future niconico_adapter.py
+Provider adapters such as niconico_adapter.py
 share URL construction and provenance vocabulary without sharing provider
 resource semantics.
 """

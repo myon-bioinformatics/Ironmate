@@ -8,7 +8,7 @@ from urllib.error import HTTPError
 from urllib.error import URLError
 from urllib.parse import parse_qs, urlsplit
 
-from niconico_adapter import (
+from adapters.niconico_adapter import (
     build_search_url, classify_page, content_url, fetch_json, next_delay_seconds,
     normalize_item, snapshot_consistent, completion_state, fetch_version,
     paged_search, VERSION_URL,
@@ -106,7 +106,7 @@ class NiconicoAdapterTest(unittest.TestCase):
         headers = Message()
         for code, expected in ((400, "invalid_request"), (503, "maintenance")):
             error = HTTPError("https://example.test", code, "x", headers, io.BytesIO(b'{"meta":{"errorCode":"synthetic"}}'))
-            with self.subTest(code=code), patch("niconico_adapter.time.monotonic", side_effect=[1.0, 1.25]):
+            with self.subTest(code=code), patch("adapters.niconico_adapter.time.monotonic", side_effect=[1.0, 1.25]):
                 result = fetch_json("https://example.test", user_agent="Ironmate", opener=lambda *a, **k: (_ for _ in ()).throw(error))
             self.assertEqual(result["status"], expected)
             self.assertEqual(result["error"]["meta"]["errorCode"], "synthetic")
@@ -134,7 +134,7 @@ class NiconicoAdapterTest(unittest.TestCase):
         def opener(request, timeout):
             seen["ua"] = request.get_header("User-agent")
             return Response()
-        with patch("niconico_adapter.time.monotonic", side_effect=[1.0, 1.1]):
+        with patch("adapters.niconico_adapter.time.monotonic", side_effect=[1.0, 1.1]):
             fetch_json("https://example.test", user_agent="Ironmate", opener=opener)
         self.assertEqual(seen["ua"], "Ironmate")
         self.assertFalse(snapshot_consistent({"last_modified": ""}, {"last_modified": ""}))
@@ -163,7 +163,7 @@ class VersionObservationTest(unittest.TestCase):
             events.append(("wait", delay))
 
         # Each HTTP request takes exactly 1.25s in this deterministic clock.
-        with patch("niconico_adapter.time.monotonic", side_effect=[
+        with patch("adapters.niconico_adapter.time.monotonic", side_effect=[
             t for i in range(20) for t in (i * 10.0, i * 10.0 + 1.25)
         ]):
             result = paged_search(q="", sort="-startTime", context="Ironmate-offline",

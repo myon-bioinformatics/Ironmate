@@ -1,3 +1,5 @@
+> Historical design: the root prototypes and associated demos were retired in cleanup stage two. See [current ownership](cleanup-stage-two.md). Commands below describe the retired implementation.
+
 # Repository metadata portability contract
 
 Ironmate is the canonical contract and generator source for repository metadata shared by sibling repositories.

@@ -1,3 +1,5 @@
+> Historical design: the root prototypes and associated demos were retired in cleanup stage two. See [current ownership](cleanup-stage-two.md). Commands below describe the retired implementation.
+
 # Python vendoring artifact provenance
 
 This contract applies only to Python single-file artifacts that are intended to be copied,

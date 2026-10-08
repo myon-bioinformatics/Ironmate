@@ -90,3 +90,47 @@ Pillowにはこれらの操作がある。ただしJPEG/PNG等のdecodeを含む
 キャラクター完成品・写真adapter・Web画面・PNG/SVG・大量ファイル保存・
 animationはまだない。Gradioが必要になった場合は既存mcp-toolcall-lab環境への
 接続を検討し、Ironmateの旧キャラクター/LLM基盤を復活させない。
+
+## 配色置換の目的とOffice CLIへの接続
+
+目的は、同じ形・配置を再利用し、色や文字などの指定した属性を機械的に
+置換することである。絵文字は最初の確認手段であり、CSSは必要としない。
+参考の素材アイデア集には純粋な配色変更のほか、内部模様や部品の変更も
+含まれる。それらは別の加工として扱い、色変更だけの成果と混同しない。
+
+まず雲型で、茂み・水・溶岩・雪の配色を比較できる。
+次の例では色番号グリッドが完全に同じで、RGBAテーブルだけが変わる。
+用途名は見立てであり、素材としての識別性は別途目視評価する。
+
+```python
+from pixel_grid import render
+
+variants = {
+    name: render("cloud", name, "shadow", 16)
+    for name in ("nature", "water", "lava", "snow")
+}
+baseline = variants["nature"]["pixels"]
+assert all(item["pixels"] == baseline for item in variants.values())
+assert len({tuple(item["colors"]) for item in variants.values()}) == 4
+```
+
+Office CLIは今後の別の試作で、まず既存PPTXの文字と塗り色の置換を対象にする。
+このPRにはPPTX編集・出力機能は含めない。PPTXはPresentationMLの複数partと
+relationshipを持つパッケージなので、ZIP内の全XMLを無条件に文字列置換する
+方式ではなく、対象part・図形・属性を特定して編集する方針とする。
+将来のWord/Excel対応でも、形式ごとのXML構造を扱うadapterを分ける。
+
+最初のOffice試作で確認する項目：
+
+- 対象のslideと図形を指定し、変更予定・一致件数をdry-runで表示する。
+- 文字が複数runに分かれる場合の扱いを定義し、対象外の文字や書式を保持する。
+- 直接RGB指定とテーマ参照色を区別し、図形単体の色変更とテーマ変更を分ける。
+- 入力とは別ファイルへ出力し、対象外partの内容とrelationshipを保持する。
+- ZIP/XMLの再読込・変更差分の検証に加え、レンダリングして表示を確認する。
+
+ドット絵は色番号グリッド、Officeは文書内の図形・文字を入力にするが、
+「構造を保持して指定した属性を置換する」という検証の考え方を共通にする。
+画像として配置する場合の配色変更と、編集可能な図形の塗り色変更は別処理になる。
+
+一次資料：[Microsoft Learn — PresentationML](https://learn.microsoft.com/en-us/office/open-xml/presentation/overview)、
+[Working with slide masters](https://learn.microsoft.com/en-us/office/open-xml/presentation/working-with-slide-masters)。

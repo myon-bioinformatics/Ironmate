@@ -129,23 +129,36 @@ def resolve_ref(r,ref,transport="auto",timeout=30):
  sha=d.get("sha") if isinstance(d,dict) else None
  if not isinstance(sha,str) or not re.fullmatch(r"[0-9a-fA-F]{40}",sha):raise Error("invalid_commit")
  return {"schema":"gh-identity-ref/1","repository":r,"ref":ref,"sha":sha.lower(),"observed_at":now()}
+def _min_checks(value):
+ if not isinstance(value,int) or isinstance(value,bool) or value<1:raise ValueError("min_checks must be at least 1")
+ return value
+
+def summarize_checks(rows,expected_count,min_checks=1):
+ min_checks=_min_checks(min_checks)
+ if not isinstance(rows,list):raise ValueError("check rows must be a list")
+ normalized=[{"id":x.get("id"),"name":x.get("name"),"status":x.get("status"),"conclusion":x.get("conclusion"),"url":x.get("url") or x.get("html_url"),"annotations_count":x.get("annotations_count",(x.get("output")or{}).get("annotations_count",0))} for x in rows]
+ complete=isinstance(expected_count,int) and not isinstance(expected_count,bool) and expected_count==len(normalized)
+ bad={"failure","cancelled","timed_out","action_required","startup_failure","stale"}
+ if not complete:state="incomplete"
+ elif len(normalized)<min_checks:state="pending"
+ elif any(x["status"]!="completed" for x in normalized):state="pending"
+ elif any(x["conclusion"] in bad for x in normalized):state="failed"
+ elif not any(x["conclusion"]=="success" for x in normalized):state="failed"
+ else:state="green"
+ return {"state":state,"complete":complete,"expected_count":expected_count,"count":len(normalized),"min_checks":min_checks,"checks":normalized}
+
 def checks_for_sha(r,sha,min_checks=1,transport="auto",timeout=30):
+ min_checks=_min_checks(min_checks)
  r=repo(r);rows=[];page=1;expected=None
  while True:
   d=request("GET",f"repos/{r}/commits/{sha}/check-runs?per_page=100&page={page}",transport=transport,timeout=timeout)
   if not isinstance(d,dict) or not isinstance(d.get("check_runs"),list):raise Error("invalid_json")
   if expected is None:expected=d.get("total_count")
-  batch=d["check_runs"];rows += [{"id":x.get("id"),"name":x.get("name"),"status":x.get("status"),"conclusion":x.get("conclusion"),"url":x.get("html_url")} for x in batch]
-  if len(batch)<100:break
+  rows += d["check_runs"]
+  if len(d["check_runs"])<100:break
   page+=1
- complete=isinstance(expected,int) and expected==len(rows)
- bad={"failure","cancelled","timed_out","action_required","startup_failure","stale"}
- if not complete:state="incomplete"
- elif len(rows)<min_checks:state="pending"
- elif any(x["status"]!="completed" for x in rows):state="pending"
- elif any(x["conclusion"] in bad for x in rows):state="failed"
- else:state="green"
- return {"schema":"gh-identity-checks/1","repository":r,"sha":sha,"state":state,"complete":complete,"expected_count":expected,"count":len(rows),"min_checks":min_checks,"checks":rows,"observed_at":now()}
+ summary=summarize_checks(rows,expected,min_checks)
+ return {"schema":"gh-identity-checks/1","repository":r,"sha":sha,**summary,"observed_at":now()}
 
 def observe_pr(r,n,min_checks=1,transport="auto",timeout=30):
  before=pr(r,n,transport=transport,timeout=timeout)

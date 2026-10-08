@@ -31,7 +31,7 @@ def client_for(*, final_head=HEAD, checks=1, conclusion='success', comment=False
                     'base': {'ref': 'main'}, 'state': 'open', 'merged': False, 'draft': False}
         elif path.endswith('/check-runs'):
             assert path == f'/repos/octo/demo/commits/{HEAD}/check-runs'
-            data = {'check_runs': [{'id': i, 'name': str(i), 'head_sha': HEAD, 'status': 'completed',
+            data = {'total_count': checks, 'check_runs': [{'id': i, 'name': str(i), 'head_sha': HEAD, 'status': 'completed',
                                    'conclusion': conclusion} for i in range(checks)]}
         elif method == 'POST':
             assert comment and path == '/repos/octo/demo/issues/11/comments'
@@ -193,3 +193,12 @@ def test_stdlib_cli_diff_offline(tmp_path):
                           cwd=tmp_path, capture_output=True, text=True, check=False)
     assert done.returncode == 0, done.stderr
     assert json.loads(done.stdout)['events'][0]['type'] == 'ci_became_green'
+
+
+def test_consumer_loads_parent_operations_with_adjacent_identity():
+    assert Path(gh_ops.gh_identity.__file__).resolve() == ROOT / 'vendor/gh_identity.py'
+    lock = json.loads((ROOT / 'vendor.lock.json').read_text())
+    entry = next(e for e in lock['files'] if e['destination'] == 'vendor/gh_ops.py')
+    assert entry['repository'] == 'myon-bioinformatics/myon-bioinformatics'
+    assert entry['source'] == 'gh_ops.py'
+    assert callable(gh_ops.gh_identity.summarize_checks)

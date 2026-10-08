@@ -74,36 +74,27 @@
       "sha256": "15f66204c4a6a1ce0c94f0ed4319ff9400f872e85fd32c95f21695c2f231af59"
     },
     {
-      "repository": "myon-bioinformatics/browser-test-kit",
+      "repository": "myon-bioinformatics/myon-bioinformatics",
       "ref": "refs/heads/main",
-      "commit": "de5bd0f5d81721bb54f0fbb8747d2f6b56d6b720",
-      "source": "scripts/gh_ops.py",
+      "commit": "974da5eb9593df652b132e4b0f1a679f67422566",
+      "source": "gh_ops.py",
       "destination": "vendor/gh_ops.py",
-      "blob_sha": "08f82d77d1beaace0d0d5a128788bb92459f9a73",
-      "sha256": "9f3e4d955cbd71b27fae85a2a017cf58a329ad1f66d17aa5e987feaf6859ed41"
-    },
-    {
-      "repository": "myon-bioinformatics/browser-test-kit",
-      "ref": "refs/heads/main",
-      "commit": "de5bd0f5d81721bb54f0fbb8747d2f6b56d6b720",
-      "source": "LICENSE",
-      "destination": "vendor/browser-test-kit-LICENSE",
-      "blob_sha": "4ec4989b801bf1a3df6184d21f79e6e7ed5931f6",
-      "sha256": "15f66204c4a6a1ce0c94f0ed4319ff9400f872e85fd32c95f21695c2f231af59"
+      "blob_sha": "6e5470e1e9395f9f3dd0908d3ce5190e0294e807",
+      "sha256": "c1c9f415ea0171205fced19b9a0eda33cde9cc3ef53cef53e89362dd873d06f4"
     },
     {
       "repository": "myon-bioinformatics/gh_identity",
       "ref": "refs/heads/main",
-      "commit": "a6550f718b55d415d519f4131775525fe83c61fb",
+      "commit": "fc2c527257b12eb99c00637bbae74f8988fd6bf4",
       "source": "gh_identity.py",
       "destination": "vendor/gh_identity.py",
-      "blob_sha": "abbd987780d9afceb7312611a5ee7f28c194b1cd",
-      "sha256": "326ed00be5193e20edaca97db201327ad679a356b986ee44b436e8675c9d26f7"
+      "blob_sha": "57f96181fecaef0a6f19bf5052b93d9bdcab69c5",
+      "sha256": "864c63af6f68d4d2baeb076bbcad0905f1973d3b0092f8f8b3f776f3ecd5ad95"
     },
     {
       "repository": "myon-bioinformatics/gh_identity",
       "ref": "refs/heads/main",
-      "commit": "a6550f718b55d415d519f4131775525fe83c61fb",
+      "commit": "fc2c527257b12eb99c00637bbae74f8988fd6bf4",
       "source": "LICENSE",
       "destination": "vendor/gh_identity-LICENSE",
       "blob_sha": "4ec4989b801bf1a3df6184d21f79e6e7ed5931f6",

@@ -32,22 +32,13 @@ BINDINGS = [['vendor/ascii_artist.provenance.json',
    'path': 'source',
    'repository': 'repository_url',
    'sha256': 'sha256'}]]
-EXPECTED = {('myon-bioinformatics/gh_identity', 'gh_identity.py', 'vendor/gh_identity.py'),
- ('myon-bioinformatics/gh_identity', 'LICENSE', 'vendor/gh_identity-LICENSE'),
- ('myon-bioinformatics/browser-test-kit', 'scripts/gh_ops.py', 'vendor/gh_ops.py'),
- ('myon-bioinformatics/browser-test-kit', 'LICENSE', 'vendor/browser-test-kit-LICENSE'),
- ('myon-bioinformatics/myon-bioinformatics', 'LICENSE', 'vendor/myon-bioinformatics-LICENSE'),
+# Required legacy projection bindings; canonical membership comes from the lock.
+EXPECTED = {('myon-bioinformatics/myon-bioinformatics', 'LICENSE', 'vendor/myon-bioinformatics-LICENSE'),
  ('myon-bioinformatics/ascii_artist', 'LICENSE', 'vendor/ascii_artist-LICENSE'),
  ('myon-bioinformatics/ascii_artist', 'ascii_artist.py', 'vendor/ascii_artist.py'),
  ('myon-bioinformatics/markdown', 'LICENSE', 'vendor/markdown-LICENSE'),
  ('myon-bioinformatics/markdown', 'markdown.py', 'vendor/markdown.py'),
- ('myon-bioinformatics/myon-bioinformatics', 'git_inspector.py', 'vendor/git_inspector.py'),
- ('myon-bioinformatics/nvd_nist_known_vulns',
-  'LICENSE',
-  'vendor/nvd_nist_known_vulns-LICENSE'),
- ('myon-bioinformatics/nvd_nist_known_vulns',
-  'nvd_nist_known_vulns.py',
-  'vendor/nvd_nist_known_vulns.py')}
+ ('myon-bioinformatics/myon-bioinformatics', 'git_inspector.py', 'vendor/git_inspector.py')}
 
 
 def records(root):
@@ -55,7 +46,8 @@ def records(root):
     if lock["schema"] != "vendor-lock/1":
         raise ValueError("unsupported vendor lock")
     files = lock["files"]
-    if len(files) != len(EXPECTED) or {(e["repository"], e["source"], e["destination"]) for e in files} != EXPECTED:
+    identities = {(e["repository"], e["source"], e["destination"]) for e in files}
+    if len({e["destination"].casefold() for e in files}) != len(files) or not EXPECTED <= identities:
         raise ValueError("unexpected source or destination")
     by_destination = {e["destination"]: e for e in files}
     for e in files:

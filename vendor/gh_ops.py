@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""GitHub REST operations for PR/CI work without the ``gh`` CLI (#9).
+"""GitHub REST operations for PR/CI work without the ``gh`` CLI (canonical parent tool).
 
 Stdlib only, so it runs under ``python -S``. Read-only by default: every
 write operation takes ``write=True`` / ``--write`` and checks its
@@ -9,17 +9,17 @@ comes from ``GITHUB_TOKEN`` (fallback ``GH_TOKEN``) and is never printed.
 Every operation is a plain function returning a dict with ``ok``; the CLI
 is a thin adapter over them::
 
-    python -S scripts/gh_ops.py issue-comments OWNER/REPO 24 --save comments.json
-    python -S scripts/gh_ops.py --json pr-observe OWNER/REPO 24 > before.json
-    python -S scripts/gh_ops.py pr-diff before.json after.json
-    python -S scripts/gh_ops.py issue-comment OWNER/REPO 24 --file comment.md --write
-    python -S scripts/gh_ops.py comments-file saved-tool-result.txt --last 5   # offline
-    python -S scripts/gh_ops.py pr-merge OWNER/REPO 11 --sha ecfd0ba --min-checks 5 --write
+    python -S gh_ops.py issue-comments OWNER/REPO 24 --save comments.json
+    python -S gh_ops.py --json pr-observe OWNER/REPO 24 > before.json
+    python -S gh_ops.py pr-diff before.json after.json
+    python -S gh_ops.py issue-comment OWNER/REPO 24 --file comment.md --write
+    python -S gh_ops.py comments-file saved-tool-result.txt --last 5   # offline
+    python -S gh_ops.py pr-merge OWNER/REPO 11 --sha ecfd0ba --min-checks 5 --write
     python -c "from gh_ops import pr_merge; print(pr_merge('OWNER/REPO', 11, sha='ecfd0ba'))"
-    python -S scripts/gh_ops.py pr-body-set OWNER/REPO 11 --file body.md --write
-    python -S scripts/gh_ops.py pr-edit OWNER/REPO 11 --base develop --write
-    python -S scripts/gh_ops.py file-put OWNER/REPO docs/x.md --from x.md --branch docs --message "add x" --write
-    python -S scripts/gh_ops.py url compare OWNER/REPO main feature   # no network; prints web + api URLs
+    python -S gh_ops.py pr-body-set OWNER/REPO 11 --file body.md --write
+    python -S gh_ops.py pr-edit OWNER/REPO 11 --base develop --write
+    python -S gh_ops.py file-put OWNER/REPO docs/x.md --from x.md --branch docs --message "add x" --write
+    python -S gh_ops.py url compare OWNER/REPO main feature   # no network; prints web + api URLs
 
 Exit codes: 0 = OK, 1 = a checked condition was not met, 2 = input or
 communication error.
@@ -27,6 +27,7 @@ communication error.
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import base64
 import difflib
 import json
@@ -41,6 +42,21 @@ import urllib.request
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Optional
+
+def _load_adjacent_gh_identity():
+    base = Path(__file__).resolve().parent
+    # Parent checkout uses vendor/; installed consumers use the adjacent copy.
+    path = base / "gh_identity.py"
+    if not path.is_file():
+        path = base / "vendor" / "gh_identity.py"
+    spec = importlib.util.spec_from_file_location("_canonical_gh_ops_identity", path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load vendored gh_identity from {path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+gh_identity = _load_adjacent_gh_identity()
 
 API_ROOT = "https://api.github.com"
 PASSING_CONCLUSIONS = frozenset({"success", "neutral", "skipped"})
@@ -140,16 +156,33 @@ class Client:
         return self.request("GET", path, params=params).data
 
     def paginate(self, path: str, *, params: dict | None = None, key: str | None = None, max_pages: int = 50) -> list:
+        if max_pages < 1:
+            raise GhOpsError("pagination requires a positive page limit")
         items: list = []
+        seen = set()
+        expected = None
         url, query = path, {"per_page": 100, **(params or {})}
         for _ in range(max_pages):
+            request_url = url if url.startswith("http") else self.api_root + url
+            if query:
+                request_url += ("&" if "?" in request_url else "?") + urllib.parse.urlencode(query)
+            if request_url in seen:
+                raise GhOpsError("pagination cycle; incomplete response")
+            seen.add(request_url)
             response = self.request("GET", url, params=query)
+            if key and "total_count" in response.data:
+                count = response.data["total_count"]
+                if type(count) is not int or count < 0 or (expected is not None and count != expected):
+                    raise GhOpsError("pagination total_count invalid or changed; incomplete response")
+                expected = count
             items.extend(response.data[key] if key else response.data)
             match = _NEXT_LINK_RE.search(response.headers.get("link", ""))
             if not match:
-                break
+                if expected is not None and len(items) != expected:
+                    raise GhOpsError("pagination total_count mismatch; incomplete response")
+                return items
             url, query = match.group(1), None
-        return items
+        raise GhOpsError("pagination page limit exceeded; incomplete response")
 
 
 def _repo(repo: str) -> str:
@@ -297,16 +330,30 @@ def pr_status(repo: str, number: int, *, client: Client | None = None) -> dict:
     }
 
 
+def compare_pr_head_identity(repo: str, number: int, local: dict, *, client: Client | None = None) -> dict:
+    """Compare a caller-supplied local identity with the current PR head via GHI."""
+    status = pr_status(repo, number, client=client)
+    result = gh_identity.compare_sha(local, status.get("head_sha"))
+    return {**result, "repo": repo, "number": int(number), "head_ref": status.get("head_ref"),
+            "base_ref": status.get("base_ref")}
+
+
+
 def _check_runs(client: Client, repo: str, sha: str) -> list:
     return client.paginate(f"/repos/{repo}/commits/{sha}/check-runs", key="check_runs")
 
 
 def _summarize_checks(runs: list, min_checks: int) -> dict:
-    pending = [run for run in runs if run.get("status") != "completed"]
-    failed = [run for run in runs if run.get("status") == "completed" and run.get("conclusion") not in PASSING_CONCLUSIONS]
-    succeeded = [run for run in runs if run.get("conclusion") == "success"]
-    if len(runs) < min_checks:
-        reason = f"only {len(runs)} check run(s), expected at least {min_checks}"
+    """Compatibility shape over GHI's canonical pure check classification."""
+    summary = gh_identity.summarize_checks(runs, len(runs), min_checks)
+    normalized = summary["checks"]
+    pending = [run for run in normalized if run.get("status") != "completed"]
+    failed = [run for run in normalized
+              if run.get("status") == "completed" and
+              run.get("conclusion") not in PASSING_CONCLUSIONS]
+    succeeded = [run for run in normalized if run.get("conclusion") == "success"]
+    if len(normalized) < min_checks:
+        reason = f"only {len(normalized)} check run(s), expected at least {min_checks}"
     elif pending:
         reason = f"{len(pending)} check run(s) still pending"
     elif failed:
@@ -316,22 +363,15 @@ def _summarize_checks(runs: list, min_checks: int) -> dict:
     else:
         reason = ""
     return {
-        "ok": not reason,
+        "ok": summary["state"] == "green",
         "reason": reason,
-        "total": len(runs),
+        "total": summary["count"],
         "pending": len(pending),
         "failed": len(failed),
         "succeeded": len(succeeded),
         "runs": [
-            {
-                "id": run.get("id"),
-                "name": run.get("name"),
-                "status": run.get("status"),
-                "conclusion": run.get("conclusion"),
-                "head_sha": run.get("head_sha"),
-                "annotations_count": (run.get("output") or {}).get("annotations_count", 0),
-            }
-            for run in runs
+            {**run, "head_sha": original.get("head_sha")}
+            for run, original in zip(normalized, runs)
         ],
     }
 
@@ -397,9 +437,11 @@ def pr_observe(repo: str, number: int, *, min_checks: int = 1, client: Client | 
     review_comments = client.paginate(base + "/comments")
     final_pr = client.get(base)
     final_head = (final_pr.get("head") or {}).get("sha")
-    if final_head != head:
+    head_identity = gh_identity.compare_sha({"sha": head}, final_head)
+    if not head_identity["same"]:
         return {"ok": False, "schema": "gh-ops-pr-observation/1", "repo": repo, "number": number,
                 "stale": True, "observed_head_sha": head, "current_head_sha": final_head,
+                "identity": head_identity,
                 "reason": "PR head changed during observation; discard this snapshot and retry"}
     return {
         "ok": True,

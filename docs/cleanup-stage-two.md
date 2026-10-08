@@ -12,7 +12,7 @@ Baseline: Ironmate `a24e356503b73b7daf1537c6e5f26a0426a6d876`, parent
 | ironmate_mcp, requirements-mcp | Retire Ironmate MCP server; future adapter ownership tracked in mcp-toolcall-lab #107 |
 | provenance, python_artifact_provenance | Retire local provenance generators; keep consumer lock identity validation through parent vendor_sync |
 | build_repository_diagnostics, build_web_ui_consumer_examples, unreviewed | Retire old prototype consumers and their tests |
-| MCP stub / generated catalog Pages and screenshot CI | Replace Pages with a static project landing; remove obsolete scheduled API collection and screenshot job |
+| MCP stub / generated catalog Pages and screenshot CI | Move project metadata to the portfolio; remove dedicated Pages workflow and obsolete scheduled API collection/screenshot job |
 
 Source and niconico implementations, offline fixture and regression tests transfer
 into mcp-toolcall-lab PR #108. Merge that transfer before this deletion. The copies

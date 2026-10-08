@@ -14,6 +14,8 @@ PPTXの文字・色・矢印属性の置換、画素／パレットに基づく�
 - `vendor/` と `vendor.lock.json` はconsumerの固定コピーです。今回の整理では内容・pinを変更していません。
 - `scripts/sync_vendor_provenance.py` は既存CIのvendor証跡をlockから投影する補助処理として残します。旧ルートの `provenance.py` とは別物です。
 
+紹介・メタデータは [ポートフォリオ](https://myon-bioinformatics.github.io/#ironmate) に集約します。Ironmate専用のmetadata stub Pagesは廃止し、このrepoで公開する実動デモが必要になった時に再検討します。
+
 詳しくは [整理とvendor調査](docs/cleanup-stage-two.md)、[vendor CI](docs/vendor-automation.md) を参照してください。
 
 ## ローカルテスト

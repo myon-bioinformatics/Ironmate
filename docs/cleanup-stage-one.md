@@ -10,7 +10,7 @@
 
 | 対象 | 処置 | 理由・移管先 |
 | --- | --- | --- |
-| `gradio_galleria.py` | mcp-toolcall-labへ移管 | 既存vendored ASCII/Markdownとloaderを再利用。任意のGradio extraで起動。古いimportを修正し、callbackと実UI構築を検証 |
+| `gradio_galleria.py` | mcp-toolcall-labへ移管 | 既存vendored ASCII/Markdownとloaderを再利用。専用Gradio依存ファイル・仮想環境で起動。古いimportを修正し、callbackと実UI構築を検証 |
 | `file_finder.py` | 独立ファイルを削除 | 利用者は旧画面のみ。移管先の小さなviewerに走査を集約し、JSON拡張子・隠しディレクトリ・symlinkを整理 |
 | `i_am_ironmate.py`, `llm_launchpad.py`, `llm_loader.py` | 削除 | 旧モデルロード・量子化・キャラクターREPL。試作検証に必須でなく、lab側の既存モデル実験へ重複移植しない |
 | `template_store.py`, `templates_ascii/`, `templates_prompt/` | 削除 | 旧キャラクター資産と専用loader。汎用ASCIIテンプレートは独立済みライブラリに残る |

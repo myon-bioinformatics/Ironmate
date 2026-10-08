@@ -83,7 +83,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: myon-bioinformatics/myon-bioinformatics
-          ref: 08dc3757deeb930c950bdcc6bd55ec3112ba49fc
+          ref: 098e2b2bde603190260f901706a335e4ecd3fa7c
           path: .vendor-sync-tools
           persist-credentials: false
       - name: Verify checked-in vendor copies
@@ -121,31 +121,14 @@ jobs:
           --summary-baseline .vendor-baseline.lock.json
           --summary-output "$GITHUB_STEP_SUMMARY"
           --update-outcome "$VENDOR_UPDATE_OUTCOME"
+      - name: Stage canonical vendor evidence
+        run: python -S scripts/stage_vendor_evidence.py --kind candidate --output build/vendor-evidence-candidate
       - name: Preserve resolved vendor snapshot
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: vendor-snapshot
-          path: |
-            vendor.lock.json
-            vendor-promotion.json
-            vendor/myon-bioinformatics-LICENSE
-            vendor/ascii_artist.py
-            vendor/git_inspector.py
-            vendor/gh_ops.py
-            vendor/gh_identity.py
-            vendor/gh_identity-LICENSE
-            vendor/browser-test-kit-LICENSE
-            vendor/markdown.py
-            vendor/nvd_nist_known_vulns.py
-            vendor/ascii_artist-LICENSE
-            vendor/markdown-LICENSE
-            vendor/nvd_nist_known_vulns-LICENSE
-            vendor/ascii_artist.provenance.json
-            vendor/git_inspector.provenance.json
-            vendor/markdown.provenance.json
-          if-no-files-found: error
-          retention-days: 14
+          path: build/vendor-evidence-candidate
 
   test:
     permissions:
@@ -163,7 +146,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: myon-bioinformatics/myon-bioinformatics
-          ref: 08dc3757deeb930c950bdcc6bd55ec3112ba49fc
+          ref: 098e2b2bde603190260f901706a335e4ecd3fa7c
           path: .vendor-sync-tools
           persist-credentials: false
       - name: Download resolved vendor snapshot
@@ -216,30 +199,14 @@ jobs:
           retention-days: 14
 
 
+      - name: Stage canonical vendor evidence
+        run: python -S scripts/stage_vendor_evidence.py --kind candidate --output build/vendor-evidence-test
       - name: Preserve vendor lock used by this run
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: vendor-lock-py3.12
-          path: |
-            vendor.lock.json
-            vendor/myon-bioinformatics-LICENSE
-            vendor/ascii_artist.py
-            vendor/git_inspector.py
-            vendor/gh_ops.py
-            vendor/gh_identity.py
-            vendor/gh_identity-LICENSE
-            vendor/browser-test-kit-LICENSE
-            vendor/markdown.py
-            vendor/nvd_nist_known_vulns.py
-            vendor/ascii_artist-LICENSE
-            vendor/markdown-LICENSE
-            vendor/nvd_nist_known_vulns-LICENSE
-            vendor/ascii_artist.provenance.json
-            vendor/git_inspector.provenance.json
-            vendor/markdown.provenance.json
-          if-no-files-found: error
-          retention-days: 14
+          path: build/vendor-evidence-test
 
   failure-identity:
     needs: test
@@ -416,7 +383,7 @@ jobs:
       uses: actions/checkout@v7
       with:
         repository: myon-bioinformatics/myon-bioinformatics
-        ref: 08dc3757deeb930c950bdcc6bd55ec3112ba49fc
+        ref: 098e2b2bde603190260f901706a335e4ecd3fa7c
         path: .vendor-sync-tools
         persist-credentials: false
     - name: Verify checked-in vendor copies
@@ -451,28 +418,14 @@ jobs:
     - run: python -m unittest tests/test_ironmate_mcp.py tests/test_github_adapter.py tests/test_niconico_adapter.py tests/test_github_catalog.py tests/test_repository_metadata.py tests/test_nvd_nist_known_vulns.py tests/test_mcp_stub_page.py tests/test_vendor_modules.py tests/test_unreviewed.py tests/test_repository_hygiene.py
     - name: Run default pytest suite (exclude heavy tests)
       run: python -m pytest -q -m "not heavy"
+    - name: Stage canonical vendor evidence
+      run: python -S scripts/stage_vendor_evidence.py --kind locked --output build/vendor-evidence-locked
     - name: Preserve vendor lock used by this run
       if: always()
       uses: actions/upload-artifact@v7
       with:
         name: locked-vendor-lock-py3.12
-        path: |
-          vendor.lock.json
-          vendor/myon-bioinformatics-LICENSE
-          vendor/ascii_artist.py
-          vendor/git_inspector.py
-          vendor/gh_ops.py
-          vendor/gh_identity.py
-          vendor/gh_identity-LICENSE
-          vendor/browser-test-kit-LICENSE
-          vendor/markdown.py
-          vendor/nvd_nist_known_vulns.py
-          vendor/ascii_artist-LICENSE
-          vendor/markdown-LICENSE
-          vendor/nvd_nist_known_vulns-LICENSE
-          vendor/ascii_artist.provenance.json
-          vendor/git_inspector.provenance.json
-          vendor/markdown.provenance.json
+        path: build/vendor-evidence-locked
         if-no-files-found: error
         retention-days: 14
     name: Locked baseline

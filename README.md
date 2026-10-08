@@ -2,224 +2,53 @@
 
 # Ironmate
 
-Local CLI for lightweight LLM text generation, ASCII art generation, and safe file operations.
+共有ツールとして独立させる前の、Pythonツールの試作・検証環境です。
+単一ファイル・標準ライブラリ中心の小さな候補を検証し、需要と責務が
+明確になったものだけを独立させます。ローカルLLMやGPUは必須ではありません。
 
-## Features
+## 第一段階の整理
 
-- Light text generation
-- Interactive tool REPL
-- Direct ASCII art generation
-- Direct ASCII art save
-- Predefined ASCII template save
-- Safe tool execution via whitelist
+旧キャラクター型アシスタント、モデルのロード・量子化・REPL、ローカル
+キャラクター資産を整理しました。ASCII・Markdownのコアは独立済みの
+[ascii_artist](https://github.com/myon-bioinformatics/ascii_artist) と
+[markdown](https://github.com/myon-bioinformatics/markdown) が提供元です。
+Gradio画面は [mcp-toolcall-lab](https://github.com/myon-bioinformatics/mcp-toolcall-lab)
+の任意起動デモ `mcp_toolcall_lab.gradio_galleria` へ移管します。
+[移管先PR #104](https://github.com/myon-bioinformatics/mcp-toolcall-lab/pull/104) の取り込みを、この削除PRの前提とします。
 
----
+削除・移管・維持の対象と理由は [整理記録](docs/cleanup-stage-one.md) に記載しています。
+今回の範囲は既存構成の整理です。新しい候補配置や自動化の作り込みは別段階です。
 
-## Install
+## 残す検証経路
 
-```bash
-pip install -r requirements.txt
-```
-
----
-
-## Default Models
-
-Recommended default:
-
-- main/light: `Qwen/Qwen3-4B-Instruct-2507`
-- tool: `Qwen/Qwen3-4B-Instruct-2507`
-
-Lighter alternative:
-
-- main/light: `Qwen/Qwen3-1.7B`
-- tool: `Qwen/Qwen3-1.7B`
-
-Notes:
-
-- `Qwen/Qwen3-4B-Instruct-2507` is a stronger default for instruction-following.
-- `Qwen/Qwen3-1.7B` is lighter and faster to load.
-
----
-
-## Environment Overrides
-
-### Linux / macOS
+- `repository_metadata*.py` と `python_artifact_provenance.py`：既存consumerが使う共有契約。
+- GitHub／ニコニコのadapter、catalog、MCP：既存の試作・統合検証。
+- `vendor/`：提供元の固定版。共通処理は再実装しません。
+- `tests/`、GitHub Actions、JUnit、親の共通証跡、Pages：継続利用する検証基盤。
 
 ```bash
-export IRONMATE_MODEL="Qwen/Qwen3-4B-Instruct-2507"
-export IRONMATE_LIGHT_MODEL="Qwen/Qwen3-4B-Instruct-2507"
-export IRONMATE_TOOL_MODEL="Qwen/Qwen3-4B-Instruct-2507"
-export IRONMATE_LOAD_4BIT="1"
+python -m pip install -r tests/requirements.txt
+# CIと同じ固定版のテスト用依存（初回のみ）
+git clone https://github.com/myon-bioinformatics/xprobe.git build/shared
+git -C build/shared checkout 7e7015b2df69ad446b968f6fa49711b5b1dbdd3f
+git clone https://github.com/myon-bioinformatics/myon-bioinformatics.git .vendor-sync-tools
+git -C .vendor-sync-tools checkout 974da5eb9593df652b132e4b0f1a679f67422566
+python -m pytest -q -m "not heavy" --junitxml=build/test-results/pytest-local.xml
+python -S scripts/build_repository_diagnostics.py
 ```
 
-### PowerShell
+メタデータMCPサーバーを起動する場合のみ、`requirements-mcp.txt` をインストールし
+`python ironmate_mcp.py` を実行します。モデルのダウンロードはありません。
 
-```powershell
-$env:IRONMATE_MODEL="Qwen/Qwen3-4B-Instruct-2507"
-$env:IRONMATE_LIGHT_MODEL="Qwen/Qwen3-4B-Instruct-2507"
-$env:IRONMATE_TOOL_MODEL="Qwen/Qwen3-4B-Instruct-2507"
-$env:IRONMATE_LOAD_4BIT="1"
-```
-
-Lighter option:
-
-### Linux / macOS
-
-```bash
-export IRONMATE_MODEL="Qwen/Qwen3-1.7B"
-export IRONMATE_LIGHT_MODEL="Qwen/Qwen3-1.7B"
-export IRONMATE_TOOL_MODEL="Qwen/Qwen3-1.7B"
-export IRONMATE_LOAD_4BIT="1"
-```
-
-### PowerShell
-
-```powershell
-$env:IRONMATE_MODEL="Qwen/Qwen3-1.7B"
-$env:IRONMATE_LIGHT_MODEL="Qwen/Qwen3-1.7B"
-$env:IRONMATE_TOOL_MODEL="Qwen/Qwen3-1.7B"
-$env:IRONMATE_LOAD_4BIT="1"
-```
-
----
-
-## Commands
-
-### Light text generation
-
-```bash
-python i_am_ironmate.py light --prompt "Markdownで実験ログのテンプレを作って"
-```
-
-### Tool mode
-
-The tool model outputs one-line JSON such as:
-
-```json
-{"tool":"save_markdown","args":{"content":"# Hello","filepath":"notes/test.md"}}
-```
-
-Run:
-
-```bash
-python i_am_ironmate.py tool --prompt "notes/test.md に '# Hello' を保存して"
-```
-
-Dry-run:
-
-```bash
-python i_am_ironmate.py tool --dry-run --prompt "notes/test.md に '# Hello' を保存して"
-```
-
-Show raw model output too:
-
-```bash
-python i_am_ironmate.py tool --print-raw --prompt "notes/test.md に '# Hello' を保存して"
-```
-
-### Tool REPL
-
-Keeps the model loaded and accepts prompts interactively.
-
-```bash
-python i_am_ironmate.py tool-repl
-```
-
-Example session:
-
-```text
-> notes/test.md に '# Hello' を保存して
-> What ASCII templates are available?
-> exit
-```
-
-### Direct ASCII generation
-
-Generate ASCII art directly with the light model:
-
-```bash
-python i_am_ironmate.py ascii --prompt "cat"
-```
-
-### Direct ASCII save
-
-Generate ASCII art directly and save it to a file:
-
-```bash
-python i_am_ironmate.py ascii-save --prompt "cat" --output "templates_ascii/cat.txt"
-```
-
-### Predefined template save
-
-Save a predefined ASCII template to a file:
-
-```bash
-python i_am_ironmate.py template-save --name ironmate --output "templates_ascii/ironmate_copy.txt"
-```
-
----
-
-## Predefined ASCII Templates
-
-Current predefined templates:
-
-- `arc_reactor`
-- `icon_ironmate`
-- `ironmate`
-
-You can also list them through tool mode or REPL.
-
----
-
-## Suggested Usage
-
-For repeated use, prefer:
-
-```bash
-python i_am_ironmate.py tool-repl
-```
-
-or direct commands such as:
-
-```bash
-python i_am_ironmate.py ascii-save --prompt "cat" --output "templates_ascii/cat.txt"
-```
-
-This avoids repeated model loading and is more reliable than routing every request through tool JSON.
-
----
-
-## Notes
-
-- `ascii-save` is the most reliable path for free-form ASCII generation plus file output.
-- `template-save` is the most reliable path for predefined ASCII templates.
-- `tool` mode is still available, but direct subcommands are preferred for deterministic tasks.
-- If a model echoes `system`, `user`, or code fences, output sanitization should remove them before saving.
-
----
-
-## Project Structure
-
-```text
-.
-├─ i_am_ironmate.py
-├─ llm_loader.py
-├─ llm_launchpad.py
-├─ vendor/
-│  ├─ ascii_artist.py
-│  └─ markdown.py
-├─ template_store.py
-├─ templates_ascii/
-└─ templates_prompt/
-```
-
+不具合は再現条件・実行したSHA・JUnit／証跡とともに提供元へ還元します。
+問題のない候補はIronmateで保持でき、すべてを直ちに独立させる必要はありません。
 
 ## Vendored utilities
 
 Ironmate keeps exact source snapshots under `vendor/` instead of treating these
 helpers as runtime package dependencies. `vendor.lock.json` records the source
-commit, Git blob and SHA-256 for markdown, ascii_artist, NVD and git_inspector.
+commit, Git blob and SHA-256 for each source and license, including markdown,
+ascii_artist, NVD, git_inspector, gh_identity and parent-owned gh_ops.
 The current checked-in NVD source is `a3d8f1835e4a82bc6e50682d6a79e22a851c4c91`
 (blob `9daa3938dfa4226198e94273c18af5362c1ccb8b`); the previous README named a
 different snapshot. The ASCII source header is now preserved verbatim and its
@@ -274,7 +103,7 @@ sibling libraries rather than only through hand-written Stub markup.
 
 - `vendor/markdown.py::markdown_to_web_ui_v1()`
 - `vendor/ascii_artist.py::to_web_ui_v1_html()`
-- pinned web-ui CSS at `a0867e45`
+- pinned web-ui CSS at `adb23d7b`
 
 The libraries emit semantic HTML only. Ironmate remains responsible for loading
 the pinned presentation assets, which keeps the upstream libraries stdlib-only

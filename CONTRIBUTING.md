@@ -59,9 +59,9 @@ Examples:
 ```
 ascii_artist.py
 markdown.py
-gradio_galleria.py
-file_finder.py
-llm_launchpad.py
+github_catalog.py
+source_adapter.py
+repository_metadata.py
 ```
 
 ---
@@ -83,10 +83,10 @@ import csv, io, json
 from pathlib import Path
 from typing import Dict
 
-import gradio as gr
+import pytest
 
-from ascii_art import generate_square
-from file_finder import find_files_as_map
+from vendor.ascii_artist import generate_square
+from source_adapter import build_url
 ```
 
 #### Single-line Import Rule
@@ -296,8 +296,8 @@ Examples:
 ```
 vendor/ascii_artist.py -> vendored ASCII art utilities
 vendor/markdown.py     -> vendored Markdown utilities
-file_finder.py      -> file discovery
-gradio_galleria.py  -> UI layer
+source_adapter.py   -> source adapter contract
+github_catalog.py   -> static metadata catalog
 ```
 
 Avoid mixing unrelated responsibilities inside the same module.

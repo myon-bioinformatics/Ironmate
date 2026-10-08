@@ -83,7 +83,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: myon-bioinformatics/myon-bioinformatics
-          ref: 098e2b2bde603190260f901706a335e4ecd3fa7c
+          ref: 974da5eb9593df652b132e4b0f1a679f67422566
           path: .vendor-sync-tools
           persist-credentials: false
       - name: Verify checked-in vendor copies
@@ -122,7 +122,16 @@ jobs:
           --summary-output "$GITHUB_STEP_SUMMARY"
           --update-outcome "$VENDOR_UPDATE_OUTCOME"
       - name: Stage canonical vendor evidence
-        run: python -S scripts/stage_vendor_evidence.py --kind candidate --output build/vendor-evidence-candidate
+        if: always()
+        env:
+          VENDOR_EVIDENCE_KIND: ${{ inputs.vendor-mode == 'locked' && 'locked' || 'candidate' }}
+        run: >-
+          python -S .vendor-sync-tools/vendor_stage.py
+          --kind "$VENDOR_EVIDENCE_KIND" --output build/vendor-evidence-candidate
+          --legacy-evidence vendor/ascii_artist.provenance.json
+          --legacy-evidence vendor/git_inspector.provenance.json
+          --legacy-evidence vendor/markdown.provenance.json
+          --promotion-receipt vendor-promotion.json
       - name: Preserve resolved vendor snapshot
         if: always()
         uses: actions/upload-artifact@v7
@@ -148,7 +157,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: myon-bioinformatics/myon-bioinformatics
-          ref: 098e2b2bde603190260f901706a335e4ecd3fa7c
+          ref: 974da5eb9593df652b132e4b0f1a679f67422566
           path: .vendor-sync-tools
           persist-credentials: false
       - name: Download resolved vendor snapshot
@@ -202,7 +211,16 @@ jobs:
 
 
       - name: Stage canonical vendor evidence
-        run: python -S scripts/stage_vendor_evidence.py --kind candidate --output build/vendor-evidence-test
+        if: always()
+        env:
+          VENDOR_EVIDENCE_KIND: ${{ inputs.vendor-mode == 'locked' && 'locked' || 'candidate' }}
+        run: >-
+          python -S .vendor-sync-tools/vendor_stage.py
+          --kind "$VENDOR_EVIDENCE_KIND" --output build/vendor-evidence-test
+          --legacy-evidence vendor/ascii_artist.provenance.json
+          --legacy-evidence vendor/git_inspector.provenance.json
+          --legacy-evidence vendor/markdown.provenance.json
+          --promotion-receipt vendor-promotion.json
       - name: Preserve vendor lock used by this run
         if: always()
         uses: actions/upload-artifact@v7
@@ -387,7 +405,7 @@ jobs:
       uses: actions/checkout@v7
       with:
         repository: myon-bioinformatics/myon-bioinformatics
-        ref: 098e2b2bde603190260f901706a335e4ecd3fa7c
+        ref: 974da5eb9593df652b132e4b0f1a679f67422566
         path: .vendor-sync-tools
         persist-credentials: false
     - name: Verify checked-in vendor copies
@@ -423,7 +441,13 @@ jobs:
     - name: Run default pytest suite (exclude heavy tests)
       run: python -m pytest -q -m "not heavy"
     - name: Stage canonical vendor evidence
-      run: python -S scripts/stage_vendor_evidence.py --kind locked --output build/vendor-evidence-locked
+      if: always()
+      run: >-
+        python -S .vendor-sync-tools/vendor_stage.py
+        --kind locked --output build/vendor-evidence-locked
+        --legacy-evidence vendor/ascii_artist.provenance.json
+        --legacy-evidence vendor/git_inspector.provenance.json
+        --legacy-evidence vendor/markdown.provenance.json
     - name: Preserve vendor lock used by this run
       if: always()
       uses: actions/upload-artifact@v7

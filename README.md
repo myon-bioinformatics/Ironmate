@@ -352,7 +352,7 @@ Normal CI remains fixture/offline-driven; this live form is for manual/browser v
 
 ## Live PR observation consumer
 
-`github_pr.py` consumes browser-test-kit's vendored `gh_ops.py` for one-shot PR
+`github_pr.py` consumes the parent repository's canonical `gh_ops.py` for one-shot PR
 observations, saved-snapshot diffs and explicitly requested PR comments. It runs
 with `python -S` and uses `GITHUB_TOKEN` / `GH_TOKEN` when provided.
 

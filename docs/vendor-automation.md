@@ -30,7 +30,7 @@ ALM agents can use the same mechanism in a disposable checkout:
 
 ```bash
 git clone https://github.com/myon-bioinformatics/myon-bioinformatics.git .vendor-sync-tools
-git -C .vendor-sync-tools checkout --detach 08dc3757deeb930c950bdcc6bd55ec3112ba49fc
+git -C .vendor-sync-tools checkout --detach 974da5eb9593df652b132e4b0f1a679f67422566
 python -S .vendor-sync-tools/vendor_sync.py check --manifest vendor.lock.json
 python -S .vendor-sync-tools/vendor_sync.py materialize --manifest vendor.lock.json
 python -S .vendor-sync-tools/vendor_sync.py update --manifest vendor.lock.json
@@ -91,9 +91,15 @@ upstream commit timestamp or a claim that the checkout was committed that day.
 The shared profile MIT LICENSE is now explicitly locked at `443b8a94bbc6801332e0abd9f2e56da68173b38d`
 and included in resolved and locked evidence. Existing source pins and bytes are unchanged.
 
-The PR observation consumer also enrolls browser-test-kit `scripts/gh_ops.py`
-and its MIT LICENSE in the same allowlist. Its checked-in baseline is the #42
-squash commit `de5bd0f5d81721bb54f0fbb8747d2f6b56d6b720`; CI may resolve newer
-main bytes through the existing update lane, while the locked lane validates
-the shipped copy. This source uses the lock directly rather than adding a
-second legacy provenance format.
+The PR observation consumer enrolls the parent's canonical `gh_ops.py` with
+adjacent GHI. Its baseline is recorded in `vendor.lock.json`. The shared parent
+LICENSE already covers gh_ops, so the old browser-test-kit LICENSE copy and
+source enrollment are removed. GHI is pinned to the compatible checks-summary
+API used by the canonical parent; other vendor source pins are unchanged.
+
+All vendor artifacts are staged directly by the pinned parent `vendor_stage.py`.
+The former `scripts/stage_vendor_evidence.py` copier is removed. Membership comes
+from the lock; the three existing provenance projections are explicitly classified
+as legacy evidence, and an optional promotion receipt is included only for candidate
+runs. `vendor-evidence.json` records member SHA-256 values. Staging runs on failure
+as well; the receipt does not certify that promotion or tests succeeded.

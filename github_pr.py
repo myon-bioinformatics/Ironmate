@@ -1,4 +1,4 @@
-"""One-shot PR observations and explicit comments using browser-test-kit's producer.
+"""One-shot PR observations and explicit comments using the canonical parent producer.
 
 Stdlib-only. No scheduler, notification delivery or automatic comment retry.
 Snapshots are local JSON; serialize callers that share the same snapshot path.

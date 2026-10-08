@@ -10,7 +10,7 @@ PPTXの文字・色・矢印属性の置換、画素／パレットに基づく�
 
 - 共通GitHub操作・vendor管理は [親リポジトリ](https://github.com/myon-bioinformatics/myon-bioinformatics) と [gh_identity](https://github.com/myon-bioinformatics/gh_identity) を参照します。
 - 旧GitHubカタログ、MCPサーバー、repository metadata／diagnostics、成果物provenance生成の試作は廃止しました。すべての旧APIが移管先に互換実装されているという意味ではありません。
-- `adapters/` はsource／niconicoの暫定保管先です。API／MCPの差分吸収の設計と引き継ぎは [mcp-toolcall-lab #107](https://github.com/myon-bioinformatics/mcp-toolcall-lab/issues/107) で扱います。
+- source／niconico実装とテストの移管先は [mcp-toolcall-lab PR #108](https://github.com/myon-bioinformatics/mcp-toolcall-lab/pull/108) です。先に移管先をマージしてから、この削除をマージします。API／MCPの差分吸収の設計は同repo #107で扱います。
 - `vendor/` と `vendor.lock.json` はconsumerの固定コピーです。今回の整理では内容・pinを変更していません。
 - `scripts/sync_vendor_provenance.py` は既存CIのvendor証跡をlockから投影する補助処理として残します。旧ルートの `provenance.py` とは別物です。
 
@@ -28,4 +28,4 @@ python -m pytest -q -m 'not heavy'
 ```
 
 xprobeと親のvendorツールはテスト用の別checkoutです。実行時依存として自動取得しません。
-アダプターはstdlibでimport可能です。今後のpython-pptx等の導入は用途に応じて判断します。
+今後のpython-pptx等の導入は用途に応じて判断します。

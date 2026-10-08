@@ -4,7 +4,6 @@ on:
   pull_request:
     paths:
       - "*.py"
-      - "adapters/**"
       - "vendor.lock.json"
       - "vendor/**"
       - "scripts/**"
@@ -15,7 +14,6 @@ on:
     branches: [main]
     paths:
       - "*.py"
-      - "adapters/**"
       - "vendor.lock.json"
       - "vendor/**"
       - "scripts/**"
@@ -153,7 +151,7 @@ jobs:
         id: compile
         run: |
           git ls-files '*.py' -z | xargs -0 python -m py_compile
-      - run: python -m unittest tests/test_niconico_adapter.py tests/test_vendor_modules.py tests/test_repository_hygiene.py
+      - run: python -m unittest tests/test_vendor_modules.py tests/test_repository_hygiene.py
       - name: Run default pytest suite (exclude heavy tests)
         # Still gather pytest evidence after a unittest failure; that job stays red.
         if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
@@ -257,7 +255,7 @@ jobs:
     - name: Compile all tracked Python sources before test collection
       run: |
         git ls-files '*.py' -z | xargs -0 python -m py_compile
-    - run: python -m unittest tests/test_niconico_adapter.py tests/test_vendor_modules.py tests/test_repository_hygiene.py
+    - run: python -m unittest tests/test_vendor_modules.py tests/test_repository_hygiene.py
     - name: Run default pytest suite (exclude heavy tests)
       run: python -m pytest -q -m "not heavy"
     - name: Stage canonical vendor evidence

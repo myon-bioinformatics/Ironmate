@@ -14,12 +14,11 @@ Baseline: Ironmate `a24e356503b73b7daf1537c6e5f26a0426a6d876`, parent
 | build_repository_diagnostics, build_web_ui_consumer_examples, unreviewed | Retire old prototype consumers and their tests |
 | MCP stub / generated catalog Pages and screenshot CI | Replace Pages with a static project landing; remove obsolete scheduled API collection and screenshot job |
 
-Source and niconico implementations and their network-free tests are preserved in
-`adapters/`. Their transfer is **pending**, tracked at
-https://github.com/myon-bioinformatics/mcp-toolcall-lab/issues/107 (related #39).
-Import with `from adapters.niconico_adapter import ...`.
+Source and niconico implementations, offline fixture and regression tests transfer
+into mcp-toolcall-lab PR #108. Merge that transfer before this deletion. The copies
+in Ironmate are removed, including obsolete prototype design notes. Routing design
+remains #107; the implementation transfer is not a live MCP registration.
 
-Historical design notes remain explicitly marked as retired documentation.
 Vendor update/check, locked-baseline tests and JUnit failure identity CI remain.
 `scripts/sync_vendor_provenance.py` remains only to project legacy vendor JSON
 receipts for the existing CI contract. Source and license identity are still

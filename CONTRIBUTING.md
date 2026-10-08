@@ -60,7 +60,7 @@ Examples:
 ascii_artist.py
 markdown.py
 pixel_grid.py
-adapters/source_adapter.py
+vendor/gh_identity.py
 vendor_integrity.py
 ```
 
@@ -296,7 +296,7 @@ Examples:
 ```
 vendor/ascii_artist.py -> vendored ASCII art utilities
 vendor/markdown.py     -> vendored Markdown utilities
-adapters/source_adapter.py   -> source adapter contract
+vendor/gh_identity.py -> shared GitHub identity
 scripts/sync_vendor_provenance.py -> vendor receipt projection
 ```
 

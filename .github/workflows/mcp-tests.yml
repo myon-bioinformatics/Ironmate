@@ -129,6 +129,8 @@ jobs:
         with:
           name: vendor-snapshot
           path: build/vendor-evidence-candidate
+          if-no-files-found: error
+          retention-days: 14
 
   test:
     permissions:
@@ -207,6 +209,8 @@ jobs:
         with:
           name: vendor-lock-py3.12
           path: build/vendor-evidence-test
+          if-no-files-found: error
+          retention-days: 14
 
   failure-identity:
     needs: test

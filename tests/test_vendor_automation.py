@@ -119,13 +119,12 @@ def test_public_vendor_ci_updates_without_repository_writes():
         upload = next(s for s in steps if s.get('name') == name)
         assert upload['if'] == 'always()'
         assert upload['with']['if-no-files-found'] == 'error'
-        expected = set(SNAPSHOT)
-        if steps is resolve:
-            expected.add('vendor-promotion.json')
-        assert set(upload['with']['path'].splitlines()) == expected
+        expected = ('build/vendor-evidence-candidate' if steps is resolve
+                    else 'build/vendor-evidence-test')
+        assert upload['with']['path'] == expected
     pins = [s['with']['ref'] for steps in (resolve,test) for s in steps
             if s.get('with',{}).get('repository') == 'myon-bioinformatics/myon-bioinformatics']
-    assert pins == ['08dc3757deeb930c950bdcc6bd55ec3112ba49fc'] * 2
+    assert pins == ['098e2b2bde603190260f901706a335e4ecd3fa7c'] * 2
     for steps in (resolve,test):
         for step in steps:
             if step.get('uses','').startswith('actions/checkout@'):
@@ -292,7 +291,7 @@ def test_locked_baseline_runs_automatically_without_candidate_snapshot():
                     if s.get('name') == 'Recreate locked vendor files from GitHub')
     assert steps[recreate] == original
     tool = next(s for s in steps if s.get('name') == 'Fetch pinned shared vendor tool')
-    assert tool['with']['ref'] == '08dc3757deeb930c950bdcc6bd55ec3112ba49fc'
+    assert tool['with']['ref'] == '098e2b2bde603190260f901706a335e4ecd3fa7c'
     for step in steps:
         assert 'continue-on-error' not in step
         if step.get('uses', '').startswith('actions/checkout@'):
@@ -303,4 +302,4 @@ def test_locked_baseline_runs_automatically_without_candidate_snapshot():
                 assert step['if'] == 'always()'
             assert step['with']['if-no-files-found'] == 'error'
     lock = next(s for s in steps if s.get('name') == 'Preserve vendor lock used by this run')
-    assert set(lock['with']['path'].splitlines()) == set(SNAPSHOT)
+    assert lock['with']['path'] == 'build/vendor-evidence-locked'

@@ -13,33 +13,17 @@ ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = '.github/workflows/mcp-tests.yml'
 TEST_JOB = 'test'
 HELPER = 'scripts/sync_vendor_provenance.py'
-SNAPSHOT = ['vendor/gh_ops.py', 'vendor/gh_identity.py', 'vendor/gh_identity-LICENSE', 'vendor/browser-test-kit-LICENSE', 'vendor/myon-bioinformatics-LICENSE', 'vendor.lock.json',
- 'vendor/ascii_artist.py',
- 'vendor/git_inspector.py',
- 'vendor/markdown.py',
- 'vendor/nvd_nist_known_vulns.py',
- 'vendor/ascii_artist-LICENSE',
- 'vendor/markdown-LICENSE',
- 'vendor/nvd_nist_known_vulns-LICENSE',
- 'vendor/ascii_artist.provenance.json',
- 'vendor/git_inspector.provenance.json',
- 'vendor/markdown.provenance.json']
-EXPECTED = {('myon-bioinformatics/gh_identity', 'gh_identity.py', 'vendor/gh_identity.py'),
- ('myon-bioinformatics/gh_identity', 'LICENSE', 'vendor/gh_identity-LICENSE'),
- ('myon-bioinformatics/browser-test-kit', 'scripts/gh_ops.py', 'vendor/gh_ops.py'),
- ('myon-bioinformatics/browser-test-kit', 'LICENSE', 'vendor/browser-test-kit-LICENSE'),
- ('myon-bioinformatics/myon-bioinformatics', 'LICENSE', 'vendor/myon-bioinformatics-LICENSE'),
- ('myon-bioinformatics/ascii_artist', 'LICENSE', 'vendor/ascii_artist-LICENSE'),
- ('myon-bioinformatics/ascii_artist', 'ascii_artist.py', 'vendor/ascii_artist.py'),
- ('myon-bioinformatics/markdown', 'LICENSE', 'vendor/markdown-LICENSE'),
- ('myon-bioinformatics/markdown', 'markdown.py', 'vendor/markdown.py'),
- ('myon-bioinformatics/myon-bioinformatics', 'git_inspector.py', 'vendor/git_inspector.py'),
- ('myon-bioinformatics/nvd_nist_known_vulns',
-  'LICENSE',
-  'vendor/nvd_nist_known_vulns-LICENSE'),
- ('myon-bioinformatics/nvd_nist_known_vulns',
-  'nvd_nist_known_vulns.py',
-  'vendor/nvd_nist_known_vulns.py')}
+def _lock_files(root=ROOT):
+    lock = json.loads((root / 'vendor.lock.json').read_text(encoding='utf-8'))
+    assert lock['schema'] == 'vendor-lock/1'
+    return lock['files']
+
+
+SNAPSHOT = ['vendor.lock.json', *[entry['destination'] for entry in _lock_files()],
+            'vendor/ascii_artist.provenance.json',
+            'vendor/git_inspector.provenance.json',
+            'vendor/markdown.provenance.json']
+
 
 
 def _workflow():
@@ -63,9 +47,20 @@ def _copy_snapshot(root):
 
 def test_vendor_lock_has_explicit_sources_and_verified_bytes():
     records = _projector().records(ROOT)
-    assert len(records) == len(EXPECTED)
-    assert {(e["repository"], e["source"], e["destination"]) for e in records.values()} == EXPECTED
+    expected = {(e['repository'], e['source'], e['destination']) for e in _lock_files()}
+    assert {(e['repository'], e['source'], e['destination']) for e in records.values()} == expected
 
+
+
+def test_canonical_vendor_evidence_membership_is_derived_from_lock():
+    """New enrollments must not require another manually maintained membership list."""
+    lock = json.loads((ROOT / 'vendor.lock.json').read_text(encoding='utf-8'))
+    destinations = [entry['destination'] for entry in lock['files']]
+    assert len(destinations) == len(set(path.casefold() for path in destinations))
+    locked = sorted(['vendor.lock.json', *destinations], key=lambda p: (p.casefold(), p))
+    assert 'vendor-promotion.json' not in locked
+    assert set(locked) == {'vendor.lock.json', *(entry['destination'] for entry in lock['files'])}
+    assert all((ROOT / path).is_file() for path in locked)
 
 def test_public_vendor_ci_updates_without_repository_writes():
     ci = _workflow()
@@ -124,13 +119,12 @@ def test_public_vendor_ci_updates_without_repository_writes():
         upload = next(s for s in steps if s.get('name') == name)
         assert upload['if'] == 'always()'
         assert upload['with']['if-no-files-found'] == 'error'
-        expected = set(SNAPSHOT)
-        if steps is resolve:
-            expected.add('vendor-promotion.json')
-        assert set(upload['with']['path'].splitlines()) == expected
+        expected = ('build/vendor-evidence-candidate' if steps is resolve
+                    else 'build/vendor-evidence-test')
+        assert upload['with']['path'] == expected
     pins = [s['with']['ref'] for steps in (resolve,test) for s in steps
             if s.get('with',{}).get('repository') == 'myon-bioinformatics/myon-bioinformatics']
-    assert pins == ['08dc3757deeb930c950bdcc6bd55ec3112ba49fc'] * 2
+    assert pins == ['098e2b2bde603190260f901706a335e4ecd3fa7c'] * 2
     for steps in (resolve,test):
         for step in steps:
             if step.get('uses','').startswith('actions/checkout@'):
@@ -297,7 +291,7 @@ def test_locked_baseline_runs_automatically_without_candidate_snapshot():
                     if s.get('name') == 'Recreate locked vendor files from GitHub')
     assert steps[recreate] == original
     tool = next(s for s in steps if s.get('name') == 'Fetch pinned shared vendor tool')
-    assert tool['with']['ref'] == '08dc3757deeb930c950bdcc6bd55ec3112ba49fc'
+    assert tool['with']['ref'] == '098e2b2bde603190260f901706a335e4ecd3fa7c'
     for step in steps:
         assert 'continue-on-error' not in step
         if step.get('uses', '').startswith('actions/checkout@'):
@@ -308,4 +302,4 @@ def test_locked_baseline_runs_automatically_without_candidate_snapshot():
                 assert step['if'] == 'always()'
             assert step['with']['if-no-files-found'] == 'error'
     lock = next(s for s in steps if s.get('name') == 'Preserve vendor lock used by this run')
-    assert set(lock['with']['path'].splitlines()) == set(SNAPSHOT)
+    assert lock['with']['path'] == 'build/vendor-evidence-locked'

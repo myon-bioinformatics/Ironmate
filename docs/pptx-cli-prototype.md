@@ -199,3 +199,10 @@ Prototype diagonal links by selecting the midpoint of a source edge and destinat
 Source and destination each independently select one of `left/right/top/bottom`; test all 16 combinations in both directions (32 directed cases). The arrowhead is centered on the line segment between edge midpoints, with the tip facing the destination. For the conceptual triangle, derive its tip and two base vertices from a normalized direction vector and perpendicular vector; verify equal base distances and forward-facing tip. Reject coincident anchors explicitly.
 
 `tests/test_pptx_edge_geometry.py` implements mathematical geometry checks only. PowerPoint shape presets may have different native orientations and rotation conventions; do not assume `head.rotation = atan2(...)` produces a visually aligned arrowhead until the rendered PPTX is checked. Future CLI adoption also requires line layering, shape insertion and visible-gap checks. No pathfinding or automatic box movement tracking is promised.
+
+
+## Mermaid / Marp / PPTX responsibility boundary
+
+Reuse `vendor/markdown.py` for safe Mermaid fence generation and extraction; its helpers treat Mermaid source as opaque and do not parse or render diagrams. Do not introduce a second Mermaid syntax dialect for the slide CLI. Use ordinary Mermaid flowchart source for portable diagram *presentation* when the installed Marp engine supports it; Marp Core's Mermaid rendering requires a plugin/dependency and must be tested with the actual pinned engine rather than assumed enabled.
+
+A standard Marp PPTX can rasterize the diagram, so editable native PPTX boxes and connectors remain a **separate, opt-in reconstruction path** using python-pptx. Mermaid arrows do not encode the four-edge anchor choice or the independent arrowhead geometry contract; those remain PPTX-specific parameters, not a modification to the Mermaid grammar. Verify a representative Markdown→Marp render separately from a native editable PPTX geometry fixture, and do not claim one is a lossless round trip of the other.

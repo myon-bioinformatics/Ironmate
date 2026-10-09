@@ -204,7 +204,7 @@ jobs:
       actions: read
     uses: myon-bioinformatics/myon-bioinformatics/.github/workflows/reusable-junit-identity.yml@4dfda95d6573250477f991a0421fa6acb9bc0258
     with:
-      expected-reports: '["junit-py3.12/pytest-3.12.xml","junit-controlled-py3.12/junit.xml"]'
+      expected-reports: '["junit-py3.12/pytest-3.12.xml","junit-controlled-py3.12/junit.xml","junit-marp/marp.xml"]'
       artifact-pattern: "junit-*"
       output-artifact: "failure-identity"
 

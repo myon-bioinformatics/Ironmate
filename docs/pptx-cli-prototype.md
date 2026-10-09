@@ -139,3 +139,10 @@ Do not require TOML as the canonical source of truth. Preserve actual PPTX packa
 Keep three separable layers: (1) observed source data (XML/HTML/CSS/JSON and binary package), (2) feature/selector/editability decisions (editable, unsupported, unknown; fail closed), and (3) execution/JUnit/visual evidence. TOML may remain a convenient *candidate* for human-authored rules, but choose the serialization based on what can be validated and reused; do not force DOM or XML into TOML. Compare markup languages through a small common vocabulary (element, attribute, text, selector, parent/child, reference), while retaining format-specific semantics.
 
 If a browser-test-kit or web-ui capture facility can extract the actual viewer DOM and styles, reuse it rather than building a parallel browser automation stack. First verify a real PPTX-capable web viewer opened the output; Marp HTML preview is a different validation lane. Store success, unsupported and unknown patterns with provenance and explicit evidence links, and promote observations into rules only after tests support the inference.
+
+
+## Cross-repository failure evidence and source validation
+
+The canonical CI already compiles every tracked Python file **before** pytest collection (`git ls-files '*.py' -z | xargs -0 python -m py_compile`), including when pytest could not collect a syntactically broken test. Reuse this existing preflight and the pinned xprobe/JUnit failure-identity collector instead of keeping a second Ironmate-specific recursive tokenizer scanner. The standalone `tests/test_python_source_escaping.py` prototype was removed as redundant; its prior success does not replace the pre-collection compiler check.
+
+When an escape/newline/regex failure occurs, first search related test fixtures and failure evidence across markdown, xprobe, ascii_artist, cli_args and other consumer repos, then add only a minimal domain-specific regression to Ironmate. Preserve normal Python string-literal escape sequences; do not blanket-replace `\\n` in source files. CI results and PR review history should be used as evidence before proposing shared fixes in the parent tooling.

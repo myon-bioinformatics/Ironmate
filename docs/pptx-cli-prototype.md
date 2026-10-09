@@ -206,3 +206,10 @@ Source and destination each independently select one of `left/right/top/bottom`;
 Reuse `vendor/markdown.py` for safe Mermaid fence generation and extraction; its helpers treat Mermaid source as opaque and do not parse or render diagrams. Do not introduce a second Mermaid syntax dialect for the slide CLI. Use ordinary Mermaid flowchart source for portable diagram *presentation* when the installed Marp engine supports it; Marp Core's Mermaid rendering requires a plugin/dependency and must be tested with the actual pinned engine rather than assumed enabled.
 
 A standard Marp PPTX can rasterize the diagram, so editable native PPTX boxes and connectors remain a **separate, opt-in reconstruction path** using python-pptx. Mermaid arrows do not encode the four-edge anchor choice or the independent arrowhead geometry contract; those remain PPTX-specific parameters, not a modification to the Mermaid grammar. Verify a representative Markdown→Marp render separately from a native editable PPTX geometry fixture, and do not claim one is a lossless round trip of the other.
+
+
+## Mermaid source preservation and optional Markdown utilities
+
+Treat original Markdown and fenced Mermaid source as the canonical regeneration inputs. Do **not** claim that a rendered PPTX can be parsed back into equivalent Mermaid. For simple diagrams, pass source through to an explicitly verified Marp Mermaid rendering lane without adding a mandatory Markdown parser. Use `vendor/markdown.py` only for optional fence extraction, formatting and source-preservation checks; do not impose its helpers on the basic conversion path.
+
+Keep source hashes and a mapping to generated PPTX artifacts. Native PPTX edge anchors and arrowhead geometry remain an Ironmate/python-pptx concern and should not be encoded as proprietary Mermaid syntax. Add the final one-liner only after a real Markdown+Mermaid→Marp→PPTX proof succeeds; if Mermaid rendering is not enabled by the pinned Marp toolchain, report unsupported instead of silently emitting a non-rendered code block.

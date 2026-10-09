@@ -98,3 +98,21 @@ At head `eac914f56ded500b574c4195e1523ba358296e62`, [CI run 37939923108](https:/
 ## Test-only fixture boundary
 
 The ad-hoc Markdown→PPTX generator has been removed from the repository root and retained **only** as `tests/fixture_pptx.py` for deterministic regression fixtures. It is not a supported production conversion CLI. Future Markdown input should use existing `vendor/markdown.py` where its API fits, or a separately validated optional Marp adapter. The production entry point remains `pptx_replace.py`; do not restore a parallel `markdown_pptx.py` runtime without a concrete need.
+
+
+## Independent Marp conversion proof (optional, before orchestration)
+
+The simple Markdown fixture `tests/fixtures/mini_readme.md` is the first Marp input. `marp_pptx.py` calls an **already installed** Marp CLI and validates that the produced PPTX can be reopened; it does not install Node, npm or a browser automatically.
+
+```sh
+marp --version
+python marp_pptx.py tests/fixtures/mini_readme.md -o marp-sample.pptx
+```
+
+Run the gated real conversion test only in an explicitly provisioned environment:
+
+```sh
+IRONMATE_RUN_MARP_INTEGRATION=1 python -m pytest -q tests/test_marp_pptx.py
+```
+
+This first proof checks actual output existence and PPTX readability, **not** that the output has editable text or that it is visually faithful. Standard Marp PPTX export can rasterize slide content; that must be measured before using python-pptx to edit generated text. Do not build the unified Markdown→Marp→PPTX→XML one-liner until this independent integration is green and the editability limitations are understood. The production PPTX editing CLI stays independent.

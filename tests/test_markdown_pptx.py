@@ -8,7 +8,7 @@ import pytest
 from pptx import Presentation
 from pptx.dml.color import RGBColor
 
-from markdown_pptx import generate, parse_blocks
+from tests.fixture_pptx import generate, parse_blocks
 from pptx_replace import transform
 
 
@@ -42,7 +42,7 @@ def test_markdown_pptx_xml_edit_roundtrip(tmp_path):
 def test_markdown_cli_one_liner(tmp_path):
     source = Path(__file__).parent / "fixtures" / "mini_readme.md"
     output = tmp_path / "fixture.pptx"
-    script = Path(__file__).resolve().parents[1] / "markdown_pptx.py"
+    script = Path(__file__).resolve().parent / "fixture_pptx.py"
     p = subprocess.run([sys.executable, str(script), str(source), "-o", str(output)], capture_output=True, text=True)
     assert p.returncode == 0, p.stderr
     assert output.is_file()

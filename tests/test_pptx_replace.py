@@ -112,3 +112,42 @@ def test_slide_xml_preserves_unrelated_shape_and_text(tmp_path):
     # Normalized XML trees must agree after restoring only the intended text change.
     after.find(".//a:t", ns).text = "Draft title"
     assert ET.tostring(before) == ET.tostring(after)
+
+
+def test_font_size_bold_and_rgb_xml_roundtrip(tmp_path):
+    import zipfile
+    import xml.etree.ElementTree as ET
+
+    src = fixture(tmp_path)
+    dst = tmp_path / "styled.pptx"
+    rules = [
+        {"operation": "font_size", "points": 24},
+        {"operation": "bold", "value": False},
+        {"operation": "text_color", "color": "#112233"},
+    ]
+    assert transform(src, rules, dry_run=True)["change_count"] == 3
+    assert transform(src, rules, destination=dst)["change_count"] == 3
+    run = Presentation(dst).slides[0].shapes[0].text_frame.paragraphs[0].runs[0]
+    assert run.font.size.pt == 24
+    assert run.font.bold is False
+    assert run.font.color.rgb == RGBColor(17, 34, 51)
+    with zipfile.ZipFile(dst) as z:
+        root = ET.fromstring(z.read("ppt/slides/slide1.xml"))
+    ns = {"a": "http://schemas.openxmlformats.org/drawingml/2006/main"}
+    properties = root.find(".//a:rPr", ns)
+    assert properties is not None
+    assert properties.attrib["sz"] == "2400"
+    assert properties.attrib["b"] == "0"
+    assert properties.find(".//a:srgbClr", ns).attrib["val"].upper() == "112233"
+
+
+@pytest.mark.parametrize("rule", [
+    {"operation": "font_size", "points": 0},
+    {"operation": "font_size", "points": "12"},
+    {"operation": "font_size", "points": True},
+    {"operation": "bold", "value": "true"},
+])
+def test_style_rule_rejects_invalid_types(tmp_path, rule):
+    src = fixture(tmp_path)
+    with pytest.raises(ValueError):
+        transform(src, [rule], dry_run=True)

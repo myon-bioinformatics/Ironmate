@@ -20,7 +20,7 @@ def _rgb(value):
 def transform(source, rules, *, dry_run=False, destination=None):
     if not isinstance(rules, list) or not rules:
         raise ValueError("at least one rule is required")
-    presentation = Presentation(str(source))
+    if destination is not None and not dry_run:\n        src, dst = Path(source), Path(destination)\n        if src.resolve() == dst.resolve() or dst.exists():\n            raise ValueError("destination must be a new file distinct from source")\n    presentation = Presentation(str(source))
     changes = []
     for index, rule in enumerate(rules):
         operation = rule.get("operation")
@@ -74,11 +74,13 @@ def transform(source, rules, *, dry_run=False, destination=None):
     if not dry_run:
         if destination is None:
             raise ValueError("destination is required unless dry-run")
-        src, dst = Path(source), Path(destination)
-        if src.resolve() == dst.resolve() or dst.exists():
-            raise ValueError("destination must be a new file distinct from source")
-        with dst.open("xb") as output:
-            presentation.save(output)
+        dst = Path(destination)
+        try:
+            with dst.open("xb") as output:
+                presentation.save(output)
+        except BaseException:
+            dst.unlink(missing_ok=True)
+            raise
     return {"dry_run": dry_run, "changes": changes, "change_count": sum(c.get("count", 1) for c in changes)}
 
 

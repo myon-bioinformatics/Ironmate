@@ -86,3 +86,10 @@ python pptx_replace.py sample.pptx --text-color '#2244AA' -o colored.pptx
 The new integration test generates a fixture, checks Markdown→shape text/role mapping, applies a color change, reopens the PPTX, checks text and RGB values, compares unrelated ZIP package members and inspects slide XML. Tests produce JUnit through the existing CI pytest command.
 
 **Marp remains optional and not yet integrated.** Its standard PPTX export can flatten slides, making run-level python-pptx editing unsuitable. Evaluate a pinned Marp/Node toolchain and editable export only after this independent editable-PPTX path is green. No visual rendering fidelity is claimed by the XML tests.
+
+
+## Stage 2 gate and later Marp sequencing (confirmed)
+
+At head `eac914f56ded500b574c4195e1523ba358296e62`, [CI run 37939923108](https://github.com/myon-bioinformatics/Ironmate/actions/runs/37939923108) finished green: 61 pytest passed; resolve-vendor, locked baseline, test, and failure-identity/collect succeeded. This validates the **minimal direct Markdown→editable PPTX→attribute edit→XML** integration, not Marp conversion or visual fidelity.
+
+**Do not combine the next steps prematurely.** First finish/review the regular Stage 2 direct path and its tests. Next conduct an **independent Marp conversion proof** (Markdown→Marp→PPTX), recording tool versions, runtime/browser/LibreOffice dependencies, whether PPTX text remains editable, and rendering limitations. Only **after** that proof succeeds, add an optional end-to-end one-liner orchestrating Markdown generation → Marp → PPTX → XML/structural verification. Keep Marp optional and preserve the original direct fixture path as a regression baseline. Continue in Draft PR #83 without merging until explicitly approved.

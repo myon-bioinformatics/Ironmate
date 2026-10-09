@@ -6,6 +6,7 @@ import tomllib
 
 from pptx import Presentation
 from pptx.dml.color import RGBColor
+from pptx.util import Pt
 
 
 def _rgb(value):
@@ -28,7 +29,7 @@ def transform(source, rules, *, dry_run=False, destination=None):
     changes = []
     for index, rule in enumerate(rules):
         operation = rule.get("operation")
-        if operation not in {"replace_text", "text_color", "slide_background"}:
+        if operation not in {"replace_text", "text_color", "slide_background", "font_size", "bold"}:
             raise ValueError(f"unsupported operation: {operation!r}")
         slide_number = rule.get("slide")
         if slide_number is not None and (type(slide_number) is not int or not 1 <= slide_number <= len(presentation.slides)):
@@ -37,8 +38,15 @@ def transform(source, rules, *, dry_run=False, destination=None):
             old, new = rule.get("old"), rule.get("new")
             if not isinstance(old, str) or not old or not isinstance(new, str):
                 raise ValueError("replace_text requires nonempty old and string new")
-        else:
+        elif operation in {"text_color", "slide_background"}:
             color = _rgb(rule.get("color"))
+        elif operation == "font_size":
+            size = rule.get("points")
+            if type(size) not in (int, float) or not 1 <= size <= 400:
+                raise ValueError("font_size requires numeric points between 1 and 400")
+        elif operation == "bold":
+            if type(rule.get("value")) is not bool:
+                raise ValueError("bold requires a boolean value")
         for number, slide in enumerate(presentation.slides, 1):
             if slide_number is not None and number != slide_number:
                 continue
@@ -67,6 +75,16 @@ def transform(source, rules, *, dry_run=False, destination=None):
                                 changes.append({"rule": index, "slide": number, "shape": shape_index, "paragraph": paragraph_index, "run": run_index, "count": count})
                                 if not dry_run:
                                     run.text = run.text.replace(old, new)
+                        elif operation == "font_size":
+                            if run.font.size != Pt(size):
+                                changes.append({"rule": index, "slide": number, "shape": shape_index, "paragraph": paragraph_index, "run": run_index, "count": 1})
+                                if not dry_run:
+                                    run.font.size = Pt(size)
+                        elif operation == "bold":
+                            if run.font.bold is not rule["value"]:
+                                changes.append({"rule": index, "slide": number, "shape": shape_index, "paragraph": paragraph_index, "run": run_index, "count": 1})
+                                if not dry_run:
+                                    run.font.bold = rule["value"]
                         elif operation == "text_color":
                             from pptx.dml.color import MSO_COLOR_TYPE
                             if run.font.color.type != MSO_COLOR_TYPE.RGB:
@@ -95,12 +113,14 @@ def main(argv=None):
     parser.add_argument("--replace", nargs=2, metavar=("OLD", "NEW"))
     parser.add_argument("--text-color")
     parser.add_argument("--background")
+    parser.add_argument("--font-size", type=float)
+    parser.add_argument("--bold", choices=("true", "false"))
     parser.add_argument("--output", type=Path)
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args(argv)
     if not args.dry_run and args.output is None:
         parser.error("--output is required unless --dry-run")
-    if args.rules and any((args.replace, args.text_color, args.background)):
+    if args.rules and any((args.replace, args.text_color, args.background, args.font_size is not None, args.bold is not None)):
         parser.error("--rules cannot be combined with inline operations")
     if args.rules:
         with args.rules.open("rb") as stream:
@@ -114,6 +134,10 @@ def main(argv=None):
             rules.append({"operation": "text_color", "color": args.text_color})
         if args.background:
             rules.append({"operation": "slide_background", "color": args.background})
+        if args.font_size is not None:
+            rules.append({"operation": "font_size", "points": args.font_size})
+        if args.bold is not None:
+            rules.append({"operation": "bold", "value": args.bold == "true"})
         if not rules:
             parser.error("specify --rules or an inline operation")
     result = transform(args.source, rules, dry_run=args.dry_run, destination=args.output)

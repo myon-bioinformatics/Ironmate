@@ -187,3 +187,8 @@ Stage work: verify existing text/font/color changes and XML evidence first; add 
 Use full-span straight lines behind boxes and place independent filled arrowhead shapes at the center of each **visible gap**, not at the center of the entire line. For horizontal neighbors, the line spans the left edge of A to the right edge of B and the head is centered between A's right edge and B's left edge. For vertical neighbors, span the outer top/bottom edges and place the head in the vertical gap, rotated/oriented toward the destination. Repeated neighbors use the same mechanical rule. Default to a filled triangle; optionally evaluate angular chevrons. These are static shapes, not auto-routing connectors; no movement-following guarantee.
 
 Initial multi-box and vertical geometry tests are in `tests/test_pptx_diagram_shapes.py`. Verify layering separately before exposing this in the production CLI; if existing shapes already occupy the slide, simply adding a line after them does not put it behind them.
+
+
+## Diagonal links: explicit edge anchors
+
+Prototype diagonal links by selecting the midpoint of a source edge and destination edge, each one of `left/right/top/bottom`. Use a single straight line between anchors and a separate triangle centered on the segment. Rotation is calculated with `atan2(dy, dx)` and should be validated visually before any production claim. This avoids routing heuristics, handles C.left→A.bottom, C.top→A.bottom and C.bottom→A.bottom uniformly, and retains a simple static shape model. The initial regression is test-only; verify actual rendering and arrowhead orientation before adding a CLI option.

@@ -192,3 +192,10 @@ Initial multi-box and vertical geometry tests are in `tests/test_pptx_diagram_sh
 ## Diagonal links: explicit edge anchors
 
 Prototype diagonal links by selecting the midpoint of a source edge and destination edge, each one of `left/right/top/bottom`. Use a single straight line between anchors and a separate triangle centered on the segment. Rotation is calculated with `atan2(dy, dx)` and should be validated visually before any production claim. This avoids routing heuristics, handles C.left→A.bottom, C.top→A.bottom and C.bottom→A.bottom uniformly, and retains a simple static shape model. The initial regression is test-only; verify actual rendering and arrowhead orientation before adding a CLI option.
+
+
+## Directed edge-pair geometry and arrowhead calibration
+
+Source and destination each independently select one of `left/right/top/bottom`; test all 16 combinations in both directions (32 directed cases). The arrowhead is centered on the line segment between edge midpoints, with the tip facing the destination. For the conceptual triangle, derive its tip and two base vertices from a normalized direction vector and perpendicular vector; verify equal base distances and forward-facing tip. Reject coincident anchors explicitly.
+
+`tests/test_pptx_edge_geometry.py` implements mathematical geometry checks only. PowerPoint shape presets may have different native orientations and rotation conventions; do not assume `head.rotation = atan2(...)` produces a visually aligned arrowhead until the rendered PPTX is checked. Future CLI adoption also requires line layering, shape insertion and visible-gap checks. No pathfinding or automatic box movement tracking is promised.

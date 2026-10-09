@@ -197,7 +197,7 @@ jobs:
           retention-days: 14
 
   failure-identity:
-    needs: test
+    needs: [test, marp-integration]
     if: always()
     permissions:
       contents: read

@@ -180,3 +180,10 @@ Prioritize a small, repeatable set of operations over full PowerPoint automation
 For diagram connectors, prefer a background straight line plus separate arrowhead shapes and foreground text boxes over elaborate auto-routing. The line should be placed behind foreground objects; explicit shape order and idempotency need tests. This deliberately does not promise automatic reconnection when boxes move. Prefer a narrow stable shape vocabulary and explicit opt-in operations. Do not silently add arrows, alter inherited fonts or recolor existing artwork merely because a preset exists.
 
 Stage work: verify existing text/font/color changes and XML evidence first; add safe text-box insertion and geometry tests; then minimal line/arrowhead layers; finally expose optional one-liner presets. Any web/Marp visual check remains distinct from actual PPTX editability and no LibreOffice dependency is introduced.
+
+
+## Simple repeated box connections
+
+Use full-span straight lines behind boxes and place independent filled arrowhead shapes at the center of each **visible gap**, not at the center of the entire line. For horizontal neighbors, the line spans the left edge of A to the right edge of B and the head is centered between A's right edge and B's left edge. For vertical neighbors, span the outer top/bottom edges and place the head in the vertical gap, rotated/oriented toward the destination. Repeated neighbors use the same mechanical rule. Default to a filled triangle; optionally evaluate angular chevrons. These are static shapes, not auto-routing connectors; no movement-following guarantee.
+
+Initial multi-box and vertical geometry tests are in `tests/test_pptx_diagram_shapes.py`. Verify layering separately before exposing this in the production CLI; if existing shapes already occupy the slide, simply adding a line after them does not put it behind them.

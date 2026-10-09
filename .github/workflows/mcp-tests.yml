@@ -311,6 +311,6 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: junit-marp
-          path: "build/test-results/marp*"
+          path: build/test-results/
           if-no-files-found: warn
           retention-days: 14

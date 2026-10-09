@@ -124,7 +124,7 @@ def test_diagonal_edge_selection_and_rotation(tmp_path):
             MSO_SHAPE.RIGHT_TRIANGLE, mid_x - Inches(0.15),
             mid_y - Inches(0.15), Inches(0.3), Inches(0.3))
         head.rotation = angle
-        assert abs(head.rotation - angle) < 0.01
+        assert abs((head.rotation - angle + 180) % 360 - 180) < 0.01
         assert line is not None
     with pytest.raises(ValueError, match="edge"):
         edge_center(c, "diagonal")

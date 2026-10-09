@@ -226,3 +226,10 @@ printf '# Title\\n' | python marp_pptx.py - -o slides.pptx
 ```
 
 Shell quoting is the caller's responsibility; prefer stdin/heredoc for multiline content and code fences. The generated PPTX remains a distinct output and the conversion still requires an installed Marp CLI. This is **not yet** the complete Markdown→Marp→PPTX→XML one-line verification orchestrator.
+
+
+## Single-command pipeline and editability observation
+
+`pptx_pipeline.py` now accepts Markdown file, `--text`, or `-` stdin, invokes the optional pinned Marp converter, then reads the produced PPTX and emits a JSON Open XML editability observation. Example: `python pptx_pipeline.py --text '# Hello' -o hello.pptx`. This is a **conversion + inspection** one-command workflow, not yet automatic style editing. `pptx_inspect.py` classifies native text-only slides as `editable`, image-only/no-native-text slides as `unsupported` for direct text-run editing, and mixed native text plus pictures as `unknown` at slide level. It does not certify web rendering or all content on a slide.
+
+Mermaid source is passed through unchanged and is covered by a source-preservation test; actual Mermaid diagram rendering by the pinned Marp CLI remains a separate integration gate, not yet proven. Retain the original source for regeneration rather than claiming PPTX→Mermaid reversibility.

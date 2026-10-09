@@ -76,10 +76,10 @@ Stage 2 is intentionally deferred until the PPTX-only structural preservation ch
 
 ## Stage 2 implementation: minimal Markdown fixture
 
-`markdown_pptx.py` is a small **editable** Markdown→PPTX fixture generator, intentionally separate from the existing PPTX editing CLI. It accepts `# title`, `## heading` and plain single-line body text (at most eight nonempty blocks). It rejects unsupported heading levels, lists and other explicit constructs rather than pretending to be a full Markdown parser. Shape names include stable line-based IDs and roles, and the CLI prints a JSON mapping manifest.
+`tests/fixture_pptx.py` is a small **editable** Markdown→PPTX fixture generator, intentionally separate from the existing PPTX editing CLI. It accepts `# title`, `## heading` and plain single-line body text (at most eight nonempty blocks). It rejects unsupported heading levels, lists and other explicit constructs rather than pretending to be a full Markdown parser. Shape names include stable line-based IDs and roles, and the CLI prints a JSON mapping manifest.
 
 ```sh
-python markdown_pptx.py tests/fixtures/mini_readme.md -o sample.pptx
+python tests/fixture_pptx.py tests/fixtures/mini_readme.md -o sample.pptx
 python pptx_replace.py sample.pptx --text-color '#2244AA' -o colored.pptx
 ```
 
@@ -93,3 +93,8 @@ The new integration test generates a fixture, checks Markdown→shape text/role 
 At head `eac914f56ded500b574c4195e1523ba358296e62`, [CI run 37939923108](https://github.com/myon-bioinformatics/Ironmate/actions/runs/37939923108) finished green: 61 pytest passed; resolve-vendor, locked baseline, test, and failure-identity/collect succeeded. This validates the **minimal direct Markdown→editable PPTX→attribute edit→XML** integration, not Marp conversion or visual fidelity.
 
 **Do not combine the next steps prematurely.** First finish/review the regular Stage 2 direct path and its tests. Next conduct an **independent Marp conversion proof** (Markdown→Marp→PPTX), recording tool versions, runtime/browser/LibreOffice dependencies, whether PPTX text remains editable, and rendering limitations. Only **after** that proof succeeds, add an optional end-to-end one-liner orchestrating Markdown generation → Marp → PPTX → XML/structural verification. Keep Marp optional and preserve the original direct fixture path as a regression baseline. Continue in Draft PR #83 without merging until explicitly approved.
+
+
+## Test-only fixture boundary
+
+The ad-hoc Markdown→PPTX generator has been removed from the repository root and retained **only** as `tests/fixture_pptx.py` for deterministic regression fixtures. It is not a supported production conversion CLI. Future Markdown input should use existing `vendor/markdown.py` where its API fits, or a separately validated optional Marp adapter. The production entry point remains `pptx_replace.py`; do not restore a parallel `markdown_pptx.py` runtime without a concrete need.

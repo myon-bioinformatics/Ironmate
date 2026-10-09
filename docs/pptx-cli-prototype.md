@@ -49,3 +49,12 @@ TOML is optional for **reusable master policies** (target selectors, allowed cha
 Future automated repair is a **separate, gated workflow**: failed test -> structured failure classification -> proposed patch on isolated branch -> repeat deterministic tests -> review. Never mutate the original input, rewrite expectations to force green, or merge an unreviewed patch. Include a bounded attempt count and rollback; distinguish product failures, missing environment dependencies, and flaky render differences.
 
 Suggested incremental PR #83 checkpoints: A) validate current CLI and add one-liner regression tests; B) synthetic Markdown/Marp fixture with pinned environment; C) PPTX Open XML canonical structural checks and preservation manifest; D) optional render-and-diff evidence; E) reusable master-rule TOML and JUnit failure classification; F) proof-of-concept repair suggestion only, without autonomous merging.
+
+
+## Minimal README fixture for first integration test
+
+Start with a **synthetic** small README (title, two headings, body and MIT license label), not a real confidential document. Generate a PPTX with one mapped text shape per Markdown block; record a stable source-block identifier and heading level in a sidecar manifest. Apply an explicit RGB heading-color change via python-pptx, then inspect slide XML and relationships to verify the intended run properties changed and unrelated text/shape positions did not. Reopen the PPTX and emit pytest/JUnit XML; optionally render before/after for human inspection.
+
+Test separately: visible text equality, heading-to-shape mapping, intended color mutation, unchanged body text, and XML preservation of unrelated elements. Use XML-aware comparison rather than raw XML string equality because serialization may reorder benign attributes. This is a constrained fixture round trip, not general PPTX-to-Markdown reversibility.
+
+Do not require web-ui, browser-test-kit, Node or Marp for this initial test. Reuse their existing capabilities only if they demonstrably help a later optional visual/interaction lane. Keep the whole workflow accessible from a single CLI invocation.

@@ -85,3 +85,30 @@ def test_cli_one_liner_and_explicit_failure_evidence(tmp_path):
     failures = root.findall(".//testcase/failure")
     assert len(failures) == 1
     assert "intentional pptx CI failure probe" in (failures[0].text or "")
+
+
+def test_output_collision_is_rejected_before_reading_input(tmp_path):
+    existing = tmp_path / "existing.pptx"
+    existing.write_bytes(b"preserve me")
+    with pytest.raises(ValueError, match="new file"):
+        transform(tmp_path / "missing.pptx", [{"operation": "replace_text", "old": "x", "new": "y"}], destination=existing)
+    assert existing.read_bytes() == b"preserve me"
+
+
+def test_slide_xml_preserves_unrelated_shape_and_text(tmp_path):
+    import zipfile
+    import xml.etree.ElementTree as ET
+
+    src = fixture(tmp_path)
+    dst = tmp_path / "changed.pptx"
+    transform(src, [{"operation": "replace_text", "old": "Draft", "new": "Final"}], destination=dst)
+    ns = {"a": "http://schemas.openxmlformats.org/drawingml/2006/main"}
+    def slide_xml(path):
+        with zipfile.ZipFile(path) as archive:
+            return ET.fromstring(archive.read("ppt/slides/slide1.xml"))
+    before, after = slide_xml(src), slide_xml(dst)
+    assert [node.text for node in before.findall(".//a:t", ns)] == ["Draft title"]
+    assert [node.text for node in after.findall(".//a:t", ns)] == ["Final title"]
+    # Normalized XML trees must agree after restoring only the intended text change.
+    after.find(".//a:t", ns).text = "Draft title"
+    assert ET.tostring(before) == ET.tostring(after)

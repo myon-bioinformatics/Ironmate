@@ -166,3 +166,8 @@ The raw Marp Open XML evidence is stored in a separate CI artifact from JUnit, s
 Prefer python-pptx for operations it supports, including adding explicit run attributes that were previously absent. Treat missing attributes separately from unsupported features: missing values may be inherited from themes, masters or styles. Test absent→explicit, explicit→changed and explicit→removed cases on disposable fixtures, comparing semantic output and package structure.
 
 For operations unsupported by python-pptx, prototype a **narrow, schema-aware Open XML mutation** on an isolated fixture; verify namespaces, element ordering, relationships, serialization, package integrity, re-opening and any available web rendering. Never assume successful ZIP/XML parsing proves visual correctness. Promote an XML strategy into the editability registry only after deterministic success and failure tests; otherwise mark it unknown or unsupported. Keep the original input unchanged and avoid general regex replacement across XML.
+
+
+## Attribute matrix experiments
+
+`tests/test_pptx_attribute_matrix.py` exercises absent→explicit bold and font-size attributes, inherited text-color rejection, ordered style updates and dry-run parity. It also performs a **test-only** Open XML insertion of an explicit `a:solidFill/a:srgbClr` under `a:rPr`, reconstructs the PPTX package, reopens it with python-pptx, and checks unrelated ZIP members are unchanged. This is deliberately not a general XML rewrite engine. Expand with theme colors, font family, paragraph alignment, shape fills and malformed packages only after each operation has a distinct observable contract. Record successes and failures as JUnit evidence, with unknown cases remaining fail-closed.

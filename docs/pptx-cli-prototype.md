@@ -213,3 +213,16 @@ A standard Marp PPTX can rasterize the diagram, so editable native PPTX boxes an
 Treat original Markdown and fenced Mermaid source as the canonical regeneration inputs. Do **not** claim that a rendered PPTX can be parsed back into equivalent Mermaid. For simple diagrams, pass source through to an explicitly verified Marp Mermaid rendering lane without adding a mandatory Markdown parser. Use `vendor/markdown.py` only for optional fence extraction, formatting and source-preservation checks; do not impose its helpers on the basic conversion path.
 
 Keep source hashes and a mapping to generated PPTX artifacts. Native PPTX edge anchors and arrowhead geometry remain an Ironmate/python-pptx concern and should not be encoded as proprietary Mermaid syntax. Add the final one-liner only after a real Markdown+Mermaid→Marp→PPTX proof succeeds; if Mermaid rendering is not enabled by the pinned Marp toolchain, report unsupported instead of silently emitting a non-rendered code block.
+
+
+## AI-friendly Markdown input modes
+
+The optional `marp_pptx.py` adapter accepts a file path, `--text` for short inline Markdown, or `-` for UTF-8 standard input. These converge on the same pinned Marp conversion function, using a temporary `.md` file for inline/stdin inputs. No separate Markdown parser or permanent input file is required. Empty inline/stdin content fails explicitly. Examples:
+
+```sh
+python marp_pptx.py slides.md -o slides.pptx
+python marp_pptx.py --text '# Title' -o slides.pptx
+printf '# Title\\n' | python marp_pptx.py - -o slides.pptx
+```
+
+Shell quoting is the caller's responsibility; prefer stdin/heredoc for multiline content and code fences. The generated PPTX remains a distinct output and the conversion still requires an installed Marp CLI. This is **not yet** the complete Markdown→Marp→PPTX→XML one-line verification orchestrator.

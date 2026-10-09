@@ -72,3 +72,17 @@ Next add optional rendering and before/after evidence; then a minimal README Mar
 At commit `79e5fcdbfbb048120f94dc65ebacccb623e9a02e`, GitHub Actions run [37938817783](https://github.com/myon-bioinformatics/Ironmate/actions/runs/37938817783) completed successfully across resolve-vendor, locked baseline, test and failure-identity/collect. The default pytest job reported **51 passed**, including the CLI one-liner and deliberately failing child pytest/JUnit regression. The controlled failure artifact was uploaded. This confirms failure capture wiring, not a production renderer or Markdown/Marp integration.
 
 Stage 2 is intentionally deferred until the PPTX-only structural preservation checks and CLI error cases are sufficiently covered. Keep this same Draft PR until review and tests are complete; do not infer visual fidelity from a green pytest run.
+
+
+## Stage 2 implementation: minimal Markdown fixture
+
+`markdown_pptx.py` is a small **editable** Markdown→PPTX fixture generator, intentionally separate from the existing PPTX editing CLI. It accepts `# title`, `## heading` and plain single-line body text (at most eight nonempty blocks). It rejects unsupported heading levels, lists and other explicit constructs rather than pretending to be a full Markdown parser. Shape names include stable line-based IDs and roles, and the CLI prints a JSON mapping manifest.
+
+```sh
+python markdown_pptx.py tests/fixtures/mini_readme.md -o sample.pptx
+python pptx_replace.py sample.pptx --text-color '#2244AA' -o colored.pptx
+```
+
+The new integration test generates a fixture, checks Markdown→shape text/role mapping, applies a color change, reopens the PPTX, checks text and RGB values, compares unrelated ZIP package members and inspects slide XML. Tests produce JUnit through the existing CI pytest command.
+
+**Marp remains optional and not yet integrated.** Its standard PPTX export can flatten slides, making run-level python-pptx editing unsuitable. Evaluate a pinned Marp/Node toolchain and editable export only after this independent editable-PPTX path is green. No visual rendering fidelity is claimed by the XML tests.

@@ -59,9 +59,9 @@ Examples:
 ```
 ascii_artist.py
 markdown.py
-github_catalog.py
-source_adapter.py
-repository_metadata.py
+pixel_grid.py
+vendor/gh_identity.py
+vendor_integrity.py
 ```
 
 ---
@@ -296,8 +296,8 @@ Examples:
 ```
 vendor/ascii_artist.py -> vendored ASCII art utilities
 vendor/markdown.py     -> vendored Markdown utilities
-source_adapter.py   -> source adapter contract
-github_catalog.py   -> static metadata catalog
+vendor/gh_identity.py -> shared GitHub identity
+scripts/sync_vendor_provenance.py -> vendor receipt projection
 ```
 
 Avoid mixing unrelated responsibilities inside the same module.

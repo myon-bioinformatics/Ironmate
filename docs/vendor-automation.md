@@ -74,15 +74,10 @@ The small projection adapter is consumer-owned because existing provenance
 schemas differ. Acquisition and verification stay in the shared pinned tool;
 unifying projection needs an explicit schema contract rather than guessed aliases.
 
-The `screenshot` job deliberately builds and captures the checked-in baseline,
-matching Pages deployment inputs. It does not validate the updated pytest snapshot.
+The old MCP/catalog screenshot job and generated Pages consumers were retired in
+[cleanup stage two](cleanup-stage-two.md). Pages now deploys a static landing.
 The existing `paths` trigger means upstream-only changes wait for a matching
 consumer change (or dispatch).
-
-Pages attribution now displays the upstream **acquisition commit** from provenance,
-not the artifact header’s `base_sha`. For ASCII this changes `7c21bacf` to
-`50585862` on the baseline. The Pages workflow is unchanged, but merging this PR
-rebuilds that attribution in the public consumer examples.
 
 A legacy provenance `date` becomes the UTC resolution date when its source commit
 changes during CI. It is retained when the commit is unchanged; it is not the

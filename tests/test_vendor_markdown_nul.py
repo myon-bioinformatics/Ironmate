@@ -2,7 +2,7 @@
 
 import pytest
 
-from scripts.build_web_ui_consumer_examples import markdown
+from vendor import markdown
 
 
 @pytest.mark.parametrize(

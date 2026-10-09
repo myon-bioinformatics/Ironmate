@@ -1,95 +1,15 @@
-import contextlib
-import importlib.util
-import io
+"""Smoke-check the retained upstream NVD consumer without network access."""
 import json
-import tempfile
-import unittest
-from pathlib import Path
-from unittest import mock
-
-from provenance import git_blob_sha
-from repository_metadata import load_cpe_manifest, repository_security_metadata
+from vendor import nvd_nist_known_vulns as nvd
 
 
-def _locked(destination):
-    root = Path(__file__).resolve().parents[1]
-    lock = json.loads((root / "vendor.lock.json").read_text(encoding="utf-8"))
-    return next(e for e in lock["files"] if e["destination"] == destination)
+def test_nvd_consumer_reads_completion_record():
+    row = {"schema": nvd.SCHEMA_VERSION, "kind": "query_complete",
+           "query": {"cpe_name": "cpe:2.3:a:example:example:1:*:*:*:*:*:*:*"}, "cve_count": 0}
+    assert nvd.parse_jsonl(json.dumps(row)) == [row]
 
 
-VENDOR = Path(__file__).resolve().parents[1] / "vendor" / "nvd_nist_known_vulns.py"
-UPSTREAM_COMMIT = _locked('vendor/nvd_nist_known_vulns.py')['commit']
-UPSTREAM_VENDOR_BLOB = _locked('vendor/nvd_nist_known_vulns.py')['blob_sha']
-CPE = "cpe:2.3:a:example:example:1:*:*:*:*:*:*:*"
-FIXTURE = Path(__file__).parent / "fixtures" / "nvd_summary.jsonl"
-UPSTREAM_SAMPLE_BLOB = "eb859fde7af74b59944c0aa8ee5797ca1f943a3b"
-
-SPEC = importlib.util.spec_from_file_location("vendored_nvd_nist_known_vulns", VENDOR)
-NVD = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(NVD)
-
-
-class NvdNistKnownVulnsVendorTest(unittest.TestCase):
-    def test_vendored_file_name_matches_upstream(self):
-        self.assertEqual(VENDOR.name, "nvd_nist_known_vulns.py")
-
-    def test_vendored_snapshot_matches_upstream_blob(self):
-        self.assertEqual(git_blob_sha(VENDOR), UPSTREAM_VENDOR_BLOB)
-
-    def test_vendored_module_keeps_upstream_schema(self):
-        self.assertEqual(NVD.SCHEMA_VERSION, "nvd-cve-summary/1")
-
-    def test_upstream_jsonl_consumer_drives_repository_metadata(self):
-        rows = NVD.parse_jsonl("\n".join([
-            json.dumps({"schema":NVD.SCHEMA_VERSION,"kind":"cve","query":{"cpe_name":CPE},"id":"CVE-2026-0001"}),
-            json.dumps({"schema":NVD.SCHEMA_VERSION,"kind":"query_complete","query":{"cpe_name":CPE},"cve_count":1}),
-        ]))
-        manifest = load_cpe_manifest(json.dumps({
-            "schema":"ironmate-security-cpe/1","repositories":{"owner/repo":[CPE,CPE]}
-        }))
-        result = repository_security_metadata("owner/repo", manifest, rows, nvd_module=NVD)
-        self.assertEqual(result["status"], "measured")
-        self.assertEqual(result["schema"], NVD.SCHEMA_VERSION)
-        self.assertEqual(result["cve_ids"], ["CVE-2026-0001"])
-
-    def test_manifest_rejects_invalid_shapes_and_accepts_bom(self):
-        good = {"schema":"ironmate-security-cpe/1","repositories":{"owner/repo":[CPE,CPE]}}
-        self.assertEqual(load_cpe_manifest("\ufeff"+json.dumps(good))["owner/repo"], [CPE])
-        invalid = [
-            "[]", '"text"',
-            json.dumps({"schema":"ironmate-security-cpe/1","repositories":{"owner/repo":["requests"]}}),
-            json.dumps({"schema":"ironmate-security-cpe/1","repositories":{"owner/repo":[]}}),
-        ]
-        for text in invalid:
-            with self.subTest(text=text), self.assertRaises(ValueError):
-                load_cpe_manifest(text)
-
-    def test_upstream_fixture_snapshot_is_still_consumable(self):
-        self.assertEqual(git_blob_sha(FIXTURE), UPSTREAM_SAMPLE_BLOB)
-        rows = NVD.read_jsonl(FIXTURE)
-        self.assertEqual(rows[-1]["kind"], "query_complete")
-
-    def test_producer_output_round_trips_through_upstream_consumer_and_metadata(self):
-        record = {"id":"CVE-2026-0001","description":"x","cwe":[],"cvss_v4":None,
-                  "cvss_v3":None,"cvss_v2":None,"published":None,
-                  "last_modified":None,"source_identifier":None}
-        with tempfile.TemporaryDirectory() as d:
-            cfg = Path(d) / "c.ini"
-            cfg.write_text("[cpeName]\na="+CPE+"\n", encoding="utf-8")
-            output = io.StringIO()
-            with mock.patch.object(NVD, "fetch_cves", return_value=[record]), contextlib.redirect_stdout(output):
-                self.assertEqual(NVD.main(["--silent","--config",str(cfg)]), 0)
-        rows = NVD.parse_jsonl(output.getvalue())
-        result = repository_security_metadata("owner/repo", {"owner/repo":[CPE]}, rows, nvd_module=NVD)
-        self.assertEqual((result["status"], result["cve_ids"]), ("measured", ["CVE-2026-0001"]))
-
-    def test_unmapped_repository_remains_not_measured(self):
-        result = repository_security_metadata("owner/repo", {}, [], nvd_module=NVD)
-        self.assertEqual(result["status"], "not_measured")
-        self.assertEqual(result["reason"], "no_explicit_cpe_mapping")
-        self.assertNotIn("cve_count", result)
-        self.assertEqual(result["schema"], NVD.SCHEMA_VERSION)
-
-
-if __name__ == "__main__":
-    unittest.main()
+def test_upstream_fixture_remains_consumable():
+    from pathlib import Path
+    rows = nvd.read_jsonl(Path(__file__).parent / "fixtures/nvd_summary.jsonl")
+    assert rows[-1]["kind"] == "query_complete"

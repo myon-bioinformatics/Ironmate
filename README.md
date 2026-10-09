@@ -1,10 +1,22 @@
 # Ironmate
 
 Pythonを中心に、文書・画像などの**内容や属性の変換・置換**を検証するプロジェクトです。
-PPTXの文字・色・矢印属性の置換、画素／パレットに基づくドット表現を今後の対象とします。
+PPTXの文字・色・矢印属性の置換を今後の対象とし、画素／パレットに基づくドット表現を試作しています。
 要件は [Issue #80](https://github.com/myon-bioinformatics/Ironmate/issues/80)、
 ドット表現の試作は [PR #79](https://github.com/myon-bioinformatics/Ironmate/pull/79) で追跡します。
-これらの計画と、このmainに実装済みの機能は区別してください。
+PPTX変換・写真変換・キャラクター部品合成は未実装です。実装済みのドット表現の範囲は次節を参照してください。
+
+## ドット絵の試作候補
+
+`pixel_grid.py`で、5種類の形・6配色・4加工・5サイズの色番号グリッドを
+再現可能に生成します。第1弾は絵文字プレビューとJSON。写真変換や
+キャラクターの部品合成は次段階です。
+
+```bash
+python -S pixel_grid.py --mask cloud --palette nature --effect shadow --size 16
+```
+
+[第1弾の契約・検証・今後の設計](docs/pixel-grid-prototype.md)。
 
 ## 責務
 

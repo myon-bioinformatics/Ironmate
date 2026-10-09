@@ -89,3 +89,45 @@ def test_vertical_boxes_use_full_height_line_and_midpoint_head(tmp_path):
     path = tmp_path / "vertical.pptx"
     p.save(path)
     assert len(Presentation(path).slides[0].shapes) == 4
+
+
+def edge_center(shape, edge):
+    if edge == "left":
+        return shape.left, shape.top + shape.height // 2
+    if edge == "right":
+        return shape.left + shape.width, shape.top + shape.height // 2
+    if edge == "top":
+        return shape.left + shape.width // 2, shape.top
+    if edge == "bottom":
+        return shape.left + shape.width // 2, shape.top + shape.height
+    raise ValueError("edge must be left/right/top/bottom")
+
+
+def test_diagonal_edge_selection_and_rotation(tmp_path):
+    import math
+
+    p = Presentation()
+    slide = p.slides.add_slide(p.slide_layouts[6])
+    a = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE, Inches(1), Inches(1), Inches(2), Inches(1))
+    c = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE, Inches(6), Inches(4), Inches(2), Inches(1))
+    for start_edge in ("left", "top", "bottom", "right"):
+        start = edge_center(c, start_edge)
+        end = edge_center(a, "bottom")
+        dx, dy = end[0] - start[0], end[1] - start[1]
+        angle = math.degrees(math.atan2(dy, dx))
+        assert math.isfinite(angle)
+        line = slide.shapes.add_connector(MSO_CONNECTOR.STRAIGHT, *start, *end)
+        mid_x, mid_y = (start[0] + end[0]) // 2, (start[1] + end[1]) // 2
+        head = slide.shapes.add_shape(
+            MSO_SHAPE.RIGHT_TRIANGLE, mid_x - Inches(0.15),
+            mid_y - Inches(0.15), Inches(0.3), Inches(0.3))
+        head.rotation = angle
+        assert abs(head.rotation - angle) < 0.01
+        assert line is not None
+    with pytest.raises(ValueError, match="edge"):
+        edge_center(c, "diagonal")
+    path = tmp_path / "diagonal.pptx"
+    p.save(path)
+    assert len(Presentation(path).slides[0].shapes) == 10

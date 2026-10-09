@@ -36,3 +36,16 @@ A future `--visual-check` CLI flag should trigger rendering, and `--visual-outpu
 Expected changes (text/color/shape) naturally generate visual differences: do not equate zero diff with success. Report changed pixel count and bounding boxes as diagnostic evidence, and distinguish expected target regions from unintended regions once target-region mapping is implemented. Pixel comparisons are renderer/font-sensitive and should not be treated as cross-platform bit-for-bit guarantees.
 
 CI should test the renderer on synthetic PPTX fixtures and upload PNG/contact sheet/diff artifacts; structural checks (slide/shapes/relationships and unmodified contents) remain separate. Real or sensitive presentations must not be uploaded as CI artifacts. If a renderer is unavailable, explicitly mark visual verification as skipped/unverified, never passed.
+
+
+## Round-trip and repair-oriented testing roadmap (Issue #80)
+
+The intended pipeline is Markdown/Marp -> PPTX -> python-pptx edits -> PPTX/Open XML inspection -> rendered output -> JUnit XML. Markdown/Marp is a fixture generator, **not** a lossless reverse serializer for arbitrary PPTX. Separate invariants into: (1) exact source package preservation where required, (2) semantic content/geometry/style invariants, (3) rendered visual comparison with tolerances. For a round trip, compare a canonical semantic projection rather than expecting identical ZIP/XML bytes. Use explicit supported-feature manifests and report unsupported/lost features, never silently claim full reversibility.
+
+The one-liner CLI remains the primary interface; all extra stages are optional adapters. Marp and browser tooling must not become unconditional runtime dependencies. Probe existing vendor/ assets first, then evaluate pinned tools only for uncovered needs.
+
+TOML is optional for **reusable master policies** (target selectors, allowed changes, preconditions, invariants, renderer profile, comparison tolerances, expected changes, and validation matrices). Simple one-off commands should need no TOML. Store each test's intent and results as reproducible evidence, export pytest/JUnit XML, and preserve renderer logs and artifacts.
+
+Future automated repair is a **separate, gated workflow**: failed test -> structured failure classification -> proposed patch on isolated branch -> repeat deterministic tests -> review. Never mutate the original input, rewrite expectations to force green, or merge an unreviewed patch. Include a bounded attempt count and rollback; distinguish product failures, missing environment dependencies, and flaky render differences.
+
+Suggested incremental PR #83 checkpoints: A) validate current CLI and add one-liner regression tests; B) synthetic Markdown/Marp fixture with pinned environment; C) PPTX Open XML canonical structural checks and preservation manifest; D) optional render-and-diff evidence; E) reusable master-rule TOML and JUnit failure classification; F) proof-of-concept repair suggestion only, without autonomous merging.

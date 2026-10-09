@@ -54,3 +54,34 @@ def test_unsupported_and_zero_match(tmp_path):
     assert transform(src, [{"operation": "replace_text", "old": "missing", "new": "x"}], dry_run=True)["change_count"] == 0
     with pytest.raises(ValueError, match="unsupported operation"):
         transform(src, [{"operation": "arrow", "color": "#000000"}], dry_run=True)
+
+
+def test_cli_one_liner_and_explicit_failure_evidence(tmp_path):
+    """An intentionally failing child suite must yield a nonzero exit and JUnit failure."""
+    import subprocess
+    import sys
+    import xml.etree.ElementTree as ET
+
+    src = fixture(tmp_path)
+    output = tmp_path / "cli-output.pptx"
+    cli = Path(__file__).resolve().parents[1] / "pptx_replace.py"
+    command = [sys.executable, str(cli), str(src), "--replace", "Draft", "Final", "--output", str(output)]
+    completed = subprocess.run(command, capture_output=True, text=True, check=False)
+    assert completed.returncode == 0, completed.stderr
+    assert Presentation(output).slides[0].shapes[0].text_frame.paragraphs[0].runs[0].text == "Final title"
+
+    child = tmp_path / "test_intentional_failure.py"
+    child.write_text(
+        "def test_expected_failure():\\n    assert 1 == 2, 'intentional pptx CI failure probe'\\n".replace("\\n", "\n"),
+        encoding="utf-8",
+    )
+    junit = tmp_path / "intentional-failure.xml"
+    probe = subprocess.run(
+        [sys.executable, "-m", "pytest", "-q", str(child), f"--junitxml={junit}"],
+        capture_output=True, text=True, check=False, cwd=tmp_path,
+    )
+    assert probe.returncode == 1, probe.stdout + probe.stderr
+    root = ET.parse(junit).getroot()
+    failures = root.findall(".//testcase/failure")
+    assert len(failures) == 1
+    assert "intentional pptx CI failure probe" in (failures[0].text or "")

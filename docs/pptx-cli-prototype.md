@@ -146,3 +146,16 @@ If a browser-test-kit or web-ui capture facility can extract the actual viewer D
 The canonical CI already compiles every tracked Python file **before** pytest collection (`git ls-files '*.py' -z | xargs -0 python -m py_compile`), including when pytest could not collect a syntactically broken test. Reuse this existing preflight and the pinned xprobe/JUnit failure-identity collector instead of keeping a second Ironmate-specific recursive tokenizer scanner. The standalone `tests/test_python_source_escaping.py` prototype was removed as redundant; its prior success does not replace the pre-collection compiler check.
 
 When an escape/newline/regex failure occurs, first search related test fixtures and failure evidence across markdown, xprobe, ascii_artist, cli_args and other consumer repos, then add only a minimal domain-specific regression to Ironmate. Preserve normal Python string-literal escape sequences; do not blanket-replace `\\n` in source files. CI results and PR review history should be used as evidence before proposing shared fixes in the parent tooling.
+
+
+## Batch style edits: color, font size, bold
+
+The prototype now accepts ordered `text_color`, `font_size` (1–400 points), and `bold` (boolean) operations, including through the inline CLI:
+
+```sh
+python pptx_replace.py input.pptx --text-color '#112233' --font-size 24 --bold false -o output.pptx
+```
+
+These operations target explicit text runs. The Open XML regression checks `a:rPr/@sz` in hundredths of a point, `a:rPr/@b` as 0/1, and `a:srgbClr/@val` for RGB. **Do not** blindly replace XML text across a PPTX ZIP: theme inheritance, shared style references, relationships, run boundaries, and unsupported constructs can change semantics. Use python-pptx for the supported operations and Open XML as independently checked evidence. Consider targeted XML mutation only when a verified capability rule proves it safe; preserve unrelated package members and reject unknown cases.
+
+The raw Marp Open XML evidence is stored in a separate CI artifact from JUnit, so the canonical failure-identity collector receives only expected JUnit XML paths.

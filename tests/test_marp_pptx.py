@@ -54,9 +54,12 @@ def test_marp_cli_integration_when_enabled(tmp_path):
             inspection.append({"slide": index, "texts": texts,
                                "pictures": pictures, "shapes": shapes,
                                "editable_runs": editable_runs})
-    evidence = Path("build/test-results/marp-openxml-inspection.json")\n    evidence.parent.mkdir(parents=True, exist_ok=True)
+    evidence = Path("build/test-results/marp-openxml-inspection.json")
+    evidence.parent.mkdir(parents=True, exist_ok=True)
     evidence.write_text(json.dumps(inspection, ensure_ascii=False, indent=2), encoding="utf-8")
-    assert len(inspection) == result["slides"]\n    assert all(isinstance(row["texts"], list) for row in inspection)
-    # Marp may encode a rendered slide as a background fill rather than p:pic.\n    assert all(row["pictures"] >= 0 and row["shapes"] >= 0 for row in inspection)
+    assert len(inspection) == result["slides"]
+    assert all(isinstance(row["texts"], list) for row in inspection)
+    # Marp may encode a rendered slide as a background fill rather than p:pic.
+    assert all(row["pictures"] >= 0 and row["shapes"] >= 0 for row in inspection)
     # This is observational evidence, not an editability guarantee.
 

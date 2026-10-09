@@ -171,3 +171,12 @@ For operations unsupported by python-pptx, prototype a **narrow, schema-aware Op
 ## Attribute matrix experiments
 
 `tests/test_pptx_attribute_matrix.py` exercises absent→explicit bold and font-size attributes, inherited text-color rejection, ordered style updates and dry-run parity. It also performs a **test-only** Open XML insertion of an explicit `a:solidFill/a:srgbClr` under `a:rPr`, reconstructs the PPTX package, reopens it with python-pptx, and checks unrelated ZIP members are unchanged. This is deliberately not a general XML rewrite engine. Expand with theme colors, font family, paragraph alignment, shape fills and malformed packages only after each operation has a distinct observable contract. Record successes and failures as JUnit evidence, with unknown cases remaining fail-closed.
+
+
+## Pragmatic business/scientific slide editing scope
+
+Prioritize a small, repeatable set of operations over full PowerPoint automation: globally consistent readable font (candidate Meiryo; configurable), black text as a **requested preset** rather than an unconditional mutation, bold headings, targeted title sizing, simple text-box creation/repositioning and basic shapes. Role-specific font *families* are low priority. Preserve existing slides and allow repeated user edits followed by additional CLI operations.
+
+For diagram connectors, prefer a background straight line plus separate arrowhead shapes and foreground text boxes over elaborate auto-routing. The line should be placed behind foreground objects; explicit shape order and idempotency need tests. This deliberately does not promise automatic reconnection when boxes move. Prefer a narrow stable shape vocabulary and explicit opt-in operations. Do not silently add arrows, alter inherited fonts or recolor existing artwork merely because a preset exists.
+
+Stage work: verify existing text/font/color changes and XML evidence first; add safe text-box insertion and geometry tests; then minimal line/arrowhead layers; finally expose optional one-liner presets. Any web/Marp visual check remains distinct from actual PPTX editability and no LibreOffice dependency is introduced.

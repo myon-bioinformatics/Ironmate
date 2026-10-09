@@ -58,3 +58,10 @@ Start with a **synthetic** small README (title, two headings, body and MIT licen
 Test separately: visible text equality, heading-to-shape mapping, intended color mutation, unchanged body text, and XML preservation of unrelated elements. Use XML-aware comparison rather than raw XML string equality because serialization may reorder benign attributes. This is a constrained fixture round trip, not general PPTX-to-Markdown reversibility.
 
 Do not require web-ui, browser-test-kit, Node or Marp for this initial test. Reuse their existing capabilities only if they demonstrably help a later optional visual/interaction lane. Keep the whole workflow accessible from a single CLI invocation.
+
+
+## Agreed implementation order (2026-10-09)
+
+Keep all prototype improvements in Draft PR #83, with small reviewed commits and clean documentation. First **prove PPTX-only** on a synthetic presentation: create with python-pptx, edit text and RGB attributes using the one-line CLI, reopen, inspect Open XML and produce pytest/JUnit evidence. Make the runtime and CI dependencies explicit. Do not block this first proof on Markdown, Marp, Node or browser rendering.
+
+Next add optional rendering and before/after evidence; then a minimal README Markdown input and heading mapping; evaluate Marp only if it reduces effort or adds useful independent verification. It is acceptable to avoid hand-building complex PPTX: fixture generation is deliberately minimal. Maintain the same PR, preserve unrelated repository functionality, and document any unsupported features or skipped visual checks.

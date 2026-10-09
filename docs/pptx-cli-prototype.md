@@ -65,3 +65,10 @@ Do not require web-ui, browser-test-kit, Node or Marp for this initial test. Reu
 Keep all prototype improvements in Draft PR #83, with small reviewed commits and clean documentation. First **prove PPTX-only** on a synthetic presentation: create with python-pptx, edit text and RGB attributes using the one-line CLI, reopen, inspect Open XML and produce pytest/JUnit evidence. Make the runtime and CI dependencies explicit. Do not block this first proof on Markdown, Marp, Node or browser rendering.
 
 Next add optional rendering and before/after evidence; then a minimal README Markdown input and heading mapping; evaluate Marp only if it reduces effort or adds useful independent verification. It is acceptable to avoid hand-building complex PPTX: fixture generation is deliberately minimal. Maintain the same PR, preserve unrelated repository functionality, and document any unsupported features or skipped visual checks.
+
+
+## Verified first-stage CI evidence
+
+At commit `79e5fcdbfbb048120f94dc65ebacccb623e9a02e`, GitHub Actions run [37938817783](https://github.com/myon-bioinformatics/Ironmate/actions/runs/37938817783) completed successfully across resolve-vendor, locked baseline, test and failure-identity/collect. The default pytest job reported **51 passed**, including the CLI one-liner and deliberately failing child pytest/JUnit regression. The controlled failure artifact was uploaded. This confirms failure capture wiring, not a production renderer or Markdown/Marp integration.
+
+Stage 2 is intentionally deferred until the PPTX-only structural preservation checks and CLI error cases are sufficiently covered. Keep this same Draft PR until review and tests are complete; do not infer visual fidelity from a green pytest run.

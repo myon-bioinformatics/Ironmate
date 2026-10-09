@@ -151,3 +151,26 @@ def test_style_rule_rejects_invalid_types(tmp_path, rule):
     src = fixture(tmp_path)
     with pytest.raises(ValueError):
         transform(src, [rule], dry_run=True)
+
+
+def test_batch_font_family_override(tmp_path):
+    src = fixture(tmp_path)
+    dst = tmp_path / "font.pptx"
+    rules = [{"operation": "font_family", "name": "Yu Gothic"}]
+    assert transform(src, rules, dry_run=True)["change_count"] == 1
+    assert transform(src, rules, destination=dst)["change_count"] == 1
+    run = Presentation(dst).slides[0].shapes[0].text_frame.paragraphs[0].runs[0]
+    assert run.font.name == "Yu Gothic"
+    import zipfile
+    import xml.etree.ElementTree as ET
+    with zipfile.ZipFile(dst) as archive:
+        root = ET.fromstring(archive.read("ppt/slides/slide1.xml"))
+    ns = {"a": "http://schemas.openxmlformats.org/drawingml/2006/main"}
+    latin = root.find(".//a:rPr/a:latin", ns)
+    assert latin is not None and latin.attrib["typeface"] == "Yu Gothic"
+
+
+def test_font_family_rejects_empty(tmp_path):
+    src = fixture(tmp_path)
+    with pytest.raises(ValueError, match="nonempty"):
+        transform(src, [{"operation": "font_family", "name": ""}], dry_run=True)

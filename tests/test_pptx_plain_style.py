@@ -61,7 +61,7 @@ def test_plain_style_batch_is_repeatable_and_preserves_other_parts(tmp_path):
 
 
 @pytest.mark.parametrize("explicit_background,explicit_text,operation,expected", [
-    (False, True, "slide_background", "inherited slide background"),
+    (False, True, "slide_background", "only explicit solid RGB slide backgrounds"),
     (True, False, "text_color", "explicit RGB"),
 ])
 def test_unverified_inherited_styles_fail_closed(tmp_path, explicit_background,

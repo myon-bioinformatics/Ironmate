@@ -32,7 +32,7 @@ Collector success does not change a failed test job's conclusion.
 
 ## Local reproduction
 
-Install `requirements-mcp.txt` and `tests/requirements.txt`, then from the checkout:
+Install `tests/requirements.txt`, then from the checkout:
 
 ```sh
 git clone https://github.com/myon-bioinformatics/xprobe.git build/xprobe-source
@@ -50,5 +50,5 @@ Completion requires same-head green CI, child exit receipt 1, and a complete
 collector receipt with three compact child failure/error cases and no sentinels.
 Measured run/head evidence is recorded in the PR. This covers JUnit integration;
 automated learning, replay and source-chat linkage remain outside this change.
-Provider APIs, screenshot, Pages and runtime requirements are unchanged;
+The controlled failure does not call provider APIs;
 #57 remains a separate identity migration.

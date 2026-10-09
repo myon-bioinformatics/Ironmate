@@ -29,7 +29,7 @@ def transform(source, rules, *, dry_run=False, destination=None):
     changes = []
     for index, rule in enumerate(rules):
         operation = rule.get("operation")
-        if operation not in {"replace_text", "text_color", "slide_background", "font_size", "bold"}:
+        if operation not in {"replace_text", "text_color", "slide_background", "font_size", "bold", "font_family"}:
             raise ValueError(f"unsupported operation: {operation!r}")
         slide_number = rule.get("slide")
         if slide_number is not None and (type(slide_number) is not int or not 1 <= slide_number <= len(presentation.slides)):
@@ -44,6 +44,10 @@ def transform(source, rules, *, dry_run=False, destination=None):
             size = rule.get("points")
             if type(size) not in (int, float) or not 1 <= size <= 400:
                 raise ValueError("font_size requires numeric points between 1 and 400")
+        elif operation == "font_family":
+            family = rule.get("name")
+            if not isinstance(family, str) or not family.strip():
+                raise ValueError("font_family requires a nonempty name")
         elif operation == "bold":
             if type(rule.get("value")) is not bool:
                 raise ValueError("bold requires a boolean value")
@@ -75,6 +79,11 @@ def transform(source, rules, *, dry_run=False, destination=None):
                                 changes.append({"rule": index, "slide": number, "shape": shape_index, "paragraph": paragraph_index, "run": run_index, "count": count})
                                 if not dry_run:
                                     run.text = run.text.replace(old, new)
+                        elif operation == "font_family":
+                            if run.font.name != family:
+                                changes.append({"rule": index, "slide": number, "shape": shape_index, "paragraph": paragraph_index, "run": run_index, "count": 1})
+                                if not dry_run:
+                                    run.font.name = family
                         elif operation == "font_size":
                             if run.font.size != Pt(size):
                                 changes.append({"rule": index, "slide": number, "shape": shape_index, "paragraph": paragraph_index, "run": run_index, "count": 1})
@@ -114,13 +123,14 @@ def main(argv=None):
     parser.add_argument("--text-color")
     parser.add_argument("--background")
     parser.add_argument("--font-size", type=float)
+    parser.add_argument("--font-family")
     parser.add_argument("--bold", choices=("true", "false"))
     parser.add_argument("--output", type=Path)
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args(argv)
     if not args.dry_run and args.output is None:
         parser.error("--output is required unless --dry-run")
-    if args.rules and any((args.replace, args.text_color, args.background, args.font_size is not None, args.bold is not None)):
+    if args.rules and any((args.replace, args.text_color, args.background, args.font_size is not None, args.font_family is not None, args.bold is not None)):
         parser.error("--rules cannot be combined with inline operations")
     if args.rules:
         with args.rules.open("rb") as stream:
@@ -134,6 +144,8 @@ def main(argv=None):
             rules.append({"operation": "text_color", "color": args.text_color})
         if args.background:
             rules.append({"operation": "slide_background", "color": args.background})
+        if args.font_family is not None:
+            rules.append({"operation": "font_family", "name": args.font_family})
         if args.font_size is not None:
             rules.append({"operation": "font_size", "points": args.font_size})
         if args.bold is not None:

@@ -1,0 +1,39 @@
+"""Input-mode tests without requiring Marp or a browser."""
+import io
+import json
+from pathlib import Path
+
+import pytest
+import marp_pptx
+
+
+@pytest.mark.parametrize("mode", ["file", "text", "stdin"])
+def test_input_modes_share_converter(monkeypatch, tmp_path, capsys, mode):
+    captured = []
+    def fake_convert(source, output, *, marp):
+        content = Path(source).read_text(encoding="utf-8")
+        captured.append(content)
+        return {"source": str(source), "output": str(output), "slides": 1, "backend": "marp"}
+    monkeypatch.setattr(marp_pptx, "convert", fake_convert)
+    output = tmp_path / "out.pptx"
+    source = tmp_path / "sample.md"
+    source.write_text("# Hello\n", encoding="utf-8")
+    if mode == "file":
+        args = [str(source), "-o", str(output)]
+    elif mode == "text":
+        args = ["--text", "# Hello\n", "-o", str(output)]
+    else:
+        monkeypatch.setattr(marp_pptx.sys, "stdin", io.StringIO("# Hello\n"))
+        args = ["-", "-o", str(output)]
+    marp_pptx.main(args)
+    assert captured == ["# Hello\n"]
+    result = json.loads(capsys.readouterr().out)
+    assert result["slides"] == 1
+    assert result["source"] == (str(source) if mode == "file" else mode if mode == "stdin" else "inline")
+
+
+def test_empty_stdin_rejected(monkeypatch, tmp_path):
+    monkeypatch.setattr(marp_pptx.sys, "stdin", io.StringIO(" \n"))
+    with pytest.raises(SystemExit) as exc:
+        marp_pptx.main(["-", "-o", str(tmp_path / "out.pptx")])
+    assert exc.value.code == 2

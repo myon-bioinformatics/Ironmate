@@ -81,3 +81,40 @@ def test_marp_cli_integration_when_enabled(tmp_path):
                             'sha256': hashlib.sha256(data).hexdigest(), 'size': len(data)})
     assert members
     (raw_dir / 'manifest.json').write_text(json.dumps(members, indent=2), encoding='utf-8')
+
+def test_mermaid_actual_rendering_probe_when_enabled(tmp_path):
+    """Observe whether the pinned Marp CLI draws Mermaid, not merely passes its source."""
+    import json
+    import os
+    import shutil
+    import subprocess
+    from pptx_inspect import inspect
+
+    if os.environ.get("IRONMATE_RUN_MARP_INTEGRATION") != "1":
+        pytest.skip("optional real Marp integration not enabled")
+    marp = os.environ.get("IRONMATE_MARP_BIN", "marp")
+    assert shutil.which(marp), "Marp CLI required for integration"
+    source = tmp_path / "diagram.md"
+    fence = chr(96) * 3
+    source.write_text("---\nmarp: true\n---\n# Flow\n\n" + fence +
+                      "mermaid\nflowchart LR\n  A[Input] --> B[Output]\n" +
+                      fence + "\n", encoding="utf-8")
+    html = tmp_path / "diagram.html"
+    proc = subprocess.run([marp, str(source), "-o", str(html)],
+                          capture_output=True, text=True, timeout=120)
+    assert proc.returncode == 0, proc.stderr
+    rendered = html.read_text(encoding="utf-8")
+    # A code fence rendered as highlighted text is not a Mermaid diagram.
+    # This is an observation, not a requirement that Marp CLI 4.x supports Mermaid.
+    has_diagram = ("<svg" in rendered and "flowchart LR" not in rendered)
+    pptx = tmp_path / "diagram.pptx"
+    convert(source, pptx, marp=marp)
+    observation = {"marp_mermaid_rendered": has_diagram,
+                   "status": "rendered" if has_diagram else "unsupported",
+                   "pptx": inspect(pptx)}
+    evidence = Path("build/test-results/marp-mermaid-observation.json")
+    evidence.parent.mkdir(parents=True, exist_ok=True)
+    evidence.write_text(json.dumps(observation, ensure_ascii=False, indent=2), encoding="utf-8")
+    assert len(observation["pptx"]["slides"]) >= 1
+    if not has_diagram:
+        assert observation["status"] == "unsupported"

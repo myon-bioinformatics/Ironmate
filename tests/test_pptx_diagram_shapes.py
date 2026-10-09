@@ -41,3 +41,51 @@ def test_diagram_arrowhead_variants(tmp_path):
         path = tmp_path / ("chevron.pptx" if chevron else "triangle.pptx")
         p.save(path)
         assert len(Presentation(path).slides[0].shapes) == 4
+
+
+def test_multiple_horizontal_boxes_have_independent_midpoint_heads(tmp_path):
+    p = Presentation()
+    slide = p.slides.add_slide(p.slide_layouts[6])
+    boxes = []
+    for x in (1, 4, 7):
+        shape = slide.shapes.add_shape(
+            MSO_SHAPE.RECTANGLE, Inches(x), Inches(1), Inches(1), Inches(1))
+        boxes.append(shape)
+    for first, second in zip(boxes, boxes[1:]):
+        center_y = first.top + first.height // 2
+        line = slide.shapes.add_connector(
+            MSO_CONNECTOR.STRAIGHT, first.left, center_y,
+            second.left + second.width, center_y)
+        midpoint = (first.left + first.width + second.left) // 2
+        head = slide.shapes.add_shape(
+            MSO_SHAPE.RIGHT_TRIANGLE, midpoint - Inches(0.15),
+            center_y - Inches(0.15), Inches(0.3), Inches(0.3))
+        assert head.left + head.width // 2 == midpoint
+        assert line.left == first.left
+        assert line.left + line.width == second.left + second.width
+    path = tmp_path / "horizontal.pptx"
+    p.save(path)
+    assert len(Presentation(path).slides[0].shapes) == 7
+
+
+def test_vertical_boxes_use_full_height_line_and_midpoint_head(tmp_path):
+    p = Presentation()
+    slide = p.slides.add_slide(p.slide_layouts[6])
+    upper = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE, Inches(3), Inches(1), Inches(2), Inches(1))
+    lower = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE, Inches(3), Inches(4), Inches(2), Inches(1))
+    center_x = upper.left + upper.width // 2
+    line = slide.shapes.add_connector(
+        MSO_CONNECTOR.STRAIGHT, center_x, upper.top,
+        center_x, lower.top + lower.height)
+    midpoint = (upper.top + upper.height + lower.top) // 2
+    head = slide.shapes.add_shape(
+        MSO_SHAPE.DOWN_ARROW, center_x - Inches(0.15),
+        midpoint - Inches(0.15), Inches(0.3), Inches(0.3))
+    assert head.top + head.height // 2 == midpoint
+    assert line.top == upper.top
+    assert line.top + line.height == lower.top + lower.height
+    path = tmp_path / "vertical.pptx"
+    p.save(path)
+    assert len(Presentation(path).slides[0].shapes) == 4

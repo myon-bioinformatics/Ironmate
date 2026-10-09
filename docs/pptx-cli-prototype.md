@@ -123,3 +123,10 @@ This first proof checks actual output existence and PPTX readability, **not** th
 For this prototype, **do not introduce LibreOffice** and do not require compatibility or visual equivalence with desktop PowerPoint. Prioritize Open XML structural correctness and browser-accessible inspection. Record separately whether the browser displays (a) Marp-generated HTML or (b) the actual generated/edited PPTX through a real PPTX-capable web viewer. HTML screenshots alone do **not** prove that the PPTX was opened in the browser. If a PPTX web viewer is unavailable, report that lane as unverified rather than substituting a claim about desktop compatibility.
 
 Use existing browser-test-kit/web-ui/Playwright/Stagehand facilities where they actually apply, without introducing redundant browser automation. App-versus-web differences are explicitly out of scope for this phase and can be investigated as separate follow-ups if concrete issues arise. Keep the Markdown→Marp→PPTX→Open XML and JUnit validation work in the same Draft PR.
+
+
+## TOML as a tri-state editability master (prototype)
+
+Use TOML for an auditable **capability/pattern registry**, not as a substitute for the Open XML DOM or test results. Classify operations and detected conditions as `editable`, `unsupported`, or `unknown`. Default to `unknown`; only `editable` entries backed by executable test evidence may be offered for automated mutation. Unsupported entries should explain why and may name a safe alternative (e.g., regenerate a rasterized Marp slide from Markdown rather than changing nonexistent text runs). Unknown cases must never silently be treated as editable.
+
+The initial registry is `tests/fixtures/openxml/editability_patterns.toml` with contract tests. It is **descriptive test data only**, not yet wired into `pptx_replace.py`. Future work: produce stable Open XML feature observations; map observations to rules, validate coverage/precedence and evidence against JUnit; store representative successful, unsupported and unknown fixtures; and make the CLI emit explicit decisions before writing. Avoid claiming all image-based or theme-based cases have been exhaustively measured.

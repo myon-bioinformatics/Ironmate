@@ -321,6 +321,7 @@ jobs:
           name: marp-openxml-observations
           path: |
             build/test-results/marp-openxml-inspection.json
+            build/test-results/marp-mermaid-observation.json
             build/test-results/marp-openxml/
           if-no-files-found: warn
           retention-days: 14

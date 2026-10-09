@@ -159,3 +159,10 @@ python pptx_replace.py input.pptx --text-color '#112233' --font-size 24 --bold f
 These operations target explicit text runs. The Open XML regression checks `a:rPr/@sz` in hundredths of a point, `a:rPr/@b` as 0/1, and `a:srgbClr/@val` for RGB. **Do not** blindly replace XML text across a PPTX ZIP: theme inheritance, shared style references, relationships, run boundaries, and unsupported constructs can change semantics. Use python-pptx for the supported operations and Open XML as independently checked evidence. Consider targeted XML mutation only when a verified capability rule proves it safe; preserve unrelated package members and reject unknown cases.
 
 The raw Marp Open XML evidence is stored in a separate CI artifact from JUnit, so the canonical failure-identity collector receives only expected JUnit XML paths.
+
+
+## Attribute update versus insertion (decision)
+
+Prefer python-pptx for operations it supports, including adding explicit run attributes that were previously absent. Treat missing attributes separately from unsupported features: missing values may be inherited from themes, masters or styles. Test absent→explicit, explicit→changed and explicit→removed cases on disposable fixtures, comparing semantic output and package structure.
+
+For operations unsupported by python-pptx, prototype a **narrow, schema-aware Open XML mutation** on an isolated fixture; verify namespaces, element ordering, relationships, serialization, package integrity, re-opening and any available web rendering. Never assume successful ZIP/XML parsing proves visual correctness. Promote an XML strategy into the editability registry only after deterministic success and failure tests; otherwise mark it unknown or unsupported. Keep the original input unchanged and avoid general regex replacement across XML.

@@ -20,7 +20,11 @@ def _rgb(value):
 def transform(source, rules, *, dry_run=False, destination=None):
     if not isinstance(rules, list) or not rules:
         raise ValueError("at least one rule is required")
-    if destination is not None and not dry_run:\n        src, dst = Path(source), Path(destination)\n        if src.resolve() == dst.resolve() or dst.exists():\n            raise ValueError("destination must be a new file distinct from source")\n    presentation = Presentation(str(source))
+    if destination is not None and not dry_run:
+        src, dst = Path(source), Path(destination)
+        if src.resolve() == dst.resolve() or dst.exists():
+            raise ValueError("destination must be a new file distinct from source")
+    presentation = Presentation(str(source))
     changes = []
     for index, rule in enumerate(rules):
         operation = rule.get("operation")

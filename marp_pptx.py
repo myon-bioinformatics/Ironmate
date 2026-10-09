@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 import shutil
 import subprocess
+import sys
+import tempfile
 
 from pptx import Presentation
 
@@ -34,11 +36,24 @@ def convert(source, output, *, marp="marp"):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("source", type=Path)
+    source = parser.add_mutually_exclusive_group(required=True)
+    source.add_argument("source", nargs="?", help="Markdown file path or '-' for stdin")
+    source.add_argument("--text", help="Inline Markdown content")
     parser.add_argument("-o", "--output", type=Path, required=True)
     parser.add_argument("--marp", default="marp", help="Path/name of installed pinned Marp CLI")
     args = parser.parse_args(argv)
-    print(json.dumps(convert(args.source, args.output, marp=args.marp), ensure_ascii=False))
+    if args.text is None and args.source != "-":
+        result = convert(args.source, args.output, marp=args.marp)
+    else:
+        content = args.text if args.text is not None else sys.stdin.read()
+        if not content.strip():
+            parser.error("Markdown content must not be empty")
+        with tempfile.TemporaryDirectory(prefix="ironmate-marp-") as directory:
+            temporary = Path(directory) / "input.md"
+            temporary.write_text(content, encoding="utf-8")
+            result = convert(temporary, args.output, marp=args.marp)
+            result["source"] = "inline" if args.text is not None else "stdin"
+    print(json.dumps(result, ensure_ascii=False))
 
 
 if __name__ == "__main__":

@@ -63,3 +63,21 @@ def test_marp_cli_integration_when_enabled(tmp_path):
     assert all(row["pictures"] >= 0 and row["shapes"] >= 0 for row in inspection)
     # This is observational evidence, not an editability guarantee.
 
+
+    # Preserve raw slide XML with hashes for later regression fixtures.
+    import hashlib
+    raw_dir = Path('build/test-results/marp-openxml')
+    raw_dir.mkdir(parents=True, exist_ok=True)
+    members = []
+    with zipfile.ZipFile(output) as archive:
+        for name in sorted(archive.namelist()):
+            if not (name.startswith('ppt/slides/') and name.endswith('.xml')):
+                continue
+            data = archive.read(name)
+            assert len(data) <= 2_000_000
+            target = raw_dir / Path(name).name
+            target.write_bytes(data)
+            members.append({'source': name, 'file': target.name,
+                            'sha256': hashlib.sha256(data).hexdigest(), 'size': len(data)})
+    assert members
+    (raw_dir / 'manifest.json').write_text(json.dumps(members, indent=2), encoding='utf-8')

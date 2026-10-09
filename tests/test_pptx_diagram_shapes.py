@@ -1,4 +1,5 @@
 """Test-only prototype: background line and separate angular arrowheads."""
+import pytest
 from pptx import Presentation
 from pptx.enum.shapes import MSO_SHAPE, MSO_CONNECTOR
 from pptx.dml.color import RGBColor

@@ -85,15 +85,32 @@ def transform(source, rules, *, dry_run=False, destination=None):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("source", type=Path)
-    parser.add_argument("--rules", type=Path, required=True)
+    parser.add_argument("--rules", type=Path)
+    parser.add_argument("--replace", nargs=2, metavar=("OLD", "NEW"))
+    parser.add_argument("--text-color")
+    parser.add_argument("--background")
     parser.add_argument("--output", type=Path)
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args(argv)
     if not args.dry_run and args.output is None:
         parser.error("--output is required unless --dry-run")
-    with args.rules.open("rb") as stream:
-        config = tomllib.load(stream)
-    result = transform(args.source, config.get("rules"), dry_run=args.dry_run, destination=args.output)
+    if args.rules and any((args.replace, args.text_color, args.background)):
+        parser.error("--rules cannot be combined with inline operations")
+    if args.rules:
+        with args.rules.open("rb") as stream:
+            config = tomllib.load(stream)
+        rules = config.get("rules")
+    else:
+        rules = []
+        if args.replace:
+            rules.append({"operation": "replace_text", "old": args.replace[0], "new": args.replace[1]})
+        if args.text_color:
+            rules.append({"operation": "text_color", "color": args.text_color})
+        if args.background:
+            rules.append({"operation": "slide_background", "color": args.background})
+        if not rules:
+            parser.error("specify --rules or an inline operation")
+    result = transform(args.source, rules, dry_run=args.dry_run, destination=args.output)
     print(json.dumps(result, ensure_ascii=False, indent=2))
 
 

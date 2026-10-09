@@ -116,3 +116,10 @@ IRONMATE_RUN_MARP_INTEGRATION=1 python -m pytest -q tests/test_marp_pptx.py
 ```
 
 This first proof checks actual output existence and PPTX readability, **not** that the output has editable text or that it is visually faithful. Standard Marp PPTX export can rasterize slide content; that must be measured before using python-pptx to edit generated text. Do not build the unified Markdown→Marp→PPTX→XML one-liner until this independent integration is green and the editability limitations are understood. The production PPTX editing CLI stays independent.
+
+
+## Web-first validation boundary (user decision)
+
+For this prototype, **do not introduce LibreOffice** and do not require compatibility or visual equivalence with desktop PowerPoint. Prioritize Open XML structural correctness and browser-accessible inspection. Record separately whether the browser displays (a) Marp-generated HTML or (b) the actual generated/edited PPTX through a real PPTX-capable web viewer. HTML screenshots alone do **not** prove that the PPTX was opened in the browser. If a PPTX web viewer is unavailable, report that lane as unverified rather than substituting a claim about desktop compatibility.
+
+Use existing browser-test-kit/web-ui/Playwright/Stagehand facilities where they actually apply, without introducing redundant browser automation. App-versus-web differences are explicitly out of scope for this phase and can be investigated as separate follow-ups if concrete issues arise. Keep the Markdown→Marp→PPTX→Open XML and JUnit validation work in the same Draft PR.

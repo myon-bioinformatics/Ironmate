@@ -34,7 +34,8 @@ def test_pipeline_opt_in_uses_svg_and_preserves_original(monkeypatch, tmp_path):
     def fake_render(raw, directory, *, mmdc):
         assert raw == source
         return "# Diagram\n", [directory / "mermaid-1.svg"]
-    def fake_convert(path, output, *, marp):
+    def fake_convert(path, output, *, marp, allow_local_files=False):
+        assert allow_local_files
         seen["prepared"] = Path(path).read_text(encoding="utf-8")
         return {"slides": 1}
     monkeypatch.setattr(pptx_pipeline, "render_mermaid", fake_render)

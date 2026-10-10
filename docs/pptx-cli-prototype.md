@@ -238,3 +238,12 @@ Mermaid source is passed through unchanged and is covered by a source-preservati
 ## Real Mermaid rendering evidence gate
 
 The pinned Marp CLI 4.2.3 may render `mermaid` fences as source code, not diagrams. The opt-in CI integration now produces a minimal flowchart in Markdown, exports HTML and PPTX, records whether a diagram was actually detected, and runs `pptx_inspect.py` on the PPTX. Its observation is saved as `marp-mermaid-observation.json`; a successful conversion **does not** count as successful Mermaid rendering. Mermaid rendering support may require a separately pinned Marp Core v5 plugin (`beautiful-mermaid`) or a pre-rendered SVG, both of which remain follow-ups rather than implicit dependencies. Inspect the generated HTML visually before promoting a `rendered` claim; SVG presence alone is a provisional signal. No LibreOffice is used.
+
+
+## SVG-first Mermaid and updated dependencies (October 2026)
+
+Two deliberate diagram lanes: (1) fenced Mermaid source is preserved and **optionally** pre-rendered to SVG using pinned `@mermaid-js/mermaid-cli@12.0.0`, then referenced as a local image for Marp `@marp-team/marp-cli@4.5.1`; (2) simple editable boxes/lines/arrowheads are native `python-pptx` objects, with Open XML verification. The verified current `python-pptx` release is `1.0.2` (no newer PyPI release found). Do not promise editability of SVG graphics inside a normal Marp PPTX.
+
+Opt in using `python pptx_pipeline.py --text '# Diagram ...' --mmdc node_modules/.bin/mmdc -o output.pptx` or pass a file/stdin. The `--mmdc` mode temporarily writes `.mmd` and `.svg` files, retains the original Markdown in memory, and enables Marp `--allow-local-files` solely for this explicitly requested path. **Security:** `--allow-local-files` grants the renderer access to other local paths referenced by Markdown; only use this mode with trusted source. Normal Marp conversion leaves it disabled. The real integration test uses a fixed, trusted diagram and no LibreOffice.
+
+The initial supported fence is a plain triple-backtick `mermaid` block. More elaborate Markdown fence variants are intentionally not silently rewritten. Prefer narrow documented support over a new full Markdown parser; `vendor/markdown.py` remains an optional source-extraction helper. Upgrade dependency versions only after pinned integration tests pass, and inspect npm's transitive dependencies/security audit separately.

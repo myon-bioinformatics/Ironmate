@@ -1,0 +1,47 @@
+name: Audit parent vendor catalog enrollment
+
+on:
+  pull_request:
+    paths:
+      - vendor-catalog.json
+      - vendor.lock.json
+      - scripts/vendor_enrollment_audit.py
+      - .github/workflows/vendor-catalog-audit.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - uses: actions/checkout@v7
+        with:
+          repository: myon-bioinformatics/myon-bioinformatics
+          ref: 7bd0603f6765481a23756e7d1a00a6451587d6ff
+          path: .vendor-audit-tools
+          persist-credentials: false
+          sparse-checkout: |
+            vendor_sync.py
+            vendor_catalog.py
+          sparse-checkout-cone-mode: false
+      - name: Audit all recommended source and license identities
+        env:
+          PYTHONPATH: .vendor-audit-tools
+        run: python -S scripts/vendor_enrollment_audit.py
+      - name: Publish audit and proposed lock for review
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: vendor-catalog-enrollment-audit
+          path: build/vendor-enrollment-audit/
+          if-no-files-found: warn
+          retention-days: 14

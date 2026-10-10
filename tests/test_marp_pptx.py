@@ -249,7 +249,7 @@ def test_inline_markdown_theme_variants_and_svg_source_when_enabled(tmp_path, ki
             assert media, "rendered PPTX must contain media"
             media_digest = hashlib.sha256(b"".join(package.read(n) for n in sorted(media))).hexdigest()
         image_dir = tmp_path / f"{kind}-{label}"
-        prepared, images = render_mermaid(markdown, image_dir, mmdc=mmdc)
+        prepared, images = render_mermaid(markdown, image_dir, mmdc=mmdc, background=background)
         assert len(images) == 1
         assert (image_dir / images[0].name).is_file()
         md = image_dir / "preview.md"

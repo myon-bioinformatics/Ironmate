@@ -31,7 +31,8 @@ def test_missing_mmdc_fails_explicitly(monkeypatch, tmp_path):
 def test_pipeline_opt_in_uses_svg_and_preserves_original(monkeypatch, tmp_path):
     source = "```mermaid\nflowchart LR\n A --> B\n```\n"
     seen = {}
-    def fake_render(raw, directory, *, mmdc):
+    def fake_render(raw, directory, *, mmdc, background="#FFFFFF"):
+        assert background == "#FFFFFF"
         assert raw == source
         return "# Diagram\n", [directory / "mermaid-1.svg"]
     def fake_convert(path, output, *, marp, allow_local_files=False):
@@ -44,3 +45,23 @@ def test_pipeline_opt_in_uses_svg_and_preserves_original(monkeypatch, tmp_path):
     result = pptx_pipeline.run(text=source, output=tmp_path / "out.pptx", mmdc="mmdc")
     assert seen["prepared"] == "# Diagram\n"
     assert result["conversion"]["mermaid_svg_count"] == 1
+
+
+
+def test_mermaid_background_option_and_invalid_color(monkeypatch, tmp_path):
+    from types import SimpleNamespace
+    calls = []
+    monkeypatch.setattr(mermaid_svg.shutil, "which", lambda binary: "/fake/mmdc")
+    def fake_run(command, **kwargs):
+        calls.append(command)
+        Path(command[command.index("-o") + 1]).write_text("<svg></svg>", encoding="utf-8")
+        return SimpleNamespace(returncode=0, stderr="")
+    monkeypatch.setattr(mermaid_svg.subprocess, "run", fake_run)
+    source = "```mermaid\nflowchart LR\n A --> B\n```"
+    mermaid_svg.render_mermaid(source, tmp_path / "white")
+    mermaid_svg.render_mermaid(source, tmp_path / "navy", background="#14213D")
+    assert calls[0][-2:] == ["-b", "#FFFFFF"]
+    assert calls[1][-2:] == ["-b", "#14213D"]
+    with pytest.raises(ValueError, match="background"):
+        mermaid_svg.render_mermaid(source, tmp_path / "bad", background="red")
+

@@ -41,7 +41,7 @@ def render_mermaid(source, directory, *, mmdc="mmdc"):
             raise RuntimeError(f"Mermaid SVG conversion failed: {result.stderr.strip()}")
         if "<svg" not in svg.read_text(encoding="utf-8"):
             raise RuntimeError("Mermaid renderer did not produce SVG")
-        output.extend((source[previous:match.start()], f"![Diagram {index}](./{svg.name})"))
+        output.extend((source[previous:match.start()], f"![Diagram {index} h:480](./{svg.name})"))
         previous = match.end()
         rendered.append(svg)
     output.append(source[previous:])

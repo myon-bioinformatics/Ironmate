@@ -118,3 +118,19 @@ def test_mermaid_actual_rendering_probe_when_enabled(tmp_path):
     assert len(observation["pptx"]["slides"]) >= 1
     if not has_diagram:
         assert observation["status"] == "unsupported"
+
+def test_real_mermaid_svg_to_marp_pptx_when_enabled(tmp_path):
+    """Integration gate for the pinned Mermaid SVG backend, separate from native PPTX shapes."""
+    import os
+    import shutil
+    from pptx_pipeline import run
+    if os.environ.get("IRONMATE_RUN_MARP_INTEGRATION") != "1":
+        pytest.skip("optional Marp integration not enabled")
+    marp = os.environ.get("IRONMATE_MARP_BIN", "marp")
+    mmdc = os.environ.get("IRONMATE_MMDC_BIN", "mmdc")
+    if shutil.which(mmdc) is None:
+        pytest.fail("Mermaid CLI requested but not installed")
+    source = "# Diagram\n\n```mermaid\nflowchart LR\n A[Start] --> B[Finish]\n```\n"
+    result = run(text=source, output=tmp_path / "mermaid.pptx", marp=marp, mmdc=mmdc)
+    assert result["conversion"]["mermaid_svg_count"] == 1
+    assert len(result["inspection"]["slides"]) >= 1

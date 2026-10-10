@@ -262,3 +262,8 @@ The opt-in integration renders both a Mermaid flowchart and Mermaid `classDiagra
 ## Direct Markdown input and theme recolor matrix
 
 An opt-in real integration test passes multiline Markdown **directly** to `pptx_pipeline.run(text=...)`, pre-renders either a Mermaid flowchart or a UML `classDiagram` to SVG, then generates PPTX and Marp/Chromium PNG previews for light (white background/black text) and dark (navy background/white text) variants. It preserves per-variant PNG evidence and media hashes and requires the two rendered PNGs to differ. This validates regeneration after Markdown style changes, **not** in-place recoloring of SVG internals or PowerPoint Web display equivalence. Native editable run/shape recoloring remains a separate python-pptx/Open XML test lane.
+
+
+## PowerPoint Web before/after review boundary
+
+CI now creates `build/test-results/pptx-web-review/native-before.pptx`, `native-after.pptx`, and `review-manifest.json`. The fixture changes native text color, size, bold, shape fill/line and geometry via the guarded Open XML probes. It checks that only `ppt/slides/slide1.xml` differs and that python-pptx can reopen both files. These are downloadable inputs for a **separate authenticated PowerPoint Web rendering check**, not proof that Web PowerPoint opened or displayed them. To complete visual acceptance, open both in PowerPoint Web, compare the target rectangle's fill, border, position, size, and white 22pt bold text, and retain screenshots plus observed outcome. Marp PNG previews cannot substitute for this step; no LibreOffice is required.

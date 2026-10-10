@@ -17,7 +17,7 @@ def test_mermaid_to_svg_preserves_source_and_uses_local_image(monkeypatch, tmp_p
     assert len(images) == 1
     assert images[0].is_file()
     assert "```mermaid" not in transformed
-    assert "![Diagram 1](./mermaid-" in transformed
+    assert "![Diagram 1 h:480](./mermaid-" in transformed
     assert transformed.startswith("Before\n") and transformed.endswith("\nAfter\n")
     assert source == "Before\n```mermaid\nflowchart LR\n A --> B\n```\nAfter\n"
 

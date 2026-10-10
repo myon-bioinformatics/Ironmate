@@ -8,7 +8,7 @@ from pathlib import Path
 import sys
 import tempfile
 
-from marp_pptx import convert
+from marp_pptx import convert, read_markdown_input
 from mermaid_svg import render_mermaid
 from pptx_inspect import inspect
 
@@ -18,7 +18,7 @@ def run(*, source=None, text=None, output, marp="marp", mmdc=None, background="#
     if (source is None) == (text is None):
         raise ValueError("provide exactly one Markdown source")
     if mmdc is not None:
-        raw = text if text is not None else Path(source).read_text(encoding="utf-8")
+        raw, _ = read_markdown_input(source=source, text=text)
         if not raw.strip():
             raise ValueError("Markdown must not be empty")
         with tempfile.TemporaryDirectory(prefix="ironmate-svg-") as directory:

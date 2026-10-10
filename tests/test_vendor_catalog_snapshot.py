@@ -16,10 +16,15 @@ def test_catalog_is_complete_and_explicit():
     assert any(item.get("default_enrollment", {}).get("enrollment") == "skipped" for item in tools)
 
 
-def test_catalog_does_not_claim_locked_installation():
+def test_catalog_enrollment_is_explicit_and_complete():
     catalog = json.loads((ROOT / "vendor-catalog.json").read_text(encoding="utf-8"))
     lock = json.loads((ROOT / "vendor.lock.json").read_text(encoding="utf-8"))
     assert lock["schema"] == "vendor-lock/1"
-    locked = {entry["repository"] for entry in lock["files"]}
-    assert "myon-bioinformatics/cli_args" not in locked
-    assert len({item["repository"] for item in catalog["tools"]}) > len(locked)
+    assert len(lock["files"]) == 53
+    locked = {(entry["repository"], entry["source"]) for entry in lock["files"]}
+    assert all(
+        (item["repository"], item.get("source", item["repository"].split("/")[1] + ".py")) in locked
+        for item in catalog["tools"]
+    )
+    assert ("myon-bioinformatics/cli_args", "cli_args.py") in locked
+    assert len({entry["destination"] for entry in lock["files"]}) == 53

@@ -267,3 +267,8 @@ An opt-in real integration test passes multiline Markdown **directly** to `pptx_
 ## PowerPoint Web before/after review boundary
 
 CI now creates `build/test-results/pptx-web-review/native-before.pptx`, `native-after.pptx`, and `review-manifest.json`. The fixture changes native text color, size, bold, shape fill/line and geometry via the guarded Open XML probes. It checks that only `ppt/slides/slide1.xml` differs and that python-pptx can reopen both files. These are downloadable inputs for a **separate authenticated PowerPoint Web rendering check**, not proof that Web PowerPoint opened or displayed them. To complete visual acceptance, open both in PowerPoint Web, compare the target rectangle's fill, border, position, size, and white 22pt bold text, and retain screenshots plus observed outcome. Marp PNG previews cannot substitute for this step; no LibreOffice is required.
+
+
+## Multi-slide Open XML experiment
+
+`pptx_xml_batch.py` applies a list of `{slide, shape_name, fill_rgb}` rules to native shape fills in a new PPTX. `slide` is the 1-based **presentation order**, resolved using `Presentation(...).slides[i].part.partname`; it must not be assumed equal to `ppt/slides/slideN.xml`. The package contains one slide XML part per slide, plus presentation order/relationships, layouts, masters and media. Reordering may change presentation relationships without renaming slide XML members. The test suite covers a 3-slide deck, targeted second-slide edits, a batch covering all slides, reordered slides, unchanged unrelated ZIP members and fail-closed invalid batches. This is deliberately a narrow RGB-fill prototype: it does not yet apply every font/shape property in one batch or claim Web PowerPoint fidelity.

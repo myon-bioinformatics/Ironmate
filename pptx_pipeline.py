@@ -9,14 +9,26 @@ import sys
 import tempfile
 
 from marp_pptx import convert
+from mermaid_svg import render_mermaid
 from pptx_inspect import inspect
 
 
-def run(*, source=None, text=None, output, marp="marp"):
+def run(*, source=None, text=None, output, marp="marp", mmdc=None):
     output = Path(output)
     if (source is None) == (text is None):
         raise ValueError("provide exactly one Markdown source")
-    if text is not None:
+    if mmdc is not None:
+        raw = text if text is not None else Path(source).read_text(encoding="utf-8")
+        if not raw.strip():
+            raise ValueError("Markdown must not be empty")
+        with tempfile.TemporaryDirectory(prefix="ironmate-svg-") as directory:
+            working = Path(directory)
+            prepared, images = render_mermaid(raw, working, mmdc=mmdc)
+            input_path = working / "input.md"
+            input_path.write_text(prepared, encoding="utf-8")
+            conversion = convert(input_path, output, marp=marp)
+            conversion["mermaid_svg_count"] = len(images)
+    elif text is not None:
         if not text.strip():
             raise ValueError("Markdown must not be empty")
         with tempfile.TemporaryDirectory(prefix="ironmate-md-") as directory:
@@ -36,10 +48,11 @@ def main(argv=None):
     source.add_argument("--text", help="Markdown source inline")
     parser.add_argument("-o", "--output", required=True, type=Path)
     parser.add_argument("--marp", default="marp")
+    parser.add_argument("--mmdc", help="Opt-in Mermaid CLI binary to pre-render fenced diagrams as SVG")
     args = parser.parse_args(argv)
     inline = args.text if args.text is not None else sys.stdin.read() if args.source == "-" else None
     result = run(source=None if inline is not None else args.source,
-                 text=inline, output=args.output, marp=args.marp)
+                 text=inline, output=args.output, marp=args.marp, mmdc=args.mmdc)
     print(json.dumps(result, ensure_ascii=False, indent=2))
 
 

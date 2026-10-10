@@ -241,7 +241,7 @@ def test_inline_markdown_theme_variants_and_svg_source_when_enabled(tmp_path, ki
                     + "; }\n  section h1 { color: " + foreground + "; }\n---\n# Direct input\n\n" + fence + "mermaid\n"
                     + diagram + "\n" + fence + "\n")
         output = tmp_path / f"{kind}-{label}.pptx"
-        result = run(text=markdown, output=output, marp=marp, mmdc=mmdc)
+        result = run(text=markdown, output=output, marp=marp, mmdc=mmdc, background=background, svg_foreground=foreground)
         assert result["conversion"]["mermaid_svg_count"] == 1
         assert len(Presentation(output).slides) == 1
         with zipfile.ZipFile(output) as package:
@@ -249,9 +249,10 @@ def test_inline_markdown_theme_variants_and_svg_source_when_enabled(tmp_path, ki
             assert media, "rendered PPTX must contain media"
             media_digest = hashlib.sha256(b"".join(package.read(n) for n in sorted(media))).hexdigest()
         image_dir = tmp_path / f"{kind}-{label}"
-        prepared, images = render_mermaid(markdown, image_dir, mmdc=mmdc, background=background)
+        prepared, images = render_mermaid(markdown, image_dir, mmdc=mmdc, background=background, foreground=foreground)
         assert len(images) == 1
         assert (image_dir / images[0].name).is_file()
+        assert foreground.upper() in (image_dir / (images[0].stem + ".mmd")).read_text(encoding="utf-8").upper()
         md = image_dir / "preview.md"
         md.write_text(prepared, encoding="utf-8")
         png = tmp_path / f"{kind}-{label}.png"

@@ -36,6 +36,17 @@ def convert(source, output, *, marp="marp", allow_local_files=False):
     return {"source": str(source), "output": str(output), "slides": slides, "backend": "marp"}
 
 
+def read_markdown_input(*, source=None, text=None, stdin=None):
+    """Resolve Markdown from file, inline text, or stdin without altering CLI semantics."""
+    if (source is None) == (text is None):
+        raise ValueError("provide exactly one Markdown source")
+    if text is not None:
+        return text, "inline"
+    if source == "-":
+        return (sys.stdin if stdin is None else stdin).read(), "stdin"
+    return Path(source).read_text(encoding="utf-8"), str(source)
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     source = parser.add_mutually_exclusive_group(required=True)

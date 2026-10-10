@@ -2,7 +2,7 @@
 from zipfile import ZipFile
 from xml.etree import ElementTree as ET
 from pptx import Presentation
-from pptx_xml_probe import set_slide_name
+from pptx_xml import set_slide_name
 import pytest
 
 
@@ -39,7 +39,7 @@ def test_xml_edit_rejects_overwrite(tmp_path):
 def test_xml_native_run_style_roundtrip(tmp_path):
     from pptx.dml.color import RGBColor
     from pptx.util import Inches
-    from pptx_xml_probe import set_run_style
+    from pptx_xml import set_run_style
     src, dst = tmp_path / "source.pptx", tmp_path / "style.pptx"
     prs = Presentation()
     slide = prs.slides.add_slide(prs.slide_layouts[6])
@@ -63,7 +63,7 @@ def test_xml_native_run_style_roundtrip(tmp_path):
 
 def test_xml_style_rejects_inherited_rgb_without_output(tmp_path):
     from pptx.util import Inches
-    from pptx_xml_probe import set_run_style
+    from pptx_xml import set_run_style
     src, dst = tmp_path / "source.pptx", tmp_path / "style.pptx"
     prs = Presentation()
     slide = prs.slides.add_slide(prs.slide_layouts[6])
@@ -78,6 +78,6 @@ def test_xml_style_rejects_inherited_rgb_without_output(tmp_path):
     {"rgb": "#xyzxyz"}, {"points": 0}, {"bold": "true"}, {}
 ])
 def test_xml_style_invalid_rules_fail_closed(tmp_path, kwargs):
-    from pptx_xml_probe import set_run_style
+    from pptx_xml import set_run_style
     with pytest.raises(ValueError):
         set_run_style(tmp_path / "missing.pptx", tmp_path / "out.pptx", **kwargs)

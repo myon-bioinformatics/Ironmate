@@ -251,7 +251,7 @@ The initial supported fence is a plain triple-backtick `mermaid` block. More ela
 
 ## SVG UML and Open XML edit experiment
 
-The SVG preprocessing lane also accepts **Mermaid `classDiagram`** as a narrow UML-class-diagram case: the same fenced `mermaid` source goes to Mermaid CLI, SVG, Marp and PPTX. This is not PlantUML syntax support; do not treat `plantuml` fenced blocks as implemented. The integration test checks both `flowchart` and `classDiagram` through real SVG→PPTX conversion. A separate test-only `pptx_xml_probe.py` updates `p:cSld/@name` in a **new** PPTX package, checks package-member preservation and reopens it with python-pptx. This demonstrates limited Open XML metadata editing, **not** editable SVG internals or general-purpose style mutation. Expand only after CI and visual evidence confirm behavior.
+The SVG preprocessing lane also accepts **Mermaid `classDiagram`** as a narrow UML-class-diagram case: the same fenced `mermaid` source goes to Mermaid CLI, SVG, Marp and PPTX. This is not PlantUML syntax support; do not treat `plantuml` fenced blocks as implemented. The integration test checks both `flowchart` and `classDiagram` through real SVG→PPTX conversion. A separate test-only `pptx_xml.py` (`set_slide_name` / `set_run_style`) updates `p:cSld/@name` in a **new** PPTX package, checks package-member preservation and reopens it with python-pptx. This demonstrates limited Open XML metadata editing, **not** editable SVG internals or general-purpose style mutation. Expand only after CI and visual evidence confirm behavior.
 
 
 ## Visual preview verification (without LibreOffice)
@@ -271,4 +271,19 @@ CI now creates `build/test-results/pptx-web-review/native-before.pptx`, `native-
 
 ## Multi-slide Open XML experiment
 
-`pptx_xml_batch.py` applies a list of `{slide, shape_name, fill_rgb}` rules to native shape fills in a new PPTX. `slide` is the 1-based **presentation order**, resolved from the stored `ppt/presentation.xml` slide order (`r:id`) and `ppt/_rels/presentation.xml.rels` relationship targets. `python-pptx` may normalize its in-memory `partname` values, so those must not be used as raw ZIP member locators. The package contains one slide XML part per slide, plus presentation order/relationships, layouts, masters and media. Reordering may change presentation relationships without renaming slide XML members. The test suite covers a 3-slide deck, targeted second-slide edits, a batch covering all slides, reordered slides, unchanged unrelated ZIP members and fail-closed invalid batches. This is deliberately a narrow RGB-fill prototype: it does not yet apply every font/shape property in one batch or claim Web PowerPoint fidelity.
+`pptx_xml.py` (`edit_shape_fills`) applies a list of `{slide, shape_name, fill_rgb}` rules to native shape fills in a new PPTX. `slide` is the 1-based **presentation order**, resolved from the stored `ppt/presentation.xml` slide order (`r:id`) and `ppt/_rels/presentation.xml.rels` relationship targets. `python-pptx` may normalize its in-memory `partname` values, so those must not be used as raw ZIP member locators. The package contains one slide XML part per slide, plus presentation order/relationships, layouts, masters and media. Reordering may change presentation relationships without renaming slide XML members. The test suite covers a 3-slide deck, targeted second-slide edits, a batch covering all slides, reordered slides, unchanged unrelated ZIP members and fail-closed invalid batches. This is deliberately a narrow RGB-fill prototype: it does not yet apply every font/shape property in one batch or claim Web PowerPoint fidelity.
+
+
+## Open XML module consolidation
+
+The former `pptx_xml_probe.py`, `pptx_xml_shapes.py` and `pptx_xml_batch.py` modules are now combined in `pptx_xml.py`. Public prototype functions and test behavior are retained; the import sites have been updated. Marp, Mermaid and the user-facing PPTX CLI remain separate responsibilities. This refactor reduces the number of production modules without intentionally changing transformation behavior.
+
+
+## Fixture ownership cleanup
+
+The web-review PPTX fixture generator now lives alongside its regression test in `tests/test_pptx_web_review_fixture.py`; the standalone root `pptx_web_review_fixture.py` was removed. CI still generates before/after artifacts by invoking the test-owned helper. Marp CLI (`marp_pptx.py`), Mermaid SVG (`mermaid_svg.py`), and the orchestration entry point (`pptx_pipeline.py`) remain separate because they have distinct CLI/API contracts; consolidating them without a compatibility plan would risk existing consumers.
+
+
+## Parent vendor catalog inventory (pending enrollment)
+
+Ironmate now tracks a copy of the parent's 30-entry `vendor-catalog/1` recommendations in `vendor-catalog.json`, including upstream tools marked `default_enrollment: skipped`. This is **discovery inventory only**, not a materialized vendor lock. `vendor.lock.json` remains the authority for checked-in bytes and is deliberately unchanged until each source path, license, full commit, Git blob and SHA-256 have been verified and enrolled using the canonical `vendor_sync.py enroll` workflow. Do not import or execute skipped catalog tools merely because they appear in the inventory. `cli_args.py` is catalogued but not yet installed. The parent-owned `vendor-consumers.json` must be updated in a separate coordinated change when actual consumer topology changes.

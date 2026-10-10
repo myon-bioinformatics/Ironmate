@@ -10,7 +10,7 @@ import tempfile
 from pptx import Presentation
 
 
-def convert(source, output, *, marp="marp"):
+def convert(source, output, *, marp="marp", allow_local_files=False):
     source, output = Path(source), Path(output)
     if source.suffix.lower() != ".md":
         raise ValueError("input must be a .md file")
@@ -22,6 +22,8 @@ def convert(source, output, *, marp="marp"):
     if executable is None:
         raise RuntimeError("Marp CLI not installed; install and pin @marp-team/marp-cli separately")
     command = [executable, str(source), "--pptx", "--output", str(output)]
+    if allow_local_files:
+        command.append("--allow-local-files")
     result = subprocess.run(command, capture_output=True, text=True, check=False, timeout=120)
     if result.returncode != 0:
         raise RuntimeError(f"Marp conversion failed (exit {result.returncode}): {result.stderr.strip()}")

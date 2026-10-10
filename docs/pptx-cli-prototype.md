@@ -277,3 +277,8 @@ CI now creates `build/test-results/pptx-web-review/native-before.pptx`, `native-
 ## Open XML module consolidation
 
 The former `pptx_xml_probe.py`, `pptx_xml_shapes.py` and `pptx_xml_batch.py` modules are now combined in `pptx_xml.py`. Public prototype functions and test behavior are retained; the import sites have been updated. Marp, Mermaid and the user-facing PPTX CLI remain separate responsibilities. This refactor reduces the number of production modules without intentionally changing transformation behavior.
+
+
+## Fixture ownership cleanup
+
+The web-review PPTX fixture generator now lives alongside its regression test in `tests/test_pptx_web_review_fixture.py`; the standalone root `pptx_web_review_fixture.py` was removed. CI still generates before/after artifacts by invoking the test-owned helper. Marp CLI (`marp_pptx.py`), Mermaid SVG (`mermaid_svg.py`), and the orchestration entry point (`pptx_pipeline.py`) remain separate because they have distinct CLI/API contracts; consolidating them without a compatibility plan would risk existing consumers.

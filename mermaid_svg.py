@@ -11,7 +11,7 @@ import subprocess
 _FENCE = re.compile(r"(?m)^```mermaid[ \t]*\r?\n(.*?)^```[ \t]*$", re.DOTALL | re.MULTILINE)
 
 
-def render_mermaid(source, directory, *, mmdc="mmdc", background=None):
+def render_mermaid(source, directory, *, mmdc="mmdc", background="#FFFFFF"):
     """Return (transformed Markdown, SVG paths); reject unsupported fenced variants."""
     if background is not None and (not isinstance(background, str) or len(background) != 7 or
             not background.startswith("#") or any(ch not in "0123456789abcdefABCDEF" for ch in background[1:])):

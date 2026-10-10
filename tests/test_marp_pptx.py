@@ -248,9 +248,11 @@ def test_inline_markdown_theme_variants_and_svg_source_when_enabled(tmp_path, ki
             media = [name for name in package.namelist() if name.startswith("ppt/media/")]
             assert media, "rendered PPTX must contain media"
             media_digest = hashlib.sha256(b"".join(package.read(n) for n in sorted(media))).hexdigest()
-        prepared, images = render_mermaid(markdown, tmp_path / f"{kind}-{label}", mmdc=mmdc)
+        image_dir = tmp_path / f"{kind}-{label}"
+        prepared, images = render_mermaid(markdown, image_dir, mmdc=mmdc)
         assert len(images) == 1
-        md = tmp_path / f"{kind}-{label}.md"
+        assert (image_dir / images[0].name).is_file()
+        md = image_dir / "preview.md"
         md.write_text(prepared, encoding="utf-8")
         png = tmp_path / f"{kind}-{label}.png"
         proc = subprocess.run([marp, str(md), "--png", "--allow-local-files",

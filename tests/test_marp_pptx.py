@@ -134,3 +134,35 @@ def test_real_mermaid_svg_to_marp_pptx_when_enabled(tmp_path):
     result = run(text=source, output=tmp_path / "mermaid.pptx", marp=marp, mmdc=mmdc)
     assert result["conversion"]["mermaid_svg_count"] == 1
     assert len(result["inspection"]["slides"]) >= 1
+
+
+@pytest.mark.parametrize("kind,diagram", [
+    ("flowchart", "flowchart LR\n A[Start] --> B[Finish]"),
+    ("uml-class", "classDiagram\n class Animal\n class Dog\n Animal <|-- Dog"),
+])
+def test_real_svg_diagram_xml_edit_when_enabled(tmp_path, kind, diagram):
+    """Mermaid flowchart and UML class diagram share the SVG pipeline."""
+    import os
+    import shutil
+    import zipfile
+    from pptx_pipeline import run
+    from pptx_xml_probe import set_slide_name
+    if os.environ.get("IRONMATE_RUN_MARP_INTEGRATION") != "1":
+        pytest.skip("optional Marp integration not enabled")
+    marp = os.environ.get("IRONMATE_MARP_BIN", "marp")
+    mmdc = os.environ.get("IRONMATE_MMDC_BIN", "mmdc")
+    assert shutil.which(mmdc), "Mermaid CLI required"
+    fence = chr(96) * 3
+    markdown = "# Diagram\n\n" + fence + "mermaid\n" + diagram + "\n" + fence + "\n"
+    generated = tmp_path / (kind + ".pptx")
+    edited = tmp_path / (kind + "-edited.pptx")
+    result = run(text=markdown, output=generated, marp=marp, mmdc=mmdc)
+    assert result["conversion"]["mermaid_svg_count"] == 1
+    set_slide_name(generated, edited, name=kind)
+    assert len(Presentation(edited).slides) == len(Presentation(generated).slides)
+    with zipfile.ZipFile(generated) as before, zipfile.ZipFile(edited) as after:
+        assert before.namelist() == after.namelist()
+        assert any(name.startswith("ppt/media/") for name in after.namelist())
+        assert all(before.read(name) == after.read(name) for name in before.namelist()
+                   if name != "ppt/slides/slide1.xml")
+

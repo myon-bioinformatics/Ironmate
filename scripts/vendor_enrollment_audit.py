@@ -36,10 +36,7 @@ def audit(catalog_path, lock_path, output):
             row["status"] = "skipped_self_vendor"
             rows.append(row)
             continue
-        if decision["enrollment"] == "skipped":
-            row["status"] = "catalog_skipped"
-            rows.append(row)
-            continue
+        # Even skipped recommendations are audited; their policy remains recorded.
         candidates = []
         try:
             for item in (source, "LICENSE"):

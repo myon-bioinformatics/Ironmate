@@ -295,8 +295,8 @@ jobs:
           node-version: "22"
       - name: Install PPTX reader and pinned Marp CLI
         run: |
-          python -m pip install "python-pptx>=1.0,<2" "pytest>=8,<10"
-          npm install --no-save --ignore-scripts @marp-team/marp-cli@4.2.3
+          python -m pip install "python-pptx==1.0.2" "pytest>=8,<10"
+          npm install --no-save --ignore-scripts @marp-team/marp-cli@4.5.1
       - name: Locate browser
         shell: bash
         run: |

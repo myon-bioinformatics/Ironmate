@@ -75,6 +75,7 @@ def run(*, source=None, text=None, output, marp="marp", mmdc=None, background="#
             input_path = Path(directory) / "input.md"
             input_path.write_text(text, encoding="utf-8")
             conversion = convert(input_path, output, marp=marp)
+            conversion["source"] = "inline"
     else:
         conversion = convert(source, output, marp=marp)
     report = inspect(output)
@@ -101,6 +102,8 @@ def main(argv=None):
     result = run(source=None if inline is not None else args.source, text=inline,
                  output=args.output, marp=args.marp, mmdc=args.mmdc,
                  background=args.background, svg_foreground=args.svg_foreground)
+    if args.source == "-":
+        result["conversion"]["source"] = "stdin"
     print(json.dumps(result, ensure_ascii=False, indent=2))
 
 

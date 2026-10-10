@@ -296,7 +296,7 @@ jobs:
       - name: Install PPTX reader and pinned Marp CLI
         run: |
           python -m pip install "python-pptx==1.0.2" "pytest>=8,<10"
-          npm install --no-save --ignore-scripts @marp-team/marp-cli@4.5.1
+          npm install --no-save --ignore-scripts @marp-team/marp-cli@4.5.1 @mermaid-js/mermaid-cli@12.0.0
       - name: Locate browser
         shell: bash
         run: |
@@ -305,6 +305,8 @@ jobs:
         env:
           IRONMATE_RUN_MARP_INTEGRATION: "1"
           IRONMATE_MARP_BIN: node_modules/.bin/marp
+          IRONMATE_MMDC_BIN: node_modules/.bin/mmdc
+          PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome
         run: python -m pytest -q tests/test_marp_pptx.py --junitxml=build/test-results/marp.xml
       - name: Preserve Marp JUnit
         if: always()

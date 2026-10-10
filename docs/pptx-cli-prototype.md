@@ -102,11 +102,11 @@ The ad-hoc Markdown→PPTX generator has been removed from the repository root a
 
 ## Independent Marp conversion proof (optional, before orchestration)
 
-The simple Markdown fixture `tests/fixtures/mini_readme.md` is the first Marp input. `marp_pptx.py` calls an **already installed** Marp CLI and validates that the produced PPTX can be reopened; it does not install Node, npm or a browser automatically.
+The simple Markdown fixture `tests/fixtures/mini_readme.md` is the first Marp input. `pptx_pipeline.py` calls an **already installed** Marp CLI and validates that the produced PPTX can be reopened; it does not install Node, npm or a browser automatically.
 
 ```sh
 marp --version
-python marp_pptx.py tests/fixtures/mini_readme.md -o marp-sample.pptx
+python pptx_pipeline.py tests/fixtures/mini_readme.md -o marp-sample.pptx
 ```
 
 Run the gated real conversion test only in an explicitly provisioned environment:
@@ -217,12 +217,12 @@ Keep source hashes and a mapping to generated PPTX artifacts. Native PPTX edge a
 
 ## AI-friendly Markdown input modes
 
-The optional `marp_pptx.py` adapter accepts a file path, `--text` for short inline Markdown, or `-` for UTF-8 standard input. These converge on the same pinned Marp conversion function, using a temporary `.md` file for inline/stdin inputs. No separate Markdown parser or permanent input file is required. Empty inline/stdin content fails explicitly. Examples:
+The unified `pptx_pipeline.py` CLI accepts a file path, `--text` for short inline Markdown, or `-` for UTF-8 standard input. These converge on the same pinned Marp conversion function, using a temporary `.md` file for inline/stdin inputs. No separate Markdown parser or permanent input file is required. Empty inline/stdin content fails explicitly. Examples:
 
 ```sh
-python marp_pptx.py slides.md -o slides.pptx
-python marp_pptx.py --text '# Title' -o slides.pptx
-printf '# Title\\n' | python marp_pptx.py - -o slides.pptx
+python pptx_pipeline.py slides.md -o slides.pptx
+python pptx_pipeline.py --text '# Title' -o slides.pptx
+printf '# Title\\n' | python pptx_pipeline.py - -o slides.pptx
 ```
 
 Shell quoting is the caller's responsibility; prefer stdin/heredoc for multiline content and code fences. The generated PPTX remains a distinct output and the conversion still requires an installed Marp CLI. This is **not yet** the complete Markdown→Marp→PPTX→XML one-line verification orchestrator.
@@ -281,9 +281,23 @@ The former `pptx_xml_probe.py`, `pptx_xml_shapes.py` and `pptx_xml_batch.py` mod
 
 ## Fixture ownership cleanup
 
-The web-review PPTX fixture generator now lives alongside its regression test in `tests/test_pptx_web_review_fixture.py`; the standalone root `pptx_web_review_fixture.py` was removed. CI still generates before/after artifacts by invoking the test-owned helper. Marp CLI (`marp_pptx.py`), Mermaid SVG (`mermaid_svg.py`), and the orchestration entry point (`pptx_pipeline.py`) remain separate because they have distinct CLI/API contracts; consolidating them without a compatibility plan would risk existing consumers.
+The web-review PPTX fixture generator now lives alongside its regression test in `tests/test_pptx_web_review_fixture.py`; the standalone root `pptx_web_review_fixture.py` was removed. CI still generates before/after artifacts by invoking the test-owned helper. The standalone `marp_pptx.py` entry point has now been retired. `pptx_pipeline.py` owns Markdown input, Marp conversion and PPTX inspection using `vendor/cli_args.py` for argument definitions; `mermaid_svg.py` remains an optional SVG preprocessing helper. The former CLI is deliberately not supported as a compatibility alias.
 
 
 ## Parent vendor catalog inventory (pending enrollment)
 
-Ironmate now tracks a copy of the parent's 30-entry `vendor-catalog/1` recommendations in `vendor-catalog.json`, including upstream tools marked `default_enrollment: skipped`. This is **discovery inventory only**, not a materialized vendor lock. `vendor.lock.json` remains the authority for checked-in bytes and is deliberately unchanged until each source path, license, full commit, Git blob and SHA-256 have been verified and enrolled using the canonical `vendor_sync.py enroll` workflow. Do not import or execute skipped catalog tools merely because they appear in the inventory. `cli_args.py` is catalogued but not yet installed. The parent-owned `vendor-consumers.json` must be updated in a separate coordinated change when actual consumer topology changes.
+Ironmate now tracks a copy of the parent's 30-entry `vendor-catalog/1` recommendations in `vendor-catalog.json`, including upstream tools marked `default_enrollment: skipped`. This is **discovery inventory only**, not a materialized vendor lock. `vendor.lock.json` remains the authority for checked-in bytes and is deliberately unchanged until each source path, license, full commit, Git blob and SHA-256 have been verified and enrolled using the canonical `vendor_sync.py enroll` workflow. Do not import or execute skipped catalog tools merely because they appear in the inventory. Since the catalog enrollment, all 53 selected source/LICENSE artifacts (including `vendor/cli_args.py`) are checked into `vendor.lock.json` and verified by the canonical tooling. The parent-owned `vendor-consumers.json` was updated separately and merged in parent PR #66.
+
+
+## Current Markdown/Marp CLI (PR #85)
+
+`pptx_pipeline.py` is the supported Markdown-to-PPTX command. The legacy `marp_pptx.py` standalone CLI is removed; callers should migrate to the unified command instead of expecting an alias. `vendor.cli_args.Argument` and `make_parser` define its arguments. The generated PPTX is inspected and the JSON result contains both `conversion` and `inspection` fields. An installed pinned Marp CLI is required for conversion; optional Mermaid pre-rendering additionally needs `mmdc` and allows local files for trusted input only.
+
+```sh
+python pptx_pipeline.py slides.md -o slides.pptx
+python pptx_pipeline.py --text '# Title' -o slides.pptx
+printf '# Title\n' | python pptx_pipeline.py - -o slides.pptx
+python pptx_pipeline.py diagrams.md --mmdc node_modules/.bin/mmdc -o diagrams.pptx
+```
+
+Input modes and actual Marp conversion are covered by tests. `pptx_replace.py` remains an independent CLI for editing existing PPTX documents. Historical prototype milestones above describe their state at the time and should not override this current CLI contract.

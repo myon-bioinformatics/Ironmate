@@ -166,3 +166,48 @@ def test_real_svg_diagram_xml_edit_when_enabled(tmp_path, kind, diagram):
         assert all(before.read(name) == after.read(name) for name in before.namelist()
                    if name != "ppt/slides/slide1.xml")
 
+
+
+@pytest.mark.parametrize("kind,diagram", [
+    ("flowchart", "flowchart LR\n A[Start] --> B[Finish]"),
+    ("uml-class", "classDiagram\n class Animal\n class Dog\n Animal <|-- Dog"),
+])
+def test_real_svg_visual_preview_when_enabled(tmp_path, kind, diagram):
+    """Generate an actual browser-rendered PNG for human inspection, without LibreOffice."""
+    import json
+    import os
+    import shutil
+    import struct
+    import subprocess
+    from mermaid_svg import render_mermaid
+    if os.environ.get("IRONMATE_RUN_MARP_INTEGRATION") != "1":
+        pytest.skip("optional Marp integration not enabled")
+    marp = os.environ.get("IRONMATE_MARP_BIN", "marp")
+    mmdc = os.environ.get("IRONMATE_MMDC_BIN", "mmdc")
+    assert shutil.which(marp) and shutil.which(mmdc)
+    fence = chr(96) * 3
+    original = "# Diagram\n\n" + fence + "mermaid\n" + diagram + "\n" + fence + "\n"
+    prepared, svgs = render_mermaid(original, tmp_path, mmdc=mmdc)
+    assert len(svgs) == 1
+    md = tmp_path / "preview.md"
+    md.write_text(prepared, encoding="utf-8")
+    png = tmp_path / "preview.png"
+    result = subprocess.run([marp, str(md), "--png", "--allow-local-files",
+                             "-o", str(png)], capture_output=True, text=True, timeout=120)
+    assert result.returncode == 0, result.stderr
+    data = png.read_bytes()
+    assert data[:8] == bytes.fromhex("89504e470d0a1a0a")
+    width, height = struct.unpack(">II", data[16:24])
+    assert width >= 640 and height >= 360
+    import hashlib
+    evidence = Path("build/test-results/marp-visual")
+    evidence.mkdir(parents=True, exist_ok=True)
+    saved = evidence / (kind + ".png")
+    saved.write_bytes(data)
+    (evidence / (kind + ".json")).write_text(json.dumps({
+        "kind": kind, "width": width, "height": height,
+        "png_sha256": hashlib.sha256(data).hexdigest(),
+        "svg_sha256": hashlib.sha256(svgs[0].read_bytes()).hexdigest(),
+        "review": "visual inspection pending"
+    }, indent=2), encoding="utf-8")
+

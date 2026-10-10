@@ -84,6 +84,8 @@ def test_foreground_is_applied_before_svg_render_not_by_marp(monkeypatch, tmp_pa
     assert "primaryTextColor" in observed[0]
     assert '"#FFFFFF"' in observed[0]
     assert "lineColor" in observed[0]
+    assert "primaryColor" in observed[0]
+    assert "#243552" in observed[0]
     assert raw in observed[0]
     assert images[0].exists()
     assert "primaryTextColor" not in transformed

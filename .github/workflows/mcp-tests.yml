@@ -325,6 +325,7 @@ jobs:
             build/test-results/marp-openxml-inspection.json
             build/test-results/marp-mermaid-observation.json
             build/test-results/marp-openxml/
+            build/test-results/marp-visual/
           if-no-files-found: warn
           retention-days: 14
 

@@ -15,6 +15,7 @@ def test_input_modes_share_converter(monkeypatch, tmp_path, capsys, mode):
         captured.append(content)
         return {"source": str(source), "output": str(output), "slides": 1, "backend": "marp"}
     monkeypatch.setattr(pptx_pipeline, "convert", fake_convert)
+    monkeypatch.setattr(pptx_pipeline, "inspect", lambda path: {"slides": []})
     output = tmp_path / "out.pptx"
     source = tmp_path / "sample.md"
     source.write_text("# Hello\n", encoding="utf-8")

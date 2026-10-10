@@ -211,3 +211,61 @@ def test_real_svg_visual_preview_when_enabled(tmp_path, kind, diagram):
         "review": "visual inspection pending"
     }, indent=2), encoding="utf-8")
 
+
+
+@pytest.mark.parametrize("kind,diagram", [
+    ("flowchart", "flowchart LR\n A[Start] --> B[Finish]"),
+    ("uml-class", "classDiagram\n class Animal\n class Dog\n Animal <|-- Dog"),
+])
+def test_inline_markdown_theme_variants_and_svg_source_when_enabled(tmp_path, kind, diagram):
+    """Direct Markdown input: color changes require a new render, not a native SVG text edit."""
+    import hashlib
+    import json
+    import os
+    import shutil
+    import subprocess
+    import zipfile
+    from pptx_pipeline import run
+    from mermaid_svg import render_mermaid
+    if os.environ.get("IRONMATE_RUN_MARP_INTEGRATION") != "1":
+        pytest.skip("optional Marp integration not enabled")
+    marp = os.environ.get("IRONMATE_MARP_BIN", "marp")
+    mmdc = os.environ.get("IRONMATE_MMDC_BIN", "mmdc")
+    assert shutil.which(marp) and shutil.which(mmdc)
+    fence = chr(96) * 3
+    observations = []
+    for label, background, foreground in (
+        ("light", "#FFFFFF", "#000000"), ("dark", "#14213D", "#FFFFFF")):
+        markdown = ("---\nmarp: true\nstyle: |\n  section { background: "
+                    + background + "; color: " + foreground
+                    + "; }\n---\n# Direct input\n\n" + fence + "mermaid\n"
+                    + diagram + "\n" + fence + "\n")
+        output = tmp_path / f"{kind}-{label}.pptx"
+        result = run(text=markdown, output=output, marp=marp, mmdc=mmdc)
+        assert result["conversion"]["mermaid_svg_count"] == 1
+        assert len(Presentation(output).slides) == 1
+        with zipfile.ZipFile(output) as package:
+            media = [name for name in package.namelist() if name.startswith("ppt/media/")]
+            assert media, "rendered PPTX must contain media"
+            media_digest = hashlib.sha256(b"".join(package.read(n) for n in sorted(media))).hexdigest()
+        prepared, images = render_mermaid(markdown, tmp_path / f"{kind}-{label}", mmdc=mmdc)
+        assert len(images) == 1
+        md = tmp_path / f"{kind}-{label}.md"
+        md.write_text(prepared, encoding="utf-8")
+        png = tmp_path / f"{kind}-{label}.png"
+        proc = subprocess.run([marp, str(md), "--png", "--allow-local-files",
+                               "-o", str(png)], capture_output=True, text=True, timeout=120)
+        assert proc.returncode == 0, proc.stderr
+        data = png.read_bytes()
+        assert data.startswith(bytes.fromhex("89504e470d0a1a0a"))
+        observations.append({"variant": label, "background": background,
+                             "foreground": foreground, "media_sha256": media_digest,
+                             "preview_sha256": hashlib.sha256(data).hexdigest()})
+        evidence = Path("build/test-results/marp-visual")
+        evidence.mkdir(parents=True, exist_ok=True)
+        (evidence / f"{kind}-{label}.png").write_bytes(data)
+    assert observations[0]["preview_sha256"] != observations[1]["preview_sha256"]
+    evidence = Path("build/test-results/marp-visual")
+    (evidence / f"{kind}-theme-comparison.json").write_text(
+        json.dumps(observations, indent=2), encoding="utf-8")
+

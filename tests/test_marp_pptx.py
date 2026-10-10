@@ -146,7 +146,7 @@ def test_real_svg_diagram_xml_edit_when_enabled(tmp_path, kind, diagram):
     import shutil
     import zipfile
     from pptx_pipeline import run
-    from pptx_xml_probe import set_slide_name
+    from pptx_xml import set_slide_name
     if os.environ.get("IRONMATE_RUN_MARP_INTEGRATION") != "1":
         pytest.skip("optional Marp integration not enabled")
     marp = os.environ.get("IRONMATE_MARP_BIN", "marp")

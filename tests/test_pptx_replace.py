@@ -1,4 +1,7 @@
+import os
 from pathlib import Path
+
+import pptx_replace
 
 import pytest
 from pptx import Presentation
@@ -174,3 +177,96 @@ def test_font_family_rejects_empty(tmp_path):
     src = fixture(tmp_path)
     with pytest.raises(ValueError, match="nonempty"):
         transform(src, [{"operation": "font_family", "name": ""}], dry_run=True)
+
+
+@pytest.mark.parametrize("target_exists", [True, False], ids=["symlink", "dangling-symlink"])
+def test_output_symlink_is_rejected_before_reading_source(tmp_path, target_exists):
+    target = tmp_path / "link-target.pptx"
+    if target_exists:
+        target.write_bytes(b"do not touch")
+    destination = tmp_path / "output.pptx"
+    try:
+        destination.symlink_to(target)
+    except (OSError, NotImplementedError) as exc:
+        pytest.skip(f"symlink creation unavailable: {exc}")
+    rules = [{"operation": "replace_text", "old": "Draft", "new": "Final"}]
+    with pytest.raises(ValueError, match="new file"):
+        transform(tmp_path / "missing-source.pptx", rules, destination=destination)
+    assert destination.is_symlink()
+    assert os.readlink(destination) == str(target)
+    if target_exists:
+        assert target.read_bytes() == b"do not touch"
+    else:
+        assert not target.exists()
+
+
+@pytest.mark.parametrize("intruder", ["file", "symlink", "dangling-symlink"])
+def test_competing_destination_creation_is_not_removed(tmp_path, monkeypatch, intruder):
+    src = fixture(tmp_path)
+    source_bytes = src.read_bytes()
+    destination = tmp_path / "output.pptx"
+    target = tmp_path / "other.pptx"
+    if intruder == "symlink":
+        target.write_bytes(b"another process")
+    real_link = os.link
+
+    def race_before_publish(staged, output, *args, **kwargs):
+        assert Path(staged).is_file()  # A complete staged PPTX already exists.
+        if intruder == "file":
+            Path(output).write_bytes(b"another process")
+        else:
+            try:
+                Path(output).symlink_to(target)
+            except (OSError, NotImplementedError) as exc:
+                pytest.skip(f"symlink creation unavailable: {exc}")
+        return real_link(staged, output, *args, **kwargs)
+
+    monkeypatch.setattr(pptx_replace.os, "link", race_before_publish)
+    with pytest.raises(FileExistsError):
+        transform(src, [{"operation": "replace_text", "old": "Draft", "new": "Final"}], destination=destination)
+    assert src.read_bytes() == source_bytes
+    assert os.path.lexists(destination)
+    if intruder == "file":
+        assert destination.read_bytes() == b"another process"
+    else:
+        assert destination.is_symlink()
+        assert os.readlink(destination) == str(target)
+        if intruder == "symlink":
+            assert target.read_bytes() == b"another process"
+        else:
+            assert not target.exists()
+    assert not list(tmp_path.glob(".pptx-replace-*"))
+
+
+@pytest.mark.parametrize("concurrent_creation", [False, True])
+def test_partial_save_failure_never_publishes_or_deletes_output(
+    tmp_path, monkeypatch, concurrent_creation
+):
+    src = fixture(tmp_path)
+    source_bytes = src.read_bytes()
+    destination = tmp_path / "output.pptx"
+    presentation_type = type(Presentation(src))
+
+    def interrupted_save(self, output):
+        output.write(b"incomplete archive")
+        if concurrent_creation:
+            destination.write_bytes(b"competing writer")
+        raise OSError("injected PPTX write failure")
+
+    monkeypatch.setattr(presentation_type, "save", interrupted_save)
+    with pytest.raises(OSError, match="injected PPTX write failure"):
+        transform(src, [{"operation": "replace_text", "old": "Draft", "new": "Final"}], destination=destination)
+    assert src.read_bytes() == source_bytes
+    if concurrent_creation:
+        assert destination.read_bytes() == b"competing writer"
+    else:
+        assert not os.path.lexists(destination)
+    assert not list(tmp_path.glob(".pptx-replace-*"))
+
+
+def test_successful_publish_removes_staging_directory(tmp_path):
+    src = fixture(tmp_path)
+    destination = tmp_path / "output.pptx"
+    transform(src, [{"operation": "replace_text", "old": "Draft", "new": "Final"}], destination=destination)
+    assert Presentation(destination).slides[0].shapes[0].text == "Final title"
+    assert not list(tmp_path.glob(".pptx-replace-*"))

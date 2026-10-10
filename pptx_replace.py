@@ -1,6 +1,8 @@
 """Conservative PPTX attribute replacement prototype. Python 3.11+."""
 import argparse
 import json
+import os
+import tempfile
 from pathlib import Path
 import tomllib
 
@@ -23,7 +25,7 @@ def transform(source, rules, *, dry_run=False, destination=None):
         raise ValueError("at least one rule is required")
     if destination is not None and not dry_run:
         src, dst = Path(source), Path(destination)
-        if src.resolve() == dst.resolve() or dst.exists():
+        if src.resolve() == dst.resolve() or os.path.lexists(dst):
             raise ValueError("destination must be a new file distinct from source")
     presentation = Presentation(str(source))
     changes = []
@@ -106,12 +108,15 @@ def transform(source, rules, *, dry_run=False, destination=None):
         if destination is None:
             raise ValueError("destination is required unless dry-run")
         dst = Path(destination)
-        try:
-            with dst.open("xb") as output:
+        # Complete the archive privately before exposing any destination entry.
+        # A hard-link publication creates dst atomically or fails if *any* path
+        # entry (including a dangling symlink) was created by another process.
+        # Never unlink dst: a competing process may own it after a failure.
+        with tempfile.TemporaryDirectory(prefix=".pptx-replace-", dir=dst.parent) as staging_dir:
+            staged = Path(staging_dir) / "complete.pptx"
+            with staged.open("xb") as output:
                 presentation.save(output)
-        except BaseException:
-            dst.unlink(missing_ok=True)
-            raise
+            os.link(staged, dst)
     return {"dry_run": dry_run, "changes": changes, "change_count": sum(c.get("count", 1) for c in changes)}
 
 

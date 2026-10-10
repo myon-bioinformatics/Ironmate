@@ -222,7 +222,7 @@ The unified `pptx_pipeline.py` CLI accepts a file path, `--text` for short inlin
 ```sh
 python pptx_pipeline.py slides.md -o slides.pptx
 python pptx_pipeline.py --text '# Title' -o slides.pptx
-printf '# Title\\n' | python pptx_pipeline.py - -o slides.pptx
+printf '# Title\n' | python pptx_pipeline.py - -o slides.pptx
 ```
 
 Shell quoting is the caller's responsibility; prefer stdin/heredoc for multiline content and code fences. The generated PPTX remains a distinct output and the conversion still requires an installed Marp CLI. This is **not yet** the complete Markdown→Marp→PPTX→XML one-line verification orchestrator.

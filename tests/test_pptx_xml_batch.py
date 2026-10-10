@@ -7,7 +7,7 @@ from pptx.dml.color import RGBColor
 from pptx.enum.shapes import MSO_SHAPE
 from pptx.util import Inches
 
-from pptx_xml_batch import edit_shape_fills
+from pptx_xml import edit_shape_fills
 
 
 def make_deck(path, *, reordered=False):

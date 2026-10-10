@@ -57,7 +57,8 @@ def test_reordered_slide_uses_display_order_not_xml_suffix(tmp_path):
         "Slide 2", "Slide 3", "Slide 1"]
     report = edit_shape_fills(source, output, [
         {"slide": 1, "shape_name": "Shared", "fill_rgb": "#ABCDEF"}])
-    assert report["changed_members"] == ["ppt/slides/slide2.xml"]
+    expected_member = str(Presentation(source).slides[0].part.partname).lstrip("/")
+    assert report["changed_members"] == [expected_member]
     assert rgb(output, 0) == RGBColor(171, 205, 239)
     assert rgb(output, 1) == RGBColor(10, 20, 30)
 

@@ -1,7 +1,7 @@
 import pytest
 from pathlib import Path
 from pptx import Presentation
-from marp_pptx import convert
+from pptx_pipeline import convert
 
 
 def test_missing_marp_is_explicit(tmp_path):

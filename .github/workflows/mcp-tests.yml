@@ -197,14 +197,14 @@ jobs:
           retention-days: 14
 
   failure-identity:
-    needs: test
+    needs: [test, marp-integration]
     if: always()
     permissions:
       contents: read
       actions: read
     uses: myon-bioinformatics/myon-bioinformatics/.github/workflows/reusable-junit-identity.yml@4dfda95d6573250477f991a0421fa6acb9bc0258
     with:
-      expected-reports: '["junit-py3.12/pytest-3.12.xml","junit-controlled-py3.12/junit.xml"]'
+      expected-reports: '["junit-py3.12/pytest-3.12.xml","junit-controlled-py3.12/junit.xml","junit-marp/marp.xml"]'
       artifact-pattern: "junit-*"
       output-artifact: "failure-identity"
 
@@ -276,3 +276,59 @@ jobs:
         retention-days: 14
     name: Locked baseline
     timeout-minutes: 20
+
+  marp-integration:
+    name: Marp real PPTX conversion
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install PPTX reader and pinned Marp CLI
+        run: |
+          python -m pip install "python-pptx==1.0.2" "pytest>=8,<10"
+          npm install --no-save --ignore-scripts @marp-team/marp-cli@4.5.1 @mermaid-js/mermaid-cli@12.0.0
+      - name: Locate browser
+        shell: bash
+        run: |
+          command -v google-chrome || command -v chromium || command -v chromium-browser
+      - name: Run real Markdown to Marp to PPTX integration
+        env:
+          IRONMATE_RUN_MARP_INTEGRATION: "1"
+          IRONMATE_MARP_BIN: node_modules/.bin/marp
+          IRONMATE_MMDC_BIN: node_modules/.bin/mmdc
+          PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome
+        run: python -m pytest -q tests/test_marp_pptx.py --junitxml=build/test-results/marp.xml
+      - name: Generate Open XML before-after PPTX web review fixtures
+        run: python pptx_web_review_fixture.py
+      - name: Preserve Marp JUnit
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: junit-marp
+          path: build/test-results/marp.xml
+          if-no-files-found: error
+          retention-days: 14
+      - name: Preserve raw Marp Open XML
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: marp-openxml-observations
+          path: |
+            build/test-results/marp-openxml-inspection.json
+            build/test-results/marp-mermaid-observation.json
+            build/test-results/marp-openxml/
+            build/test-results/marp-visual/
+            build/test-results/pptx-web-review/
+          if-no-files-found: warn
+          retention-days: 14
+

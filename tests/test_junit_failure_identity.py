@@ -124,8 +124,14 @@ def test_workflow_keeps_suite_failure_and_exact_reports(tmp_path):
         reports.append(upload['with']['name'] + '/' +
                        ('junit.xml' if path.endswith('/') else Path(path).name))
     collector = jobs['failure-identity']
-    assert collector['needs'] == 'test'
+    assert collector['needs'] == ['test', 'marp-integration']
     assert collector['if'] == 'always()'
     assert collector['uses'].endswith('@4dfda95d6573250477f991a0421fa6acb9bc0258')
+    marp_steps = jobs['marp-integration']['steps']
+    marp_upload = next(s for s in marp_steps if s.get('name') == 'Preserve Marp JUnit')
+    assert marp_upload['if'] == 'always()'
+    assert marp_upload['with']['if-no-files-found'] == 'error'
+    assert marp_upload['with']['path'] == 'build/test-results/marp.xml'
+    reports.append(marp_upload['with']['name'] + '/marp.xml')
     assert json.loads(collector['with']['expected-reports']) == reports
     assert collector['with']['artifact-pattern'] == 'junit-*'

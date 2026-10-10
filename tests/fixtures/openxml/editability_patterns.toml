@@ -1,0 +1,33 @@
+# Prototype editability capability registry; not a universal PPTX specification.
+schema_version = 1
+default_status = "unknown"
+
+[[patterns]]
+id = "explicit-rgb-run"
+operation = "text_color"
+status = "editable"
+condition = "text_run_with_explicit_rgb"
+strategy = "python-pptx"
+evidence = "tests/test_pptx_replace.py::test_dry_run_and_preservation"
+
+[[patterns]]
+id = "rasterized-slide-text"
+operation = "text_color"
+status = "unsupported"
+condition = "image_only_slide"
+alternative = "regenerate_from_markdown"
+reason = "no_editable_text_run"
+
+[[patterns]]
+id = "theme-reference-run"
+operation = "text_color"
+status = "unknown"
+condition = "theme_color_reference"
+reason = "not_verified_for_current_prototype"
+
+[[patterns]]
+id = "run-spanning-text"
+operation = "replace_text"
+status = "unsupported"
+condition = "text_spans_multiple_runs"
+reason = "run_local_replacement_only"

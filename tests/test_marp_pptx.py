@@ -238,7 +238,7 @@ def test_inline_markdown_theme_variants_and_svg_source_when_enabled(tmp_path, ki
         ("light", "#FFFFFF", "#000000"), ("dark", "#14213D", "#FFFFFF")):
         markdown = ("---\nmarp: true\nstyle: |\n  section { background: "
                     + background + "; color: " + foreground
-                    + "; }\n---\n# Direct input\n\n" + fence + "mermaid\n"
+                    + "; }\n  section h1 { color: " + foreground + "; }\n---\n# Direct input\n\n" + fence + "mermaid\n"
                     + diagram + "\n" + fence + "\n")
         output = tmp_path / f"{kind}-{label}.pptx"
         result = run(text=markdown, output=output, marp=marp, mmdc=mmdc)

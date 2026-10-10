@@ -13,7 +13,7 @@ from mermaid_svg import render_mermaid
 from pptx_inspect import inspect
 
 
-def run(*, source=None, text=None, output, marp="marp", mmdc=None, background="#FFFFFF"):
+def run(*, source=None, text=None, output, marp="marp", mmdc=None, background="#FFFFFF", svg_foreground=None):
     output = Path(output)
     if (source is None) == (text is None):
         raise ValueError("provide exactly one Markdown source")
@@ -23,7 +23,7 @@ def run(*, source=None, text=None, output, marp="marp", mmdc=None, background="#
             raise ValueError("Markdown must not be empty")
         with tempfile.TemporaryDirectory(prefix="ironmate-svg-") as directory:
             working = Path(directory)
-            prepared, images = render_mermaid(raw, working, mmdc=mmdc, background=background)
+            prepared, images = render_mermaid(raw, working, mmdc=mmdc, background=background, foreground=svg_foreground)
             input_path = working / "input.md"
             input_path.write_text(prepared, encoding="utf-8")
             conversion = convert(input_path, output, marp=marp, allow_local_files=True)
@@ -49,11 +49,12 @@ def main(argv=None):
     parser.add_argument("-o", "--output", required=True, type=Path)
     parser.add_argument("--marp", default="marp")
     parser.add_argument("--background", default="#FFFFFF", help="Mermaid SVG background #RRGGBB")
+    parser.add_argument("--svg-foreground", help="Mermaid SVG text/line color #RRGGBB")
     parser.add_argument("--mmdc", help="Opt-in Mermaid CLI binary to pre-render fenced diagrams as SVG")
     args = parser.parse_args(argv)
     inline = args.text if args.text is not None else sys.stdin.read() if args.source == "-" else None
     result = run(source=None if inline is not None else args.source,
-                 text=inline, output=args.output, marp=args.marp, mmdc=args.mmdc, background=args.background)
+                 text=inline, output=args.output, marp=args.marp, mmdc=args.mmdc, background=args.background, svg_foreground=args.svg_foreground)
     print(json.dumps(result, ensure_ascii=False, indent=2))
 
 

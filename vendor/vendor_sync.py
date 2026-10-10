@@ -1,0 +1,436 @@
+"""Reproducible GitHub file placement and update candidates (stdlib only)."""
+from __future__ import annotations
+
+import argparse
+import copy
+import hashlib
+import json
+import os
+from pathlib import Path, PurePosixPath
+import re
+import stat
+import subprocess
+import sys
+import tempfile
+from urllib.error import HTTPError
+from urllib.parse import quote
+from urllib.request import Request, urlopen
+
+__version__ = "0.2.0"
+__all__ = ["git_blob", "inspect_source", "validate", "evidence", "synchronize", "promote", "main"]
+
+SCHEMA = "vendor-lock/1"
+MAX_BYTES = 8 * 1024 * 1024
+
+
+def git_blob(data):
+    return hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
+
+
+def _path(value):
+    if not isinstance(value, str) or not value or "\\" in value or ":" in value:
+        raise ValueError("expected a relative POSIX path")
+    parts = value.split("/")
+    if any(p in ("", ".", "..", ".git") for p in parts) or any(ord(c) < 32 for c in value):
+        raise ValueError("unsafe path: " + value)
+    return value
+
+
+def _hex(value, length):
+    if not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{%d}" % length, value):
+        raise ValueError("expected a full lowercase hex digest")
+
+
+def validate(lock):
+    if not isinstance(lock, dict) or set(lock) != {"schema", "files"} or lock["schema"] != SCHEMA:
+        raise ValueError("expected vendor-lock/1")
+    if not isinstance(lock["files"], list) or not lock["files"]:
+        raise ValueError("files must be a nonempty list")
+    destinations = set()
+    for item in lock["files"]:
+        if not isinstance(item, dict) or set(item) != {
+            "repository", "ref", "commit", "source", "destination", "blob_sha", "sha256"
+        }:
+            raise ValueError("invalid file fields")
+        if not isinstance(item["repository"], str) or not re.fullmatch(
+            r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+", item["repository"]
+        ) or any(p in (".", "..") for p in item["repository"].split("/")):
+            raise ValueError("expected owner/repository")
+        _path(item["ref"])
+        _path(item["source"])
+        destination = _path(item["destination"])
+        if destination.casefold() in destinations:
+            raise ValueError("duplicate destination")
+        destinations.add(destination.casefold())
+        _hex(item["commit"], 40)
+        _hex(item["blob_sha"], 40)
+        _hex(item["sha256"], 64)
+    for destination in destinations:
+        if any(destination.startswith(other + "/") for other in destinations if other != destination):
+            raise ValueError("overlapping destinations")
+    return lock
+
+
+def _target(root, relative):
+    path = root.joinpath(*PurePosixPath(_path(relative)).parts)
+    current = root
+    for part in PurePosixPath(relative).parts:
+        current = current / part
+        if current.is_symlink():
+            raise ValueError("symlink destination: " + relative)
+    if not path.resolve().is_relative_to(root):
+        raise ValueError("destination outside root")
+    return path
+
+
+def _verify(item, data):
+    if git_blob(data) != item["blob_sha"] or hashlib.sha256(data).hexdigest() != item["sha256"]:
+        raise ValueError("digest mismatch: " + item["destination"])
+
+
+def _get(url):
+    headers = {"User-Agent": "vendor-sync/1"}
+    if url.startswith("https://api.github.com/"):
+        headers["Accept"] = "application/vnd.github+json"
+    with urlopen(Request(url, headers=headers), timeout=30) as response:
+        data = response.read(MAX_BYTES + 1)
+    if len(data) > MAX_BYTES:
+        raise ValueError("download exceeds byte limit")
+    return data
+
+
+def _public_git_snapshot(repository, ref, sources, *, remote=None):
+    """Read public Git objects in a temporary bare repo on API rate limits."""
+    with tempfile.TemporaryDirectory(prefix="vendor-public-git-") as directory:
+        # Do not inherit repository selectors or injected credential/config state.
+        env = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
+        env.update(GIT_TERMINAL_PROMPT="0", GIT_CONFIG_NOSYSTEM="1", GIT_CONFIG_GLOBAL=os.devnull)
+        command = ["git", "-c", "credential.helper=", "-c", "core.askPass=",
+                   "-c", "http.extraHeader=", "-C", directory]
+
+        def git(*args):
+            result = subprocess.run(command + list(args), env=env, capture_output=True, timeout=60)
+            if result.returncode:
+                raise ValueError("public Git fetch/read failed: " + result.stderr.decode("utf-8", "replace").strip())
+            return result.stdout
+
+        git("init", "--bare")
+        git("fetch", "--no-tags", "--depth=1", "--filter=blob:none", "--",
+            remote or "https://github.com/" + repository + ".git", ref)
+        commit = git("rev-parse", "FETCH_HEAD^{commit}").decode().strip()
+        _hex(commit, 40)
+        files = {}
+        for source in sources:
+            obj = commit + ":" + source
+            record = git("ls-tree", commit, "--", source).split(b"\t", 1)[0].split()
+            if len(record) != 3 or record[0] not in (b"100644", b"100755") or record[1] != b"blob":
+                raise ValueError("source must be a regular file")
+            blob = record[2].decode()
+            size = int(git("cat-file", "-s", obj))
+            if size > MAX_BYTES:
+                raise ValueError("download exceeds byte limit")
+            files[source] = (blob, git("cat-file", "blob", obj))
+        return commit, files
+
+
+def inspect_source(repository, commit, source):
+    """Read one exact public source without placing files or updating a lock.
+
+    Git tree mode, resolved commit, Git blob and SHA-256 are checked here;
+    recommendation metadata never supplies trusted source digests.
+    """
+    item = dict(repository=repository, ref=commit, commit=commit, source=source,
+                destination="source", blob_sha="0" * 40, sha256="0" * 64)
+    validate({"schema": SCHEMA, "files": [item]})
+    resolved, files = _public_git_snapshot(repository, commit, [source])
+    if resolved != commit:
+        raise ValueError("public Git commit does not match recommended SHA")
+    item["blob_sha"], data = files[source]
+    _hex(item["blob_sha"], 40)
+    item["sha256"] = hashlib.sha256(data).hexdigest()
+    _verify(item, data)
+    return {key: item[key] for key in ("repository", "commit", "source", "blob_sha", "sha256")}
+
+
+def _limited(error):
+    return isinstance(error, HTTPError) and error.code in (403, 429)
+
+
+def _raw(item, get):
+    url = "https://raw.githubusercontent.com/{}/{}/{}".format(
+        item["repository"], item["commit"], quote(item["source"], safe="/")
+    )
+    return get(url)
+
+
+def _atomic(path, data):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    mode = stat.S_IMODE(path.stat().st_mode) & 0o777 if path.exists() else 0o644
+    name = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=path.parent, delete=False) as stream:
+            name = stream.name
+            stream.write(data)
+        os.chmod(name, mode)
+        os.replace(name, path)
+    finally:
+        if name and os.path.exists(name):
+            os.unlink(name)
+
+
+def _create(path, data):
+    """Place complete bytes without replacing a destination that appeared late."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    name = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=path.parent, delete=False) as stream:
+            name = stream.name
+            stream.write(data)
+        os.chmod(name, 0o644)
+        os.link(name, path)
+    finally:
+        if name and os.path.exists(name):
+            os.unlink(name)
+
+
+def evidence(manifest, root, *, runtime=None):
+    """Derive deterministic evidence membership from a validated vendor lock."""
+    root = Path(root).resolve()
+    manifest_path = _target(root, manifest)
+    lock = validate(json.loads(manifest_path.read_text(encoding="utf-8")))
+    locked = [manifest_path.relative_to(root).as_posix()]
+    locked.extend(item["destination"] for item in lock["files"])
+    folded = [p.casefold() for p in locked]
+    if len(folded) != len(set(folded)):
+        raise ValueError("locked evidence membership collides")
+    locked.sort(key=lambda p: (p.casefold(), p))
+    runtime_paths = []
+    seen = set(folded)
+    for value in runtime or []:
+        path = _path(value)
+        key = path.casefold()
+        if key in folded:
+            raise ValueError("runtime evidence collides with locked membership: " + path)
+        if key not in seen:
+            runtime_paths.append(path)
+            seen.add(key)
+    runtime_paths.sort(key=lambda p: (p.casefold(), p))
+    return {"schema": "vendor-evidence/1", "locked": locked,
+            "candidate": list(locked), "runtime": runtime_paths}
+
+
+def synchronize(manifest, root, mode, *, get=_get):
+    """Check offline, place locked bytes, or resolve an upstream update candidate.
+
+    All downloads/digests are validated before any write. Files are placed
+    atomically individually; filesystem I/O failure can leave a partial batch.
+    Enrollment creates only initially missing destinations, using hard links
+    to prevent replacement of a file that appears during the command. Use an
+    isolated checkout; concurrent directory/manifest changes are unsupported.
+    No downloaded module is imported. Public Git fallback only writes a temporary
+    bare object store; the consumer Git checkout and remote refs are untouched.
+    """
+    root = Path(root).resolve()
+    manifest = _target(root, manifest)
+    lock = validate(json.loads(manifest.read_text(encoding="utf-8")))
+    for item in lock["files"]:
+        target = _target(root, item["destination"])
+        if target.relative_to(root).as_posix().casefold() == manifest.relative_to(root).as_posix().casefold():
+            raise ValueError("file destination collides with manifest")
+    if mode not in ("check", "materialize", "update", "enroll"):
+        raise ValueError("unknown mode")
+    # Enrollment may create missing locked files, but never repairs an existing edit.
+    missing = set()
+    if mode == "enroll":
+        for item in lock["files"]:
+            target = _target(root, item["destination"])
+            if target.exists():
+                _verify(item, target.read_bytes())
+            else:
+                missing.add(item["destination"])
+    # Updates must start from the recorded bytes, never silently replace edits.
+    if mode == "update":
+        for item in lock["files"]:
+            _verify(item, _target(root, item["destination"]).read_bytes())
+    candidate = copy.deepcopy(lock)
+    pending = []
+    commits = {}
+    snapshots = {}
+    for item in candidate["files"]:
+        target = _target(root, item["destination"])
+        if mode == "check":
+            _verify(item, target.read_bytes())
+            continue
+        if mode == "enroll" and item["destination"] not in missing:
+            continue
+        if mode == "update":
+            key = item["repository"], item["ref"]
+            sources = [i["source"] for i in candidate["files"]
+                       if (i["repository"], i["ref"]) == key]
+            if key not in commits:
+                url = "https://api.github.com/repos/{}/commits?sha={}&per_page=1".format(
+                    key[0], quote(key[1], safe="")
+                )
+                try:
+                    listed = json.loads(get(url))
+                    if not isinstance(listed, list) or not listed:
+                        raise ValueError("upstream ref has no commits")
+                    commits[key] = listed[0]["sha"]
+                    _hex(commits[key], 40)
+                except HTTPError as error:
+                    if not _limited(error):
+                        raise
+                    commits[key], snapshots[key] = _public_git_snapshot(key[0], key[1], sources)
+            item["commit"] = commits[key]
+            if key not in snapshots:
+                url = "https://api.github.com/repos/{}/contents/{}?ref={}".format(
+                    item["repository"], quote(item["source"], safe="/"), item["commit"]
+                )
+                try:
+                    metadata = json.loads(get(url))
+                    if metadata.get("type") != "file":
+                        raise ValueError("source must be a regular file")
+                    item["blob_sha"] = metadata["sha"]
+                    _hex(item["blob_sha"], 40)
+                    data = _raw(item, get)
+                except HTTPError as error:
+                    if not _limited(error):
+                        raise
+                    resolved, snapshots[key] = _public_git_snapshot(key[0], commits[key], sources)
+                    if resolved != commits[key]:
+                        raise ValueError("public Git commit does not match resolved SHA")
+            if key in snapshots:
+                item["blob_sha"], data = snapshots[key][item["source"]]
+            item["sha256"] = hashlib.sha256(data).hexdigest()
+        else:
+            data = target.read_bytes() if mode != "enroll" and target.is_file() else None
+            if data is None or git_blob(data) != item["blob_sha"] or hashlib.sha256(data).hexdigest() != item["sha256"]:
+                key = item["repository"], item["commit"]
+                if key not in snapshots:
+                    try:
+                        data = _raw(item, get)
+                    except HTTPError as error:
+                        if not _limited(error):
+                            raise
+                        sources = [i["source"] for i in candidate["files"]
+                                   if (i["repository"], i["commit"]) == key
+                                   and (mode != "enroll" or i["destination"] in missing)]
+                        resolved, snapshots[key] = _public_git_snapshot(key[0], key[1], sources)
+                        if resolved != key[1]:
+                            raise ValueError("public Git commit does not match locked SHA")
+                if key in snapshots:
+                    blob, data = snapshots[key][item["source"]]
+                    if blob != item["blob_sha"]:
+                        raise ValueError("public Git blob does not match locked blob")
+        _verify(item, data)
+        pending.append((target, data))
+    # Unchanged upstream bytes do not churn pins on unrelated upstream commits.
+    if mode == "update":
+        for key in commits:
+            old = [i for i in lock["files"] if (i["repository"], i["ref"]) == key]
+            new = [i for i in candidate["files"] if (i["repository"], i["ref"]) == key]
+            if all(a["blob_sha"] == b["blob_sha"] and a["sha256"] == b["sha256"] for a, b in zip(old, new)):
+                for a, b in zip(old, new):
+                    b["commit"] = a["commit"]
+        validate(candidate)
+        encoded = (json.dumps(candidate, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
+        if candidate != lock:
+            pending.append((manifest, encoded))
+    if mode == "enroll":
+        # Recheck the whole baseline before any placement: downloads can be slow.
+        for item in lock["files"]:
+            target = _target(root, item["destination"])
+            if item["destination"] not in missing or target.exists():
+                _verify(item, target.read_bytes())
+    changed = []
+    for target, data in pending:
+        if mode == "enroll":
+            relative = target.relative_to(root).as_posix()
+            target = _target(root, relative)
+            try:
+                _create(target, data)
+            except FileExistsError:
+                target = _target(root, relative)
+                if target.read_bytes() != data:
+                    raise ValueError("digest mismatch: " + relative)
+            else:
+                changed.append(relative)
+            continue
+        if not target.exists() or target.read_bytes() != data:
+            _atomic(target, data)
+            changed.append(target.relative_to(root).as_posix())
+    if mode == "enroll":
+        synchronize(manifest.relative_to(root).as_posix(), root, "check", get=get)
+    return {"schema": SCHEMA, "mode": mode, "changed_paths": changed}
+
+
+def promote(manifest, root, *, get=_get):
+    """Explicitly promote a verified upstream candidate into the working tree.
+
+    This never commits, pushes, opens a PR, or mutates GitHub. It requires the
+    current locked bytes to be intact, reuses the canonical update resolver,
+    verifies the resulting baseline offline, and returns a deterministic
+    identity receipt suitable for review/CI evidence.
+    """
+    root = Path(root).resolve()
+    manifest_path = _target(root, manifest)
+    before = validate(json.loads(manifest_path.read_text(encoding="utf-8")))
+    before_by_destination = {item["destination"]: copy.deepcopy(item) for item in before["files"]}
+    backups = {manifest_path: manifest_path.read_bytes()}
+    for item in before["files"]:
+        target = _target(root, item["destination"])
+        backups[target] = target.read_bytes()
+    try:
+        result = synchronize(manifest, root, "update", get=get)
+        synchronize(manifest, root, "check", get=lambda url: (_ for _ in ()).throw(AssertionError("network used during promoted baseline check")))
+    except BaseException:
+        for target, data in backups.items():
+            _atomic(target, data)
+        raise
+    after = validate(json.loads(manifest_path.read_text(encoding="utf-8")))
+    changes = []
+    for item in after["files"]:
+        old = before_by_destination[item["destination"]]
+        if old != item:
+            changes.append({
+                "repository": item["repository"],
+                "source": item["source"],
+                "destination": item["destination"],
+                "old_commit": old["commit"],
+                "new_commit": item["commit"],
+                "old_blob_sha": old["blob_sha"],
+                "new_blob_sha": item["blob_sha"],
+                "old_sha256": old["sha256"],
+                "new_sha256": item["sha256"],
+            })
+    return {
+        "schema": "vendor-promotion/1",
+        "mode": "promote",
+        "changed_paths": result["changed_paths"],
+        "promoted": changes,
+    }
+
+
+def main(argv=None, *, get=_get):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("mode", choices=("check", "materialize", "update", "promote", "enroll", "evidence"))
+    parser.add_argument("--manifest", default="vendor.lock.json")
+    parser.add_argument("--root", default=".")
+    parser.add_argument("--runtime-evidence", action="append", default=[])
+    args = parser.parse_args(argv)
+    try:
+        if args.mode == "promote":
+            result = promote(args.manifest, args.root, get=get)
+        elif args.mode == "evidence":
+            result = evidence(args.manifest, args.root, runtime=args.runtime_evidence)
+        else:
+            result = synchronize(args.manifest, args.root, args.mode, get=get)
+    except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError) as error:
+        print("vendor-sync: " + str(error), file=sys.stderr)
+        return 2
+    print(json.dumps(result, ensure_ascii=False))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

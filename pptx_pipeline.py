@@ -26,7 +26,7 @@ def run(*, source=None, text=None, output, marp="marp", mmdc=None):
             prepared, images = render_mermaid(raw, working, mmdc=mmdc)
             input_path = working / "input.md"
             input_path.write_text(prepared, encoding="utf-8")
-            conversion = convert(input_path, output, marp=marp)
+            conversion = convert(input_path, output, marp=marp, allow_local_files=True)
             conversion["mermaid_svg_count"] = len(images)
     elif text is not None:
         if not text.strip():

@@ -267,6 +267,7 @@ def test_inline_markdown_theme_variants_and_svg_source_when_enabled(tmp_path, ki
         evidence = Path("build/test-results/marp-visual")
         evidence.mkdir(parents=True, exist_ok=True)
         (evidence / f"{kind}-{label}.png").write_bytes(data)
+        (evidence / f"{kind}-{label}.svg").write_bytes(images[0].read_bytes())
     assert observations[0]["preview_sha256"] != observations[1]["preview_sha256"]
     evidence = Path("build/test-results/marp-visual")
     (evidence / f"{kind}-theme-comparison.json").write_text(

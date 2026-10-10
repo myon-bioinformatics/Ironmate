@@ -252,3 +252,8 @@ The initial supported fence is a plain triple-backtick `mermaid` block. More ela
 ## SVG UML and Open XML edit experiment
 
 The SVG preprocessing lane also accepts **Mermaid `classDiagram`** as a narrow UML-class-diagram case: the same fenced `mermaid` source goes to Mermaid CLI, SVG, Marp and PPTX. This is not PlantUML syntax support; do not treat `plantuml` fenced blocks as implemented. The integration test checks both `flowchart` and `classDiagram` through real SVG→PPTX conversion. A separate test-only `pptx_xml_probe.py` updates `p:cSld/@name` in a **new** PPTX package, checks package-member preservation and reopens it with python-pptx. This demonstrates limited Open XML metadata editing, **not** editable SVG internals or general-purpose style mutation. Expand only after CI and visual evidence confirm behavior.
+
+
+## Visual preview verification (without LibreOffice)
+
+The opt-in integration renders both a Mermaid flowchart and Mermaid `classDiagram` (UML) as SVG and then asks Marp/Chromium to export **PNG previews**. The test validates the PNG signature and dimensions, saves the PNG plus SVG/PNG SHA-256 metadata to `build/test-results/marp-visual/`, and publishes them in CI artifacts. This is an image of the **same prepared Markdown rendered by Marp**, not a screenshot of the final PPTX in PowerPoint. A successful PNG export is not proof that the PPTX displays identically or that every label is legible: review the PNGs visually and compare against PPTX Open XML evidence. PowerPoint desktop fidelity remains outside scope.

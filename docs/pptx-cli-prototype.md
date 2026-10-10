@@ -282,3 +282,8 @@ The former `pptx_xml_probe.py`, `pptx_xml_shapes.py` and `pptx_xml_batch.py` mod
 ## Fixture ownership cleanup
 
 The web-review PPTX fixture generator now lives alongside its regression test in `tests/test_pptx_web_review_fixture.py`; the standalone root `pptx_web_review_fixture.py` was removed. CI still generates before/after artifacts by invoking the test-owned helper. Marp CLI (`marp_pptx.py`), Mermaid SVG (`mermaid_svg.py`), and the orchestration entry point (`pptx_pipeline.py`) remain separate because they have distinct CLI/API contracts; consolidating them without a compatibility plan would risk existing consumers.
+
+
+## Parent vendor catalog inventory (pending enrollment)
+
+Ironmate now tracks a copy of the parent's 30-entry `vendor-catalog/1` recommendations in `vendor-catalog.json`, including upstream tools marked `default_enrollment: skipped`. This is **discovery inventory only**, not a materialized vendor lock. `vendor.lock.json` remains the authority for checked-in bytes and is deliberately unchanged until each source path, license, full commit, Git blob and SHA-256 have been verified and enrolled using the canonical `vendor_sync.py enroll` workflow. Do not import or execute skipped catalog tools merely because they appear in the inventory. `cli_args.py` is catalogued but not yet installed. The parent-owned `vendor-consumers.json` must be updated in a separate coordinated change when actual consumer topology changes.

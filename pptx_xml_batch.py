@@ -1,9 +1,9 @@
 """Batch-edit explicit RGB native shape fills across ordered PPTX slides.
 
-Resolve presentation order through python-pptx slide parts, not slideN.xml guesses.
+Resolve presentation order from raw presentation.xml relationship targets.
 The original archive is never overwritten. All targets validate before writing.
 """
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from zipfile import ZipFile
 from xml.etree import ElementTree as ET
 
@@ -11,6 +11,37 @@ from pptx import Presentation
 
 A = "{http://schemas.openxmlformats.org/drawingml/2006/main}"
 P = "{http://schemas.openxmlformats.org/presentationml/2006/main}"
+R = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id"
+REL = "{http://schemas.openxmlformats.org/package/2006/relationships}"
+
+
+def _ordered_slide_members(package):
+    """Map display-order r:ids to the *stored* ZIP members, without OPC reserialization."""
+    presentation = ET.fromstring(package.read("ppt/presentation.xml"))
+    rels = ET.fromstring(package.read("ppt/_rels/presentation.xml.rels"))
+    mapping = {}
+    for rel in rels.findall(REL + "Relationship"):
+        if rel.get("Type", "").endswith("/slide"):
+            if rel.get("TargetMode", "Internal") != "Internal":
+                raise ValueError("external slide relationships are unsupported")
+            rid, target = rel.get("Id"), rel.get("Target", "")
+            if not rid or not target or ".." in PurePosixPath(target).parts or target.startswith("/"):
+                raise ValueError("invalid slide relationship target")
+            if rid in mapping:
+                raise ValueError("duplicate slide relationship")
+            mapping[rid] = "ppt/" + str(PurePosixPath(target))
+    ids = presentation.find(P + "sldIdLst")
+    if ids is None:
+        raise ValueError("slide order list missing")
+    ordered = []
+    for slide in ids.findall(P + "sldId"):
+        rid = slide.get(R)
+        if rid not in mapping:
+            raise ValueError("unresolved slide relationship")
+        ordered.append(mapping[rid])
+    if len(ordered) != len(set(ordered)):
+        raise ValueError("duplicate slide target")
+    return ordered
 
 
 def edit_shape_fills(source, destination, rules):
@@ -21,12 +52,14 @@ def edit_shape_fills(source, destination, rules):
     if not isinstance(rules, list) or not rules:
         raise ValueError("nonempty rules list required")
     presentation = Presentation(source)
-    parts = [str(s.part.partname).lstrip("/") for s in presentation.slides]
     parsed = {}
     targets = set()
     with ZipFile(source) as package:
         entries = package.infolist()
         names = [entry.filename for entry in entries]
+        parts = _ordered_slide_members(package)
+        if len(parts) != len(presentation.slides):
+            raise ValueError("slide count does not match presentation order")
         if len(names) != len(set(names)) or any(part not in names for part in parts):
             raise ValueError("invalid slide package members")
         for rule in rules:

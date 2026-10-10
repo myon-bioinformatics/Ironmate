@@ -26,12 +26,14 @@ jobs:
       - uses: actions/checkout@v7
         with:
           repository: myon-bioinformatics/myon-bioinformatics
-          ref: 7bd0603f6765481a23756e7d1a00a6451587d6ff
+          ref: 14ef53c8316015d1350e62ff9cce3301103e65a7
           path: .vendor-audit-tools
           persist-credentials: false
           sparse-checkout: |
             vendor_sync.py
             vendor_catalog.py
+            vendor_consumers.py
+            vendor-consumers.json
           sparse-checkout-cone-mode: false
       - name: Audit all recommended source and license identities
         env:
@@ -56,6 +58,9 @@ jobs:
               dest.parent.mkdir(parents=True, exist_ok=True)
               dest.write_bytes(source.read_bytes())
           PY
+      - name: Compare parent consumer topology against committed Ironmate lock
+        run: |
+          python -S .vendor-audit-tools/vendor_consumers.py compare --consumer myon-bioinformatics/Ironmate --lock vendor.lock.json --registry .vendor-audit-tools/vendor-consumers.json
       - name: Publish audit and proposed lock for review
         if: always()
         uses: actions/upload-artifact@v7

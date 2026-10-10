@@ -12,8 +12,8 @@ from pptx.dml.color import RGBColor
 from pptx.enum.shapes import MSO_SHAPE
 from pptx.util import Inches
 
-from pptx_xml_probe import set_run_style
-from pptx_xml_shapes import edit_shape
+from pptx_xml import set_run_style
+from pptx_xml import edit_shape
 
 
 def generate(directory):

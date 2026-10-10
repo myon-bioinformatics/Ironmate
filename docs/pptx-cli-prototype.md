@@ -257,3 +257,8 @@ The SVG preprocessing lane also accepts **Mermaid `classDiagram`** as a narrow U
 ## Visual preview verification (without LibreOffice)
 
 The opt-in integration renders both a Mermaid flowchart and Mermaid `classDiagram` (UML) as SVG and then asks Marp/Chromium to export **PNG previews**. The test validates the PNG signature and dimensions, saves the PNG plus SVG/PNG SHA-256 metadata to `build/test-results/marp-visual/`, and publishes them in CI artifacts. This is an image of the **same prepared Markdown rendered by Marp**, not a screenshot of the final PPTX in PowerPoint. A successful PNG export is not proof that the PPTX displays identically or that every label is legible: review the PNGs visually and compare against PPTX Open XML evidence. PowerPoint desktop fidelity remains outside scope.
+
+
+## Direct Markdown input and theme recolor matrix
+
+An opt-in real integration test passes multiline Markdown **directly** to `pptx_pipeline.run(text=...)`, pre-renders either a Mermaid flowchart or a UML `classDiagram` to SVG, then generates PPTX and Marp/Chromium PNG previews for light (white background/black text) and dark (navy background/white text) variants. It preserves per-variant PNG evidence and media hashes and requires the two rendered PNGs to differ. This validates regeneration after Markdown style changes, **not** in-place recoloring of SVG internals or PowerPoint Web display equivalence. Native editable run/shape recoloring remains a separate python-pptx/Open XML test lane.

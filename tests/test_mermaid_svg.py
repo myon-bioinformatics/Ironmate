@@ -65,3 +65,25 @@ def test_mermaid_background_option_and_invalid_color(monkeypatch, tmp_path):
     with pytest.raises(ValueError, match="background"):
         mermaid_svg.render_mermaid(source, tmp_path / "bad", background="red")
 
+
+
+def test_foreground_is_applied_before_svg_render_not_by_marp(monkeypatch, tmp_path):
+    from types import SimpleNamespace
+    monkeypatch.setattr(mermaid_svg.shutil, "which", lambda binary: "/fake/mmdc")
+    observed = []
+    def fake_run(command, **kwargs):
+        source = Path(command[command.index("-i") + 1])
+        observed.append(source.read_text(encoding="utf-8"))
+        Path(command[command.index("-o") + 1]).write_text("<svg></svg>", encoding="utf-8")
+        return SimpleNamespace(returncode=0, stderr="")
+    monkeypatch.setattr(mermaid_svg.subprocess, "run", fake_run)
+    raw = "flowchart LR\n A --> B"
+    original = "```mermaid\n" + raw + "\n```"
+    transformed, images = mermaid_svg.render_mermaid(
+        original, tmp_path, foreground="#FFFFFF", background="#14213D")
+    assert "primaryTextColor" in observed[0]
+    assert '"#FFFFFF"' in observed[0]
+    assert "lineColor" in observed[0]
+    assert raw in observed[0]
+    assert images[0].exists()
+    assert "primaryTextColor" not in transformed

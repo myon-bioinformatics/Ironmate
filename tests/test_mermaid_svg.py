@@ -31,7 +31,7 @@ def test_missing_mmdc_fails_explicitly(monkeypatch, tmp_path):
 def test_pipeline_opt_in_uses_svg_and_preserves_original(monkeypatch, tmp_path):
     source = "```mermaid\nflowchart LR\n A --> B\n```\n"
     seen = {}
-    def fake_render(raw, directory, *, mmdc, background="#FFFFFF"):
+    def fake_render(raw, directory, *, mmdc, background="#FFFFFF", foreground=None):
         assert background == "#FFFFFF"
         assert raw == source
         return "# Diagram\n", [directory / "mermaid-1.svg"]

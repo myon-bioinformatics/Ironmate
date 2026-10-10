@@ -33,3 +33,51 @@ def test_xml_edit_rejects_overwrite(tmp_path):
     with pytest.raises(ValueError, match="new file"):
         set_slide_name(source, source)
 
+
+
+
+def test_xml_native_run_style_roundtrip(tmp_path):
+    from pptx.dml.color import RGBColor
+    from pptx.util import Inches
+    from pptx_xml_probe import set_run_style
+    src, dst = tmp_path / "source.pptx", tmp_path / "style.pptx"
+    prs = Presentation()
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    box = slide.shapes.add_textbox(Inches(1), Inches(1), Inches(4), Inches(1))
+    run = box.text_frame.paragraphs[0].add_run()
+    run.text = "Editable"
+    run.font.color.rgb = RGBColor(100, 100, 100)
+    prs.save(src)
+    report = set_run_style(src, dst, rgb="#112233", points=24, bold=True)
+    assert report["runs"] == 1
+    actual = Presentation(dst).slides[0].shapes[0].text_frame.paragraphs[0].runs[0]
+    assert actual.font.color.rgb == RGBColor(17, 34, 51)
+    assert actual.font.size.pt == 24
+    assert actual.font.bold is True
+    assert actual.text == "Editable"
+    with ZipFile(src) as before, ZipFile(dst) as after:
+        assert before.namelist() == after.namelist()
+        assert all(before.read(name) == after.read(name) for name in before.namelist()
+                   if name != "ppt/slides/slide1.xml")
+
+
+def test_xml_style_rejects_inherited_rgb_without_output(tmp_path):
+    from pptx.util import Inches
+    from pptx_xml_probe import set_run_style
+    src, dst = tmp_path / "source.pptx", tmp_path / "style.pptx"
+    prs = Presentation()
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    slide.shapes.add_textbox(Inches(1), Inches(1), Inches(4), Inches(1)).text = "Inherited"
+    prs.save(src)
+    with pytest.raises(ValueError, match="explicit RGB"):
+        set_run_style(src, dst, rgb="#000000")
+    assert not dst.exists()
+
+
+@pytest.mark.parametrize("kwargs", [
+    {"rgb": "#xyzxyz"}, {"points": 0}, {"bold": "true"}, {}
+])
+def test_xml_style_invalid_rules_fail_closed(tmp_path, kwargs):
+    from pptx_xml_probe import set_run_style
+    with pytest.raises(ValueError):
+        set_run_style(tmp_path / "missing.pptx", tmp_path / "out.pptx", **kwargs)

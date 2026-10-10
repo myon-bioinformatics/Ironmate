@@ -5,7 +5,7 @@ from pptx.dml.color import RGBColor
 from pptx.enum.shapes import MSO_SHAPE
 from pptx.util import Inches
 import pytest
-from pptx_xml_shapes import edit_shape
+from pptx_xml import edit_shape
 
 
 def sample(path, *, explicit=True):

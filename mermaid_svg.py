@@ -11,8 +11,11 @@ import subprocess
 _FENCE = re.compile(r"(?m)^```mermaid[ \t]*\r?\n(.*?)^```[ \t]*$", re.DOTALL | re.MULTILINE)
 
 
-def render_mermaid(source, directory, *, mmdc="mmdc"):
+def render_mermaid(source, directory, *, mmdc="mmdc", background=None):
     """Return (transformed Markdown, SVG paths); reject unsupported fenced variants."""
+    if background is not None and (not isinstance(background, str) or len(background) != 7 or
+            not background.startswith("#") or any(ch not in "0123456789abcdefABCDEF" for ch in background[1:])):
+        raise ValueError("background must be #RRGGBB")
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
     matches = list(_FENCE.finditer(source))
@@ -35,7 +38,10 @@ def render_mermaid(source, directory, *, mmdc="mmdc"):
         if svg.exists() or source_file.exists():
             raise ValueError("Mermaid render output already exists")
         source_file.write_text(diagram, encoding="utf-8")
-        result = subprocess.run([executable, "-i", str(source_file), "-o", str(svg)],
+        command = [executable, "-i", str(source_file), "-o", str(svg)]
+        if background is not None:
+            command.extend(["-b", background])
+        result = subprocess.run(command,
                                 capture_output=True, text=True, timeout=120, check=False)
         if result.returncode != 0 or not svg.is_file():
             raise RuntimeError(f"Mermaid SVG conversion failed: {result.stderr.strip()}")

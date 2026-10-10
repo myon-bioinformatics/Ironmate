@@ -22,7 +22,7 @@ def edit_shape(source, destination, *, slide=1, shape_name, fill_rgb=None, line_
                                   or color[0] != "#" or any(c not in "0123456789abcdefABCDEF" for c in color[1:])):
             raise ValueError("colors must be #RRGGBB")
     for key, value in (("left", left), ("top", top), ("width", width), ("height", height)):
-        if value is not None and (type(value) not in (int, Emu) or (key in ("width", "height") and value <= 0)):
+        if value is not None and (not isinstance(value, int) or isinstance(value, bool) or (key in ("width", "height") and value <= 0)):
             raise ValueError("geometry must be integer EMUs with positive size")
     source, destination = Path(source), Path(destination)
     if source.resolve() == destination.resolve() or destination.exists():

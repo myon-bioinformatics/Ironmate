@@ -37,6 +37,25 @@ jobs:
         env:
           PYTHONPATH: .vendor-audit-tools
         run: python -S scripts/vendor_enrollment_audit.py
+      - name: Enroll proposed vendor files in disposable CI checkout
+        env:
+          PYTHONPATH: .vendor-audit-tools
+        run: |
+          cp build/vendor-enrollment-audit/proposed-vendor.lock.json vendor.lock.json
+          python -S .vendor-audit-tools/vendor_sync.py enroll --manifest vendor.lock.json
+          python -S .vendor-audit-tools/vendor_sync.py check --manifest vendor.lock.json
+          mkdir -p build/vendor-enrollment-audit/verified
+          cp vendor.lock.json build/vendor-enrollment-audit/verified/vendor.lock.json
+          python -S - <<'PY'
+          import json
+          from pathlib import Path
+          lock = json.loads(Path("vendor.lock.json").read_text(encoding="utf-8"))
+          for item in lock["files"]:
+              source = Path(item["destination"])
+              dest = Path("build/vendor-enrollment-audit/verified") / source
+              dest.parent.mkdir(parents=True, exist_ok=True)
+              dest.write_bytes(source.read_bytes())
+          PY
       - name: Publish audit and proposed lock for review
         if: always()
         uses: actions/upload-artifact@v7

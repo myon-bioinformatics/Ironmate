@@ -274,6 +274,16 @@ def main(argv=None):
     es.add_argument('--data-uri', action='store_true', help='limit includes the data:image/png;base64, prefix')
     es.add_argument('--no-meta', action='store_true', help='size output written with --no-meta (default: with header)')
     es.add_argument('--verify', action='store_true', help='encode each candidate and report the real size')
+    ft = sub.add_parser('fit', help='largest verified PNG/Base64 that fits a size limit (auto ratio/meta)')
+    ft.add_argument('input')
+    lim = ft.add_mutually_exclusive_group(required=True)
+    lim.add_argument('--limit-bytes', type=int)
+    lim.add_argument('--limit-chars', type=int)
+    ft.add_argument('--data-uri', action='store_true')
+    ft.add_argument('--prefer', choices=('lossless', 'largest'), default='lossless')
+    ft.add_argument('--to', choices=('base64', 'png'), default='base64')
+    ft.add_argument('-o', '--output')
+    ft.add_argument('--force', action='store_true')
     for cmd in (mk, ph, ld):
         cmd.add_argument('--to', choices=FORMATS, default='base64' if cmd is mk else 'json')
         cmd.add_argument('--scale', type=int, default=1, help='output pixels per cell (svg default 8)')
@@ -295,6 +305,28 @@ def main(argv=None):
             print(f'error: {exc}', file=sys.stderr)
             return 2
         print(json.dumps(result, ensure_ascii=False, indent=1))
+        return 0
+    if args.command == 'fit':
+        import ironmate_image
+        try:
+            res = ironmate_image.fit_to_limit(_read(args.input), args.limit_bytes, args.limit_chars, args.data_uri,
+                                              args.prefer)
+        except (OSError, ValueError, ImportError) as exc:
+            print(f'error: {exc}', file=sys.stderr)
+            return 2
+        info = {k: v for k, v in vars(res).items() if k not in ('data', 'text')}
+        print(json.dumps(info, ensure_ascii=False), file=sys.stderr)
+        data = res.data if args.to == 'png' else (res.text + '\n').encode()
+        if args.output:
+            from grid_output import write_output
+            try:
+                write_output(args.output, data, args.force)
+            except OSError as exc:
+                print(f'error: {exc}', file=sys.stderr)
+                return 2
+        else:
+            sys.stdout.buffer.write(data)
+            sys.stdout.flush()
         return 0
     try:
         if args.command == 'make':

@@ -152,6 +152,29 @@ python -c "import size_estimate as s;print(s.estimate(width=64,height=64,nbytes=
 
 測定（写真のJPEG/WebP/PNG、ドット絵）では見積もりは実測の0.75〜1.6倍に収まりました。PNGの圧縮率は内容で変わるため、上限に近いときは`--verify`を使ってください。
 
+#### かんたんAPI（`ironmate_image`）
+
+縮小率・メタデータの有無・形式判定を気にせず呼べる窓口です（標準モジュールのみ。JPEG/WebP入力はPillowがあれば可）。
+入力はパス・PNG/JPEG/WebPのbytes・Base64・data URI・ironmate JSONのどれでも構いません。
+
+```bash
+# 上限2万文字のBase64に収める（無劣化の縮小率を優先、入らなければメタデータを外して再挑戦）
+python -c "import ironmate_image as im;r=im.fit_to_limit('a.png',max_chars=20000,data_uri=True);print(r.ratio,r.chars,r.meta_used,r.warnings)"
+python -m grid_tools fit a.png --limit-chars 20000 --data-uri -o a.b64    # 結果の要約はstderrにJSON
+# 行ったり来たり
+python -c "import ironmate_image as im;s=im.to_base64('a.png');print(im.from_base64(s)['width'])"
+python -c "import ironmate_image as im,grid_tools as g;print(g.encode(im.resize('a.png',64)))"
+```
+
+| 関数 | 内容 |
+| --- | --- |
+| `fit_to_limit(src, max_bytes=None, max_chars=None, data_uri=False, prefer='lossless')` | 実際に符号化して上限内に収まった最大の結果（`FitResult`：`data`・`text`・`ratio`・`width`・`height`・`bytes`・`chars`・`meta_used`・`lossless`・`command`・`warnings`）。画素を優先し（無劣化→大きい比率）、同じ比率ならメタデータ付きを選ぶ。どうしても入らなければ`FitError` |
+| `to_base64(src, data_uri=False, meta=True)` / `to_png(src)` | 既定のgrid_tools出力 |
+| `from_base64(s)` / `load(src)` | グリッド（dict）へ。メタデータ付きなら完全に元通り |
+| `resize(src, width, height=None)` | 最近傍で拡大縮小（高さは縦横比を維持） |
+
+`FitResult.command`は同じバイト列を出すgrid_toolsのCLIです（テストで一致を確認）。
+
 #### クリップボード／Base64入力の事例集
 
 `tests/fixtures/base64_bridge_cases.json`に、Base64画像の貼り付けで起きやすい入力（data URIのtypeと中身の不一致、ラベルなしGIF、大文字の`DATA:`、BOM、`;charset=`等のparameter、76桁CRLF改行、URL-safe、`%3D`padding等）と期待結果をまとめています。Ironmateでの扱い：

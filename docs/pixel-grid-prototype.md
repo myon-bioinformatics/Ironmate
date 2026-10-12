@@ -215,6 +215,28 @@ PNGを標準ライブラリ（zlib+struct）で書く。時刻・テキストchu
 `photo_grid.py`・`pixel_grid.py`の`--format png`（遅延import）または`grid_png.py`のCLIで使う。
 標準PNG decoderでの読み戻しが元の色と一致することをテストで確認している。
 
+#### Base64出力（可逆性）
+
+`--format base64`（`photo_grid.py`・`pixel_grid.py`、`grid_png.to_base64`）は、`--format png`と
+同じbytesをBase64で出す。`--data-uri`で`data:image/png;base64,`付き。`--scale`と`-o`に従う。
+出力はそのまま`photo_grid.py`の入力にできる。
+
+- scale 1で、同じ`--size`を指定して読み戻すと元のgrid（palette＋色番号）と一致する。
+  pixel_grid.pyのgridは同じ`--palette`、photo_grid.pyのgridは`--colors`を元の不透明色数にする。
+- scale>1のPNGは、元の`--size`を指定すれば同じgridに戻る（各セルがscale×scaleの同色ブロックのため）。
+  異なる`--size`では別のgridになる。
+- median cutの出力は、どのセルにも使われない色をpaletteから除く（色番号は詰め直す）。
+  そのため photo_grid.py の出力は `--colors`=不透明色数で読み戻すと一致する。
+- 外部で作ったgridは、色番号0が透明・不透明色がRGB昇順・全色使用・重複なしの場合に一致する。
+  それ以外（0が透明でない、未使用色、半透明色alpha 1〜254）はセルの色は保てても番号やalphaは一致しない。
+  非正方形や8/16/32/64/128以外の寸法のgridは、PNG/Base64には書けるがphoto_grid.pyの入力では
+  正方形canvasへcropされるため同じgridには戻らない。
+
+Base64入力の規則：標準アルファベットと`=`padding必須（URL-safeの`-_`・padding省略は拒否）。
+空白・CRLF改行・先頭のBOMは無視。`data:`のschemeとtypeは大文字小文字を区別しない。
+data URIのtypeは省略か`image/png`・`image/jpeg`・`image/jpg`・`image/webp`のみで、
+復号したbytesの形式と一致しない場合はエラー（例：`data:text/plain;base64,`、`data:image/svg+xml;base64,`）。
+
 #### SVG出力（`grid_svg.py`）
 
 `to_svg(artifact, scale=8)` は `ironmate-pixel-grid/1` のJSON（pixel_grid.py・photo_grid.py共通）から

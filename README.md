@@ -49,6 +49,7 @@ python -S pixel_grid.py --mask cloud --palette nature --effect shadow --size 16
 | JSON（既定） | 標準ライブラリ |
 | SVG | 標準ライブラリ（`grid_svg.py`） |
 | PNG | 標準ライブラリ（`grid_png.py`、8bit RGBA、整数倍の最近傍拡大） |
+| Base64 | 標準ライブラリ（PNG出力と同じbytesをBase64化。`--data-uri`で`data:image/png;base64,...`） |
 
 WebP出力・PPTXネイティブ図形出力はありません。SVGは出力専用です。
 
@@ -64,6 +65,8 @@ python -S grid_svg.py grid.json -o grid.svg   # 既存のgrid JSONからSVG
 python -S photo_grid.py photo.png --size 32 --format png --scale 4 -o dots.png
 python -S pixel_grid.py --mask cloud --format png --scale 8 > cloud.png
 python -S grid_png.py grid.json --scale 8 -o grid.png
+python -S pixel_grid.py --mask cloud --format base64 --data-uri -o cloud.b64
+python -S photo_grid.py cloud.b64 --size 16 --palette nature   # 元のgridに戻る
 ```
 
 [写真入力の契約と制限](docs/pixel-grid-prototype.md#写真入力の最初の到達点base64からドットグリッドへ)。

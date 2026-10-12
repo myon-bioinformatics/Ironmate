@@ -16,7 +16,9 @@ __all__ = ['FITS', 'MAX_BYTES', 'MAX_PIXELS', 'ImageDecodeError', 'decode_base64
 FITS = ('crop', 'contain')
 MAX_BYTES = 8 * 1024 * 1024
 MAX_PIXELS = 4096 * 4096
-_DATA_URI = re.compile(r'data:([\w.+-]+/[\w.+-]+)?((?:;[\w.+-]+=[\w.+-]+)*);base64,', re.ASCII)
+_DATA_URI = re.compile(r'data:([\w.+-]+/[\w.+-]+)?((?:;[\w.+-]+=[\w.+-]+)*);base64,', re.ASCII | re.IGNORECASE)
+_MIME_SIGNATURES = {'image/png': (b'\x89PNG\r\n\x1a\n',), 'image/jpeg': (b'\xff\xd8\xff',),
+                    'image/jpg': (b'\xff\xd8\xff',), 'image/webp': (b'RIFF',)}
 _BASE64 = re.compile(r'[A-Za-z0-9+/]*={0,2}', re.ASCII)
 _PNG_SIGNATURE = b'\x89PNG\r\n\x1a\n'
 _PNG_CHANNELS = {0: 1, 2: 3, 4: 2, 6: 4}  # gray, RGB, gray+alpha, RGBA
@@ -183,11 +185,14 @@ def decode_base64(text, max_bytes=MAX_BYTES):
             text = text.decode('ascii')
         except UnicodeDecodeError:
             raise ValueError('Base64 input must be ASCII') from None
-    text = text.strip()
+    text = text.lstrip('\ufeff').strip()  # tolerate a UTF-8 BOM from Windows editors
     match = _DATA_URI.match(text)
+    mime = (match.group(1) or '').lower() if match else ''
+    if mime and mime not in _MIME_SIGNATURES:
+        raise ValueError(f'unsupported data URI type {mime!r}; use image/png, image/jpeg or image/webp')
     if match:
         text = text[match.end():]
-    elif text.startswith('data:'):
+    elif text[:5].lower() == 'data:':
         raise ValueError('data URI must be base64-encoded (data:<type>;base64,...)')
     text = ''.join(text.split())
     if not text:
@@ -195,13 +200,18 @@ def decode_base64(text, max_bytes=MAX_BYTES):
     if len(text) // 4 * 3 > max_bytes + 2:
         raise ValueError(f'decoded input exceeds {max_bytes} bytes')
     if len(text) % 4 or not _BASE64.fullmatch(text):
-        raise ValueError('invalid Base64 input')
+        raise ValueError('invalid Base64 input (standard alphabet A-Z a-z 0-9 + / with = padding; '
+                         'URL-safe -_ and unpadded input are rejected)')
     try:
         data = base64.b64decode(text, validate=True)
     except (binascii.Error, ValueError):
         raise ValueError('invalid Base64 input') from None
     if len(data) > max_bytes:
         raise ValueError(f'decoded input exceeds {max_bytes} bytes')
+    if mime and not data.startswith(_MIME_SIGNATURES[mime]):
+        raise ValueError(f'data URI says {mime} but the decoded bytes are not that format')
+    if mime == 'image/webp' and data[8:12] != b'WEBP':
+        raise ValueError('data URI says image/webp but the decoded bytes are not that format')
     return data
 
 
@@ -269,7 +279,8 @@ def decode_pillow(data, max_pixels=MAX_PIXELS):
     except ImageDecodeError:
         raise
     except Exception as exc:  # Pillow raises several types for unreadable input
-        raise ImageDecodeError(f'Pillow could not decode the image: {exc}') from None
+        raise ImageDecodeError('unrecognized or corrupt image (PNG, JPEG/JPG and WebP are supported; '
+                               f'Pillow reported {type(exc).__name__})') from None
     raw, stride = image.tobytes(), image.width * 4
     return image.width, image.height, [raw[y * stride:(y + 1) * stride] for y in range(image.height)]
 
@@ -286,7 +297,7 @@ def convert(text, size=16, fit='crop', colors=8, palette=None, decoder=decode_im
     """Base64 text (or raw PNG bytes) -> ``ironmate-pixel-grid/1`` artifact. Index 0 is always transparent.
 
     ``palette`` names a fixed pixel_grid palette; otherwise ``colors`` (1-16) opaque colors
-    are chosen by deterministic median cut. Cells with averaged alpha < 128 become index 0.
+    are chosen by deterministic median cut (unused colors dropped). Cells with averaged alpha < 128 become index 0.
     """
     if type(size) is not int or size not in SIZES:
         raise ValueError('size must be 8, 16, 32, 64 or 128')
@@ -314,6 +325,11 @@ def convert(text, size=16, fit='crop', colors=8, palette=None, decoder=decode_im
         rgb = _median_cut(list(counts.items()), colors) if counts else []
     pixels = [[0 if not cell or cell[3] < 128 else 1 + _nearest(cell[:3], rgb) for cell in row]
               for row in canvas]
+    if not palette:  # drop median-cut colors no cell maps to, so the palette is canonical
+        used = sorted({v for row in pixels for v in row} - {0})
+        remap = {old: new for new, old in enumerate(used, 1)}
+        pixels = [[remap.get(v, 0) for v in row] for row in pixels]
+        rgb = [rgb[old - 1] for old in used]
     table = ['#00000000'] + ['#%02X%02X%02XFF' % value for value in rgb]
     return {'schema': 'ironmate-pixel-grid/1', 'source': {'width': width, 'height': height},
             'fit': fit, 'palette': palette, 'quantize': 'fixed' if palette else 'median_cut',
@@ -328,8 +344,9 @@ def main(argv=None):
     p.add_argument('--fit', choices=FITS, default='crop')
     p.add_argument('--colors', type=int, default=8, help='median-cut colors, 1-16 (default 8)')
     p.add_argument('--palette', choices=PALETTES, help='use a fixed pixel_grid palette instead')
-    p.add_argument('--format', choices=('json', 'svg', 'png'), default='json')
-    p.add_argument('--scale', type=int, help='pixels per cell, 1-64 (default svg 8, png 1)')
+    p.add_argument('--format', choices=('json', 'svg', 'png', 'base64'), default='json')
+    p.add_argument('--data-uri', action='store_true', help='base64: emit data:image/png;base64,...')
+    p.add_argument('--scale', type=int, help='pixels per cell, 1-64 (default svg 8, png/base64 1)')
     p.add_argument('-o', '--output', help='write the result here instead of stdout')
     args = p.parse_args(argv)
     try:
@@ -339,7 +356,10 @@ def main(argv=None):
             with open(args.input, 'rb') as handle:
                 text = handle.read(MAX_BYTES * 2)
         artifact = convert(text, args.size, args.fit, args.colors, args.palette)
-        if args.format == 'png':
+        if args.format == 'base64':
+            from grid_png import to_base64
+            result = (to_base64(artifact, args.scale or 1, args.data_uri) + '\n').encode('ascii')
+        elif args.format == 'png':
             from grid_png import to_png
             result = to_png(artifact, args.scale or 1)
         elif args.format == 'svg':

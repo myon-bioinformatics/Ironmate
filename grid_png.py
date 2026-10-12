@@ -4,9 +4,9 @@
 same grid and scale always give the same bytes. ``scale`` is integer nearest-neighbour.
 """
 from __future__ import annotations
-import argparse, json, re, struct, sys, zlib
+import argparse, base64, json, re, struct, sys, zlib
 
-__all__ = ['MAX_PIXELS', 'to_png', 'main']
+__all__ = ['MAX_PIXELS', 'to_png', 'to_base64', 'main']
 MAX_PIXELS = 4096 * 4096
 _RGBA = re.compile(r'#[0-9A-Fa-f]{8}')
 
@@ -37,6 +37,12 @@ def to_png(artifact, scale=1):
     header = struct.pack('>IIBBBBB', width * scale, height * scale, 8, 6, 0, 0, 0)
     return (b'\x89PNG\r\n\x1a\n' + _chunk(b'IHDR', header)
             + _chunk(b'IDAT', zlib.compress(bytes(raw), 9)) + _chunk(b'IEND', b''))
+
+
+def to_base64(artifact, scale=1, data_uri=False):
+    """Base64 of ``to_png`` bytes (optionally ``data:image/png;base64,...``); readable by photo_grid."""
+    text = base64.b64encode(to_png(artifact, scale)).decode('ascii')
+    return 'data:image/png;base64,' + text if data_uri else text
 
 
 def main(argv=None):

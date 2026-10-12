@@ -65,7 +65,7 @@ CLI JSONと副作用のないimportを検証する。
 
 ## 今後の段階（未実装）
 
-1. **出力とサイズ別設計**：JSON gridからPNG/SVGへ出力。
+1. **出力とサイズ別設計**：JSON gridからPNG/SVGへ出力（SVGは`grid_svg.py`で試作済み、PNGは未実装）。
    16/32/64それぞれのseedまたは輪郭規則を用意し、単なる拡大との差を比較する。
    観察用拡大は最近傍でセル境界を維持する。
 2. **キャラクター部品**：胴体・頭・目・口・手足・装備をlayerで合成。
@@ -203,6 +203,21 @@ CSSの読み取りに関する既存の横断資産は、必要になった時�
 | 減色 | 既定はmedian cut（1〜16色、既定8色、同値時の選び方を固定）。`--palette`ではpixel_grid.pyの固定paletteの番号1〜4へ最近色（RGB二乗距離、同距離は小さい番号）で割り当てる |
 | 透過 | 平均alphaが128未満のセルは色番号0（`#00000000`）。それ以外は不透明色として出力 |
 
+入力形式：PNGは標準ライブラリのみで対応。JPEG/JPGとWebPはPillowがインストールされている
+場合のみ対応し、無い場合は「Pillowが必要」というエラーにする（標準版はPNGのみ）。
+
+#### SVG出力（`grid_svg.py`）
+
+`to_svg(artifact, scale=8)` は `ironmate-pixel-grid/1` のJSON（pixel_grid.py・photo_grid.py共通）から
+SVGを標準ライブラリだけで書く。Base64→decode→grid→SVGを1コマンドで行える
+（`photo_grid.py --format svg [-o out.svg]`、既定はJSONのまま）。
+
+- `viewBox`はグリッド単位、`--scale`（1〜64、既定8）はwidth/heightのみ変える。`shape-rendering="crispEdges"`。
+- 同じ色の横方向の連続を1つの`<rect>`にまとめる（`--no-merge`で1セル1つ）。塗られる範囲は同じ。
+- 色番号0とalpha 0の色は出力しない。`fill="#rrggbb"`、alpha<255は`fill-opacity`。
+- metadataは`<title>`/`<desc>`にXMLエスケープして入れる。同じ入力なら同じSVG。
+- PNG・WebP出力、PPTXネイティブ図形出力は行わない。
+
 同じ入力・同じ指定なら同じJSONになる。乱数・ネットワークは使わない。
 PNGのdecoderは対象を8bitの基本形式に絞った小さなadapterで、パレットPNG・16bit・
 interlace・APNG・色空間chunk（gAMA/iCCP等）は扱わない（前3つは明示的にエラー）。
@@ -210,6 +225,6 @@ JPEG等のdecoderは独自実装せず、Pillowへ任せる方針を維持する
 Pillow版と標準版は同じadapter契約なので、後から差し替え・追加できる。
 
 制限：ditherなし、縮小方式は面積平均のみ（BOX/LANCZOS等との比較は未実施）、
-出力はJSONのみ（絵文字プレビュー・PNG/SVGはなし）、背景除去・顔などの意味的補正なし。
+出力はJSON/SVG（絵文字プレビュー・PNG/WebP出力はなし）、背景除去・顔などの意味的補正なし。
 標準版は純Pythonなので大きな画像は遅い（1000×1000で約1秒の目安）。
 見た目の品質は評価していない。

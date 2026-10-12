@@ -36,13 +36,23 @@ python -S pixel_grid.py --mask cloud --palette nature --effect shadow --size 16
 
 `photo_grid.py`は、Base64（生の文字列または`data:image/...;base64,`）で渡された画像を
 復号し、同じ`ironmate-pixel-grid/1`形式（固定RGBA＋色番号グリッド）のJSONにします。
-PNG（8bitのgray/gray+alpha/RGB/RGBA、非interlace）は標準ライブラリだけで読み、
-JPEG/WebP等はPillowが入っている場合のみ扱います（Pillowは必須依存ではありません）。
+出力はJSON（既定）またはSVG（`--format svg`）です。PNG出力・WebP出力・PPTXネイティブ図形出力はありません。
+
+| 入力形式 | 標準ライブラリのみ | Pillowあり |
+| --- | --- | --- |
+| PNG（8bitのgray/gray+alpha/RGB/RGBA、非interlace） | 対応 | 対応（標準decoderを使用） |
+| JPEG/JPG | 非対応（Pillowが必要というエラー） | 対応 |
+| WebP | 非対応（Pillowが必要というエラー） | 対応 |
+
+Pillowは必須依存ではありません。
 
 ```bash
 base64 -w0 photo.png > photo.b64
 python -S photo_grid.py photo.b64 --size 32 --colors 8
 python photo_grid.py photo.b64 --size 16 --palette nature --fit contain
+python -S photo_grid.py photo.b64 --size 32 --format svg --scale 8 -o photo.svg
+python -S pixel_grid.py --mask cloud --format svg > cloud.svg
+python -S grid_svg.py grid.json -o grid.svg   # 既存のgrid JSONからSVG
 ```
 
 [写真入力の契約と制限](docs/pixel-grid-prototype.md#写真入力の最初の到達点base64からドットグリッドへ)。

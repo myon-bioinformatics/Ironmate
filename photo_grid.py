@@ -322,6 +322,9 @@ def main(argv=None):
     p.add_argument('--fit', choices=FITS, default='crop')
     p.add_argument('--colors', type=int, default=8, help='median-cut colors, 1-16 (default 8)')
     p.add_argument('--palette', choices=PALETTES, help='use a fixed pixel_grid palette instead')
+    p.add_argument('--format', choices=('json', 'svg'), default='json')
+    p.add_argument('--scale', type=int, default=8, help='SVG pixels per cell, 1-64 (default 8)')
+    p.add_argument('-o', '--output', help='write the result here instead of stdout')
     args = p.parse_args(argv)
     try:
         if args.input == '-':
@@ -330,10 +333,19 @@ def main(argv=None):
             with open(args.input, encoding='ascii') as handle:
                 text = handle.read(MAX_BYTES * 2)
         artifact = convert(text, args.size, args.fit, args.colors, args.palette)
+        if args.format == 'svg':
+            from grid_svg import to_svg
+            result = to_svg(artifact, args.scale)
+        else:
+            result = json.dumps(artifact, ensure_ascii=False) + '\n'
+        if args.output:
+            with open(args.output, 'w', encoding='utf-8') as handle:
+                handle.write(result)
+        else:
+            sys.stdout.write(result)
     except (OSError, UnicodeDecodeError, ValueError) as exc:
         print(f'error: {exc}', file=sys.stderr)
         return 2
-    print(json.dumps(artifact, ensure_ascii=False))
     return 0
 
 

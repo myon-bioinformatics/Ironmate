@@ -51,7 +51,7 @@ python -S pixel_grid.py --mask circle --palette C02 --size 31 --format png --sca
 
 | 入力 | 判定 | 必要な依存 | 理由・挙動 |
 | --- | --- | --- | --- |
-| `.png`（8bit gray / gray+alpha / RGB / RGBA、非interlace） | 対応 | なし（標準ライブラリ） | PNGの圧縮はzlib（deflate）なので、標準の`zlib`＋`struct`で展開・filter復元できる。gray・RGBの`tRNS`（透明色）はalpha 0に反映（RGB値は保持、Pillowと画素一致）。zlib streamは終端・checksumまで必須で、切断・後続データはエラー |
+| `.png`（8bit gray / gray+alpha / RGB / RGBA、非interlace） | 対応 | なし（標準ライブラリ） | PNGの圧縮はzlib（deflate）なので、標準の`zlib`＋`struct`で展開・filter復元できる。gray・RGBの`tRNS`（透明色）はalpha 0に反映（RGB値は保持、Pillowと画素一致）。zlib streamは終端・checksumまで必須で、切断・後続データはエラー。APNGはエラーにせず既定画像（IDAT）だけを読む（既定画像がアニメーションに含まれない場合も同じ。Pillow経由も一致） |
 | `.png`（palette・16bit・interlace） | 条件付き | Pillow | 標準decoderは対象外の形式として明示エラー。Pillowがあれば自動でPillowで読む（無ければ「unsupported PNG …」「interlaced PNG …」のエラー）。palette＋`tRNS`の透明度もPillowでRGBAに反映（期待値と画素一致をテスト） |
 | Base64のPNG（生の文字列） | 対応 | なし | 標準の`base64`で元のbytesに戻してから上と同じ処理。標準アルファベット＋`=`padding必須（URL-safe・padding省略はエラー）。空白・改行（CRLF）・BOMは無視 |
 | data URI（`data:image/png;base64,`） | 対応 | なし | 上と同じ。typeと中身が違う場合（例：`image/jpeg`なのにPNG）や、上記以外のtype（gif・svg+xml等）は「unsupported data URI type」等のエラー |

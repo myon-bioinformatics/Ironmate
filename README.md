@@ -134,6 +134,73 @@ python -m grid_tools photo photo.jpg --size 32 --colors 8 --to base64 --data-uri
 標準ライブラリ実装を基準（oracle）とし、テストでPillow（PNG展開・NEAREST拡大）とnumpy（倍率判定・拡大縮小・SVG描画）
 の結果がbyte単位で一致することを確認しています。512×512 PNG→128セル復元の目安：標準約250ms、Pillow約190ms、numpy約180ms（手元計測）。
 
+#### 縮小率と出力サイズの見積もり（`estimate`）
+
+Base64の文字数上限（例：エージェントのメッセージ上限）に収めるための縮小率を出します。
+出力はgrid_toolsと同じ8bit RGBA PNG（filter 0、zlib 9）として見積もります。
+対象は**既定のgrid_tools出力**です。つまり`ironmate`メタデータ（tEXt）付きで、`load INPUT --size W --resize w2 --to base64 [--data-uri]`が実際に出す長さを測ります。メタデータを付けない出力を測るときは`--no-meta`（Python では`meta=False`）を指定します。
+
+```bash
+python -m grid_tools estimate --width 1024 --height 768 --bytes 900000 --limit-chars 200000 --data-uri
+python -m grid_tools estimate photo.jpg --limit-chars 100000 --data-uri --verify   # 実際に符号化して確認
+python -c "import size_estimate as s;print(s.estimate(width=64,height=64,nbytes=3000,limit_chars=2000)['recommended'])"
+```
+
+| 項目 | 内容 |
+| --- | --- |
+| Base64文字数 | `4*ceil(bytes/3)`（`=`padding込み、`--data-uri`なら`data:image/png;base64,`の22文字を加算）。厳密 |
+| 推奨 | `recommended`（2/3・1/2など簡単な分数）、`integer_option`（1/k）、`lossless_option`（最近傍で無劣化） |
+| 無劣化の判定 | 同色連続長の最大公約数（cell scale）をkが割り切る1/kのみ無劣化 |
+| メタデータ | 既定で`est_bytes`・`upper_bytes`・`actual_bytes`にtEXt分を含む。resizeはパレットを全部残すので、色数の多い写真はヘッダーだけで大きくなる（その場合は`--no-meta`を案内） |
+| 上限 | `upper_bytes`は無圧縮deflateとメタデータ込みの厳密な上限。`typical_low_bytes`は目安 |
+| 使った信号 | `signals_used`：PNGのIHDR・PLTE・tRNS・IDAT圧縮率・meta、JPEGのSOF・量子化表からの品質推定・subsampling・EXIF、WebPのVP8/VP8L/VP8X、色数・alpha・エントロピー・連続長・cell scale |
+| 信頼度 | `confidence`：low（寸法とbytesのみ）／medium（画素を再符号化して測定）／verified（`--verify`で各候補を`grid_tools.encode`で実符号化。各候補に同じ出力を出す`command`を併記） |
+
+測定（写真のJPEG/WebP/PNG、ドット絵）では見積もりは実測の0.75〜1.6倍に収まりました。PNGの圧縮率は内容で変わるため、上限に近いときは`--verify`を使ってください。
+
+#### かんたんAPI（`ironmate_image`）
+
+縮小率・メタデータの有無・形式判定を気にせず呼べる窓口です（標準モジュールのみ。JPEG/WebP入力はPillowがあれば可）。
+入力はパス・PNG/JPEG/WebPのbytes・Base64・data URI・ironmate JSONのどれでも構いません。
+
+```bash
+# 上限2万文字のBase64に収める（無劣化の縮小率を優先、入らなければメタデータを外して再挑戦）
+python -c "import ironmate_image as im;r=im.fit_to_limit('a.png',max_chars=20000,data_uri=True);print(r.ratio,r.chars,r.meta_used,r.warnings)"
+python -m grid_tools fit a.png --limit-chars 20000 --data-uri -o a.b64    # 結果の要約はstderrにJSON
+# 行ったり来たり
+python -c "import ironmate_image as im;s=im.to_base64('a.png');print(im.from_base64(s)['width'])"
+python -c "import ironmate_image as im,grid_tools as g;print(g.encode(im.resize('a.png',64)))"
+```
+
+| 関数 | 内容 |
+| --- | --- |
+| `fit_to_limit(src, max_bytes=None, max_chars=None, data_uri=False, prefer='lossless')` | 実際に符号化して上限内に収まった最大の結果（`FitResult`：`data`・`text`・`ratio`・`width`・`height`・`bytes`・`chars`・`meta_used`・`lossless`・`command`・`warnings`）。画素を優先し（無劣化→大きい比率）、同じ比率ならメタデータ付きを選ぶ。どうしても入らなければ`FitError` |
+| `to_base64(src, data_uri=False, meta=True)` / `to_png(src)` | 既定のgrid_tools出力 |
+| `from_base64(s)` / `load(src)` | グリッド（dict）へ。メタデータ付きなら完全に元通り |
+| `resize(src, width, height=None)` | 最近傍で拡大縮小（高さは縦横比を維持） |
+
+`FitResult.command`は同じバイト列を出すgrid_toolsのCLIです（テストで一致を確認）。
+
+#### プライバシー（元画像のメタデータは必ず捨てる）
+
+出力（PNG・Base64・data URI・SVG・JSON）には、元画像のEXIF（GPS位置情報・撮影日時・機種・作者を含む）、XMP、ICCプロファイル、PNGの`tEXt`/`zTXt`/`iTXt`（作者・コメント等）、`eXIf`、`tIME`などは**一切含まれません**。画素だけを読み、出力はゼロから書き直すためです。`ironmate_image`・`grid_tools`（`photo`/`load`/`fit`）・`photo_grid`のすべての経路で、元の文字列が出力に残らないことをテスト（`tests/test_privacy.py`）で確認しています。
+
+PNG出力に入るのは`IHDR`・`IDAT`・`IEND`と、既定ではironmateの`tEXt`1つだけです。その中身は次の項目に限ります（`--no-meta`なら付きません）。
+
+| 項目 | 内容 |
+| --- | --- |
+| `schema`・`width`・`height` | 形式名とグリッドの大きさ |
+| `colors`・`palette` | パレット（`#RRGGBBAA`の並び）と色ID |
+| `mask`・`effect`・`fit`・`quantize`・`resampling` | 生成・変換の設定 |
+| `source`・`restored` | 元画像の幅・高さ・形式名・倍率（数値と短い識別子のみ） |
+
+これ以外のキーや自由な文字列は、書き出すときも、ironmateヘッダー付きPNGを読み込むときも捨てます（他のツールが作ったヘッダーに個人情報が入っていても引き継ぎません）。
+
+#### クリップボード／Base64入力の事例集
+
+`tests/fixtures/base64_bridge_cases.json`に、Base64画像の貼り付けで起きやすい入力（data URIのtypeと中身の不一致、ラベルなしGIF、大文字の`DATA:`、BOM、`;charset=`等のparameter、76桁CRLF改行、URL-safe、`%3D`padding等）と期待結果をまとめています。Ironmateでの扱い：
+`;key=value`形式のparameterは受け付けて無視、引用符付きの値や`;base64`なしはエラー、上限はbyte数が正（文字数は`4*ceil(bytes/3)`から導出、空白は数えない）。他の実装（Flutter等）のテストでも同じJSONを読めます。
+
 ## 責務
 
 - 共通GitHub操作・vendor管理は [親リポジトリ](https://github.com/myon-bioinformatics/myon-bioinformatics) と [gh_identity](https://github.com/myon-bioinformatics/gh_identity) を参照します。

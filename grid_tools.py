@@ -48,7 +48,8 @@ def _png_meta(data):
             if (not isinstance(colors, list) or not colors
                     or not all(isinstance(c, str) and _HEX.fullmatch(c) for c in colors)):
                 raise ValueError('ironmate metadata colors must be a non-empty list of #RRGGBBAA')
-            return meta
+            from grid_png import header_info
+            return header_info(meta)   # foreign/free-text fields in a header are dropped, never echoed
         if kind in (b'IDAT', b'IEND'):
             return None
         pos += 12 + length
@@ -263,6 +264,27 @@ def main(argv=None):
     ld = sub.add_parser('load', help='dot-art PNG/SVG/JSON/Base64 -> grid')
     ld.add_argument('input')
     ld.add_argument('--size', type=int, help='original grid width (skips scale detection)')
+    es = sub.add_parser('estimate', help='recommend a downscale so PNG/Base64 fits a size limit')
+    es.add_argument('input', nargs='?', help='image file, Base64 or data URI (optional)')
+    es.add_argument('--width', type=int)
+    es.add_argument('--height', type=int)
+    es.add_argument('--bytes', type=int, dest='nbytes', help='current file size')
+    es.add_argument('--chars', type=int, help='current Base64 length')
+    es.add_argument('--limit-bytes', type=int)
+    es.add_argument('--limit-chars', type=int)
+    es.add_argument('--data-uri', action='store_true', help='limit includes the data:image/png;base64, prefix')
+    es.add_argument('--no-meta', action='store_true', help='size output written with --no-meta (default: with header)')
+    es.add_argument('--verify', action='store_true', help='encode each candidate and report the real size')
+    ft = sub.add_parser('fit', help='largest verified PNG/Base64 that fits a size limit (auto ratio/meta)')
+    ft.add_argument('input')
+    lim = ft.add_mutually_exclusive_group(required=True)
+    lim.add_argument('--limit-bytes', type=int)
+    lim.add_argument('--limit-chars', type=int)
+    ft.add_argument('--data-uri', action='store_true')
+    ft.add_argument('--prefer', choices=('lossless', 'largest'), default='lossless')
+    ft.add_argument('--to', choices=('base64', 'png'), default='base64')
+    ft.add_argument('-o', '--output')
+    ft.add_argument('--force', action='store_true')
     for cmd in (mk, ph, ld):
         cmd.add_argument('--to', choices=FORMATS, default='base64' if cmd is mk else 'json')
         cmd.add_argument('--scale', type=int, default=1, help='output pixels per cell (svg default 8)')
@@ -273,6 +295,40 @@ def main(argv=None):
         cmd.add_argument('-o', '--output')
         cmd.add_argument('--force', action='store_true', help='replace an existing -o file')
     args = p.parse_args(argv)
+    if args.command == 'estimate':
+        from size_estimate import estimate
+        try:
+            result = estimate(_read(args.input) if args.input else None, width=args.width, height=args.height,
+                              nbytes=args.nbytes, chars=args.chars, limit_bytes=args.limit_bytes,
+                              limit_chars=args.limit_chars, data_uri=args.data_uri, verify=args.verify,
+                              meta=not args.no_meta)
+        except (OSError, ValueError, ImportError) as exc:
+            print(f'error: {exc}', file=sys.stderr)
+            return 2
+        print(json.dumps(result, ensure_ascii=False, indent=1))
+        return 0
+    if args.command == 'fit':
+        import ironmate_image
+        try:
+            res = ironmate_image.fit_to_limit(_read(args.input), args.limit_bytes, args.limit_chars, args.data_uri,
+                                              args.prefer)
+        except (OSError, ValueError, ImportError) as exc:
+            print(f'error: {exc}', file=sys.stderr)
+            return 2
+        info = {k: v for k, v in vars(res).items() if k not in ('data', 'text')}
+        print(json.dumps(info, ensure_ascii=False), file=sys.stderr)
+        data = res.data if args.to == 'png' else (res.text + '\n').encode()
+        if args.output:
+            from grid_output import write_output
+            try:
+                write_output(args.output, data, args.force)
+            except OSError as exc:
+                print(f'error: {exc}', file=sys.stderr)
+                return 2
+        else:
+            sys.stdout.buffer.write(data)
+            sys.stdout.flush()
+        return 0
     try:
         if args.command == 'make':
             art = make(args.mask, args.palette, args.effect, args.size)

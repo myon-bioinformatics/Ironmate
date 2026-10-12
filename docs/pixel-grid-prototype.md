@@ -8,52 +8,89 @@ Ironmate #77の「試作・検証・候補として保管」に沿った候補�
 ## 実装した範囲
 
 `pixel_grid.py` は単一ファイル・stdlib-onlyで、import時に入出力しない。
-JSONと絵文字を標準出力へ出す。自動保存や画像依存の追加はない。
+`render(mask, palette, effect, size)` が `ironmate-pixel-grid/1` を返す（`resampling: procedural_mask`）。
+`filename(artifact)` は `{形}_{色ID}_{加工}_{サイズ}.png`（例：`triangle_C01_shadow_32.png`）。
 
-```sh
-python -S pixel_grid.py --mask cloud --palette nature --effect shadow --size 16
-python -S pixel_grid.py --mask circle --palette water --effect outline --size 32 --format json
-```
-
-Pythonでは `render(mask, palette, effect, size)` が
-`ironmate-pixel-grid/1` を返し、`emoji(artifact)` が閲覧用文字列を作る。
-
-| 軸 | 第1弾 |
+| 軸 | 現在 |
 | --- | --- |
-| マスク | triangle / diamond / cloud / circle / rock |
-| 配色 | nature / water / lava / poison / desert / snow |
+| 形 | triangle / diamond / cloud / circle / rock（手続き生成） |
+| 配色 | 色ID `C01`〜`C10`（main/shadowから派生） |
 | 加工 | normal / shadow / highlight / outline（いずれか1つ） |
-| キャンバス | 8 / 16 / 32 / 64 / 128の正方形 |
-| 正規データ | 色番号の二次元配列＋固定RGBA palette |
-| 出力 | JSON / 絵文字プレビュー |
+| サイズ | 形ごとの範囲内の任意の整数（下表） |
+| 正規データ | 色番号の二次元配列＋固定RGBA palette（0=透明） |
+| 出力 | 絵文字 / JSON / SVG / PNG |
 
-5×6×4×5 = **600設定**。600種類の違う完成素材、または見た目の品質を
-保証する数ではない。通常の比較は16/32/64、8は小型の限界、128は拡大の
-限界を確認するために含める。サイズは用途の選択であり品質の順位ではない。
+`SIZES = (8, 16, 32, 64, 128)` は photo_grid.py と共有する代表サイズとして残す。
+pixel_grid では8を下限としない形がある（cloud・diamondは8では描かない）。
 
-## データと描画規則
+### 色ID
 
-色番号は0=透明、1=本色、2=影、3=明部、4=輪郭。
-RGBAは `#RRGGBBAA`。背景の透明と黒い輪郭を分け、絵文字をデータの本体にしない。
-絵文字は端末・フォントによって表示が異なり、透明の白セルや同じ記号に
-見える色がある。例示色は役割を見分ける近似であり、正確な色・透過はJSONで判定する。
+- IDは `C` ＋2桁の連番（`C01`〜`C10`）。一度割り当てたIDは別の色に再利用しない。
+  色名（grass等）は `PALETTE_LABELS` の参考ラベルで、CLI・JSON・ファイル名には使わない。
+- 定義は `PALETTE_BASE[ID] = (main, shadow)`。色番号は 0=透明、1=main、2=shadow、3=highlight、4=outline。
+- highlight・outlineはRGBの各成分を整数で四捨五入（0.5は切り上げ）して派生する：
+  - highlight = round((3 × main + 2 × 255) / 5)（mainを白へ40%寄せる）
+  - outline = round(shadow / 2)（shadowを黒へ50%寄せる）
+- C05（main #FFFFFF）はhighlightがmainと同じ色になる。
 
-- マスクは長方形の0/1 seed。菱形・丸型は正方形、雲・三角は横長。
-- 正方形canvasの内側へ、縦横比を保つ近傍参照でfitし中央に配置。
-  二値seedが0.5を含まないよう、補間・アンチエイリアスは行わない。
-  roundingによる1セル程度の形・余白の差はあり得る。
-- 外側には透明marginを残す。影は形の下1/3、明部は上1/3を置換する。
-- 輪郭は4近傍のいずれかが透明である**形の内側のセル**を色4へ置換する。
-  silhouetteは変えず、小型では内部が減ることがある。
-- 加工は独立した選択肢で、影＋明部＋輪郭の組み合わせはまだない。
-- 同じ入力は同じ出力。乱数・ネットワーク・外部モデルは使わない。
+| ID | main | shadow | ラベル |
+| --- | --- | --- | --- |
+| C01 | #5BBD3E | #418A2D | grass |
+| C02 | #63B3FF | #3F75CC | water |
+| C03 | #FF6A00 | #CC3D00 | lava |
+| C04 | #A84DFF | #7520B8 | poison |
+| C05 | #FFFFFF | #CFD8E6 | snow |
+| C06 | #E0C072 | #B08D45 | sand（仮） |
+| C07 | #9EA4AB | #6D737B | stone（仮） |
+| C08 | #A8693A | #744423 | wood（仮） |
+| C09 | #FFD23F | #C99A17 | gold（仮） |
+| C10 | #FF86C0 | #C9568F | blossom（仮） |
 
-小さなseedを64へ拡大しても細部は増えない。現在のcircleは小型の離散近似で、
-サイズ別に設計した円形ではない。第1弾の上限として記録する。
+C01〜C05はユーザー指定の値。C06〜C10は10色にするための仮の値で、目視評価は未実施。
+
+### 形（手続き生成）
+
+固定seedの拡大ではなく、サイズごとに図形を計算し直す。外周1セルは透明margin。
+
+| 形 | 生成方法 | サイズ範囲 |
+| --- | --- | --- |
+| triangle | 1行ごとに左右1セルずつ広げる（頂点1または2セル、高さ≒幅/2） | 5〜256 |
+| diamond | セル中心の L1距離 ≤ 半径 | 9〜256 |
+| circle | セル中心の距離 ≤ 半径 | 6〜256 |
+| rock | 指数2.6の超楕円（高さ0.7×幅）、下側を平らにカット | 7〜256 |
+| cloud | 平らな底の上に3つの円（左右r=0.16W、中央r=0.2W）、各列の穴を埋める | 16〜256 |
+
+品質規則（`mask_problem`）に合わない場合は、半径・幅を少し小さくする等の決まった順の候補を試し、
+最初に合格したものを使う。どれも合格しなければ `ValueError`。範囲外のサイズも `ValueError`。
+
+### 品質規則
+
+1. 透明margin、4連結、穴・列の途切れなし（cloud以外は行の途切れもなし）。
+2. 左右対称。circle・diamondは上下対称も必要。
+3. 輪郭のぎざぎざなし：上端・下端（列ごと）と左端（行ごと）の各輪郭を単調な区間に分け、
+   - 2セル以上の段差が平らな区間と隣り合わない（2×2の階段を作らない）
+   - 隣り合う同じ種類の区間（段差の大きさ、平らな区間の長さ）の比が2倍以内
+   （区間の両端は切れているので比較しない）。cloudの左端は、puffの切れ込みより下だけを見る。
+4. 形として読めること：triangleは頂点2セル以下で底辺が最大、diamondは頂点2セル以下・充填率0.65以下、
+   circleは外接四角形が正方形で角が空き充填率0.68〜0.9、rockは横長・角が空き・底辺が幅の半分以上、
+   cloudは上端に2つ以上の切れ込み・底辺が幅の半分以上・頂上が1セルの尖りでないこと。
+
+サイズ範囲は3〜256の全サイズを走査して決めた。下限は「それ以上の全サイズが合格する最小値」。
+下限未満で合格するサイズ（diamondの5・7、cloudの14）もあるが、範囲を連続にするため採用しない。
+上限256は出力サイズの方針上の上限で、品質規則の限界ではない。
+範囲内では5つの形が同じサイズで互いに異なることも確認している（16〜64）。
+
+### 加工
+
+色番号の置換で表す。影＝形の下1/3を2、明部＝上1/3を3、
+輪郭＝4近傍に透明がある形の内側のセルを4。silhouetteは変えない。
+
+同じ入力は同じ出力。乱数・ネットワーク・外部モデルは使わない。
+絵文字は各色に最も近い絵文字を選ぶ近似表示で、正確な色・透過はJSONで判定する。
 
 ## 検証と評価
 
-自動テストでは600設定の寸法・色範囲・透過margin・非空・決定性、
+自動テストでは範囲内の全サイズ（heavy）の品質規則、奇数・代表サイズでの寸法・色範囲・決定性、
 加工前後のsilhouette維持、影/明部の位置、輪郭境界、入力拒否、
 CLI JSONと副作用のないimportを検証する。
 既存pytestからJUnitを生成できるため、専用の証跡生成処理は増やさない。
@@ -107,9 +144,9 @@ from pixel_grid import render
 
 variants = {
     name: render("cloud", name, "shadow", 16)
-    for name in ("nature", "water", "lava", "snow")
+    for name in ("C01", "C02", "C03", "C05")
 }
-baseline = variants["nature"]["pixels"]
+baseline = variants["C01"]["pixels"]
 assert all(item["pixels"] == baseline for item in variants.values())
 assert len({tuple(item["colors"]) for item in variants.values()}) == 4
 ```

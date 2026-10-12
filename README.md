@@ -24,12 +24,21 @@ Marp CLIは事前インストールが必要で、コマンドが勝手にNode/n
 
 ## ドット絵の試作候補
 
-`pixel_grid.py`で、5種類の形・6配色・4加工・5サイズの色番号グリッドを
-再現可能に生成します。第1弾は絵文字プレビューとJSON。写真変換や
-キャラクターの部品合成は次段階です。
+`pixel_grid.py`で、5種類の形（手続き生成）・10配色（色ID `C01`〜`C10`）・4加工を、
+形ごとの範囲内の任意サイズ（奇数も可）で再現可能な色番号グリッドにします。
+きれいに描けないサイズは生成せずエラーにします。
+
+| 形 | 最小〜最大サイズ |
+| --- | --- |
+| triangle | 5〜256 |
+| diamond | 9〜256 |
+| cloud | 16〜256 |
+| circle | 6〜256 |
+| rock | 7〜256 |
 
 ```bash
-python -S pixel_grid.py --mask cloud --palette nature --effect shadow --size 16
+python -S pixel_grid.py --mask cloud --palette C01 --effect shadow --size 23
+python -S pixel_grid.py --mask circle --palette C02 --size 31 --format png --scale 8 > circle.png
 ```
 
 [第1弾の契約・検証・今後の設計](docs/pixel-grid-prototype.md)。
@@ -58,7 +67,7 @@ Pillowは必須依存ではありません。
 ```bash
 base64 -w0 photo.png > photo.b64
 python -S photo_grid.py photo.b64 --size 32 --colors 8
-python photo_grid.py photo.b64 --size 16 --palette nature --fit contain
+python photo_grid.py photo.b64 --size 16 --palette C01 --fit contain
 python -S photo_grid.py photo.b64 --size 32 --format svg --scale 8 -o photo.svg
 python -S pixel_grid.py --mask cloud --format svg > cloud.svg
 python -S grid_svg.py grid.json -o grid.svg   # 既存のgrid JSONからSVG
@@ -66,7 +75,7 @@ python -S photo_grid.py photo.png --size 32 --format png --scale 4 -o dots.png
 python -S pixel_grid.py --mask cloud --format png --scale 8 > cloud.png
 python -S grid_png.py grid.json --scale 8 -o grid.png
 python -S pixel_grid.py --mask cloud --format base64 --data-uri -o cloud.b64
-python -S photo_grid.py cloud.b64 --size 16 --palette nature   # 元のgridに戻る
+python -S photo_grid.py cloud.b64 --size 16 --palette C01   # 元のgridに戻る
 ```
 
 [写真入力の契約と制限](docs/pixel-grid-prototype.md#写真入力の最初の到達点base64からドットグリッドへ)。

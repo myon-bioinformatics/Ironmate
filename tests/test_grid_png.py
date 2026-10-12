@@ -18,7 +18,7 @@ def _cells(art, scale=1):
 @pytest.mark.parametrize('scale', [1, 3])
 def test_round_trip_through_stdlib_decoder(scale):
     for mask in pixel_grid.MASKS:
-        art = pixel_grid.render(mask, 'water', 'shadow', 16)
+        art = pixel_grid.render(mask, 'C02', 'shadow', 16)
         data = gp.to_png(art, scale)
         assert data == gp.to_png(art, scale)
         w, h, rows = photo_grid.decode_png(data)
@@ -28,7 +28,7 @@ def test_round_trip_through_stdlib_decoder(scale):
 
 
 def test_png_grid_png_round_trip_is_identical():
-    art = pixel_grid.render('circle', 'lava', 'outline', 32)
+    art = pixel_grid.render('circle', 'C03', 'outline', 32)
     back = photo_grid.convert(base64.b64encode(gp.to_png(art)).decode(), size=32, colors=16)
     assert _cells(back) == _cells(art)
     raw = photo_grid.convert(gp.to_png(art), size=32, colors=16)  # plain PNG bytes, no Base64
@@ -36,8 +36,8 @@ def test_png_grid_png_round_trip_is_identical():
 
 
 @pytest.mark.parametrize('art,kw', [
-    (pixel_grid.render(size=8), {'scale': 0}), (pixel_grid.render(size=8), {'scale': 65}),
-    (pixel_grid.render(size=8) | {'width': 9}, {}), (pixel_grid.render(size=8) | {'colors': ['#000']}, {}),
+    (pixel_grid.render('circle', size=8), {'scale': 0}), (pixel_grid.render('circle', size=8), {'scale': 65}),
+    (pixel_grid.render('circle', size=8) | {'width': 9}, {}), (pixel_grid.render('circle', size=8) | {'colors': ['#000']}, {}),
     (pixel_grid.render(size=128), {'scale': 64})])
 def test_invalid(art, kw):
     with pytest.raises(ValueError):
@@ -45,13 +45,13 @@ def test_invalid(art, kw):
 
 
 def test_plain_png_file_and_oversize():
-    data = gp.to_png(pixel_grid.render(size=8))
+    data = gp.to_png(pixel_grid.render('circle', size=8))
     with pytest.raises(ValueError, match='exceeds'):
         photo_grid.convert(data, size=8, max_bytes=len(data) - 1)
 
 
 def test_cli_png_outputs(tmp_path):
-    art = pixel_grid.render('rock', 'snow', 'normal', 8)
+    art = pixel_grid.render('rock', 'C05', 'normal', 8)
     png = tmp_path / 'in.png'
     png.write_bytes(gp.to_png(art))
     b64 = tmp_path / 'in.b64'
@@ -68,7 +68,7 @@ def test_cli_png_outputs(tmp_path):
     assert photo_grid.decode_png(outs[0])[:2] == (16, 16)
     j = subprocess.run(photo + [str(png), '--size', '8'], capture_output=True, text=True)
     assert _cells(json.loads(j.stdout)) == _cells(art)
-    r = subprocess.run([sys.executable, '-S', str(ROOT / 'pixel_grid.py'), '--mask', 'rock', '--palette', 'snow',
+    r = subprocess.run([sys.executable, '-S', str(ROOT / 'pixel_grid.py'), '--mask', 'rock', '--palette', 'C05',
                         '--size', '8', '--format', 'png'], capture_output=True)
     assert r.returncode == 0 and r.stdout == gp.to_png(art)
     jf = tmp_path / 'a.json'

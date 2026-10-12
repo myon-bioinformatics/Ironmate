@@ -109,8 +109,8 @@ def test_photo_like_round_trip(name, fit):
             for scale, uri in ((1, False), (2, True)):
                 back = pg.convert(gp.to_base64(art, scale, uri), size=size, colors=len(art['colors']) - 1)
                 assert _key(back) == _key(art)
-        fixed = pg.convert(source, size=size, fit=fit, palette='nature')
-        assert _key(pg.convert(gp.to_base64(fixed), size=size, palette='nature')) == _key(fixed)
+        fixed = pg.convert(source, size=size, fit=fit, palette='C01')
+        assert _key(pg.convert(gp.to_base64(fixed), size=size, palette='C01')) == _key(fixed)
 
 
 def test_median_cut_drops_unused_colors():
@@ -119,7 +119,7 @@ def test_median_cut_drops_unused_colors():
     assert {v for row in art['pixels'] for v in row} == set(range(len(art['colors'])))
 
 
-PNG8 = gp.to_png(pixel_grid.render(size=8))
+PNG8 = gp.to_png(pixel_grid.render('circle', size=8))
 B64 = base64.b64encode(PNG8).decode()
 
 
@@ -128,7 +128,7 @@ B64 = base64.b64encode(PNG8).decode()
     '\ufeff' + B64, 'DATA:IMAGE/PNG;BASE64,' + B64, 'data:image/png;base64,\r\n' + B64,
     'data:;base64,' + B64, B64.encode('ascii'), PNG8])
 def test_accepted_inputs(text):
-    assert _key(pg.convert(text, size=8, palette='nature')) == _key(pixel_grid.render(size=8))
+    assert _key(pg.convert(text, size=8, palette='C01')) == _key(pixel_grid.render('circle', size=8))
 
 
 @pytest.mark.parametrize('text,match', [

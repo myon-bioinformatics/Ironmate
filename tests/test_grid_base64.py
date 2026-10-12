@@ -47,7 +47,7 @@ def test_photo_grid_round_trip_identical(data_uri):
 
 
 def test_same_bytes_as_png_and_deterministic():
-    art = pixel_grid.render('cloud', 'lava', 'shadow', 32)
+    art = pixel_grid.render('cloud', 'C03', 'shadow', 32)
     for scale in (1, 4):
         text = gp.to_base64(art, scale)
         assert text == gp.to_base64(art, scale)
@@ -56,26 +56,26 @@ def test_same_bytes_as_png_and_deterministic():
 
 
 def test_scaled_round_trip_needs_matching_target():
-    art = pixel_grid.render('diamond', 'water', 'normal', 16)
+    art = pixel_grid.render('diamond', 'C02', 'normal', 16)
     text = gp.to_base64(art, scale=2)  # 32x32 image
-    assert _key(photo_grid.convert(text, size=16, palette='water')) == _key(art)  # target = original size
-    assert photo_grid.convert(text, size=32, palette='water')['width'] == 32  # different grid
+    assert _key(photo_grid.convert(text, size=16, palette='C02')) == _key(art)  # target = original size
+    assert photo_grid.convert(text, size=32, palette='C02')['width'] == 32  # different grid
 
 
 def test_cli_end_to_end(tmp_path):
     out = tmp_path / 'g.b64'
-    r = subprocess.run(PIXEL + ['--mask', 'rock', '--palette', 'desert', '--size', '8', '--format', 'base64',
+    r = subprocess.run(PIXEL + ['--mask', 'rock', '--palette', 'C06', '--size', '8', '--format', 'base64',
                                 '--data-uri', '-o', str(out)], capture_output=True, text=True)
     assert r.returncode == 0 and r.stdout == '', r.stderr
-    art = pixel_grid.render('rock', 'desert', 'normal', 8)
+    art = pixel_grid.render('rock', 'C06', 'normal', 8)
     assert out.read_text(encoding='ascii') == gp.to_base64(art, data_uri=True) + '\n'
-    j = subprocess.run(PHOTO + [str(out), '--size', '8', '--palette', 'desert'], capture_output=True, text=True)
+    j = subprocess.run(PHOTO + [str(out), '--size', '8', '--palette', 'C06'], capture_output=True, text=True)
     assert _key(json.loads(j.stdout)) == _key(art)
-    again = subprocess.run(PHOTO + [str(out), '--size', '8', '--palette', 'desert', '--format', 'base64'],
+    again = subprocess.run(PHOTO + [str(out), '--size', '8', '--palette', 'C06', '--format', 'base64'],
                            capture_output=True, text=True)
     assert again.stdout == gp.to_base64(art) + '\n'
-    piped = subprocess.run(PHOTO + ['-', '--size', '8', '--palette', 'desert'], input=again.stdout,
+    piped = subprocess.run(PHOTO + ['-', '--size', '8', '--palette', 'C06'], input=again.stdout,
                            capture_output=True, text=True)
     assert _key(json.loads(piped.stdout)) == _key(art)
-    scaled = subprocess.run(PIXEL + ['--size', '8', '--format', 'base64', '--scale', '3'], capture_output=True, text=True)
+    scaled = subprocess.run(PIXEL + ['--mask', 'circle', '--size', '8', '--format', 'base64', '--scale', '3'], capture_output=True, text=True)
     assert photo_grid.decode_png(base64.b64decode(scaled.stdout))[:2] == (24, 24)

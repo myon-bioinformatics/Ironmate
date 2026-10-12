@@ -1,0 +1,183 @@
+{
+ "schemaVersion": 1,
+ "generator": "Ironmate tests/test_base64_bridge_cases.py (cases are literal)",
+ "about": "Text payloads for clipboard/Base64 image import. Mirrors flutter_navigation_basic Base64ImageBridge bugs (flutterBug = number in the review). expect: ok -> decoded format; reject -> category + message substring from Ironmate photo_grid.decode_image.",
+ "limits": {
+  "maxInputBytes": 8388608,
+  "maxBase64Chars": 11184812,
+  "note": "chars limit = 4*ceil(bytes/3) (+ data URI prefix); the byte limit is authoritative"
+ },
+ "cases": [
+  {
+   "id": "raw_png",
+   "description": "raw Base64 PNG",
+   "text": "iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAAY3RFWHRpcm9ubWF0ZQB7ImNvbG9ycyI6WyIjMDAwMDAwMDAiLCIjRkYwMDAwRkYiXSwiaGVpZ2h0IjoxLCJzY2hlbWEiOiJpcm9ubWF0ZS1waXhlbC1ncmlkLzEiLCJ3aWR0aCI6Mn332HEQAAAADklEQVR42mNgAIL/QAQABQQB/38FbVAAAAAASUVORK5CYII=",
+   "expect": "ok",
+   "result": "png",
+   "messageContains": null,
+   "flutterBug": null
+  },
+  {
+   "id": "data_png",
+   "description": "data URI PNG",
+   "text": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAAY3RFWHRpcm9ubWF0ZQB7ImNvbG9ycyI6WyIjMDAwMDAwMDAiLCIjRkYwMDAwRkYiXSwiaGVpZ2h0IjoxLCJzY2hlbWEiOiJpcm9ubWF0ZS1waXhlbC1ncmlkLzEiLCJ3aWR0aCI6Mn332HEQAAAADklEQVR42mNgAIL/QAQABQQB/38FbVAAAAAASUVORK5CYII=",
+   "expect": "ok",
+   "result": "png",
+   "messageContains": null,
+   "flutterBug": null
+  },
+  {
+   "id": "data_mismatch_jpeg_label",
+   "description": "data URI says JPEG, bytes are PNG",
+   "text": "data:image/jpeg;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAAY3RFWHRpcm9ubWF0ZQB7ImNvbG9ycyI6WyIjMDAwMDAwMDAiLCIjRkYwMDAwRkYiXSwiaGVpZ2h0IjoxLCJzY2hlbWEiOiJpcm9ubWF0ZS1waXhlbC1ncmlkLzEiLCJ3aWR0aCI6Mn332HEQAAAADklEQVR42mNgAIL/QAQABQQB/38FbVAAAAAASUVORK5CYII=",
+   "expect": "reject",
+   "result": "mismatch",
+   "messageContains": "says image/jpeg",
+   "flutterBug": 1
+  },
+  {
+   "id": "data_mismatch_png_label",
+   "description": "data URI says PNG, bytes are JPEG",
+   "text": "data:image/png;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgMCAgMDAwMEAwMEBQgFBQQEBQoHBwYIDAoMDAsKCwsNDhIQDQ4RDgsLEBYQERMUFRUVDA8XGBYUGBIUFRT/2wBDAQMEBAUEBQkFBQkUDQsNFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBT/wAARCAACAAIDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD5cooor8qP79P/2Q==",
+   "expect": "reject",
+   "result": "mismatch",
+   "messageContains": "says image/png",
+   "flutterBug": 1
+  },
+  {
+   "id": "raw_gif",
+   "description": "raw Base64 GIF (no label)",
+   "text": "R0lGODlhAQABAAAAADs=",
+   "expect": "reject",
+   "result": "unsupported_format",
+   "messageContains": "GIF input is not supported",
+   "flutterBug": 1
+  },
+  {
+   "id": "data_gif",
+   "description": "data URI GIF",
+   "text": "data:image/gif;base64,R0lGODlhAQABAAAAADs=",
+   "expect": "reject",
+   "result": "unsupported_type",
+   "messageContains": "unsupported data URI type",
+   "flutterBug": 1
+  },
+  {
+   "id": "upper_scheme",
+   "description": "uppercase DATA:/IMAGE/PNG;BASE64",
+   "text": "DATA:IMAGE/PNG;BASE64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAAY3RFWHRpcm9ubWF0ZQB7ImNvbG9ycyI6WyIjMDAwMDAwMDAiLCIjRkYwMDAwRkYiXSwiaGVpZ2h0IjoxLCJzY2hlbWEiOiJpcm9ubWF0ZS1waXhlbC1ncmlkLzEiLCJ3aWR0aCI6Mn332HEQAAAADklEQVR42mNgAIL/QAQABQQB/38FbVAAAAAASUVORK5CYII=",
+   "expect": "ok",
+   "result": "png",
+   "messageContains": null,
+   "flutterBug": 2
+  },
+  {
+   "id": "bom",
+   "description": "UTF-8 BOM before raw Base64",
+   "text": "﻿iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAAY3RFWHRpcm9ubWF0ZQB7ImNvbG9ycyI6WyIjMDAwMDAwMDAiLCIjRkYwMDAwRkYiXSwiaGVpZ2h0IjoxLCJzY2hlbWEiOiJpcm9ubWF0ZS1waXhlbC1ncmlkLzEiLCJ3aWR0aCI6Mn332HEQAAAADklEQVR42mNgAIL/QAQABQQB/38FbVAAAAAASUVORK5CYII=",
+   "expect": "ok",
+   "result": "png",
+   "messageContains": null,
+   "flutterBug": 2
+  },
+  {
+   "id": "param_charset",
+   "description": "data URI with ;charset=utf-8",
+   "text": "data:image/png;charset=utf-8;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAAY3RFWHRpcm9ubWF0ZQB7ImNvbG9ycyI6WyIjMDAwMDAwMDAiLCIjRkYwMDAwRkYiXSwiaGVpZ2h0IjoxLCJzY2hlbWEiOiJpcm9ubWF0ZS1waXhlbC1ncmlkLzEiLCJ3aWR0aCI6Mn332HEQAAAADklEQVR42mNgAIL/QAQABQQB/38FbVAAAAAASUVORK5CYII=",
+   "expect": "ok",
+   "result": "png",
+   "messageContains": null,
+   "flutterBug": 2
+  },
+  {
+   "id": "param_name",
+   "description": "data URI with ;name=dot.png",
+   "text": "data:image/png;name=dot.png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAAY3RFWHRpcm9ubWF0ZQB7ImNvbG9ycyI6WyIjMDAwMDAwMDAiLCIjRkYwMDAwRkYiXSwiaGVpZ2h0IjoxLCJzY2hlbWEiOiJpcm9ubWF0ZS1waXhlbC1ncmlkLzEiLCJ3aWR0aCI6Mn332HEQAAAADklEQVR42mNgAIL/QAQABQQB/38FbVAAAAAASUVORK5CYII=",
+   "expect": "ok",
+   "result": "png",
+   "messageContains": null,
+   "flutterBug": 2
+  },
+  {
+   "id": "param_quoted",
+   "description": "data URI with quoted parameter value",
+   "text": "data:image/png;name=\"a b.png\";base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAAY3RFWHRpcm9ubWF0ZQB7ImNvbG9ycyI6WyIjMDAwMDAwMDAiLCIjRkYwMDAwRkYiXSwiaGVpZ2h0IjoxLCJzY2hlbWEiOiJpcm9ubWF0ZS1waXhlbC1ncmlkLzEiLCJ3aWR0aCI6Mn332HEQAAAADklEQVR42mNgAIL/QAQABQQB/38FbVAAAAAASUVORK5CYII=",
+   "expect": "reject",
+   "result": "bad_data_uri",
+   "messageContains": "base64-encoded",
+   "flutterBug": 2
+  },
+  {
+   "id": "not_base64_uri",
+   "description": "data URI without ;base64",
+   "text": "data:image/png,iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAAY3RFWHRpcm9ubWF0ZQB7ImNvbG9ycyI6WyIjMDAwMDAwMDAiLCIjRkYwMDAwRkYiXSwiaGVpZ2h0IjoxLCJzY2hlbWEiOiJpcm9ubWF0ZS1waXhlbC1ncmlkLzEiLCJ3aWR0aCI6Mn332HEQAAAADklEQVR42mNgAIL/QAQABQQB/38FbVAAAAAASUVORK5CYII=",
+   "expect": "reject",
+   "result": "bad_data_uri",
+   "messageContains": "base64-encoded",
+   "flutterBug": 2
+  },
+  {
+   "id": "wrapped_crlf_76",
+   "description": "CRLF wrapped at 76 columns",
+   "text": "iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAAY3RFWHRpcm9ubWF0ZQB7ImNvbG9y\r\ncyI6WyIjMDAwMDAwMDAiLCIjRkYwMDAwRkYiXSwiaGVpZ2h0IjoxLCJzY2hlbWEiOiJpcm9ubWF0\r\nZS1waXhlbC1ncmlkLzEiLCJ3aWR0aCI6Mn332HEQAAAADklEQVR42mNgAIL/QAQABQQB/38FbVAA\r\nAAAASUVORK5CYII=",
+   "expect": "ok",
+   "result": "png",
+   "messageContains": null,
+   "flutterBug": 3
+  },
+  {
+   "id": "wrapped_spaces_tabs",
+   "description": "spaces and tabs inside",
+   "text": "iVBORw0KGgoAAAANSUhE \tUgAAAAIAAAABCAYAAAD0 \tIn+KAAAAY3RFWHRpcm9u \tbWF0ZQB7ImNvbG9ycyI6 \tWyIjMDAwMDAwMDAiLCIj \tRkYwMDAwRkYiXSwiaGVp \tZ2h0IjoxLCJzY2hlbWEi \tOiJpcm9ubWF0ZS1waXhl \tbC1ncmlkLzEiLCJ3aWR0 \taCI6Mn332HEQAAAADklE \tQVR42mNgAIL/QAQABQQB \t/38FbVAAAAAASUVORK5C \tYII=",
+   "expect": "ok",
+   "result": "png",
+   "messageContains": null,
+   "flutterBug": 3
+  },
+  {
+   "id": "url_safe",
+   "description": "URL-safe alphabet -_",
+   "text": "iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In-KAAAAY3RFWHRpcm9ubWF0ZQB7ImNvbG9ycyI6WyIjMDAwMDAwMDAiLCIjRkYwMDAwRkYiXSwiaGVpZ2h0IjoxLCJzY2hlbWEiOiJpcm9ubWF0ZS1waXhlbC1ncmlkLzEiLCJ3aWR0aCI6Mn332HEQAAAADklEQVR42mNgAIL_QAQABQQB_38FbVAAAAAASUVORK5CYII=",
+   "expect": "reject",
+   "result": "bad_base64",
+   "messageContains": "URL-safe",
+   "flutterBug": 4
+  },
+  {
+   "id": "pct_padding",
+   "description": "percent-encoded padding %3D",
+   "text": "iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAAY3RFWHRpcm9ubWF0ZQB7ImNvbG9ycyI6WyIjMDAwMDAwMDAiLCIjRkYwMDAwRkYiXSwiaGVpZ2h0IjoxLCJzY2hlbWEiOiJpcm9ubWF0ZS1waXhlbC1ncmlkLzEiLCJ3aWR0aCI6Mn332HEQAAAADklEQVR42mNgAIL/QAQABQQB/38FbVAAAAAASUVORK5CYII%3D",
+   "expect": "reject",
+   "result": "bad_base64",
+   "messageContains": "invalid Base64",
+   "flutterBug": 4
+  },
+  {
+   "id": "no_padding",
+   "description": "padding removed",
+   "text": "iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAAY3RFWHRpcm9ubWF0ZQB7ImNvbG9ycyI6WyIjMDAwMDAwMDAiLCIjRkYwMDAwRkYiXSwiaGVpZ2h0IjoxLCJzY2hlbWEiOiJpcm9ubWF0ZS1waXhlbC1ncmlkLzEiLCJ3aWR0aCI6Mn332HEQAAAADklEQVR42mNgAIL/QAQABQQB/38FbVAAAAAASUVORK5CYII",
+   "expect": "reject",
+   "result": "bad_base64",
+   "messageContains": "invalid Base64",
+   "flutterBug": 4
+  },
+  {
+   "id": "extra_padding",
+   "description": "extra = padding",
+   "text": "iVBORw0KGgoAAAANSUhEUgAAAAIAAAABCAYAAAD0In+KAAAAY3RFWHRpcm9ubWF0ZQB7ImNvbG9ycyI6WyIjMDAwMDAwMDAiLCIjRkYwMDAwRkYiXSwiaGVpZ2h0IjoxLCJzY2hlbWEiOiJpcm9ubWF0ZS1waXhlbC1ncmlkLzEiLCJ3aWR0aCI6Mn332HEQAAAADklEQVR42mNgAIL/QAQABQQB/38FbVAAAAAASUVORK5CYII===",
+   "expect": "reject",
+   "result": "bad_base64",
+   "messageContains": "invalid Base64",
+   "flutterBug": 4
+  },
+  {
+   "id": "empty",
+   "description": "empty input",
+   "text": "   ",
+   "expect": "reject",
+   "result": "empty",
+   "messageContains": "empty",
+   "flutterBug": null
+  }
+ ]
+}

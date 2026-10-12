@@ -263,6 +263,16 @@ def main(argv=None):
     ld = sub.add_parser('load', help='dot-art PNG/SVG/JSON/Base64 -> grid')
     ld.add_argument('input')
     ld.add_argument('--size', type=int, help='original grid width (skips scale detection)')
+    es = sub.add_parser('estimate', help='recommend a downscale so PNG/Base64 fits a size limit')
+    es.add_argument('input', nargs='?', help='image file, Base64 or data URI (optional)')
+    es.add_argument('--width', type=int)
+    es.add_argument('--height', type=int)
+    es.add_argument('--bytes', type=int, dest='nbytes', help='current file size')
+    es.add_argument('--chars', type=int, help='current Base64 length')
+    es.add_argument('--limit-bytes', type=int)
+    es.add_argument('--limit-chars', type=int)
+    es.add_argument('--data-uri', action='store_true', help='limit includes the data:image/png;base64, prefix')
+    es.add_argument('--verify', action='store_true', help='encode each candidate and report the real size')
     for cmd in (mk, ph, ld):
         cmd.add_argument('--to', choices=FORMATS, default='base64' if cmd is mk else 'json')
         cmd.add_argument('--scale', type=int, default=1, help='output pixels per cell (svg default 8)')
@@ -273,6 +283,17 @@ def main(argv=None):
         cmd.add_argument('-o', '--output')
         cmd.add_argument('--force', action='store_true', help='replace an existing -o file')
     args = p.parse_args(argv)
+    if args.command == 'estimate':
+        from size_estimate import estimate
+        try:
+            result = estimate(_read(args.input) if args.input else None, width=args.width, height=args.height,
+                              nbytes=args.nbytes, chars=args.chars, limit_bytes=args.limit_bytes,
+                              limit_chars=args.limit_chars, data_uri=args.data_uri, verify=args.verify)
+        except (OSError, ValueError, ImportError) as exc:
+            print(f'error: {exc}', file=sys.stderr)
+            return 2
+        print(json.dumps(result, ensure_ascii=False, indent=1))
+        return 0
     try:
         if args.command == 'make':
             art = make(args.mask, args.palette, args.effect, args.size)

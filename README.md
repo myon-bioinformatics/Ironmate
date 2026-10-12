@@ -34,15 +34,36 @@ python -S pixel_grid.py --mask cloud --palette nature --effect shadow --size 16
 
 [第1弾の契約・検証・今後の設計](docs/pixel-grid-prototype.md)。
 
-`photo_grid.py`は、Base64（生の文字列または`data:image/...;base64,`）で渡された画像を
-復号し、同じ`ironmate-pixel-grid/1`形式（固定RGBA＋色番号グリッド）のJSONにします。
-PNG（8bitのgray/gray+alpha/RGB/RGBA、非interlace）は標準ライブラリだけで読み、
-JPEG/WebP等はPillowが入っている場合のみ扱います（Pillowは必須依存ではありません）。
+`photo_grid.py`は、Base64（生の文字列または`data:image/...;base64,`）または画像ファイルを
+読み、同じ`ironmate-pixel-grid/1`形式（固定RGBA＋色番号グリッド）にします。
+
+| 入力形式（Base64包み・ファイルとも） | 標準ライブラリのみ | Pillowあり |
+| --- | --- | --- |
+| PNG（8bitのgray/gray+alpha/RGB/RGBA、非interlace） | 対応 | 対応（標準decoderを使用） |
+| JPEG/JPG | 非対応（Pillowが必要というエラー） | 対応 |
+| WebP | 非対応（Pillowが必要というエラー） | 対応 |
+| SVG | 非対応（入力としては扱わない） | 非対応 |
+
+| 出力形式（`--format`） | 実装 |
+| --- | --- |
+| JSON（既定） | 標準ライブラリ |
+| SVG | 標準ライブラリ（`grid_svg.py`） |
+| PNG | 標準ライブラリ（`grid_png.py`、8bit RGBA、整数倍の最近傍拡大） |
+
+WebP出力・PPTXネイティブ図形出力はありません。SVGは出力専用です。
+
+Pillowは必須依存ではありません。
 
 ```bash
 base64 -w0 photo.png > photo.b64
 python -S photo_grid.py photo.b64 --size 32 --colors 8
 python photo_grid.py photo.b64 --size 16 --palette nature --fit contain
+python -S photo_grid.py photo.b64 --size 32 --format svg --scale 8 -o photo.svg
+python -S pixel_grid.py --mask cloud --format svg > cloud.svg
+python -S grid_svg.py grid.json -o grid.svg   # 既存のgrid JSONからSVG
+python -S photo_grid.py photo.png --size 32 --format png --scale 4 -o dots.png
+python -S pixel_grid.py --mask cloud --format png --scale 8 > cloud.png
+python -S grid_png.py grid.json --scale 8 -o grid.png
 ```
 
 [写真入力の契約と制限](docs/pixel-grid-prototype.md#写真入力の最初の到達点base64からドットグリッドへ)。

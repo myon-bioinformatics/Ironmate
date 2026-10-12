@@ -240,9 +240,14 @@ CSSの読み取りに関する既存の横断資産は、必要になった時�
 | 減色 | 既定はmedian cut（1〜16色、既定8色、同値時の選び方を固定）。`--palette`ではpixel_grid.pyの固定paletteの番号1〜4へ最近色（RGB二乗距離、同距離は小さい番号）で割り当てる |
 | 透過 | 平均alphaが128未満のセルは色番号0（`#00000000`）。それ以外は不透明色として出力 |
 
-入力形式：Base64（生・`data:image/png;base64,`等）またはファイル。PNGは標準ライブラリのみで対応
-（PNGファイルは署名で判別し、Base64を経由せず読む）。JPEG/JPGとWebPはPillowがインストールされている
-場合のみ対応し、無い場合は「Pillowが必要」というエラーにする。SVGは入力として扱わない（出力専用）。
+入力形式：Base64（生・data URI）または画像ファイル。拡張子ではなく先頭bytesで判別する（`_sniff`）。
+- PNG（8bit gray/gray+alpha/RGB/RGBA、非interlace）：標準ライブラリ（zlib＋struct）。
+- palette・16bit・interlaceのPNG：標準decoderは拒否し、Pillowがあれば自動でPillowへ切り替える。
+- JPEG/JPG・WebP：Pillowがある場合のみ（DCT・VP8/VP8Lの展開は標準ライブラリにない）。Pillowを
+  開く形式を限定するため、他の形式がJPEG等を名乗っても読まない。WebPアニメーションは先頭フレーム。
+- SVG（ベクター、描画器が必要）・GIF・BMP・TIFF・ICO・HEIC/AVIF：Pillowの有無に関係なく
+  「… input is not supported」で拒否する。
+形式ごとの理由と挙動はREADMEの表を参照。`tests/test_image_formats.py` が表の挙動を検証する。
 
 #### PNG出力（`grid_png.py`）
 

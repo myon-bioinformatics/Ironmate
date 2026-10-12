@@ -333,6 +333,7 @@ def main(argv=None):
     p.add_argument('--scale', type=int, help='pixels per cell for svg (default 8) / png, base64 (default 1)')
     p.add_argument('--data-uri', action='store_true', help='base64: emit data:image/png;base64,...')
     p.add_argument('-o', '--output', help='write the result here instead of stdout')
+    p.add_argument('--force', action='store_true', help='replace an existing -o file')
     args = p.parse_args(argv)
     try:
         artifact = render(args.mask, args.palette, args.effect, args.size)
@@ -352,8 +353,12 @@ def main(argv=None):
         text = emoji(artifact) if args.format == 'emoji' else json.dumps(artifact, ensure_ascii=False)
         data = (text + '\n').encode('utf-8')
     if args.output:
-        with open(args.output, 'wb') as handle:
-            handle.write(data)
+        from grid_output import write_output
+        try:
+            write_output(args.output, data, args.force)
+        except OSError as exc:
+            print(f'error: {exc}', file=sys.stderr)
+            return 2
     else:
         sys.stdout.flush()
         sys.stdout.buffer.write(data)

@@ -70,17 +70,19 @@ def _unfilter(raw, width, height, bpp):
     return rows
 
 
-def _to_rgba(line, channels):
+def _to_rgba(line, channels, key=None):
+    """Expand one unfiltered row to RGBA; ``key`` is the tRNS color (gray or RGB) that becomes alpha 0."""
     if channels == 4:
         return bytes(line)
     out = bytearray()
     for i in range(0, len(line), channels):
         if channels == 3:
-            out += bytes((line[i], line[i + 1], line[i + 2], 255))
+            rgb = bytes(line[i:i + 3])
+            out += rgb + (b'\x00' if rgb == key else b'\xff')
         elif channels == 2:
             out += bytes((line[i], line[i], line[i], line[i + 1]))
         else:
-            out += bytes((line[i], line[i], line[i], 255))
+            out += bytes((line[i], line[i], line[i], 0 if key == bytes((line[i],)) else 255))
     return bytes(out)
 
 
@@ -248,7 +250,7 @@ def decode_png(data, max_pixels=MAX_PIXELS):
     """Stdlib-only PNG adapter: bytes -> (width, height, RGBA rows as bytes)."""
     if not data.startswith(_PNG_SIGNATURE):
         raise ImageDecodeError('not a PNG file')
-    pos, header, idat = 8, None, []
+    pos, header, idat, trns = 8, None, [], None
     while True:
         if pos + 8 > len(data):
             raise ImageDecodeError('truncated PNG (missing IEND)')
@@ -276,9 +278,23 @@ def decode_png(data, max_pixels=MAX_PIXELS):
             if compression or filtering:
                 raise ImageDecodeError('invalid PNG compression/filter method')
             _check_size(width, height, max_pixels)
+        elif kind == b'tRNS':
+            # PNG spec 11.3.2.1: gray uses one 16-bit sample, RGB three; alpha types must not carry it.
+            if idat or trns is not None:
+                raise ImageDecodeError('tRNS must appear once, before IDAT')
+            if header[3] not in (0, 2):
+                raise ImageDecodeError(f'tRNS is not allowed for PNG color type {header[3]}')
+            if length != (2 if header[3] == 0 else 6):
+                raise ImageDecodeError('invalid tRNS length')
+            samples = struct.unpack(f'>{length // 2}H', body)
+            if any(v > 255 for v in samples):
+                raise ImageDecodeError('tRNS value exceeds the 8-bit sample range')
+            trns = bytes(samples)
         elif kind == b'IDAT':
             idat.append(body)
         elif kind == b'IEND':
+            if pos != len(data):
+                raise ImageDecodeError(f'{len(data) - pos} bytes of trailing data after PNG IEND')
             break
     if not idat:
         raise ImageDecodeError('PNG has no image data')
@@ -287,10 +303,18 @@ def decode_png(data, max_pixels=MAX_PIXELS):
     inflater = zlib.decompressobj()
     try:
         raw = inflater.decompress(b''.join(idat), expected + 1)
+        if len(raw) == expected and not inflater.eof:
+            raw += inflater.decompress(inflater.unconsumed_tail, 1)
     except zlib.error:
         raise ImageDecodeError('PNG image data is corrupt') from None
+    if len(raw) != expected:
+        raise ImageDecodeError('PNG image data has unexpected length')
+    if not inflater.eof:
+        raise ImageDecodeError('PNG image data is truncated (zlib stream not terminated)')
+    if inflater.unused_data:
+        raise ImageDecodeError('PNG image data has extra bytes after the zlib stream')
     rows = _unfilter(raw, header[0], header[1], channels)
-    return header[0], header[1], [_to_rgba(line, channels) for line in rows]
+    return header[0], header[1], [_to_rgba(line, channels, trns) for line in rows]
 
 
 def decode_pillow(data, max_pixels=MAX_PIXELS, formats=('JPEG', 'WEBP', 'PNG')):
@@ -404,6 +428,7 @@ def main(argv=None):
     p.add_argument('--data-uri', action='store_true', help='base64: emit data:image/png;base64,...')
     p.add_argument('--scale', type=int, help='pixels per cell, 1-64 (default svg 8, png/base64 1)')
     p.add_argument('-o', '--output', help='write the result here instead of stdout')
+    p.add_argument('--force', action='store_true', help='replace an existing -o file')
     args = p.parse_args(argv)
     try:
         if args.input == '-':
@@ -424,8 +449,8 @@ def main(argv=None):
         else:
             result = (json.dumps(artifact, ensure_ascii=False) + '\n').encode('utf-8')
         if args.output:
-            with open(args.output, 'wb') as handle:
-                handle.write(result)
+            from grid_output import write_output
+            write_output(args.output, result, args.force)
         else:
             sys.stdout.buffer.write(result)
             sys.stdout.flush()

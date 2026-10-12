@@ -51,13 +51,13 @@ python -S pixel_grid.py --mask circle --palette C02 --size 31 --format png --sca
 
 | 入力 | 判定 | 必要な依存 | 理由・挙動 |
 | --- | --- | --- | --- |
-| `.png`（8bit gray / gray+alpha / RGB / RGBA、非interlace） | 対応 | なし（標準ライブラリ） | PNGの圧縮はzlib（deflate）なので、標準の`zlib`＋`struct`で展開・filter復元できる |
-| `.png`（palette・16bit・interlace） | 条件付き | Pillow | 標準decoderは対象外の形式として明示エラー。Pillowがあれば自動でPillowで読む（無ければ「unsupported PNG …」「interlaced PNG …」のエラー） |
+| `.png`（8bit gray / gray+alpha / RGB / RGBA、非interlace） | 対応 | なし（標準ライブラリ） | PNGの圧縮はzlib（deflate）なので、標準の`zlib`＋`struct`で展開・filter復元できる。gray・RGBの`tRNS`（透明色）はalpha 0に反映（RGB値は保持、Pillowと画素一致）。zlib streamは終端・checksumまで必須で、切断・後続データはエラー。APNGはエラーにせず既定画像（IDAT）だけを読む（既定画像がアニメーションに含まれない場合も同じ。Pillow経由も一致） |
+| `.png`（palette・16bit・interlace） | 条件付き | Pillow | 標準decoderは対象外の形式として明示エラー。Pillowがあれば自動でPillowで読む（無ければ「unsupported PNG …」「interlaced PNG …」のエラー）。palette＋`tRNS`の透明度もPillowでRGBAに反映（期待値と画素一致をテスト） |
 | Base64のPNG（生の文字列） | 対応 | なし | 標準の`base64`で元のbytesに戻してから上と同じ処理。標準アルファベット＋`=`padding必須（URL-safe・padding省略はエラー）。空白・改行（CRLF）・BOMは無視 |
 | data URI（`data:image/png;base64,`） | 対応 | なし | 上と同じ。typeと中身が違う場合（例：`image/jpeg`なのにPNG）や、上記以外のtype（gif・svg+xml等）は「unsupported data URI type」等のエラー |
 | `.jpg` / `.jpeg`（ファイル・Base64・`image/jpeg`） | 条件付き | Pillow | JPEGはDCT＋ハフマン符号の展開が必要で、標準ライブラリにdecoderがない。Pillowが無い場合は「needs the optional Pillow package」エラー。EXIFの向きは補正 |
 | `.webp`（同上、`image/webp`） | 条件付き | Pillow | WebPはVP8/VP8Lの展開が必要で、標準ライブラリにdecoderがない。Pillowが無い場合は同じエラー。アニメーションは先頭フレームのみ |
-| `.svg` | 非対応 | — | ベクター形式で、画素にするには描画（rasterize）が必要。標準ライブラリに描画器がなく、一部だけの対応は誤解を招くため入力では扱わない（「SVG input is not supported」）。SVGは出力専用 |
+| `.svg` | `photo_grid.py`では非対応／`grid_tools.py load`で条件付き | なし（numpyがあれば高速化） | 写真入力（`photo_grid.py`）は従来どおり「SVG input is not supported」。ドット絵の読み戻し（`grid_tools.py`、`svg_raster.py`）は安全な部分集合のみ描画：`rect`（塗りのみ・面積で正確）、`circle`/`ellipse`/`polygon`（4×4 supersampling）、`g`（translateのみ）、`#rgb`/`#rrggbb`、`fill-opacity`/`opacity`。DOCTYPE・ENTITY、`path`・`line`・グラデーション・`style`/`class`・`script`・`image`・`text`・回転等の変形は理由付き`SvgError`。SVG経由の可逆性は保証しない（透明セルの色は`#00000000`になる） |
 | `.gif` | 非対応 | — | LZW展開は自作が必要で、アニメーションのフレーム選択も未定義。Pillowは読めるが対象外として拒否（「GIF input is not supported」） |
 | `.bmp` | 非対応 | — | 未採用（需要が出たら検討）。Pillowの有無に関係なく「BMP input is not supported」 |
 | `.tif` / `.tiff` | 非対応 | — | 圧縮方式・複数ページ・色空間が多様で未採用。「TIFF input is not supported」 |
@@ -75,6 +75,7 @@ python -S pixel_grid.py --mask circle --palette C02 --size 31 --format png --sca
 | PPTXネイティブ図形 | 非対応 | — | ユーザー判断で対象外（画像出力のみ） |
 
 エラーはいずれも`ValueError`（`ImageDecodeError`を含む）で、CLIは理由を表示してexit 2で終了します。
+`-o`は既存ファイル・symlinkを上書きせずexit 2（「refusing to overwrite」）。置き換えるときは`--force`（一時ファイル＋`os.replace`で、symlinkの先ではなくsymlink自体を置き換える）。全CLI共通（`grid_output.py`）。
 Pillowは必須依存ではありません。
 
 ```bash
@@ -92,6 +93,40 @@ python -S photo_grid.py cloud.b64 --size 16 --palette C01   # 元のgridに戻�
 ```
 
 [写真入力の契約と制限](docs/pixel-grid-prototype.md#写真入力の最初の到達点base64からドットグリッドへ)。
+
+### 1行で往復する（`grid_tools.py`）
+
+AIエージェントが小さなBase64画像を本文に埋め込む用途向けに、生成・読み戻し・拡大縮小・色ID置換を
+1関数／1コマンドにまとめました。標準ライブラリのみで動き、Pillow・numpyは任意（あれば同じ結果をより速く出す）。
+
+```bash
+python -c "import grid_tools as g;print(g.encode(g.make('cloud','C01','shadow',16),data_uri=True))"
+python -m grid_tools make circle --palette C02 --size 32 --scale 4 > c.b64          # Base64（既定）
+python -m grid_tools load c.b64 --to json                                          # 128px→32セルに自動復元
+python -m grid_tools load dots64.png --to json                                      # 64×64（32の2倍）→32×32
+python -m grid_tools load c.b64 --resize 64 --recolor C05 --to png --scale 4 -o c.png
+python -m grid_tools load c.png --to svg -o c.svg                                   # PPTX用SVG
+python -m grid_tools photo photo.jpg --size 32 --colors 8 --to base64 --data-uri    # JPEG/WebPはPillow
+```
+
+`encode`はPNGに`ironmate`のtEXtチャンク（色表と寸法）を既定で入れ、`load`/`restore`はそれがあれば
+元のJSONをそのまま返します（`--no-meta`で付けない。既定のPNG bytes自体は`grid_png.py`と同じ）。
+
+| 経路 | 可逆か | 条件（テストで固定） |
+| --- | --- | --- |
+| grid → PNG/Base64（meta付き、任意の`--scale`）→ load | JSONまで完全一致 | 色表に同じRGBAが重複する場合のみ、最初の番号に寄る（セルのRGBAは一致） |
+| grid → PNG/Base64（metaなし）→ load | セルのRGBAが完全一致 | 倍率は`--size`指定、または全ての同色連続長の最大公約数で自動判定。判定は「説明できる最大倍率」なので、2×2模様だけの絵は小さく復元される（`--size`で解決）。色表は正規順（透明＋RGBA昇順）になり、元の色表が正規順ならJSONも一致 |
+| 半透明（alpha 1〜254）・色数（1〜300色を検証） | 完全一致 | PNGはRGBA 8bitなので劣化なし |
+| 拡大（整数・非整数とも）→ 元サイズへ縮小 | 完全一致 | セル中心での最近傍。拡大で全セルが残る |
+| 縮小 → 拡大 | 一般に不可逆 | 各ブロックが単色のときだけ一致 |
+| 色ID置換 A→B→A | 完全一致 | 色番号は不変。番号が5役割（0〜4）を超えるgridはエラー |
+| grid → SVG → load | 見えるセルのRGBAが一致 | alpha 0のセルは`#00000000`。SVG自体の可逆は要件外 |
+| JPEG/WebP → grid | 不可逆（縮小・減色・alpha二値化） | grid以降（PNG/Base64/SVG）は上の表のとおり |
+| PNGの破損・改ざん | エラー | CRC不一致、IEND後の余分なbytes、zlib後の余分なbytes、meta headerの寸法・色表の不整合はすべてエラー（Pillow経由はIEND後の余分を無視する） |
+| 縮小や補間で崩れたPNG | エラー | 「block … is not one color」「does not divide」。推測で直さない |
+
+標準ライブラリ実装を基準（oracle）とし、テストでPillow（PNG展開・NEAREST拡大）とnumpy（倍率判定・拡大縮小・SVG描画）
+の結果がbyte単位で一致することを確認しています。512×512 PNG→128セル復元の目安：標準約250ms、Pillow約190ms、numpy約180ms（手元計測）。
 
 ## 責務
 

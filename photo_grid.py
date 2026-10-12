@@ -328,8 +328,9 @@ def main(argv=None):
     p.add_argument('--fit', choices=FITS, default='crop')
     p.add_argument('--colors', type=int, default=8, help='median-cut colors, 1-16 (default 8)')
     p.add_argument('--palette', choices=PALETTES, help='use a fixed pixel_grid palette instead')
-    p.add_argument('--format', choices=('json', 'svg', 'png'), default='json')
-    p.add_argument('--scale', type=int, help='pixels per cell, 1-64 (default svg 8, png 1)')
+    p.add_argument('--format', choices=('json', 'svg', 'png', 'base64'), default='json')
+    p.add_argument('--data-uri', action='store_true', help='base64: emit data:image/png;base64,...')
+    p.add_argument('--scale', type=int, help='pixels per cell, 1-64 (default svg 8, png/base64 1)')
     p.add_argument('-o', '--output', help='write the result here instead of stdout')
     args = p.parse_args(argv)
     try:
@@ -339,7 +340,10 @@ def main(argv=None):
             with open(args.input, 'rb') as handle:
                 text = handle.read(MAX_BYTES * 2)
         artifact = convert(text, args.size, args.fit, args.colors, args.palette)
-        if args.format == 'png':
+        if args.format == 'base64':
+            from grid_png import to_base64
+            result = (to_base64(artifact, args.scale or 1, args.data_uri) + '\n').encode('ascii')
+        elif args.format == 'png':
             from grid_png import to_png
             result = to_png(artifact, args.scale or 1)
         elif args.format == 'svg':

@@ -87,19 +87,31 @@ def main(argv=None):
     p.add_argument('--palette', choices=PALETTES, default='nature')
     p.add_argument('--effect', choices=EFFECTS, default='normal')
     p.add_argument('--size', type=int, choices=SIZES, default=16)
-    p.add_argument('--format', choices=('emoji', 'json', 'svg', 'png'), default='emoji')
-    p.add_argument('--scale', type=int, help='pixels per cell for svg (default 8) / png (default 1)')
+    p.add_argument('--format', choices=('emoji', 'json', 'svg', 'png', 'base64'), default='emoji')
+    p.add_argument('--scale', type=int, help='pixels per cell for svg (default 8) / png, base64 (default 1)')
+    p.add_argument('--data-uri', action='store_true', help='base64: emit data:image/png;base64,...')
+    p.add_argument('-o', '--output', help='write the result here instead of stdout')
     args = p.parse_args(argv)
     artifact = render(args.mask, args.palette, args.effect, args.size)
-    if args.format == 'svg':
-        from grid_svg import to_svg  # lazy: keeps import of this module inert
-        print(to_svg(artifact, args.scale or 8), end='')
+    if args.format == 'base64':
+        from grid_png import to_base64  # lazy: keeps import of this module inert
+        data = (to_base64(artifact, args.scale or 1, args.data_uri) + '\n').encode('ascii')
     elif args.format == 'png':
-        from grid_png import to_png  # lazy, like grid_svg
-        sys.stdout.flush()
-        sys.stdout.buffer.write(to_png(artifact, args.scale or 1))
+        from grid_png import to_png
+        data = to_png(artifact, args.scale or 1)
+    elif args.format == 'svg':
+        from grid_svg import to_svg
+        data = to_svg(artifact, args.scale or 8).encode('utf-8')
     else:
-        print(emoji(artifact) if args.format == 'emoji' else json.dumps(artifact, ensure_ascii=False))
+        text = emoji(artifact) if args.format == 'emoji' else json.dumps(artifact, ensure_ascii=False)
+        data = (text + '\n').encode('utf-8')
+    if args.output:
+        with open(args.output, 'wb') as handle:
+            handle.write(data)
+    else:
+        sys.stdout.flush()
+        sys.stdout.buffer.write(data)
+        sys.stdout.flush()
     return 0
 
 

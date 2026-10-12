@@ -215,6 +215,19 @@ PNGを標準ライブラリ（zlib+struct）で書く。時刻・テキストchu
 `photo_grid.py`・`pixel_grid.py`の`--format png`（遅延import）または`grid_png.py`のCLIで使う。
 標準PNG decoderでの読み戻しが元の色と一致することをテストで確認している。
 
+#### Base64出力（可逆性）
+
+`--format base64`（`photo_grid.py`・`pixel_grid.py`、`grid_png.to_base64`）は、`--format png`と
+同じbytesをBase64で出す。`--data-uri`で`data:image/png;base64,`付き。`--scale`と`-o`に従う。
+出力はそのまま`photo_grid.py`の入力にできる。
+
+- scale 1で、同じ`--size`を指定して読み戻すと元のgrid（palette＋色番号）と一致する。
+  pixel_grid.pyのgridは同じ`--palette`、photo_grid.pyのgridは`--colors`を元の不透明色数にする。
+- scale>1のPNGは、元の`--size`を指定すれば同じgridに戻る（各セルがscale×scaleの同色ブロックのため）。
+  異なる`--size`では別のgridになる。
+- median cutでは、元のgridにある不透明色がすべて使われている前提で一致する。
+  未使用の色を含むpaletteや、半透明色（alpha 1〜254）は元に戻らない。
+
 #### SVG出力（`grid_svg.py`）
 
 `to_svg(artifact, scale=8)` は `ironmate-pixel-grid/1` のJSON（pixel_grid.py・photo_grid.py共通）から

@@ -4,7 +4,7 @@ Pythonを中心に、文書・画像などの**内容や属性の変換・置換
 PPTXの文字・色・矢印属性の置換を今後の対象とし、画素／パレットに基づくドット表現を試作しています。
 要件は [Issue #80](https://github.com/myon-bioinformatics/Ironmate/issues/80)、
 ドット表現の試作は [PR #79](https://github.com/myon-bioinformatics/Ironmate/pull/79) で追跡します。
-Markdown→PPTX変換と既存PPTXの属性編集CLIは試作実装済みです。写真変換・キャラクター部品合成は未実装です。実装済みのドット表現の範囲は次節を参照してください。
+Markdown→PPTX変換と既存PPTXの属性編集CLIは試作実装済みです。写真変換は第1段階（Base64→色番号グリッド）のみ試作済みで、キャラクター部品合成は未実装です。実装済みのドット表現の範囲は次節を参照してください。
 
 ## PPTX変換・編集
 
@@ -33,6 +33,19 @@ python -S pixel_grid.py --mask cloud --palette nature --effect shadow --size 16
 ```
 
 [第1弾の契約・検証・今後の設計](docs/pixel-grid-prototype.md)。
+
+`photo_grid.py`は、Base64（生の文字列または`data:image/...;base64,`）で渡された画像を
+復号し、同じ`ironmate-pixel-grid/1`形式（固定RGBA＋色番号グリッド）のJSONにします。
+PNG（8bitのgray/gray+alpha/RGB/RGBA、非interlace）は標準ライブラリだけで読み、
+JPEG/WebP等はPillowが入っている場合のみ扱います（Pillowは必須依存ではありません）。
+
+```bash
+base64 -w0 photo.png > photo.b64
+python -S photo_grid.py photo.b64 --size 32 --colors 8
+python photo_grid.py photo.b64 --size 16 --palette nature --fit contain
+```
+
+[写真入力の契約と制限](docs/pixel-grid-prototype.md#写真入力の最初の到達点base64からドットグリッドへ)。
 
 ## 責務
 

@@ -43,6 +43,12 @@ python -S pixel_grid.py --mask circle --palette C02 --size 31 --format png --sca
 
 [第1弾の契約・検証・今後の設計](docs/pixel-grid-prototype.md)。
 
+![生成例：5形×10色ID（加工shadow）、4加工、奇数サイズ](docs/pixel-grid-preview.png)
+
+生成例（上から5形×色ID `C01`〜`C10`、加工shadow／cloud・rockで4加工／奇数サイズ5・9・7・13・17・31）。
+`python -S grid_preview.py -o docs/pixel-grid-preview.png --force`で再生成でき、
+テスト（`tests/test_grid_preview.py`）がコミット済みのPNGとbyte一致することを確認するため、実装と画像がずれません。
+
 `photo_grid.py`は、Base64（生の文字列または`data:image/...;base64,`）または画像ファイルを
 読み、同じ`ironmate-pixel-grid/1`形式（固定RGBA＋色番号グリッド）にします。
 

@@ -87,10 +87,10 @@ def test_png_filters_reconstruct_exact_pixels():
 
 
 def test_fixed_palette_and_data_uri():
-    data = _png(4, 4, lambda x, y: (100, 180, 70, 255))
+    data = _png(4, 4, lambda x, y: (91, 189, 62, 255))
     uri = 'data:image/png;base64,' + _b64(data)
-    a = g.convert(uri, size=8, palette='nature')
-    assert a['colors'] == ['#00000000', '#67B84AFF', '#2D6B35FF', '#BFE889FF', '#1C3028FF']
+    a = g.convert(uri, size=8, palette='C01')
+    assert a['colors'] == list(g.PALETTES['C01'])
     assert {v for r in a['pixels'] for v in r} == {1}
     wrapped = '\n'.join(_b64(data)[i:i + 10] for i in range(0, len(_b64(data)), 10))
     assert g.decode_base64(wrapped) == data

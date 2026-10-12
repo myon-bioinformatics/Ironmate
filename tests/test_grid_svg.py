@@ -53,7 +53,7 @@ def test_cells_colors_transparency_and_runs():
 
 def test_merge_equivalence_on_real_grids():
     for mask in pixel_grid.MASKS:
-        art = pixel_grid.render(mask, 'lava', 'outline', 32)
+        art = pixel_grid.render(mask, 'C03', 'outline', 32)
         merged, single = s.to_svg(art), s.to_svg(art, merge=False)
         assert _cover(merged)[1] == _cover(single)[1] == _expected(art)
         assert len(merged) < len(single)
@@ -106,9 +106,9 @@ def test_cli_end_to_end_from_base64_png(tmp_path):
 
 
 def test_pixel_grid_cli_svg_and_inert_imports(tmp_path):
-    r = subprocess.run([sys.executable, '-S', str(ROOT / 'pixel_grid.py'), '--size', '8', '--format', 'svg'],
+    r = subprocess.run([sys.executable, '-S', str(ROOT / 'pixel_grid.py'), '--mask', 'circle', '--size', '8', '--format', 'svg'],
                        cwd=tmp_path, capture_output=True, text=True)
-    assert r.returncode == 0 and r.stdout == s.to_svg(pixel_grid.render(size=8))
+    assert r.returncode == 0 and r.stdout == s.to_svg(pixel_grid.render('circle', size=8))
     probe = ('import sys;sys.path.insert(0,sys.argv[1]);import pixel_grid, grid_svg;'
              'import photo_grid;assert "PIL" not in sys.modules')
     r = subprocess.run([sys.executable, '-S', '-c', probe, str(ROOT)], cwd=tmp_path, capture_output=True)

@@ -1,10 +1,11 @@
-"""Base64 image or PNG file -> indexed pixel grid (photo conversion, first milestone). Python 3.11+.
+"""Base64 image or image file -> indexed pixel grid (photo conversion, first milestone). Python 3.11+.
 
 Pipeline: strict Base64/data URI decode -> image bytes -> decoder adapter
 (bytes -> width, height, RGBA rows) -> crop/fit -> area-average downscale ->
 deterministic quantization -> ``ironmate-pixel-grid/1`` JSON.
 PNG (8-bit gray/gray+alpha/RGB/RGBA, non-interlaced) is decoded with stdlib only.
-Other formats use Pillow if it is installed; Pillow is never required or imported eagerly.
+JPEG/WebP (and other PNG variants) use Pillow if installed; Pillow is never required or imported eagerly.
+SVG, GIF, BMP, TIFF, ICO and HEIC/AVIF input is rejected with a clear error.
 """
 from __future__ import annotations
 import argparse, base64, binascii, json, re, struct, sys, zlib
@@ -22,6 +23,9 @@ _MIME_SIGNATURES = {'image/png': (b'\x89PNG\r\n\x1a\n',), 'image/jpeg': (b'\xff\
 _BASE64 = re.compile(r'[A-Za-z0-9+/]*={0,2}', re.ASCII)
 _PNG_SIGNATURE = b'\x89PNG\r\n\x1a\n'
 _PNG_CHANNELS = {0: 1, 2: 3, 4: 2, 6: 4}  # gray, RGB, gray+alpha, RGBA
+
+
+_UNSUPPORTED = {'gif': 'GIF', 'bmp': 'BMP', 'tiff': 'TIFF', 'ico': 'ICO', 'heif': 'HEIC/HEIF/AVIF'}
 
 
 class ImageDecodeError(ValueError):
@@ -78,6 +82,31 @@ def _to_rgba(line, channels):
         else:
             out += bytes((line[i], line[i], line[i], 255))
     return bytes(out)
+
+
+def _sniff(data):
+    """Image kind from magic bytes, or None (e.g. Base64 text)."""
+    head = data[:64]
+    if head.startswith(_PNG_SIGNATURE):
+        return 'png'
+    if head.startswith(b'\xff\xd8\xff'):
+        return 'jpeg'
+    if head[:4] == b'RIFF' and head[8:12] == b'WEBP':
+        return 'webp'
+    if head[:6] in (b'GIF87a', b'GIF89a'):
+        return 'gif'
+    if head[:2] == b'BM':
+        return 'bmp'
+    if head[:4] in (b'II*\x00', b'MM\x00*'):
+        return 'tiff'
+    if head[:4] == b'\x00\x00\x01\x00':
+        return 'ico'
+    if head[4:8] == b'ftyp':
+        return 'heif'
+    text = data[:1024].lstrip(b'\xef\xbb\xbf \t\r\n').lower()
+    if text.startswith(b'<') and (b'<svg' in text or text.startswith(b'<?xml')):
+        return 'svg'
+    return None
 
 
 def _check_size(width, height, max_pixels):
@@ -264,8 +293,11 @@ def decode_png(data, max_pixels=MAX_PIXELS):
     return header[0], header[1], [_to_rgba(line, channels) for line in rows]
 
 
-def decode_pillow(data, max_pixels=MAX_PIXELS):
-    """Optional Pillow adapter (JPEG/WebP/...): bytes -> (width, height, RGBA rows)."""
+def decode_pillow(data, max_pixels=MAX_PIXELS, formats=('JPEG', 'WEBP', 'PNG')):
+    """Optional Pillow adapter (JPEG/WebP, and PNG variants): bytes -> (width, height, RGBA rows).
+
+    Only ``formats`` are opened; animated images use their first frame.
+    """
     try:
         from PIL import Image, ImageOps
     except ImportError:
@@ -273,23 +305,45 @@ def decode_pillow(data, max_pixels=MAX_PIXELS):
                                '(pip install Pillow); only PNG works without it') from None
     import io
     try:
-        with Image.open(io.BytesIO(data)) as image:
+        with Image.open(io.BytesIO(data), formats=list(formats)) as image:
             _check_size(image.width, image.height, max_pixels)
             image = ImageOps.exif_transpose(image).convert('RGBA')
     except ImageDecodeError:
         raise
     except Exception as exc:  # Pillow raises several types for unreadable input
-        raise ImageDecodeError('unrecognized or corrupt image (PNG, JPEG/JPG and WebP are supported; '
+        raise ImageDecodeError('unrecognized or corrupt image (PNG with stdlib; JPEG/WebP with Pillow; '
                                f'Pillow reported {type(exc).__name__})') from None
     raw, stride = image.tobytes(), image.width * 4
     return image.width, image.height, [raw[y * stride:(y + 1) * stride] for y in range(image.height)]
 
 
 def decode_image(data, max_pixels=MAX_PIXELS):
-    """Dispatch: PNG uses the stdlib adapter; anything else goes to Pillow when installed."""
-    if data.startswith(_PNG_SIGNATURE):
-        return decode_png(data, max_pixels)
-    return decode_pillow(data, max_pixels)
+    """Dispatch by magic bytes.
+
+    PNG: stdlib adapter; palette/16-bit/interlaced PNG fall back to Pillow when it is installed.
+    JPEG/WebP: Pillow only. SVG, GIF, BMP, TIFF, ICO, HEIC/AVIF: rejected.
+    """
+    kind = _sniff(data)
+    if kind == 'png':
+        try:
+            return decode_png(data, max_pixels)
+        except ImageDecodeError as exc:
+            if not str(exc).startswith(('unsupported PNG', 'interlaced PNG')):
+                raise
+            try:
+                import PIL  # noqa: F401  (only to decide whether a fallback exists)
+            except ImportError:
+                raise exc from None
+            return decode_pillow(data, max_pixels, ('PNG',))
+    if kind in ('jpeg', 'webp'):
+        return decode_pillow(data, max_pixels, ('JPEG',) if kind == 'jpeg' else ('WEBP',))
+    if kind == 'svg':
+        raise ImageDecodeError('SVG input is not supported: it is vector data and needs a renderer '
+                               '(SVG is an output format only)')
+    if kind in _UNSUPPORTED:
+        raise ImageDecodeError(f'{_UNSUPPORTED[kind]} input is not supported '
+                               '(PNG with stdlib; JPEG/WebP with Pillow)')
+    raise ImageDecodeError('unrecognized image format (PNG with stdlib; JPEG/WebP with Pillow)')
 
 
 def convert(text, size=16, fit='crop', colors=8, palette=None, decoder=decode_image,
@@ -307,10 +361,12 @@ def convert(text, size=16, fit='crop', colors=8, palette=None, decoder=decode_im
         raise ValueError('unknown palette')
     if palette is None and (type(colors) is not int or not 1 <= colors <= 16):
         raise ValueError('colors must be an integer from 1 to 16')
-    if isinstance(text, bytes) and text.startswith(_PNG_SIGNATURE):
+    if isinstance(text, str) and text.lstrip('\ufeff \t\r\n').startswith('<'):
+        text = text.encode('utf-8')  # markup such as SVG, not Base64
+    if isinstance(text, bytes) and _sniff(text):
         if len(text) > max_bytes:
             raise ValueError(f'input exceeds {max_bytes} bytes')
-        data = text  # plain PNG file bytes
+        data = text  # plain image file bytes (not Base64)
     else:
         data = decode_base64(text, max_bytes)
     width, height, rows = decoder(data, max_pixels)

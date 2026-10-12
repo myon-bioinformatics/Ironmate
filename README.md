@@ -24,12 +24,21 @@ Marp CLIは事前インストールが必要で、コマンドが勝手にNode/n
 
 ## ドット絵の試作候補
 
-`pixel_grid.py`で、5種類の形・6配色・4加工・5サイズの色番号グリッドを
-再現可能に生成します。第1弾は絵文字プレビューとJSON。写真変換や
-キャラクターの部品合成は次段階です。
+`pixel_grid.py`で、5種類の形（手続き生成）・10配色（色ID `C01`〜`C10`）・4加工を、
+形ごとの範囲内の任意サイズ（奇数も可）で再現可能な色番号グリッドにします。
+きれいに描けないサイズは生成せずエラーにします。
+
+| 形 | 最小〜最大サイズ |
+| --- | --- |
+| triangle | 5〜256 |
+| diamond | 9〜256 |
+| cloud | 16〜256 |
+| circle | 6〜256 |
+| rock | 7〜256 |
 
 ```bash
-python -S pixel_grid.py --mask cloud --palette nature --effect shadow --size 16
+python -S pixel_grid.py --mask cloud --palette C01 --effect shadow --size 23
+python -S pixel_grid.py --mask circle --palette C02 --size 31 --format png --scale 8 > circle.png
 ```
 
 [第1弾の契約・検証・今後の設計](docs/pixel-grid-prototype.md)。
@@ -37,28 +46,41 @@ python -S pixel_grid.py --mask cloud --palette nature --effect shadow --size 16
 `photo_grid.py`は、Base64（生の文字列または`data:image/...;base64,`）または画像ファイルを
 読み、同じ`ironmate-pixel-grid/1`形式（固定RGBA＋色番号グリッド）にします。
 
-| 入力形式（Base64包み・ファイルとも） | 標準ライブラリのみ | Pillowあり |
-| --- | --- | --- |
-| PNG（8bitのgray/gray+alpha/RGB/RGBA、非interlace） | 対応 | 対応（標準decoderを使用） |
-| JPEG/JPG | 非対応（Pillowが必要というエラー） | 対応 |
-| WebP | 非対応（Pillowが必要というエラー） | 対応 |
-| SVG | 非対応（入力としては扱わない） | 非対応 |
+判定は拡張子ではなく先頭bytes（magic bytes）で行います。ファイルはそのまま、Base64は生の文字列または
+`data:<type>;base64,`で渡せます（data URIのtypeは省略か `image/png`・`image/jpeg`・`image/jpg`・`image/webp` のみ）。
 
-| 出力形式（`--format`） | 実装 |
-| --- | --- |
-| JSON（既定） | 標準ライブラリ |
-| SVG | 標準ライブラリ（`grid_svg.py`） |
-| PNG | 標準ライブラリ（`grid_png.py`、8bit RGBA、整数倍の最近傍拡大） |
-| Base64 | 標準ライブラリ（PNG出力と同じbytesをBase64化。`--data-uri`で`data:image/png;base64,...`） |
+| 入力 | 判定 | 必要な依存 | 理由・挙動 |
+| --- | --- | --- | --- |
+| `.png`（8bit gray / gray+alpha / RGB / RGBA、非interlace） | 対応 | なし（標準ライブラリ） | PNGの圧縮はzlib（deflate）なので、標準の`zlib`＋`struct`で展開・filter復元できる |
+| `.png`（palette・16bit・interlace） | 条件付き | Pillow | 標準decoderは対象外の形式として明示エラー。Pillowがあれば自動でPillowで読む（無ければ「unsupported PNG …」「interlaced PNG …」のエラー） |
+| Base64のPNG（生の文字列） | 対応 | なし | 標準の`base64`で元のbytesに戻してから上と同じ処理。標準アルファベット＋`=`padding必須（URL-safe・padding省略はエラー）。空白・改行（CRLF）・BOMは無視 |
+| data URI（`data:image/png;base64,`） | 対応 | なし | 上と同じ。typeと中身が違う場合（例：`image/jpeg`なのにPNG）や、上記以外のtype（gif・svg+xml等）は「unsupported data URI type」等のエラー |
+| `.jpg` / `.jpeg`（ファイル・Base64・`image/jpeg`） | 条件付き | Pillow | JPEGはDCT＋ハフマン符号の展開が必要で、標準ライブラリにdecoderがない。Pillowが無い場合は「needs the optional Pillow package」エラー。EXIFの向きは補正 |
+| `.webp`（同上、`image/webp`） | 条件付き | Pillow | WebPはVP8/VP8Lの展開が必要で、標準ライブラリにdecoderがない。Pillowが無い場合は同じエラー。アニメーションは先頭フレームのみ |
+| `.svg` | 非対応 | — | ベクター形式で、画素にするには描画（rasterize）が必要。標準ライブラリに描画器がなく、一部だけの対応は誤解を招くため入力では扱わない（「SVG input is not supported」）。SVGは出力専用 |
+| `.gif` | 非対応 | — | LZW展開は自作が必要で、アニメーションのフレーム選択も未定義。Pillowは読めるが対象外として拒否（「GIF input is not supported」） |
+| `.bmp` | 非対応 | — | 未採用（需要が出たら検討）。Pillowの有無に関係なく「BMP input is not supported」 |
+| `.tif` / `.tiff` | 非対応 | — | 圧縮方式・複数ページ・色空間が多様で未採用。「TIFF input is not supported」 |
+| `.ico` | 非対応 | — | 複数サイズの画像を含むため選択規則が未定義。「ICO input is not supported」 |
+| `.heic` / `.avif` | 非対応 | — | HEVC/AV1の展開が必要。Pillowのビルドによっては読めるが対象外として拒否（「HEIC/HEIF/AVIF input is not supported」） |
+| 判別できないbytes | 非対応 | — | 「unrecognized image format」エラー |
 
-WebP出力・PPTXネイティブ図形出力はありません。SVGは出力専用です。
+| 出力（`--format`） | 判定 | 必要な依存 | 理由・挙動 |
+| --- | --- | --- | --- |
+| JSON（既定） | 対応 | なし | `ironmate-pixel-grid/1`（固定RGBA＋色番号）。正規データ |
+| SVG | 対応 | なし | 文字列として直接書ける（`grid_svg.py`、横方向の同色をまとめた`<rect>`） |
+| PNG | 対応 | なし | `zlib`＋`struct`で8bit RGBAを書く（`grid_png.py`、整数倍の最近傍拡大、同じ入力は同じbytes） |
+| Base64 | 対応 | なし | PNG出力と同じbytesを`base64`で文字列化。`--data-uri`で`data:image/png;base64,...`。photo_grid.pyの入力に戻せる |
+| WebP出力 | 非対応 | — | VP8/VP8Lのencoderが標準ライブラリにない。要件外 |
+| PPTXネイティブ図形 | 非対応 | — | ユーザー判断で対象外（画像出力のみ） |
 
+エラーはいずれも`ValueError`（`ImageDecodeError`を含む）で、CLIは理由を表示してexit 2で終了します。
 Pillowは必須依存ではありません。
 
 ```bash
 base64 -w0 photo.png > photo.b64
 python -S photo_grid.py photo.b64 --size 32 --colors 8
-python photo_grid.py photo.b64 --size 16 --palette nature --fit contain
+python photo_grid.py photo.b64 --size 16 --palette C01 --fit contain
 python -S photo_grid.py photo.b64 --size 32 --format svg --scale 8 -o photo.svg
 python -S pixel_grid.py --mask cloud --format svg > cloud.svg
 python -S grid_svg.py grid.json -o grid.svg   # 既存のgrid JSONからSVG
@@ -66,7 +88,7 @@ python -S photo_grid.py photo.png --size 32 --format png --scale 4 -o dots.png
 python -S pixel_grid.py --mask cloud --format png --scale 8 > cloud.png
 python -S grid_png.py grid.json --scale 8 -o grid.png
 python -S pixel_grid.py --mask cloud --format base64 --data-uri -o cloud.b64
-python -S photo_grid.py cloud.b64 --size 16 --palette nature   # 元のgridに戻る
+python -S photo_grid.py cloud.b64 --size 16 --palette C01   # 元のgridに戻る
 ```
 
 [写真入力の契約と制限](docs/pixel-grid-prototype.md#写真入力の最初の到達点base64からドットグリッドへ)。

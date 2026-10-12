@@ -121,6 +121,7 @@ python -m grid_tools photo photo.jpg --size 32 --colors 8 --to base64 --data-uri
 | 色ID置換 A→B→A | 完全一致 | 色番号は不変。番号が5役割（0〜4）を超えるgridはエラー |
 | grid → SVG → load | 見えるセルのRGBAが一致 | alpha 0のセルは`#00000000`。SVG自体の可逆は要件外 |
 | JPEG/WebP → grid | 不可逆（縮小・減色・alpha二値化） | grid以降（PNG/Base64/SVG）は上の表のとおり |
+| PNGの破損・改ざん | エラー | CRC不一致、IEND後の余分なbytes、zlib後の余分なbytes、meta headerの寸法・色表の不整合はすべてエラー（Pillow経由はIEND後の余分を無視する） |
 | 縮小や補間で崩れたPNG | エラー | 「block … is not one color」「does not divide」。推測で直さない |
 
 標準ライブラリ実装を基準（oracle）とし、テストでPillow（PNG展開・NEAREST拡大）とnumpy（倍率判定・拡大縮小・SVG描画）

@@ -6,7 +6,7 @@
 No import-time I/O; optional backends are imported only when used.
 """
 from __future__ import annotations
-import argparse, json, math, os, struct, sys, zlib
+import argparse, json, math, os, re, struct, sys, zlib
 
 import photo_grid
 import pixel_grid
@@ -14,6 +14,7 @@ import pixel_grid
 __all__ = ['FORMATS', 'make', 'photo', 'encode', 'restore', 'resize', 'recolor', 'cells', 'canonical', 'main']
 FORMATS = ('json', 'svg', 'png', 'base64')
 _CLEAR = '#00000000'
+_HEX = re.compile(r'#[0-9A-Fa-f]{8}')
 
 
 def _backend(name, module):
@@ -40,6 +41,13 @@ def _png_meta(data):
             meta = json.loads(body[9:].decode('ascii'))
             if not isinstance(meta, dict) or meta.get('schema') != 'ironmate-pixel-grid/1':
                 raise ValueError('ironmate metadata is not an ironmate-pixel-grid/1 header')
+            for key in ('width', 'height'):
+                if type(meta.get(key)) is not int or meta[key] < 1:
+                    raise ValueError(f'ironmate metadata {key} must be a positive integer')
+            colors = meta.get('colors')
+            if (not isinstance(colors, list) or not colors
+                    or not all(isinstance(c, str) and _HEX.fullmatch(c) for c in colors)):
+                raise ValueError('ironmate metadata colors must be a non-empty list of #RRGGBBAA')
             return meta
         if kind in (b'IDAT', b'IEND'):
             return None
@@ -146,7 +154,7 @@ def restore(source, size=None, backend='auto'):
     """Dot-art PNG/SVG/JSON (file bytes, Base64, data URI or dict) -> artifact.
 
     With the ``ironmate`` PNG header the original artifact is returned exactly. Otherwise the
-    cell scale is ``image width // size`` when ``size`` is given, else the largest scale that
+    cell scale is ``image width // size`` when ``size`` is given (SVG: 1 by default), else the largest scale that
     divides every same-color run; the palette is canonical (see ``canonical``).
     ``backend``: PNG decoding via 'stdlib' or 'PIL' (Pillow), scale detection via 'numpy'.
     """
@@ -183,6 +191,8 @@ def restore(source, size=None, backend='auto'):
         if any(c not in index for row in small for c in row):
             raise ValueError('pixels use colors that are not in the ironmate metadata')
         return dict(meta, pixels=[[index[c] for c in row] for row in small])
+    if size is None and kind == 'svg':
+        size = width  # SVG pixel size comes from its viewBox (grid units for grid_svg output)
     if size is not None:
         if type(size) is not int or size < 1 or width % size:
             raise ValueError(f'size {size!r} does not divide the image width {width}')

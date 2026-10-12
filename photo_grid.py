@@ -279,6 +279,8 @@ def decode_png(data, max_pixels=MAX_PIXELS):
         elif kind == b'IDAT':
             idat.append(body)
         elif kind == b'IEND':
+            if pos != len(data):
+                raise ImageDecodeError(f'{len(data) - pos} bytes of trailing data after PNG IEND')
             break
     if not idat:
         raise ImageDecodeError('PNG has no image data')
@@ -289,6 +291,9 @@ def decode_png(data, max_pixels=MAX_PIXELS):
         raw = inflater.decompress(b''.join(idat), expected + 1)
     except zlib.error:
         raise ImageDecodeError('PNG image data is corrupt') from None
+    if inflater.unused_data or (len(raw) == expected and not inflater.eof
+                                and inflater.decompress(inflater.unconsumed_tail, 1)):
+        raise ImageDecodeError('PNG image data has extra bytes after the zlib stream')
     rows = _unfilter(raw, header[0], header[1], channels)
     return header[0], header[1], [_to_rgba(line, channels) for line in rows]
 

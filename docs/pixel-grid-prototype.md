@@ -309,3 +309,11 @@ Pillow版と標準版は同じadapter契約なので、後から差し替え・�
 - `recolor`：色IDの表に差し替えるだけ（番号不変）で往復一致。
 - SVG入力は`rect`・`circle`・`ellipse`・`polygon`・`g`(translate)と単色塗りのみ。曲線パス・グラデーション・CSS・外部参照・DOCTYPE/ENTITYは理由付きで拒否（`tests/test_svg_raster.py`）。
 - 条件表はREADMEの「1行で往復する」を正とする。Pillow・numpyはテスト依存に追加し、実行時は任意。
+
+#### 検証の強化（性質テスト・変異テスト・行列での見方）
+
+- `tests/test_grid_properties.py`：固定seedの乱数で11種の敵対的grid（多色・1違いの近似色・alpha 1〜255全部・市松・1点だけ違う・1×N/N×1・素数サイズ・透明のみ・単色・偶然そろったブロック）を作り、条件表の全経路を(x, y, RGBA)単位で独立のoracleと比較（標準・Pillow・numpy）。重い版は`heavy`。
+- 変異テスト：2点の入れ替え、1チャンネル±1、行のずらし、転置、反転、色表の順序変更、meta破損・改ざんがすべて検出されることを確認。
+- 作ったPNG：filter 0〜4（行ごとの混在含む）、IDAT分割、余分なチャンク、CRC不一致、IEND後・zlib後の余分なbytes。
+- `tests/test_grid_matrix.py`：gridをRGBA 4枚の行列として扱い、可逆経路の残差 R = 復元 − 元 が厳密に0であることを確認。特異値やsign+scaleの指紋は補助にとどめる（特異値は反転・転置を見逃すことをテストで示した）。非可逆経路（縮小→拡大、JPEG）はRMSで誤差を報告する。
+  考え方はmyon-bioinformatics/Aoiの`pythdragoras/littlebit_prune.py`（SVD残差、符号＋スケール）と`queryu/ask/suggest.py`（SVD＋符号の索引）から。コードの取り込みはしていない。

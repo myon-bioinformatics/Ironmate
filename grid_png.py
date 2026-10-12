@@ -58,6 +58,7 @@ def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument('input', help="pixel-grid JSON file ('-' = stdin)")
     p.add_argument('-o', '--output', help='write PNG here instead of stdout')
+    p.add_argument('--force', action='store_true', help='replace an existing -o file')
     p.add_argument('--scale', type=int, default=1, help='pixels per cell, 1-64 (default 1)')
     args = p.parse_args(argv)
     try:
@@ -68,8 +69,8 @@ def main(argv=None):
                 artifact = json.load(handle)
         data = to_png(artifact, args.scale)
         if args.output:
-            with open(args.output, 'wb') as handle:
-                handle.write(data)
+            from grid_output import write_output
+            write_output(args.output, data, args.force)
         else:
             sys.stdout.buffer.write(data)
     except (OSError, KeyError, TypeError, ValueError) as exc:

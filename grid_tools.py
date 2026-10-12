@@ -271,6 +271,7 @@ def main(argv=None):
         cmd.add_argument('--resize', type=int, help='nearest-neighbour resize to this width')
         cmd.add_argument('--recolor', help='swap palette to this color ID')
         cmd.add_argument('-o', '--output')
+        cmd.add_argument('--force', action='store_true', help='replace an existing -o file')
     args = p.parse_args(argv)
     try:
         if args.command == 'make':
@@ -289,8 +290,12 @@ def main(argv=None):
         return 2
     data = result if isinstance(result, bytes) else (result + ('' if result.endswith('\n') else '\n')).encode()
     if args.output:
-        with open(args.output, 'wb') as handle:
-            handle.write(data)
+        from grid_output import write_output
+        try:
+            write_output(args.output, data, args.force)
+        except OSError as exc:
+            print(f'error: {exc}', file=sys.stderr)
+            return 2
     else:
         sys.stdout.buffer.write(data)
         sys.stdout.flush()

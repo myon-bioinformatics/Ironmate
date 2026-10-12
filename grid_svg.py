@@ -62,6 +62,7 @@ def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument('input', help="pixel-grid JSON file ('-' = stdin)")
     p.add_argument('-o', '--output', help='write SVG here instead of stdout')
+    p.add_argument('--force', action='store_true', help='replace an existing -o file')
     p.add_argument('--scale', type=int, default=8, help='output pixels per cell, 1-64 (default 8)')
     p.add_argument('--no-merge', action='store_true', help='one rect per cell')
     args = p.parse_args(argv)
@@ -73,8 +74,8 @@ def main(argv=None):
                 artifact = json.load(handle)
         svg = to_svg(artifact, args.scale, not args.no_merge)
         if args.output:
-            with open(args.output, 'w', encoding='utf-8') as handle:
-                handle.write(svg)
+            from grid_output import write_output
+            write_output(args.output, svg.encode('utf-8'), args.force)
         else:
             sys.stdout.write(svg)
     except (OSError, KeyError, TypeError, ValueError) as exc:

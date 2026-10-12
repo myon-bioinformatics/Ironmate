@@ -48,7 +48,8 @@ def _png_meta(data):
             if (not isinstance(colors, list) or not colors
                     or not all(isinstance(c, str) and _HEX.fullmatch(c) for c in colors)):
                 raise ValueError('ironmate metadata colors must be a non-empty list of #RRGGBBAA')
-            return meta
+            from grid_png import header_info
+            return header_info(meta)   # foreign/free-text fields in a header are dropped, never echoed
         if kind in (b'IDAT', b'IEND'):
             return None
         pos += 12 + length

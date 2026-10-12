@@ -11,6 +11,28 @@ MAX_PIXELS = 4096 * 4096
 _RGBA = re.compile(r'#[0-9A-Fa-f]{8}')
 
 
+# Only these artifact fields ever go into the ironmate tEXt header (size, palette, generation
+# parameters). Anything else, including any source-image metadata, is never written.
+HEADER_FIELDS = ('schema', 'width', 'height', 'colors', 'palette', 'mask', 'effect', 'resampling', 'source',
+                 'fit', 'quantize', 'restored')
+_TOKEN = re.compile(r'[A-Za-z0-9_./-]{1,64}')
+
+
+def header_info(artifact):
+    """Whitelisted, type-checked header fields of ``artifact`` (no free text, no foreign keys)."""
+    def ok(key, v):
+        if key in ('width', 'height'):
+            return type(v) is int
+        if key == 'colors':
+            return isinstance(v, list) and all(isinstance(c, str) and _RGBA.fullmatch(c) for c in v)
+        if key in ('source', 'restored'):
+            return isinstance(v, dict) and all(k in ('width', 'height', 'format', 'scale') and
+                                               (type(x) is int or (isinstance(x, str) and _TOKEN.fullmatch(x)))
+                                               for k, x in v.items())
+        return v is None or (isinstance(v, str) and _TOKEN.fullmatch(v) is not None)
+    return {k: artifact[k] for k in HEADER_FIELDS if k in artifact and ok(k, artifact[k])}
+
+
 def _chunk(kind, body):
     return struct.pack('>I', len(body)) + kind + body + struct.pack('>I', zlib.crc32(kind + body))
 
@@ -41,7 +63,7 @@ def to_png(artifact, scale=1, meta=False):
     header = struct.pack('>IIBBBBB', width * scale, height * scale, 8, 6, 0, 0, 0)
     text = b''
     if meta:
-        info = {k: v for k, v in artifact.items() if k != 'pixels'}
+        info = header_info(artifact)
         text = _chunk(b'tEXt', b'ironmate\x00' + json.dumps(info, sort_keys=True, separators=(',', ':'),
                                                             ensure_ascii=True).encode('ascii'))
     return (b'\x89PNG\r\n\x1a\n' + _chunk(b'IHDR', header) + text

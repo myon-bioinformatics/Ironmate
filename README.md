@@ -175,6 +175,21 @@ python -c "import ironmate_image as im,grid_tools as g;print(g.encode(im.resize(
 
 `FitResult.command`は同じバイト列を出すgrid_toolsのCLIです（テストで一致を確認）。
 
+#### プライバシー（元画像のメタデータは必ず捨てる）
+
+出力（PNG・Base64・data URI・SVG・JSON）には、元画像のEXIF（GPS位置情報・撮影日時・機種・作者を含む）、XMP、ICCプロファイル、PNGの`tEXt`/`zTXt`/`iTXt`（作者・コメント等）、`eXIf`、`tIME`などは**一切含まれません**。画素だけを読み、出力はゼロから書き直すためです。`ironmate_image`・`grid_tools`（`photo`/`load`/`fit`）・`photo_grid`のすべての経路で、元の文字列が出力に残らないことをテスト（`tests/test_privacy.py`）で確認しています。
+
+PNG出力に入るのは`IHDR`・`IDAT`・`IEND`と、既定ではironmateの`tEXt`1つだけです。その中身は次の項目に限ります（`--no-meta`なら付きません）。
+
+| 項目 | 内容 |
+| --- | --- |
+| `schema`・`width`・`height` | 形式名とグリッドの大きさ |
+| `colors`・`palette` | パレット（`#RRGGBBAA`の並び）と色ID |
+| `mask`・`effect`・`fit`・`quantize`・`resampling` | 生成・変換の設定 |
+| `source`・`restored` | 元画像の幅・高さ・形式名・倍率（数値と短い識別子のみ） |
+
+これ以外のキーや自由な文字列は、書き出すときも、ironmateヘッダー付きPNGを読み込むときも捨てます（他のツールが作ったヘッダーに個人情報が入っていても引き継ぎません）。
+
 #### クリップボード／Base64入力の事例集
 
 `tests/fixtures/base64_bridge_cases.json`に、Base64画像の貼り付けで起きやすい入力（data URIのtypeと中身の不一致、ラベルなしGIF、大文字の`DATA:`、BOM、`;charset=`等のparameter、76桁CRLF改行、URL-safe、`%3D`padding等）と期待結果をまとめています。Ironmateでの扱い：

@@ -15,8 +15,12 @@ def _chunk(kind, body):
     return struct.pack('>I', len(body)) + kind + body + struct.pack('>I', zlib.crc32(kind + body))
 
 
-def to_png(artifact, scale=1):
-    """Return deterministic PNG bytes; index 0 is written as its RGBA (normally transparent)."""
+def to_png(artifact, scale=1, meta=False):
+    """Return deterministic PNG bytes; index 0 is written as its RGBA (normally transparent).
+
+    ``meta=True`` adds a ``tEXt`` chunk (keyword ``ironmate``) with the artifact minus ``pixels``,
+    so ``grid_tools.restore`` can recover palette order, unused colors and the grid size exactly.
+    """
     if type(scale) is not int or not 1 <= scale <= 64:
         raise ValueError('scale must be an integer from 1 to 64')
     width, height, pixels, colors = (artifact['width'], artifact['height'],
@@ -35,13 +39,18 @@ def to_png(artifact, scale=1):
         line = b'\x00' + b''.join(rgba[v] * scale for v in row)
         raw += line * scale
     header = struct.pack('>IIBBBBB', width * scale, height * scale, 8, 6, 0, 0, 0)
-    return (b'\x89PNG\r\n\x1a\n' + _chunk(b'IHDR', header)
+    text = b''
+    if meta:
+        info = {k: v for k, v in artifact.items() if k != 'pixels'}
+        text = _chunk(b'tEXt', b'ironmate\x00' + json.dumps(info, sort_keys=True, separators=(',', ':'),
+                                                            ensure_ascii=True).encode('ascii'))
+    return (b'\x89PNG\r\n\x1a\n' + _chunk(b'IHDR', header) + text
             + _chunk(b'IDAT', zlib.compress(bytes(raw), 9)) + _chunk(b'IEND', b''))
 
 
-def to_base64(artifact, scale=1, data_uri=False):
+def to_base64(artifact, scale=1, data_uri=False, meta=False):
     """Base64 of ``to_png`` bytes (optionally ``data:image/png;base64,...``); readable by photo_grid."""
-    text = base64.b64encode(to_png(artifact, scale)).decode('ascii')
+    text = base64.b64encode(to_png(artifact, scale, meta)).decode('ascii')
     return 'data:image/png;base64,' + text if data_uri else text
 
 

@@ -301,3 +301,11 @@ Pillow版と標準版は同じadapter契約なので、後から差し替え・�
 出力はJSON/SVG/PNG（WebP出力はなし）、背景除去・顔などの意味的補正なし。
 標準版は純Pythonなので大きな画像は遅い（1000×1000で約1秒の目安）。
 見た目の品質は評価していない。
+
+#### 往復ツール（`grid_tools.py`）とSVG入力の部分集合（`svg_raster.py`）
+
+- `restore`：meta付きPNGは元JSONに完全復元。metaなしは`--size`か連続長の最大公約数で倍率を決め、各ブロックが単色でなければエラー。
+- `resize`：セル中心の最近傍（`(2i+1)*old // (2*new)`）。拡大→元サイズは常に一致、縮小は情報が落ちる。
+- `recolor`：色IDの表に差し替えるだけ（番号不変）で往復一致。
+- SVG入力は`rect`・`circle`・`ellipse`・`polygon`・`g`(translate)と単色塗りのみ。曲線パス・グラデーション・CSS・外部参照・DOCTYPE/ENTITYは理由付きで拒否（`tests/test_svg_raster.py`）。
+- 条件表はREADMEの「1行で往復する」を正とする。Pillow・numpyはテスト依存に追加し、実行時は任意。

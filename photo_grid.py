@@ -1,4 +1,4 @@
-"""Base64 image -> indexed pixel grid (photo conversion, first milestone). Python 3.11+.
+"""Base64 image or PNG file -> indexed pixel grid (photo conversion, first milestone). Python 3.11+.
 
 Pipeline: strict Base64/data URI decode -> image bytes -> decoder adapter
 (bytes -> width, height, RGBA rows) -> crop/fit -> area-average downscale ->
@@ -283,7 +283,7 @@ def decode_image(data, max_pixels=MAX_PIXELS):
 
 def convert(text, size=16, fit='crop', colors=8, palette=None, decoder=decode_image,
             max_bytes=MAX_BYTES, max_pixels=MAX_PIXELS):
-    """Base64 image -> ``ironmate-pixel-grid/1`` artifact. Index 0 is always transparent.
+    """Base64 text (or raw PNG bytes) -> ``ironmate-pixel-grid/1`` artifact. Index 0 is always transparent.
 
     ``palette`` names a fixed pixel_grid palette; otherwise ``colors`` (1-16) opaque colors
     are chosen by deterministic median cut. Cells with averaged alpha < 128 become index 0.
@@ -296,7 +296,13 @@ def convert(text, size=16, fit='crop', colors=8, palette=None, decoder=decode_im
         raise ValueError('unknown palette')
     if palette is None and (type(colors) is not int or not 1 <= colors <= 16):
         raise ValueError('colors must be an integer from 1 to 16')
-    width, height, rows = decoder(decode_base64(text, max_bytes), max_pixels)
+    if isinstance(text, bytes) and text.startswith(_PNG_SIGNATURE):
+        if len(text) > max_bytes:
+            raise ValueError(f'input exceeds {max_bytes} bytes')
+        data = text  # plain PNG file bytes
+    else:
+        data = decode_base64(text, max_bytes)
+    width, height, rows = decoder(data, max_pixels)
     canvas = _downscale(width, height, rows, size, fit)
     opaque = [cell[:3] for row in canvas for cell in row if cell and cell[3] >= 128]
     if palette:
@@ -317,32 +323,36 @@ def convert(text, size=16, fit='crop', colors=8, palette=None, decoder=decode_im
 
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    p.add_argument('input', help="file containing Base64 or a data: URI ('-' = stdin)")
+    p.add_argument('input', help="PNG file, or file with Base64 / a data: URI ('-' = stdin)")
     p.add_argument('--size', type=int, choices=SIZES, default=16)
     p.add_argument('--fit', choices=FITS, default='crop')
     p.add_argument('--colors', type=int, default=8, help='median-cut colors, 1-16 (default 8)')
     p.add_argument('--palette', choices=PALETTES, help='use a fixed pixel_grid palette instead')
-    p.add_argument('--format', choices=('json', 'svg'), default='json')
-    p.add_argument('--scale', type=int, default=8, help='SVG pixels per cell, 1-64 (default 8)')
+    p.add_argument('--format', choices=('json', 'svg', 'png'), default='json')
+    p.add_argument('--scale', type=int, help='pixels per cell, 1-64 (default svg 8, png 1)')
     p.add_argument('-o', '--output', help='write the result here instead of stdout')
     args = p.parse_args(argv)
     try:
         if args.input == '-':
-            text = sys.stdin.read(MAX_BYTES * 2)
+            text = sys.stdin.buffer.read(MAX_BYTES * 2)
         else:
-            with open(args.input, encoding='ascii') as handle:
+            with open(args.input, 'rb') as handle:
                 text = handle.read(MAX_BYTES * 2)
         artifact = convert(text, args.size, args.fit, args.colors, args.palette)
-        if args.format == 'svg':
+        if args.format == 'png':
+            from grid_png import to_png
+            result = to_png(artifact, args.scale or 1)
+        elif args.format == 'svg':
             from grid_svg import to_svg
-            result = to_svg(artifact, args.scale)
+            result = to_svg(artifact, args.scale or 8).encode('utf-8')
         else:
-            result = json.dumps(artifact, ensure_ascii=False) + '\n'
+            result = (json.dumps(artifact, ensure_ascii=False) + '\n').encode('utf-8')
         if args.output:
-            with open(args.output, 'w', encoding='utf-8') as handle:
+            with open(args.output, 'wb') as handle:
                 handle.write(result)
         else:
-            sys.stdout.write(result)
+            sys.stdout.buffer.write(result)
+            sys.stdout.flush()
     except (OSError, UnicodeDecodeError, ValueError) as exc:
         print(f'error: {exc}', file=sys.stderr)
         return 2

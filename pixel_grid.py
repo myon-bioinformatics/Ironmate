@@ -2,6 +2,7 @@
 from __future__ import annotations
 import argparse
 import json
+import sys
 
 __all__ = ['MASKS', 'PALETTES', 'SIZES', 'EFFECTS', 'render', 'emoji', 'main']
 SIZES = (8, 16, 32, 64, 128)
@@ -86,13 +87,17 @@ def main(argv=None):
     p.add_argument('--palette', choices=PALETTES, default='nature')
     p.add_argument('--effect', choices=EFFECTS, default='normal')
     p.add_argument('--size', type=int, choices=SIZES, default=16)
-    p.add_argument('--format', choices=('emoji', 'json', 'svg'), default='emoji')
-    p.add_argument('--scale', type=int, default=8, help='SVG pixels per cell (svg only)')
+    p.add_argument('--format', choices=('emoji', 'json', 'svg', 'png'), default='emoji')
+    p.add_argument('--scale', type=int, help='pixels per cell for svg (default 8) / png (default 1)')
     args = p.parse_args(argv)
     artifact = render(args.mask, args.palette, args.effect, args.size)
     if args.format == 'svg':
         from grid_svg import to_svg  # lazy: keeps import of this module inert
-        print(to_svg(artifact, args.scale), end='')
+        print(to_svg(artifact, args.scale or 8), end='')
+    elif args.format == 'png':
+        from grid_png import to_png  # lazy, like grid_svg
+        sys.stdout.flush()
+        sys.stdout.buffer.write(to_png(artifact, args.scale or 1))
     else:
         print(emoji(artifact) if args.format == 'emoji' else json.dumps(artifact, ensure_ascii=False))
     return 0

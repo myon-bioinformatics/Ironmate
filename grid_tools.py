@@ -272,6 +272,7 @@ def main(argv=None):
     es.add_argument('--limit-bytes', type=int)
     es.add_argument('--limit-chars', type=int)
     es.add_argument('--data-uri', action='store_true', help='limit includes the data:image/png;base64, prefix')
+    es.add_argument('--no-meta', action='store_true', help='size output written with --no-meta (default: with header)')
     es.add_argument('--verify', action='store_true', help='encode each candidate and report the real size')
     for cmd in (mk, ph, ld):
         cmd.add_argument('--to', choices=FORMATS, default='base64' if cmd is mk else 'json')
@@ -288,7 +289,8 @@ def main(argv=None):
         try:
             result = estimate(_read(args.input) if args.input else None, width=args.width, height=args.height,
                               nbytes=args.nbytes, chars=args.chars, limit_bytes=args.limit_bytes,
-                              limit_chars=args.limit_chars, data_uri=args.data_uri, verify=args.verify)
+                              limit_chars=args.limit_chars, data_uri=args.data_uri, verify=args.verify,
+                              meta=not args.no_meta)
         except (OSError, ValueError, ImportError) as exc:
             print(f'error: {exc}', file=sys.stderr)
             return 2

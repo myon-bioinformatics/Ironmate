@@ -26,7 +26,8 @@ def test_header_only_estimate():
     rec = r['recommended']
     assert rec['est_chars'] <= 200000 and Fraction(rec['ratio']) < 1
     assert Fraction(r['integer_option']['ratio']).numerator == 1
-    assert r['signals_used'] == ['input byte size only']
+    assert r['signals_used'] == ['input byte size only',
+                                 'ironmate metadata chunk (default output; --no-meta to omit)']
 
 
 def test_pixel_art_signals_and_lossless_options():
@@ -59,7 +60,9 @@ def _photo(fmt, **kw):
                                      ('PNG', {})])
 def test_photo_signals_and_estimate_accuracy(fmt, kw):
     data = _photo(fmt, **kw)
-    r = s.estimate(data, limit_chars=20000, data_uri=True, verify=True)
+    r = s.estimate(data, limit_chars=20000, data_uri=True, verify=True, meta=False)
+    with_meta = s.estimate(data, limit_chars=20000, data_uri=True, verify=True)
+    assert with_meta['recommended'] is None and '--no-meta' in with_meta['note']   # 1 header entry per color
     sig = r['input']
     if fmt == 'JPEG':
         assert sig['quality_estimate'] == kw['quality'] and sig['subsampling'] == '4:2:0'
@@ -104,3 +107,101 @@ def test_cli_one_liners(tmp_path):
     assert one.returncode == 0 and Fraction(one.stdout.decode().strip()) < 1
     bad = subprocess.run([sys.executable, '-m', 'grid_tools', 'estimate', '--width', '5'], cwd=ROOT, capture_output=True)
     assert bad.returncode == 2 and b'error' in bad.stderr
+
+
+# --- review #92 Blocking: verification must measure the real default grid_tools output -------
+def _cli(*args):
+    out = subprocess.run([sys.executable, '-m', 'grid_tools', *args], cwd=ROOT, capture_output=True, timeout=120)
+    assert out.returncode == 0, out.stderr
+    return out.stdout
+
+
+def _real(src_path, opt, data_uri, meta):
+    """Length of what the verified command actually prints (Base64 text, newline stripped)."""
+    args = ['load', str(src_path), '--size', str(opt and SRC_W[src_path]), '--resize', str(opt['width']),
+            '--to', 'base64'] + (['--data-uri'] if data_uri else []) + ([] if meta else ['--no-meta'])
+    return len(_cli(*args).rstrip(b'\n'))
+
+
+SRC_W = {}
+
+
+def _sources(tmp_path):
+    rnd = random.Random(92)
+    art = g.make('circle', 'C03', 'shadow', 24)
+    plain = tmp_path / 'plain.png'          # header-less PNG (e.g. from another tool)
+    plain.write_bytes(g.encode(art, 'png', 3, meta=False))
+    noisy = dict(art, colors=art['colors'] + ['#%08X' % rnd.getrandbits(32) for _ in range(40)])
+    noisy['pixels'] = [[rnd.randrange(len(noisy['colors'])) for _ in row] for row in art['pixels']]
+    noise = tmp_path / 'noise.png'
+    noise.write_bytes(g.encode(noisy, 'png', 1, meta=False))
+    withmeta = tmp_path / 'meta.png'        # default grid_tools output (ironmate header)
+    withmeta.write_bytes(g.encode(art, 'png', 3))
+    for p in (plain, noise, withmeta):
+        SRC_W[p] = s.inspect(p.read_bytes())[0]['width']
+    return plain, noise, withmeta
+
+
+@pytest.mark.parametrize('meta', [True, False])
+@pytest.mark.parametrize('data_uri', [False, True])
+def test_verify_matches_real_cli_output_at_the_boundary(tmp_path, meta, data_uri):
+    for src in _sources(tmp_path):
+        data = src.read_bytes()
+        probe = s.estimate(data, limit_chars=10 ** 7, data_uri=data_uri, verify=True, meta=meta)
+        for opt in probe['options'][:6]:
+            real = _real(src, opt, data_uri, meta) if opt['ratio'] in ('1', '1/2', '2/3') else None
+            if real is not None:
+                assert opt['actual_chars'] == real, (src.name, opt['ratio'])
+            assert opt['actual_bytes'] == len(g.encode(s._candidate_artifact(
+                data, 'png', SRC_W[src], s.inspect(data)[1], opt['width']), 'png', 1, meta=meta))
+            assert opt['actual_bytes'] <= opt['upper_bytes']
+        full = probe['options'][0]
+        real = _real(src, full, data_uri, meta)
+        # limit exactly at the real output size -> full size verified as fitting
+        at = s.estimate(data, limit_chars=real, data_uri=data_uri, verify=True, meta=meta)
+        assert at['recommended']['ratio'] == '1' and at['recommended']['actual_chars'] == real
+        # one Base64 quantum below -> full size must be rejected (no fail-open)
+        below = s.estimate(data, limit_chars=real - 1, data_uri=data_uri, verify=True, meta=meta)
+        assert below['recommended'] is None or below['recommended']['ratio'] != '1'
+        if below['recommended']:
+            rec = below['recommended']
+            assert _real(src, rec, data_uri, meta) == rec['actual_chars'] <= real - 1
+        # byte limits: exact and 1 byte below
+        nb = full['actual_bytes']
+        assert s.estimate(data, limit_bytes=nb, verify=True, meta=meta)['recommended']['ratio'] == '1'
+        assert s.estimate(data, limit_bytes=nb - 1, verify=True, meta=meta)['recommended']['ratio'] != '1' \
+            if s.estimate(data, limit_bytes=nb - 1, verify=True, meta=meta)['recommended'] else True
+
+
+def test_bare_fits_but_default_meta_exceeds(tmp_path):
+    """The review's fixture: header-less size fits, the default (meta) output does not."""
+    plain, _, _ = _sources(tmp_path)
+    data = plain.read_bytes()
+    bare = _real(plain, {'width': SRC_W[plain]}, False, False)
+    withm = _real(plain, {'width': SRC_W[plain]}, False, True)
+    assert withm > bare
+    r = s.estimate(data, limit_chars=bare, verify=True)                # default meta=True
+    assert r['options'][0]['actual_chars'] == withm > bare
+    if r['recommended']:
+        assert r['recommended']['ratio'] != '1'
+        assert _real(plain, r['recommended'], False, True) <= bare
+    r = s.estimate(data, limit_chars=bare, verify=True, meta=False)
+    assert r['recommended']['ratio'] == '1'
+    out = json.loads(_cli('estimate', str(plain), '--limit-chars', str(bare), '--verify'))
+    assert out['meta'] is True and (out['recommended'] or {}).get('ratio') != '1'
+    out = json.loads(_cli('estimate', str(plain), '--limit-chars', str(bare), '--verify', '--no-meta'))
+    assert out['recommended']['ratio'] == '1' and '--no-meta' in out['recommended']['command']
+
+
+def test_estimate_without_verify_includes_meta_overhead(tmp_path):
+    plain, noise, withmeta = _sources(tmp_path)
+    for src in (plain, noise, withmeta):
+        data = src.read_bytes()
+        on = s.estimate(data, limit_bytes=10 ** 7, verify=True)
+        off = s.estimate(data, limit_bytes=10 ** 7, verify=True, meta=False)
+        for a, b in zip(on['options'], off['options']):
+            assert a['est_bytes'] > b['est_bytes'] and a['upper_bytes'] > b['upper_bytes']
+            assert a['actual_bytes'] <= a['upper_bytes']
+    hdr_on = s.estimate(width=64, height=64, nbytes=3000, limit_bytes=10 ** 6)
+    hdr_off = s.estimate(width=64, height=64, nbytes=3000, limit_bytes=10 ** 6, meta=False)
+    assert hdr_on['recommended']['upper_bytes'] > hdr_off['recommended']['upper_bytes']

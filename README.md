@@ -132,6 +132,7 @@ python -m grid_tools photo photo.jpg --size 32 --colors 8 --to base64 --data-uri
 
 Base64の文字数上限（例：エージェントのメッセージ上限）に収めるための縮小率を出します。
 出力はgrid_toolsと同じ8bit RGBA PNG（filter 0、zlib 9）として見積もります。
+対象は**既定のgrid_tools出力**です。つまり`ironmate`メタデータ（tEXt）付きで、`load INPUT --size W --resize w2 --to base64 [--data-uri]`が実際に出す長さを測ります。メタデータを付けない出力を測るときは`--no-meta`（Python では`meta=False`）を指定します。
 
 ```bash
 python -m grid_tools estimate --width 1024 --height 768 --bytes 900000 --limit-chars 200000 --data-uri
@@ -144,9 +145,10 @@ python -c "import size_estimate as s;print(s.estimate(width=64,height=64,nbytes=
 | Base64文字数 | `4*ceil(bytes/3)`（`=`padding込み、`--data-uri`なら`data:image/png;base64,`の22文字を加算）。厳密 |
 | 推奨 | `recommended`（2/3・1/2など簡単な分数）、`integer_option`（1/k）、`lossless_option`（最近傍で無劣化） |
 | 無劣化の判定 | 同色連続長の最大公約数（cell scale）をkが割り切る1/kのみ無劣化 |
-| 上限 | `upper_bytes`は無圧縮deflateの厳密な上限。`typical_low_bytes`は目安 |
+| メタデータ | 既定で`est_bytes`・`upper_bytes`・`actual_bytes`にtEXt分を含む。resizeはパレットを全部残すので、色数の多い写真はヘッダーだけで大きくなる（その場合は`--no-meta`を案内） |
+| 上限 | `upper_bytes`は無圧縮deflateとメタデータ込みの厳密な上限。`typical_low_bytes`は目安 |
 | 使った信号 | `signals_used`：PNGのIHDR・PLTE・tRNS・IDAT圧縮率・meta、JPEGのSOF・量子化表からの品質推定・subsampling・EXIF、WebPのVP8/VP8L/VP8X、色数・alpha・エントロピー・連続長・cell scale |
-| 信頼度 | `confidence`：low（寸法とbytesのみ）／medium（画素を再符号化して測定）／verified（`--verify`で各候補を実符号化） |
+| 信頼度 | `confidence`：low（寸法とbytesのみ）／medium（画素を再符号化して測定）／verified（`--verify`で各候補を`grid_tools.encode`で実符号化。各候補に同じ出力を出す`command`を併記） |
 
 測定（写真のJPEG/WebP/PNG、ドット絵）では見積もりは実測の0.75〜1.6倍に収まりました。PNGの圧縮率は内容で変わるため、上限に近いときは`--verify`を使ってください。
 

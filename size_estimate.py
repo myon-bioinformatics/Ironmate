@@ -6,6 +6,11 @@
 Output PNGs are modelled as 8-bit RGBA written by grid_png (filter 0, zlib level 9), the format
 grid_tools produces. Without ``verify`` the size is an estimate with explicit bounds and a
 confidence level; ``verify`` encodes the candidate and reports the actual size.
+
+Contract: sizes are those of the default ``grid_tools`` output for the candidate, i.e.
+``python -m grid_tools load INPUT [--size W] --resize w2 --to png|base64 [--data-uri]`` with the
+``ironmate`` tEXt metadata ON unless ``meta=False`` (CLI ``--no-meta``). JPEG/WebP inputs (which
+``load`` rejects) are measured as ``grid_tools.encode`` of the same canonical candidate grid.
 """
 from __future__ import annotations
 import base64, binascii, math, struct, zlib
@@ -44,6 +49,7 @@ def _png_signals(data):
             out['trns'] = True
         elif kind == b'tEXt' and body.startswith(b'ironmate\x00'):
             out['ironmate_meta'] = True
+            out['ironmate_meta_bytes'] = 12 + length
         if kind == b'IDAT':
             idat += length
         else:
@@ -169,17 +175,54 @@ def _size(dim, r):
     return max(1, round(dim * r))
 
 
+def _meta_bytes(width, height, ncolors, restored):
+    """Exact tEXt chunk size grid_png writes for a canonical grid with ``ncolors`` colors."""
+    import json
+    info = {'colors': ['#00000000'] * ncolors, 'height': height, 'schema': 'ironmate-pixel-grid/1',
+            'width': width}
+    if restored:
+        info['restored'] = restored
+    return 12 + len(b'ironmate\x00') + len(json.dumps(info, sort_keys=True, separators=(',', ':')))
+
+
+def _command(is_png, width, w2, data_uri, meta):
+    if not is_png:
+        return 'grid_tools.encode(candidate grid, "png"%s)' % ('' if meta else ', meta=False')
+    return ('python -m grid_tools load INPUT --size %d --resize %d --to base64%s%s'
+            % (width, w2, ' --data-uri' if data_uri else '', '' if meta else ' --no-meta'))
+
+
+def _candidate_artifact(png, kind, width, pixels, w2):
+    """The artifact ``grid_tools load INPUT [--size W] --resize w2`` would encode (default output)."""
+    import grid_tools
+    if png is not None and grid_tools._png_meta(png):
+        art = grid_tools.restore(png)
+    else:   # identical to grid_tools.restore(png, size=width) for header-less PNG, without its O(n*colors) index
+        w, h, rows = pixels
+        small = [['#' + rows[y][4 * x:4 * x + 4].hex().upper() for x in range(w)] for y in range(h)]
+        used = sorted({c for row in small for c in row})
+        idx = {c: i for i, c in enumerate(used)}
+        art = grid_tools.canonical({'schema': 'ironmate-pixel-grid/1', 'width': w, 'height': h, 'colors': used,
+                                    'pixels': [[idx[c] for c in row] for row in small]})
+        art['restored'] = {'format': kind, 'scale': 1}
+    return grid_tools.resize(art, w2)
+
+
 def estimate(source=None, *, width=None, height=None, nbytes=None, chars=None, limit_bytes=None,
-             limit_chars=None, data_uri=False, verify=False):
+             limit_chars=None, data_uri=False, verify=False, meta=True):
     """Recommend a reduction so the output PNG (or its Base64) fits a limit.
 
     Give ``source`` (bytes, Base64 or data URI) for full signals, or just ``width``/``height`` with
     ``nbytes`` or ``chars``. ``limit_chars`` counts the ``data:image/png;base64,`` prefix when
-    ``data_uri`` is true. Returns a JSON-able dict with signals used, bounds and confidence.
+    ``data_uri`` is true. ``meta`` (default True, like grid_tools) includes the ironmate tEXt
+    chunk in every estimate, bound and verified size. Returns a JSON-able dict with signals used, bounds and confidence.
     """
-    signals, pixels, used = {}, None, []
+    signals, pixels, used, png = {}, None, [], None
     if source is not None:
         signals, pixels = inspect(source)
+        if signals['format'] == 'png':
+            import photo_grid
+            png = source if isinstance(source, bytes) and photo_grid._sniff(source) else photo_grid.decode_base64(source)
         used.append(f"{signals['format']} header")
         if 'unique_colors' in signals:
             used.append('pixel statistics')
@@ -217,14 +260,33 @@ def estimate(source=None, *, width=None, height=None, nbytes=None, chars=None, l
     if cell > 1:
         used.append(f'cell scale {cell} (block-uniform pixel art)')
 
+    src_meta = signals.get('ironmate_meta_bytes')
+    uniq = signals.get('unique_colors')
+    if meta:
+        used.append('ironmate metadata chunk (default output; --no-meta to omit)')
+
+    def meta_cost(w2, h2):
+        """(point, upper) bytes of the tEXt chunk grid_tools writes by default."""
+        if not meta:
+            return 0, 0
+        if src_meta:     # ironmate input: same header; width/height never gain digits when shrinking
+            return src_meta, src_meta
+        restored = {'format': fmt or 'jpeg', 'scale': 1}   # 'jpeg'/'webp' is the longest name
+        # resize keeps the whole palette, so the header lists every source color (+ transparent)
+        point = uniq if uniq else min(width * height, 16)   # unknown: typical dot art
+        upper = uniq if uniq else width * height
+        return _meta_bytes(w2, h2, point + 1, restored), _meta_bytes(w2, h2, upper + 1, restored)
+
     def model(r):
-        w2, h2 = _size(width, r), _size(height, r)
+        w2 = _size(width, r)
+        h2 = max(1, round(height * w2 / width))             # same rule as grid_tools.resize
         stored = h2 * (1 + 4 * w2)
-        upper = PNG_OVERHEAD + stored + 5 * math.ceil(stored / 65535) + 6   # hard: deflate stored blocks
+        mp, mu = meta_cost(w2, h2)
+        upper = PNG_OVERHEAD + mu + stored + 5 * math.ceil(stored / 65535) + 6   # hard: deflate stored blocks
         # Photos scale with pixel count (r^2). Block art keeps detail until blocks reach 1 px (~r).
         point = base * (r * min(1.0, math.sqrt(cell * r)) if cell > 1 else r * r)
-        point = PNG_OVERHEAD + int(min(point, upper - PNG_OVERHEAD))
-        low = PNG_OVERHEAD + int(min(point - PNG_OVERHEAD, upper) * 0.5)          # heuristic
+        point = PNG_OVERHEAD + mp + int(min(point, upper - PNG_OVERHEAD - mu))
+        low = PNG_OVERHEAD + mp + int((point - PNG_OVERHEAD - mp) * 0.5)          # heuristic
         return w2, h2, point, low, upper
 
     def lossless(r):
@@ -237,8 +299,11 @@ def estimate(source=None, *, width=None, height=None, nbytes=None, chars=None, l
                'typical_low_bytes': low, 'upper_bytes': upper,
                'est_chars': base64_chars(point, data_uri), 'nearest_lossless': lossless(r)}
         if verify and pixels:
-            actual = _encode_rgba(w2, h2, _nearest(*pixels, w2, h2))
-            out.update(actual_bytes=actual, actual_chars=base64_chars(actual, data_uri))
+            import grid_tools
+            art = _candidate_artifact(png, fmt, width, pixels, w2)
+            actual = len(grid_tools.encode(art, 'png', 1, meta=meta))
+            out.update(actual_bytes=actual, actual_chars=base64_chars(actual, data_uri),
+                       meta=meta, command=_command(png is not None, width, w2, data_uri, meta))
         return out
 
     def fits(o):
@@ -251,6 +316,7 @@ def estimate(source=None, *, width=None, height=None, nbytes=None, chars=None, l
     if verify and pixels:
         conf = 'verified'
     result = {
+        'meta': meta, 'data_uri': data_uri,
         'target_bytes': target, 'target_chars': base64_chars(target, data_uri) if limit_chars is None else limit_chars,
         'input': {k: v for k, v in signals.items()} or {'width': width, 'height': height, 'bytes': nbytes},
         'signals_used': used, 'confidence': conf,
@@ -262,6 +328,9 @@ def estimate(source=None, *, width=None, height=None, nbytes=None, chars=None, l
     }
     if rec is None:
         result['note'] = 'even the smallest candidate exceeds the limit'
+        if meta and options[-1].get('actual_bytes', options[-1]['est_bytes']) > target:
+            result['note'] += ('; the ironmate header lists every palette color and is kept by resize,'
+                               ' try --no-meta')
     elif cell > 1 and not rec['nearest_lossless']:
         result['note'] = f'pixel art with cell scale {cell}: ratios 1/k with k dividing {cell} are lossless'
     return result

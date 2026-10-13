@@ -3,8 +3,8 @@
  "generator": "Ironmate tests/test_base64_bridge_cases.py (cases are literal)",
  "about": "Text payloads for clipboard/Base64 image import. Mirrors flutter_navigation_basic Base64ImageBridge bugs (flutterBug = number in the review). expect: ok -> decoded format; reject -> category + message substring from Ironmate photo_grid.decode_image.",
  "limits": {
-  "maxInputBytes": 8388608,
-  "maxBase64Chars": 11184812,
+  "maxInputBytes": 33554432,
+  "maxBase64Chars": 44739244,
   "note": "chars limit = 4*ceil(bytes/3) (+ data URI prefix); the byte limit is authoritative"
  },
  "cases": [

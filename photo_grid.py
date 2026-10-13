@@ -12,10 +12,10 @@ import argparse, base64, binascii, json, re, struct, sys, zlib
 
 from pixel_grid import PALETTES, SIZES
 
-__all__ = ['FITS', 'MAX_BYTES', 'MAX_PIXELS', 'ImageDecodeError', 'decode_base64',
+__all__ = ['FITS', 'MAX_BYTES', 'MAX_PIXELS', 'max_base64_chars', 'ImageDecodeError', 'decode_base64',
            'decode_png', 'decode_pillow', 'decode_image', 'convert', 'main']
 FITS = ('crop', 'contain')
-MAX_BYTES = 8 * 1024 * 1024
+MAX_BYTES = 32 * 1024 * 1024  # = flutter_navigation_basic PhotoImportLimits.maxInputBytes
 MAX_PIXELS = 4096 * 4096
 _DATA_URI = re.compile(r'data:([\w.+-]+/[\w.+-]+)?((?:;[\w.+-]+=[\w.+-]+)*);base64,', re.ASCII | re.IGNORECASE)
 _MIME_SIGNATURES = {'image/png': (b'\x89PNG\r\n\x1a\n',), 'image/jpeg': (b'\xff\xd8\xff',),
@@ -209,6 +209,11 @@ def _hex_rgb(value):
     return tuple(int(value[i:i + 2], 16) for i in (1, 3, 5))
 
 
+def max_base64_chars(max_bytes=MAX_BYTES):
+    """Most Base64 characters (padding included) that can decode to ``max_bytes`` bytes."""
+    return 4 * ((max_bytes + 2) // 3)
+
+
 def decode_base64(text, max_bytes=MAX_BYTES):
     """Strictly decode raw Base64 or a ``data:...;base64,`` URI into the original bytes."""
     if isinstance(text, bytes):
@@ -228,7 +233,7 @@ def decode_base64(text, max_bytes=MAX_BYTES):
     text = ''.join(text.split())
     if not text:
         raise ValueError('Base64 input is empty')
-    if len(text) // 4 * 3 > max_bytes + 2:
+    if len(text) > max_base64_chars(max_bytes):  # same early check as Dart Base64ImageBridge
         raise ValueError(f'decoded input exceeds {max_bytes} bytes')
     if len(text) % 4 or not _BASE64.fullmatch(text):
         raise ValueError('invalid Base64 input (standard alphabet A-Z a-z 0-9 + / with = padding; '

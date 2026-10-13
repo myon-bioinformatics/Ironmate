@@ -148,13 +148,13 @@ def test_rejected_inputs(text, match):
 
 
 def test_limits():
-    limit = pg.MAX_BYTES
+    limit = 1000  # small stand-in for MAX_BYTES (boundary semantics are size-independent)
     exact = base64.b64encode(b'\x89PNG\r\n\x1a\n' + b'\0' * (limit - 8)).decode()
     with pytest.raises(pg.ImageDecodeError):  # accepted by size, then rejected as a PNG
-        pg.convert(exact)
+        pg.convert(exact, max_bytes=limit)
     over = base64.b64encode(b'\x89PNG\r\n\x1a\n' + b'\0' * (limit - 7)).decode()
     with pytest.raises(ValueError, match='exceeds'):
-        pg.convert(over)
+        pg.convert(over, max_bytes=limit)
     big = pixel_grid.render(size=128)
     assert pg.decode_png(gp.to_png(big, 32))[:2] == (4096, 4096)
     with pytest.raises(ValueError, match='exceeds'):

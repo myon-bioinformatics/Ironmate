@@ -233,7 +233,7 @@ CSSの読み取りに関する既存の横断資産は、必要になった時�
 
 | 段階 | 規則 |
 | --- | --- |
-| Base64 | 生Base64または`data:<type>;base64,`。空白・改行は除去。英数字`+/`と末尾`=`2個まで以外、長さが4の倍数でない入力は拒否。復号後8 MiBまで |
+| Base64 | 生Base64または`data:<type>;base64,`。空白・改行は除去。英数字`+/`と末尾`=`2個まで以外、長さが4の倍数でない入力は拒否。復号後32 MiB（33,554,432 bytes）まで（flutter_navigation_basic の `maxInputBytes` と同じ。Base64長は先に `4*((max+2)//3)` 文字で判定） |
 | decode | adapter契約は`bytes -> (width, height, RGBA行のbytes)`。PNG署名なら`decode_png`（zlib+struct、CRC検査、8bit gray/gray+alpha/RGB/RGBA、非interlaceのみ）。それ以外は`decode_pillow`（Pillowがある場合のみ。EXIF向き補正あり）。上限4096×4096画素 |
 | crop/fit | 既定`crop`は短辺に合わせた中央の正方形を切り出す。`contain`は縦横比を保って全体を収め、余白を透明にする。canvasは8/16/32/64/128 |
 | 縮小 | 面積平均（端の画素は重なった面積で重み付け）。alphaで重み付けし、透明画素の色は混ぜない |

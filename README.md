@@ -137,6 +137,8 @@ python -m grid_tools photo photo.jpg --size 32 --colors 8 --to base64 --data-uri
 #### 縮小率と出力サイズの見積もり（`estimate`）
 
 Base64の文字数上限（例：エージェントのメッセージ上限）に収めるための縮小率を出します。
+
+読み込めるBase64は復号後32 MiB（33,554,432 bytes）までです（`photo_grid.MAX_BYTES`。flutter_navigation_basic の `maxInputBytes` と同じ値・同じ判定）。
 出力はgrid_toolsと同じ8bit RGBA PNG（filter 0、zlib 9）として見積もります。
 対象は**既定のgrid_tools出力**です。つまり`ironmate`メタデータ（tEXt）付きで、`load INPUT --size W --resize w2 --to base64 [--data-uri]`が実際に出す長さを測ります。メタデータを付けない出力を測るときは`--no-meta`（Python では`meta=False`）を指定します。
 

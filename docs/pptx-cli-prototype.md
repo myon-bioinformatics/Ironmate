@@ -301,3 +301,49 @@ python pptx_pipeline.py diagrams.md --mmdc node_modules/.bin/mmdc -o diagrams.pp
 ```
 
 Input modes and actual Marp conversion are covered by tests. `pptx_replace.py` remains an independent CLI for editing existing PPTX documents. Historical prototype milestones above describe their state at the time and should not override this current CLI contract.
+
+## Object spacing and simple layout patterns (#80)
+
+`pptx_layout.py` reproduces **row**, **column**, and **grid** arrangements
+using existing editable native shapes. No new dependency is required: lxml is
+already a python-pptx dependency. This is a geometry prototype, not screenshot
+recognition or automatic visual enrichment. It does not copy reference text.
+
+```toml
+[[rules]]
+pattern = "grid" # row / column / grid
+slide = 1
+shape_ids = [2, 3, 4, 5] # Open XML cNvPr IDs, NOT collection indexes
+columns = 2 # required only for grid
+x = 1.0 # inches, top-left anchor
+ y = 1.0
+gap_x = 0.2
+gap_y = 0.3
+```
+
+```sh
+python pptx_layout.py input.pptx --rules layout.toml --dry-run
+python pptx_layout.py input.pptx --rules layout.toml --output arranged.pptx
+```
+
+Selection order determines placement. Cells use the maximum selected width and
+height; gaps measure the space between cells (unequal shapes can therefore have
+larger visible gaps). Row uses one row, column one column, grid fills rows first.
+All coordinates/gaps must be finite nonnegative inches, at most 100; every
+resulting shape must fit the slide. Rules are sequential; dry-run uses the same
+intermediate geometry and returns before/after EMU coordinates and change count.
+
+Only top-level, unrotated, unflipped `p:sp` objects with explicit geometry are
+supported. Groups, pictures, tables, connectors and shapes attached to connectors
+are rejected when selected. Shape IDs must exist and be unique. This avoids
+silently breaking connected diagrams; automatic arrow routing remains future work.
+Sizes, text, style and IDs stay unchanged. Only selected slide XML is reserialized;
+all other ZIP member bytes (including relationships) are copied unchanged. Input
+and existing output paths are never overwritten. Output is reopened before atomic
+publication. Tests: `python -m pytest -q tests/test_pptx_layout.py`.
+
+Reference-derived structural targets are cards in rows, vertical agenda rows,
+columns with headings and box/arrow flows. This first step implements spacing of
+existing boxes. Pattern generation, arrow routing, text fitting, and final
+PowerPoint Web visual acceptance remain separate work; XML tests do not establish
+pixel equivalence to photographed slides.

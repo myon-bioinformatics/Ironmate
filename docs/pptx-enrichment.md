@@ -1,0 +1,77 @@
+# Editable PPTX enrichment patterns (#80)
+
+`pptx_enrich.py` adds reusable native objects to explicit regions of existing
+slides. It accepts TOML data instead of generating disposable Python per slide.
+Uses the existing python-pptx dependency; no additional install or API is needed.
+
+```sh
+python pptx_enrich.py input.pptx --patterns examples/pptx_enrich.toml --dry-run
+python pptx_enrich.py input.pptx --patterns examples/pptx_enrich.toml --output enriched.pptx
+```
+
+The example requires five existing slides. For a real deck, change slide numbers,
+text and region coordinates. Input is never overwritten. Output must be new.
+
+| Pattern | Reference structure | Native output |
+| --- | --- | --- |
+| agenda | Vertical agenda rows | Rounded boxes and editable text |
+| cards | Heading cards, comparison columns | Boxes, top bars, bold headings, body text |
+| regions | Labeled rounded areas | Rounded boxes, accent badges, editable text |
+| flow | Horizontal boxes and arrows | Independent boxes and right-arrow shapes |
+| table | Comparison/condition table | Editable native PowerPoint table |
+
+Several patterns can be placed in separate regions of one slide, e.g. a flow
+above cards and a one-row agenda/callout below. Cards can use `columns` to wrap
+into multiple rows. Patterns fill their given rectangle; dimensions and gaps
+are shared across cells. This covers basic reference structures, not exact
+reproduction of every photographed slide.
+
+## Contract
+
+Each `[[patterns]]` requires `pattern`, 1-based `slide`, `x`, `y`, `width`,
+`height` (inches). Optional `gap` defaults to 0.2, `font_size` to 14 points,
+`accent` to black. Cards optionally accept `columns` (default item count).
+Non-table patterns use `[[patterns.items]]` with `title`, `body` and optional
+`label` (agenda annotation). Table uses rectangular `rows`, with first row
+rendered as an accent header. Region badges and table headers use white text;
+other text uses black Meiryo. Titles are bold. New shapes have stable descriptive
+names and the report includes their Open XML IDs.
+
+Coordinates must be finite nonnegative numbers; positive dimensions and 6–72
+point font size are required. Content must be strings. Cells must be at least
+0.7 inches in each dimension. Patterns must fit slide bounds; flows require
+at least 0.15 inches of gap for arrows. Invalid input prevents publication,
+including when a later pattern fails after earlier ones were built in memory.
+
+Dry-run constructs the same objects in memory and reports counts and IDs without
+writing output. Only target slide XML members are replaced. All other member
+bytes, relationships, notes, media, and ZIP archive comments are preserved.
+Existing shapes are retained, with new objects appended above them in z-order.
+Reopen the output before atomic publication; existing destinations are rejected.
+
+## Acceptance boundary and remaining patterns
+
+The caller must choose free regions. Existing-object overlap is not detected or
+resolved. Text wrapping is enabled, but font metrics and text overflow are not
+measured; long text requires manual adjustment. A successful dry-run establishes
+native geometry and structure, not a successful visual fit.
+
+Flow arrows are standalone editable right-arrow shapes, not attached connectors;
+moving a box later does not automatically reroute them. Branch/merge paths,
+stacked model boxes with fan-out lines, return arrows, legends, automatic title/
+footer/page-number generation and detailed style matching remain future work.
+Use several explicit patterns for simple multi-region compositions. Source
+image OCR, raster-to-shape conversion and automatic semantic content enrichment
+are not implemented. The uploaded work photos and their text are not committed.
+
+PowerPoint Web visual acceptance is still required for the final PPTX. Tests
+verify editable shapes/table text, bounds, sequential additions, dry-run parity,
+input preservation, and byte preservation outside target slides. No final
+PowerPoint rendering or pixel-level match is claimed by these tests.
+
+```sh
+python -m pytest -q tests/test_pptx_enrich.py tests/test_pptx_replace.py tests/test_pptx_diagram_shapes.py
+```
+
+The separate `pptx_layout.py` proposal in PR #97 arranges existing shapes; this
+module creates new patterns and has no runtime dependency on that proposal.

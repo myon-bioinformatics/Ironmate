@@ -1,0 +1,87 @@
+# Apply to an existing deck with at least five slides.
+# All content is synthetic; regions must be free of existing objects.
+[[patterns]]
+pattern = "agenda"
+slide = 1
+x = 0.5
+y = 1.2
+width = 9.0
+height = 4.0
+[[patterns.items]]
+title = "01 Overview"
+body = "Purpose and scope"
+label = "2–3"
+[[patterns.items]]
+title = "02 Implementation"
+body = "Components and flow"
+label = "4–5"
+[[patterns.items]]
+title = "03 Validation"
+body = "Results and next steps"
+label = "6–7"
+
+[[patterns]]
+pattern = "cards"
+slide = 2
+x = 0.5
+y = 1.2
+width = 9.0
+height = 4.0
+columns = 3
+[[patterns.items]]
+title = "Observation"
+body = "Record the current state."
+[[patterns.items]]
+title = "Comparison"
+body = "Use consistent conditions."
+[[patterns.items]]
+title = "Decision"
+body = "Describe the evidence."
+
+[[patterns]]
+pattern = "regions"
+slide = 3
+x = 0.5
+y = 1.2
+width = 9.0
+height = 4.0
+accent = "#325A90"
+[[patterns.items]]
+title = "Input"
+body = "Collect data."
+[[patterns.items]]
+title = "Process"
+body = "Transform data."
+[[patterns.items]]
+title = "Output"
+body = "Present results."
+
+[[patterns]]
+pattern = "flow"
+slide = 4
+x = 0.5
+y = 1.2
+width = 9.0
+height = 3.0
+gap = 0.4
+[[patterns.items]]
+title = "Receive"
+body = "Validate input."
+[[patterns.items]]
+title = "Transform"
+body = "Apply explicit rules."
+[[patterns.items]]
+title = "Check"
+body = "Verify the output."
+[[patterns.items]]
+title = "Publish"
+body = "Save a new file."
+
+[[patterns]]
+pattern = "table"
+slide = 5
+x = 0.5
+y = 1.2
+width = 9.0
+height = 3.0
+rows = [["Criterion", "Option A", "Option B"], ["Input", "Text", "Image"], ["Output", "Report", "Grid"]]

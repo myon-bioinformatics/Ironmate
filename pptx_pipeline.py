@@ -3,6 +3,7 @@
 No promise of Mermaid rendering unless a configured Marp renderer supports it.
 """
 import json
+import os
 from pathlib import Path
 import sys
 import tempfile
@@ -53,10 +54,24 @@ def read_markdown_input(*, source=None, text=None, stdin=None):
 
 
 
-def run(*, source=None, text=None, output, marp="marp", mmdc=None, background="#FFFFFF", svg_foreground=None):
+def run(*, source=None, text=None, output, marp="marp", mmdc=None, background="#FFFFFF", svg_foreground=None, enrich_patterns=None):
     output = Path(output)
     if (source is None) == (text is None):
         raise ValueError("provide exactly one Markdown source")
+    if enrich_patterns is not None:
+        from pptx_enrich import enrich
+        if output.suffix.lower() != ".pptx" or os.path.lexists(output):
+            raise ValueError("output must be a new .pptx file")
+        # Keep the Marp intermediate private until all native edits succeed.
+        with tempfile.TemporaryDirectory(prefix="ironmate-enrich-", dir=output.parent) as directory:
+            intermediate = Path(directory) / "marp.pptx"
+            result = run(source=source, text=text, output=intermediate, marp=marp,
+                         mmdc=mmdc, background=background, svg_foreground=svg_foreground)
+            edit_report = enrich(intermediate, enrich_patterns, destination=output)
+        result["conversion"]["output"] = str(output)
+        result["enrichment"] = edit_report
+        result["inspection"] = inspect(output)
+        return result
     if mmdc is not None:
         raw, _ = read_markdown_input(source=source, text=text)
         if not raw.strip():
@@ -92,6 +107,7 @@ def main(argv=None):
         Argument(("--mmdc",), {"help": "Optional Mermaid SVG pre-renderer"}),
         Argument(("--background",), {"default": "#FFFFFF"}),
         Argument(("--svg-foreground",), {}),
+        Argument(("--enrich",), {"type": Path, "help": "TOML patterns applied with python-pptx after Marp"}),
     ], description=__doc__)
     args = parser.parse_args(argv)
     if (args.source is None) == (args.text is None):
@@ -99,9 +115,13 @@ def main(argv=None):
     inline = args.text if args.text is not None else sys.stdin.read() if args.source == "-" else None
     if inline is not None and not inline.strip():
         parser.error("Markdown content must not be empty")
+    patterns = None
+    if args.enrich is not None:
+        from pptx_enrich import load_patterns
+        patterns = load_patterns(args.enrich)
     result = run(source=None if inline is not None else args.source, text=inline,
                  output=args.output, marp=args.marp, mmdc=args.mmdc,
-                 background=args.background, svg_foreground=args.svg_foreground)
+                 background=args.background, svg_foreground=args.svg_foreground, enrich_patterns=patterns)
     if args.source == "-":
         result["conversion"]["source"] = "stdin"
     print(json.dumps(result, ensure_ascii=False, indent=2))

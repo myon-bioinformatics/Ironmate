@@ -213,6 +213,19 @@ def enrich(source, patterns, *, destination=None, dry_run=False):
     return dict(dry_run=dry_run,patterns=report,added_shapes=sum(r['added_shapes'] for r in report))
 
 
+def load_patterns(path):
+    """Read TOML and resolve CSV references relative to its directory."""
+    path = Path(path)
+    with path.open('rb') as stream:
+        patterns = tomllib.load(stream).get('patterns')
+    if not isinstance(patterns, list) or not patterns:
+        raise ValueError('at least one pattern is required')
+    for spec in patterns:
+        if isinstance(spec, dict) and isinstance(spec.get('csv'), str):
+            spec['csv'] = str(path.parent / spec['csv'])
+    return patterns
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('source',type=Path)
@@ -220,12 +233,7 @@ def main(argv=None):
     parser.add_argument('--output',type=Path)
     parser.add_argument('--dry-run',action='store_true')
     args = parser.parse_args(argv)
-    with args.patterns.open('rb') as stream:
-        patterns = tomllib.load(stream).get('patterns')
-    if isinstance(patterns, list):
-        for spec in patterns:
-            if isinstance(spec, dict) and isinstance(spec.get('csv'), str):
-                spec['csv'] = str(args.patterns.parent / spec['csv'])
+    patterns = load_patterns(args.patterns)
     print(json.dumps(enrich(args.source,patterns,destination=args.output,dry_run=args.dry_run),ensure_ascii=False,indent=2))
 
 

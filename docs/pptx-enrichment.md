@@ -94,3 +94,28 @@ overrides; reference photos guide structure, not the default palette.
 Agenda work is deferred. The previously added prototype remains available,
 but the shipped example and current focus are cards, regions, simple flows
 and CSV tables.
+
+## Principle: Markdown → Marp → python-pptx
+
+The main creation entry point stays `pptx_pipeline.py`. Use its optional
+`--enrich` argument to run native editing after the existing Marp conversion:
+
+```sh
+python pptx_pipeline.py slides.md --enrich examples/pptx_enrich.toml -o enriched.pptx
+```
+
+Marp generates the base PPTX from Markdown; python-pptx adds editable patterns;
+the final PPTX goes through inspection. The intermediate Marp deck is private
+and removed after success/failure. Invalid enrichment does not publish the final
+output. Existing `--enrich`-free behavior is retained. CSV references resolve
+relative to the TOML configuration in both CLI entry points.
+
+The standalone `pptx_enrich.py` command is the editing stage for already existing
+PPTX, not a replacement Markdown renderer. Marp is required for Markdown creation
+and is not required to edit an existing PPTX. Native additions do not turn any
+rasterized Marp background text into editable text. Leave intended pattern regions
+free in the Markdown layout; adding objects does not remove background content.
+
+Pipeline tests stub the Marp subprocess boundary and exercise real python-pptx
+addition/reopening/inspection. Actual Marp rendering and final PowerPoint display
+have not been verified for this new integrated path.

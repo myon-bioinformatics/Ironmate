@@ -208,8 +208,7 @@ PNG出力に入るのは`IHDR`・`IDAT`・`IEND`と、既定ではironmateの`tE
 - 共通GitHub操作・vendor管理は [親リポジトリ](https://github.com/myon-bioinformatics/myon-bioinformatics) と [gh_identity](https://github.com/myon-bioinformatics/gh_identity) を参照します。
 - 旧GitHubカタログ、MCPサーバー、repository metadata／diagnostics、成果物provenance生成の試作は廃止しました。すべての旧APIが移管先に互換実装されているという意味ではありません。
 - source／niconico実装とテストの移管先は [mcp-toolcall-lab PR #108](https://github.com/myon-bioinformatics/mcp-toolcall-lab/pull/108) です。先に移管先をマージしてから、この削除をマージします。API／MCPの差分吸収の設計は同repo #107で扱います。
-- `vendor/` と `vendor.lock.json` はconsumerの固定コピーです。共有ツール53ファイル（LICENSEを含む）を親の管理方式で登録し、固定ハッシュ検証を行います。
-- `scripts/sync_vendor_provenance.py` は既存CIのvendor証跡をlockから投影する補助処理として残します。旧ルートの `provenance.py` とは別物です。
+- `vendor/` と `vendor.lock.json` はconsumerの固定コピーです。共有ツール51ファイル（LICENSEを含む）を親の管理方式で登録し、固定ハッシュ検証を行います。`vendor.lock.json` が唯一のprovenanceです。
 
 紹介・メタデータは [ポートフォリオ](https://myon-bioinformatics.github.io/#ironmate) に集約します。Ironmate専用のmetadata stub Pagesは廃止し、このrepoで公開する実動デモが必要になった時に再検討します。
 
@@ -222,7 +221,8 @@ python -m pip install -r tests/requirements.txt
 git clone https://github.com/myon-bioinformatics/xprobe.git build/shared
 git -C build/shared checkout 7e7015b2df69ad446b968f6fa49711b5b1dbdd3f
 git clone https://github.com/myon-bioinformatics/myon-bioinformatics.git .vendor-sync-tools
-git -C .vendor-sync-tools checkout 974da5eb9593df652b132e4b0f1a679f67422566
+git -C .vendor-sync-tools checkout f907560c2b9b3f7a0f78f4434f547f91cb2ef954
+python -S .vendor-sync-tools/vendor_sync.py check --manifest vendor.lock.json
 python -m pytest -q -m 'not heavy'
 ```
 

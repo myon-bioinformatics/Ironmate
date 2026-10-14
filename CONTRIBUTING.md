@@ -297,7 +297,7 @@ Examples:
 vendor/ascii_artist.py -> vendored ASCII art utilities
 vendor/markdown.py     -> vendored Markdown utilities
 vendor/gh_identity.py -> shared GitHub identity
-scripts/sync_vendor_provenance.py -> vendor receipt projection
+vendor.lock.json -> sole vendored source provenance (parent vendor_sync check in CI)
 ```
 
 Avoid mixing unrelated responsibilities inside the same module.

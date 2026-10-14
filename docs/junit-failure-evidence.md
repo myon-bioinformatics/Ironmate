@@ -23,10 +23,11 @@ The test and collector use xprobe commit
 under ignored `build/shared`, a test-only dependency outside the vendor lock.
 
 The canonical reusable collector is pinned to
-`myon-bioinformatics/myon-bioinformatics/.github/workflows/reusable-junit-identity.yml@4dfda95d6573250477f991a0421fa6acb9bc0258`.
+`myon-bioinformatics/myon-bioinformatics/.github/workflows/reusable-junit-identity.yml@652608b16c73ecd1e39db848abba3d08a00a8a3a`.
+The `failure-identity` job passes `commit-sha: ${{ github.event.pull_request.head.sha || github.sha }}`
+so the collector receipt records the workflow run's head commit.
 Its exact expected report list is the two paths above from the same run;
 `failure-identity` contains its compact corpus and collection receipt.
-`commit_sha` is null because canonical metadata is not connected.
 Raw JUnit stays in Actions artifacts (14 days), never Pages or the shared corpus.
 Collector success does not change a failed test job's conclusion.
 

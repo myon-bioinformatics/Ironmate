@@ -36,7 +36,11 @@ def audit(catalog_path, lock_path, output):
             row["status"] = "skipped_self_vendor"
             rows.append(row)
             continue
-        # Even skipped recommendations are audited; their policy remains recorded.
+        if decision["enrollment"] == "skipped":
+            row["status"] = "skipped_policy"
+            rows.append(row)
+            continue
+        # Only explicitly eligible recommendations become disposable candidates.
         candidates = []
         try:
             for item in (source, "LICENSE"):
@@ -47,7 +51,7 @@ def audit(catalog_path, lock_path, output):
                                           else repository.split("/")[-1] + "-LICENSE")
                 if destination.casefold() in destinations:
                     raise ValueError("destination collision: " + destination)
-                candidates.append({**verified, "ref": "refs/heads/main", "destination": destination})
+                candidates.append({**verified, "ref": verified["commit"], "destination": destination})
             for item in candidates:
                 destinations.add(item["destination"].casefold())
                 proposed.append(item)

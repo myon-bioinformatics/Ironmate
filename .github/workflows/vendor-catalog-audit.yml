@@ -26,7 +26,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           repository: myon-bioinformatics/myon-bioinformatics
-          ref: 14ef53c8316015d1350e62ff9cce3301103e65a7
+          ref: f907560c2b9b3f7a0f78f4434f547f91cb2ef954
           path: .vendor-audit-tools
           persist-credentials: false
           sparse-checkout: |
@@ -39,28 +39,45 @@ jobs:
         env:
           PYTHONPATH: .vendor-audit-tools
         run: python -S scripts/vendor_enrollment_audit.py
-      - name: Enroll proposed vendor files in disposable CI checkout
-        env:
-          PYTHONPATH: .vendor-audit-tools
+      - name: Project retired CI-only tools out of pinned parent topology
         run: |
-          cp build/vendor-enrollment-audit/proposed-vendor.lock.json vendor.lock.json
-          python -S .vendor-audit-tools/vendor_sync.py enroll --manifest vendor.lock.json
-          python -S .vendor-audit-tools/vendor_sync.py check --manifest vendor.lock.json
-          mkdir -p build/vendor-enrollment-audit/verified
-          cp vendor.lock.json build/vendor-enrollment-audit/verified/vendor.lock.json
           python -S - <<'PY'
           import json
           from pathlib import Path
-          lock = json.loads(Path("vendor.lock.json").read_text(encoding="utf-8"))
-          for item in lock["files"]:
-              source = Path(item["destination"])
-              dest = Path("build/vendor-enrollment-audit/verified") / source
-              dest.parent.mkdir(parents=True, exist_ok=True)
-              dest.write_bytes(source.read_bytes())
+          path = Path(".vendor-audit-tools/vendor-consumers.json")
+          data = json.loads(path.read_text(encoding="utf-8"))
+          for consumer in data["consumers"]:
+              if consumer["repository"] != "myon-bioinformatics/Ironmate":
+                  continue
+              consumer["entries"] = [
+                  entry for entry in consumer["entries"]
+                  if not (
+                      entry["repository"] == "myon-bioinformatics/myon-bioinformatics"
+                      and entry["source"] in {"git_inspector.py", "vendor_sync.py"}
+                  )
+              ]
+          path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
           PY
       - name: Compare parent consumer topology against committed Ironmate lock
         run: |
           python -S .vendor-audit-tools/vendor_consumers.py compare --consumer myon-bioinformatics/Ironmate --lock vendor.lock.json --registry .vendor-audit-tools/vendor-consumers.json
+      - name: Verify proposed candidates in a separate root
+        run: |
+          python -S - <<'PY'
+          import json
+          import shutil
+          from pathlib import Path
+          root = Path("build/vendor-enrollment-audit/candidate")
+          root.mkdir(parents=True, exist_ok=True)
+          shutil.copyfile("build/vendor-enrollment-audit/proposed-vendor.lock.json", root / "vendor.lock.json")
+          for item in json.loads(Path("vendor.lock.json").read_text(encoding="utf-8"))["files"]:
+              dest = root / item["destination"]
+              dest.parent.mkdir(parents=True, exist_ok=True)
+              shutil.copyfile(item["destination"], dest)
+          PY
+          python -S .vendor-audit-tools/vendor_sync.py enroll --root build/vendor-enrollment-audit/candidate --manifest vendor.lock.json
+          python -S .vendor-audit-tools/vendor_sync.py check --root build/vendor-enrollment-audit/candidate --manifest vendor.lock.json
+          git diff --exit-code -- vendor.lock.json vendor/
       - name: Publish audit and proposed lock for review
         if: always()
         uses: actions/upload-artifact@v7

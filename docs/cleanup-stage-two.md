@@ -19,11 +19,12 @@ into mcp-toolcall-lab PR #108. Merge that transfer before this deletion. The cop
 in Ironmate are removed, including obsolete prototype design notes. Routing design
 remains #107; the implementation transfer is not a live MCP registration.
 
-Vendor update/check, locked-baseline tests and JUnit failure identity CI remain.
-`scripts/sync_vendor_provenance.py` remains only to project legacy vendor JSON
-receipts for the existing CI contract. Source and license identity are still
-verified by the pinned parent `vendor_sync.py`; all existing lock entries and
-vendor bytes are unchanged.
+Vendor lock check/materialize, Python tests and JUnit failure identity CI remain.
+Legacy per-file provenance JSON and `scripts/sync_vendor_provenance.py` are removed;
+`vendor.lock.json` is the only provenance record. Source and license identity are
+verified by the pinned parent `vendor_sync.py`; vendored bytes and lock digests are
+unchanged aside from commit-pinned `ref` normalization and retiring the vendored
+`vendor_sync.py` copy.
 
 ## Why xprobe and yourself are not in vendor
 

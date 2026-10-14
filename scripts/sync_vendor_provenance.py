@@ -18,13 +18,6 @@ BINDINGS = [['vendor/ascii_artist.provenance.json',
    'source_commit': 'commit',
    'source_path': 'source',
    'source_repository': 'repository'}],
- ['vendor/git_inspector.provenance.json',
-  'vendor/git_inspector.py',
-  {'blob_sha': 'blob_sha',
-   'sha256': 'sha256',
-   'source_commit': 'commit',
-   'source_path': 'source',
-   'source_repository': 'repository'}],
  ['vendor/markdown.provenance.json',
   'vendor/markdown.py',
   {'blob_sha': 'blob_sha',
@@ -37,8 +30,7 @@ EXPECTED = {('myon-bioinformatics/myon-bioinformatics', 'LICENSE', 'vendor/myon-
  ('myon-bioinformatics/ascii_artist', 'LICENSE', 'vendor/ascii_artist-LICENSE'),
  ('myon-bioinformatics/ascii_artist', 'ascii_artist.py', 'vendor/ascii_artist.py'),
  ('myon-bioinformatics/markdown', 'LICENSE', 'vendor/markdown-LICENSE'),
- ('myon-bioinformatics/markdown', 'markdown.py', 'vendor/markdown.py'),
- ('myon-bioinformatics/myon-bioinformatics', 'git_inspector.py', 'vendor/git_inspector.py')}
+ ('myon-bioinformatics/markdown', 'markdown.py', 'vendor/markdown.py')}
 
 
 def records(root):

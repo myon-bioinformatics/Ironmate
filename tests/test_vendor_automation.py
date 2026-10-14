@@ -22,7 +22,6 @@ def _lock_files(root=ROOT):
 
 SNAPSHOT = ['vendor.lock.json', *[entry['destination'] for entry in _lock_files()],
             'vendor/ascii_artist.provenance.json',
-            'vendor/git_inspector.provenance.json',
             'vendor/markdown.provenance.json']
 
 

@@ -58,6 +58,25 @@ jobs:
               dest.parent.mkdir(parents=True, exist_ok=True)
               dest.write_bytes(source.read_bytes())
           PY
+      - name: Drop retired git_inspector from parent Ironmate consumer topology
+        run: |
+          python -S - <<'PY'
+          import json
+          from pathlib import Path
+          path = Path(".vendor-audit-tools/vendor-consumers.json")
+          data = json.loads(path.read_text(encoding="utf-8"))
+          for consumer in data["consumers"]:
+              if consumer["repository"] != "myon-bioinformatics/Ironmate":
+                  continue
+              consumer["entries"] = [
+                  entry for entry in consumer["entries"]
+                  if not (
+                      entry["repository"] == "myon-bioinformatics/myon-bioinformatics"
+                      and entry["source"] == "git_inspector.py"
+                  )
+              ]
+          path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+          PY
       - name: Compare parent consumer topology against committed Ironmate lock
         run: |
           python -S .vendor-audit-tools/vendor_consumers.py compare --consumer myon-bioinformatics/Ironmate --lock vendor.lock.json --registry .vendor-audit-tools/vendor-consumers.json

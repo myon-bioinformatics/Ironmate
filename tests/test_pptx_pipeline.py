@@ -76,3 +76,33 @@ def test_cli_enrichment_resolves_csv_relative_to_toml(monkeypatch,tmp_path,capsy
     pptx_pipeline.main(['--text','# Markdown','--enrich',str(config),'-o',str(output)])
     assert Presentation(output).slides[0].shapes[-1].table.cell(1,1).text=='b'
     assert '"enrichment"' in capsys.readouterr().out
+
+@pytest.mark.parametrize('suffix,content',[('.csv','Name,Detail\nA,one\nB,two\n'),('.md','| Name | Detail |\n| --- | --- |\n| A | one |\n| B | two |\n')])
+def test_direct_table_input_to_diagram(tmp_path,suffix,content):
+    path=tmp_path/('data'+suffix);path.write_text(content)
+    table=pptx_pipeline.table_pattern(path)
+    assert table['rows']==[['Name','Detail'],['A','one'],['B','two']]
+    cards=pptx_pipeline.table_pattern(path,pattern='cards',columns=2)
+    assert cards['items']==[dict(title='A',body='Detail: one'),dict(title='B',body='Detail: two')]
+
+def test_markdown_reuses_vendor_live_table_parser(tmp_path):
+    path=tmp_path/'data.md'
+    path.write_text('```\n| Wrong | X |\n| --- | --- |\n| nope | x |\n```\n\n| Name | Detail |\n| --- | --- |\n| A | a\\|b |\n')
+    assert pptx_pipeline.table_pattern(path)['rows']==[['Name','Detail'],['A','a|b']]
+
+def test_direct_csv_cli_needs_no_toml(monkeypatch,tmp_path,capsys):
+    from pptx import Presentation
+    def fake_marp(source,output,*,marp):
+        prs=Presentation();prs.slides.add_slide(prs.slide_layouts[6]);prs.save(output)
+        return dict(slides=1,backend='marp')
+    monkeypatch.setattr(pptx_pipeline,'convert',fake_marp)
+    path=tmp_path/'data.csv';path.write_text('Name,Detail\nA,one\nB,two\n')
+    output=tmp_path/'out.pptx'
+    pptx_pipeline.main(['--text','# Base','--table',str(path),'--table-pattern','flow','-o',str(output)])
+    assert len(Presentation(output).slides[0].shapes)==9
+    assert '"enrichment"' in capsys.readouterr().out
+
+@pytest.mark.parametrize('content',['no table','| H |\n| --- |\n','```\n| H |\n| --- |\n| x |\n```'])
+def test_missing_live_markdown_body_is_rejected(tmp_path,content):
+    path=tmp_path/'data.md';path.write_text(content)
+    with pytest.raises(ValueError):pptx_pipeline.table_pattern(path)

@@ -1,121 +1,81 @@
-# Editable PPTX enrichment patterns (#80)
+# Markdown / CSV tables and simple PPTX diagrams (#80)
 
-`pptx_enrich.py` adds reusable native objects to explicit regions of existing
-slides. It accepts TOML data instead of generating disposable Python per slide.
-Uses the existing python-pptx dependency; no additional install or API is needed.
+Creation follows **Markdown → Marp → python-pptx → PPTX inspection**.
+`pptx_pipeline.py` owns conversion and native editing in one file. No separate
+enrichment runtime module or added dependency. Use the existing vendored
+`markdown.py` table parser rather than implementing another Markdown parser.
+
+## Direct input: no TOML required
 
 ```sh
-python pptx_enrich.py input.pptx --patterns examples/pptx_enrich.toml --dry-run
-python pptx_enrich.py input.pptx --patterns examples/pptx_enrich.toml --output enriched.pptx
+python pptx_pipeline.py slides.md --table comparison.csv -o result.pptx
+python pptx_pipeline.py slides.md --table comparison.md -o result.pptx
+python pptx_pipeline.py slides.md --table comparison.md --table-pattern cards --table-columns 3 -o result.pptx
+python pptx_pipeline.py slides.md --table comparison.csv --table-pattern flow -o result.pptx
 ```
 
-The example requires four existing slides. For a real deck, change slide numbers,
-text and region coordinates. Input is never overwritten. Output must be new.
+`slides.md` defines the Marp base slides, including free space for the objects.
+`--table` is the data source. Defaults: native table on slide 1, region
+`0.5 1.2 9 4` inches. Set `--table-slide N` and `--table-region X Y WIDTH HEIGHT`
+for placement. CSV is UTF-8 (BOM accepted), with a header and rectangular body
+rows; standard quoting is supported. Markdown uses the **first live GFM table**
+via `vendor.markdown.markdown_table_to_rows`: fenced examples are skipped,
+escaped pipes are unescaped, short rows padded and excess cells truncated by
+that existing helper. Other tables are ignored. Inline Markdown formatting stays
+literal text; this adapter does not render cell markup into rich text.
 
-| Pattern | Reference structure | Native output |
+| Pattern | Data mapping | Native output |
 | --- | --- | --- |
-| agenda (deferred) | Vertical agenda rows | Prototype retained; not included in the current example |
-| cards | Heading cards, comparison columns | Boxes, top bars, bold headings, body text |
-| regions | Labeled rounded areas | Rounded boxes, accent badges, editable text |
-| flow | Horizontal boxes and arrows | Independent boxes and straight lines with triangular arrowheads |
-| table | Comparison/condition table | Editable native PowerPoint table |
+| table | Header + body rows unchanged | Editable PowerPoint table |
+| cards | First column = title, remaining columns = header: value lines | Boxes, top bars, bold titles, body text |
+| regions | Same mapping | Rounded areas with header badges |
+| flow | Same mapping, source row order | Boxes and simple straight lines with triangular arrowheads |
 
-Several patterns can be placed in separate regions of one slide, e.g. a flow
-above cards and a one-row agenda/callout below. Cards can use `columns` to wrap
-into multiple rows. Patterns fill their given rectangle; dimensions and gaps
-are shared across cells. This covers basic reference structures, not exact
-reproduction of every photographed slide.
+There is no scoring, ranking, or automatic semantic evaluation. Cards optionally
+wrap with `--table-columns`. Flows stay one row. Text uses Meiryo; body text is
+black, headings bold. Defaults are white, black and neutral grays. Table headers
+are dark gray (#222222) with white text; body fills alternate white/light gray
+(#F2F2F2); borders are 0.5-point gray (#B3B3B3). Region header badges are white
+text on black. Agenda work is deferred.
 
-## Contract
+## Optional TOML configuration
 
-Each `[[patterns]]` requires `pattern`, 1-based `slide`, `x`, `y`, `width`,
-`height` (inches). Optional `gap` defaults to 0.2, `font_size` to 14 points,
-`accent` to black. Cards optionally accept `columns` (default item count).
-Non-table patterns use `[[patterns.items]]` with `title`, `body` and optional
-`label` (agenda annotation). Table uses rectangular `rows` or `csv`, with the first row
-rendered using the header colors. Region badges and table headers use white text;
-other text uses black Meiryo. Titles are bold. New shapes have stable descriptive
-names and the report includes their Open XML IDs.
+Use `--enrich examples/pptx_enrich.toml` for several patterns or explicit color
+changes instead of `--table`. TOML is a convenience, not the primary input.
+Both options together are rejected. The example requires four existing Marp
+slides and uses synthetic `comparison.csv`. CSV references in TOML resolve
+relative to its directory.
 
-Coordinates must be finite nonnegative numbers; positive dimensions and 6–72
-point font size are required. Content must be strings. Cells must be at least
-0.7 inches in each dimension. Patterns must fit slide bounds; flows require
-at least 0.15 inches of gap for arrows. Invalid input prevents publication,
-including when a later pattern fails after earlier ones were built in memory.
+Each pattern requires `pattern`, 1-based `slide`, `x`, `y`, `width`, `height`.
+Optional `gap` defaults to 0.2 inches, `font_size` to 14 points, and `accent` to
+black. Native tables accept `rows` or `csv` (not both). Optional `header_fill`,
+`header_text`, `row_fills` and `border_color` change colors; otherwise the
+monochrome defaults apply. Non-table patterns accept `items` with `title` and
+`body`. The Python API `pptx_pipeline.enrich()` supports already existing PPTX;
+`table_pattern()` adapts CSV/Markdown data for that API.
 
-Dry-run constructs the same objects in memory and reports counts and IDs without
-writing output. Only target slide XML members are replaced. All other member
-bytes, relationships, notes, media, and ZIP archive comments are preserved.
-Existing shapes are retained, with new objects appended above them in z-order.
-Reopen the output before atomic publication; existing destinations are rejected.
+## Preservation and validation
 
-## Acceptance boundary and remaining patterns
+Dry-run is available through `enrich(..., dry_run=True)` for existing PPTX.
+Coordinates are finite nonnegative inches, dimensions positive, fonts 6–72
+points. Shapes must fit the slide; cells must be at least 0.7 inches in each
+dimension. IDs and counts are reported. Existing shapes remain unchanged with
+new objects appended above them. Every non-target ZIP member, relationship,
+media and note is copied unchanged. Input and existing output are never
+ overwritten. The Marp intermediate remains private; failed edits do not publish
+a final output. The result is reopened before atomic publication.
 
-The caller must choose free regions. Existing-object overlap is not detected or
-resolved. Text wrapping is enabled, but font metrics and text overflow are not
-measured; long text requires manual adjustment. A successful dry-run establishes
-native geometry and structure, not a successful visual fit.
+The caller chooses free regions. Overlap and text overflow are not automatically
+measured. Arrows are not attached to boxes, so later box moves do not reroute them.
+Branch/merge lines, return arrows, legends and automatic page numbers remain
+future work. Rasterized Marp background text is not made editable by adding
+native objects. Reference photos and their work content are not committed.
 
-Flow arrows are straight editable lines with triangular end arrowheads, without box attachments;
-moving a box later does not automatically reroute them. Branch/merge paths,
-stacked model boxes with fan-out lines, return arrows, legends, automatic title/
-footer/page-number generation and detailed style matching remain future work.
-Use several explicit patterns for simple multi-region compositions. Source
-image OCR, raster-to-shape conversion and automatic semantic content enrichment
-are not implemented. The uploaded work photos and their text are not committed.
-
-PowerPoint Web visual acceptance is still required for the final PPTX. Tests
-verify editable shapes/table text, bounds, sequential additions, dry-run parity,
-input preservation, and byte preservation outside target slides. No final
-PowerPoint rendering or pixel-level match is claimed by these tests.
+Integration tests stub the Marp boundary and run real native editing/inspection.
+Actual Marp rendering and final PowerPoint Web display remain unverified.
 
 ```sh
-python -m pytest -q tests/test_pptx_enrich.py tests/test_pptx_replace.py tests/test_pptx_diagram_shapes.py
+python -m pytest -q tests/test_pptx_pipeline.py tests/test_pptx_enrich.py tests/test_markdown_pptx.py tests/test_pptx_replace.py tests/test_pptx_diagram_shapes.py
 ```
 
-The separate `pptx_layout.py` proposal in PR #97 arranges existing shapes; this
-module creates new patterns and has no runtime dependency on that proposal.
-
-## CSV comparison tables and monochrome defaults
-
-Comparison means direct CSV-to-table conversion only: no scoring, ranking,
-inference or automatic evaluation. Use `csv = "comparison.csv"` instead of
-`rows`; setting both is rejected. CLI paths resolve relative to the TOML file.
-The Python API resolves CSV paths relative to its working directory. CSV is
-comma-separated UTF-8 (BOM accepted), supports quoted fields, and uses its first
-row as the header. Ragged input is rejected rather than truncated.
-
-`header_fill` defaults to `#222222`, `header_text` to `#FFFFFF`,
-`row_fills` to `["#FFFFFF", "#F2F2F2"]`, and `border_color` to `#B3B3B3`.
-Body fills repeat over rows; give one entry per body row to specify all rows
-individually. Borders are 0.5-point lines. Defaults are white, black and neutral grays. Color changes are explicit optional
-overrides; reference photos guide structure, not the default palette.
-
-Agenda work is deferred. The previously added prototype remains available,
-but the shipped example and current focus are cards, regions, simple flows
-and CSV tables.
-
-## Principle: Markdown → Marp → python-pptx
-
-The main creation entry point stays `pptx_pipeline.py`. Use its optional
-`--enrich` argument to run native editing after the existing Marp conversion:
-
-```sh
-python pptx_pipeline.py slides.md --enrich examples/pptx_enrich.toml -o enriched.pptx
-```
-
-Marp generates the base PPTX from Markdown; python-pptx adds editable patterns;
-the final PPTX goes through inspection. The intermediate Marp deck is private
-and removed after success/failure. Invalid enrichment does not publish the final
-output. Existing `--enrich`-free behavior is retained. CSV references resolve
-relative to the TOML configuration in both CLI entry points.
-
-The standalone `pptx_enrich.py` command is the editing stage for already existing
-PPTX, not a replacement Markdown renderer. Marp is required for Markdown creation
-and is not required to edit an existing PPTX. Native additions do not turn any
-rasterized Marp background text into editable text. Leave intended pattern regions
-free in the Markdown layout; adding objects does not remove background content.
-
-Pipeline tests stub the Marp subprocess boundary and exercise real python-pptx
-addition/reopening/inspection. Actual Marp rendering and final PowerPoint display
-have not been verified for this new integrated path.
+Existing-shape spacing is a separate proposal in PR #97, with no dependency here.

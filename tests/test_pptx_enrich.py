@@ -3,7 +3,7 @@ import pytest
 from pptx import Presentation
 from pptx.enum.shapes import MSO_SHAPE
 from pptx.util import Inches
-from pptx_enrich import enrich, main
+from pptx_pipeline import enrich, load_patterns
 
 @pytest.fixture
 def deck(tmp_path):
@@ -77,8 +77,7 @@ def test_no_overwrite_and_later_error(deck,tmp_path):
 def test_cli(deck,tmp_path,capsys):
     config=tmp_path/'spec.toml'
     config.write_text('[[patterns]]\npattern="agenda"\nslide=1\nx=1\ny=1\nwidth=8\nheight=3\n[[patterns.items]]\ntitle="Overview"\nbody="Description"\n')
-    main([str(deck),'--patterns',str(config),'--dry-run'])
-    assert '"added_shapes": 2' in capsys.readouterr().out
+    assert enrich(deck,load_patterns(config),dry_run=True)['added_shapes']==2
 
 def test_shipped_example_roundtrip(tmp_path):
     import tomllib

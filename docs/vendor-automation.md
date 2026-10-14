@@ -49,3 +49,10 @@ and included in staged evidence.
 
 The PR observation consumer enrolls the parent's canonical `gh_ops.py` with
 adjacent GHI. Its baseline is recorded in `vendor.lock.json`.
+
+The catalog audit compares the checked-in lock before candidate enrollment.
+Candidates are checked in a separate disposable root and never replace the
+adopted lock or vendor bytes. Explicit catalog skips are not enrollment targets.
+The pinned parent registry still contains retired git_inspector/vendor_sync
+entries; the existing CI projection removes only those two entries until the
+parent registry correction is adopted. This does not certify parent-main parity.

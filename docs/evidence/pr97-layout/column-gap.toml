@@ -1,0 +1,9 @@
+[[rules]]
+pattern = "column"
+slide = 1
+shape_ids = [6, 2, 5, 3, 4]
+columns = 3
+x = 0.75
+y = 1
+gap_x = 0.9
+gap_y = 0.3

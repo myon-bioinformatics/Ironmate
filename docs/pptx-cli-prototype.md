@@ -347,3 +347,14 @@ columns with headings and box/arrow flows. This first step implements spacing of
 existing boxes. Pattern generation, arrow routing, text fitting, and final
 PowerPoint Web visual acceptance remain separate work; XML tests do not establish
 pixel equivalence to photographed slides.
+
+### PR #97 synthetic layout acceptance
+
+See [layout evidence](evidence/pr97-layout/README.md) for six literal-coordinate
+regressions across row/column/grid, unequal widths/heights, zero/changed gaps,
+selection order and incomplete grid rows. Actual TOML CLI output preserves all
+non-offset slide content and unrelated ZIP members. An optional local renderer
+check matched independent reference decks with zero pixel difference in all six
+cases; synthetic source/output PPTX and contact sheets are retained with hashes.
+PowerPoint Web and reference-image fidelity remain unverified. No production or
+CI renderer dependency was added.

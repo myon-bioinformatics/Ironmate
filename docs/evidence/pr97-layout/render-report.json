@@ -1,0 +1,153 @@
+{
+  "renderer_versions": {
+    "soffice": "LibreOfficeDev 26.8.0.0.alpha0 2c87e51eeaa2b413ff4ae097b2705eea1995d8e5",
+    "pdftoppm": "pdftoppm version 26.05.0\nCopyright 2005-2026 The Poppler Developers - http://poppler.freedesktop.org\nCopyright 1996-2011, 2022 Glyph & Cog, LLC",
+    "pdftotext": "pdftotext version 24.02.0\nCopyright 2005-2024 The Poppler Developers - http://poppler.freedesktop.org\nCopyright 1996-2011, 2022 Glyph & Cog, LLC"
+  },
+  "powerpoint_web": "unverified",
+  "comparison": "actual vs independently positioned reference, same renderer/fonts",
+  "cases": [
+    {
+      "name": "row-zero",
+      "changed_pixels": 0,
+      "diff_bbox": null,
+      "image_size": [
+        1120,
+        800
+      ],
+      "all_labels_extracted": true
+    },
+    {
+      "name": "row-gap",
+      "changed_pixels": 0,
+      "diff_bbox": null,
+      "image_size": [
+        1120,
+        800
+      ],
+      "all_labels_extracted": true
+    },
+    {
+      "name": "column-zero",
+      "changed_pixels": 0,
+      "diff_bbox": null,
+      "image_size": [
+        1120,
+        800
+      ],
+      "all_labels_extracted": true
+    },
+    {
+      "name": "column-gap",
+      "changed_pixels": 0,
+      "diff_bbox": null,
+      "image_size": [
+        1120,
+        800
+      ],
+      "all_labels_extracted": true
+    },
+    {
+      "name": "grid-zero",
+      "changed_pixels": 0,
+      "diff_bbox": null,
+      "image_size": [
+        1120,
+        800
+      ],
+      "all_labels_extracted": true
+    },
+    {
+      "name": "grid-gap",
+      "changed_pixels": 0,
+      "diff_bbox": null,
+      "image_size": [
+        1120,
+        800
+      ],
+      "all_labels_extracted": true
+    }
+  ],
+  "contact_sheet": {
+    "columns": [
+      "source",
+      "independent expected",
+      "actual"
+    ],
+    "rows": [
+      "zero gap",
+      "changed gap"
+    ]
+  },
+  "files": {
+    "column-comparison.png": "c6ce3e67af5f01b46d061fc13e0c71dee35a2122e61c83f56b5a22af7f9333d1",
+    "column-gap-expected.pptx": "0b2879fa7abbf942ec9846ca974736f5820d0ddfb66419e37e8c14ee235b1036",
+    "column-gap.pptx": "8ef3375f366add915a25c4681fccdeb99b8ae26fbeb38303588755d0e7c05d5b",
+    "column-gap.toml": "5cf124f2972c132d102a506a431dacdd5047d9baa62cacfe0fcc7e2026d134b7",
+    "column-zero-expected.pptx": "62c47949282cda3e9eac209821ed26da95417c8f444622e44755786b1c3b9bf4",
+    "column-zero.pptx": "52f2cc02c4503cd4807a5e221735b7b13fe9cd4fc7f39660b49a557ba940f7d1",
+    "column-zero.toml": "0da332e37efc6a663830cd1d348595dfce34b45ba2974ec75ddd0c294eef5d7a",
+    "grid-comparison.png": "b2962ab8187ee8bcd532d61b7bc254729ca662fd6457a24ac42e6de85e2fe640",
+    "grid-gap-expected.pptx": "2cb825f6b2ed386a58f61b4fa3eb29fbd3aabe4a4c66b0286e524f3241fa2579",
+    "grid-gap.pptx": "34d29a966c92b026ebeadb436d615c730c080e91a624e3348943b1a9bb9b7aba",
+    "grid-gap.toml": "4b1e93fe7f5012d45aa7dff061d735c1b13337daaace440dcaa475dd9433a3c1",
+    "grid-zero-expected.pptx": "b8684a9e2c8487114d46bad6b7943933505c4cd5a5065689042363ae6f6fbbae",
+    "grid-zero.pptx": "b8700e8a0c922ad98d0771d611d4c735acac23911b4ba21f74d64d9c9467c61e",
+    "grid-zero.toml": "6768641206b9729f8e4224108873e547950d555ed2da746d08e151967de2d5ae",
+    "manifest.json": "64afd46bc9ab44c6eb82f7768b2e71821229dc1cd8bea0e74aefe73362264940",
+    "pdf/column-gap-expected.pdf": "d48be331a4f319f88aa33094383cd0174471bf2d14746ab044b7da0607d5716d",
+    "pdf/column-gap-expected.txt": "914a4eda6a1e876ca3a301d56668ac7774a2c56923f4455f81c16336e67581f1",
+    "pdf/column-gap.pdf": "b5b1b829b32b4e2efca1ccd2c58e17fec70a324313774d77502898a93a40dde7",
+    "pdf/column-gap.txt": "914a4eda6a1e876ca3a301d56668ac7774a2c56923f4455f81c16336e67581f1",
+    "pdf/column-zero-expected.pdf": "4d71bf71e99473f1e8084b4d6fdde523793a1af3a9586cf5b11c84fdefed9854",
+    "pdf/column-zero-expected.txt": "914a4eda6a1e876ca3a301d56668ac7774a2c56923f4455f81c16336e67581f1",
+    "pdf/column-zero.pdf": "b6ff63e109e29ac89b37447802632c4e079e228c8cb86364a22a6b891e2113fc",
+    "pdf/column-zero.txt": "914a4eda6a1e876ca3a301d56668ac7774a2c56923f4455f81c16336e67581f1",
+    "pdf/grid-gap-expected.pdf": "f573afaf889b390cc68c2a0d4f92043d6a33216377ca4f34bdb82f4361e916b1",
+    "pdf/grid-gap-expected.txt": "bcfcd3ab4dbed1db52a1d830b3d21bf9843f561cdbaa6b7cfa4a99d3ebf020d6",
+    "pdf/grid-gap.pdf": "168564378d7f25f3e8c082e909ad39dc87ca8d91a9e9fe0bbbda67360a3f584d",
+    "pdf/grid-gap.txt": "bcfcd3ab4dbed1db52a1d830b3d21bf9843f561cdbaa6b7cfa4a99d3ebf020d6",
+    "pdf/grid-zero-expected.pdf": "bbe811c24fa179d76c5585dfec296a146ba13d6c495155d739507ef66f981675",
+    "pdf/grid-zero-expected.txt": "bcfcd3ab4dbed1db52a1d830b3d21bf9843f561cdbaa6b7cfa4a99d3ebf020d6",
+    "pdf/grid-zero.pdf": "8c0ee6bf265ff375e62aa3ef0f205abd7928ea43720a2e78bcafd668003b3dc4",
+    "pdf/grid-zero.txt": "bcfcd3ab4dbed1db52a1d830b3d21bf9843f561cdbaa6b7cfa4a99d3ebf020d6",
+    "pdf/row-gap-expected.pdf": "a165a122e1d618dfe3259fa8adb4ac2269ee5356ba08e4b2c859837d148615a7",
+    "pdf/row-gap-expected.txt": "bcfcd3ab4dbed1db52a1d830b3d21bf9843f561cdbaa6b7cfa4a99d3ebf020d6",
+    "pdf/row-gap.pdf": "a8dac3428058642bd3b05c9fad64d4db4a10b237aca3ce2be3649b3544b84b0b",
+    "pdf/row-gap.txt": "bcfcd3ab4dbed1db52a1d830b3d21bf9843f561cdbaa6b7cfa4a99d3ebf020d6",
+    "pdf/row-zero-expected.pdf": "d84f084cd5472e3cad79459c134685173e2124838977752e4d1e5db0bbf842b3",
+    "pdf/row-zero-expected.txt": "bcfcd3ab4dbed1db52a1d830b3d21bf9843f561cdbaa6b7cfa4a99d3ebf020d6",
+    "pdf/row-zero.pdf": "c97d4816f3b86a65628dbb6f2b5500c88db8c9e09c62c8dec6b472ba33e34ece",
+    "pdf/row-zero.txt": "bcfcd3ab4dbed1db52a1d830b3d21bf9843f561cdbaa6b7cfa4a99d3ebf020d6",
+    "pdf/source.pdf": "b544b176bf220155027028cc20e80699e34196289f1b6eb55ede9722fca88da4",
+    "pdf/source.txt": "b6ff0d378d5a0307eaed6ebfbb823790fd785a868d720a661257ce48c97ec73d",
+    "png/column-gap-diff.png": "0fbef93e6b721fb075c6a2846987f1c3789eeb44d26a0a0b050a6e6b500a82a0",
+    "png/column-gap-expected.png": "52d15924ff25ef52d2a37209bf8cfd857317bb625fc153d7a636deda1db7b4fd",
+    "png/column-gap.png": "52d15924ff25ef52d2a37209bf8cfd857317bb625fc153d7a636deda1db7b4fd",
+    "png/column-zero-diff.png": "0fbef93e6b721fb075c6a2846987f1c3789eeb44d26a0a0b050a6e6b500a82a0",
+    "png/column-zero-expected.png": "5bf2b276763e38e2daecdddf75b64e41f546113ab735b31aa772e6afc3f93143",
+    "png/column-zero.png": "5bf2b276763e38e2daecdddf75b64e41f546113ab735b31aa772e6afc3f93143",
+    "png/grid-gap-diff.png": "0fbef93e6b721fb075c6a2846987f1c3789eeb44d26a0a0b050a6e6b500a82a0",
+    "png/grid-gap-expected.png": "194eaa85d92a1696a7868c2bc1f1c0b76c200f7ddc803248e35826c02575d438",
+    "png/grid-gap.png": "194eaa85d92a1696a7868c2bc1f1c0b76c200f7ddc803248e35826c02575d438",
+    "png/grid-zero-diff.png": "0fbef93e6b721fb075c6a2846987f1c3789eeb44d26a0a0b050a6e6b500a82a0",
+    "png/grid-zero-expected.png": "9c211eb6aea04affdeca22ec0cc3285774454917e149a8ba796ff3912f1c225c",
+    "png/grid-zero.png": "9c211eb6aea04affdeca22ec0cc3285774454917e149a8ba796ff3912f1c225c",
+    "png/row-gap-diff.png": "0fbef93e6b721fb075c6a2846987f1c3789eeb44d26a0a0b050a6e6b500a82a0",
+    "png/row-gap-expected.png": "685b4d6b6c9c8d3a4fb7f4b967c5560a8d1b571ed4f64548ddcdb440139a108c",
+    "png/row-gap.png": "685b4d6b6c9c8d3a4fb7f4b967c5560a8d1b571ed4f64548ddcdb440139a108c",
+    "png/row-zero-diff.png": "0fbef93e6b721fb075c6a2846987f1c3789eeb44d26a0a0b050a6e6b500a82a0",
+    "png/row-zero-expected.png": "84832a02ecd9d01c9d3bb38a60451c1b923226fc0671488b70123a0ec9416c82",
+    "png/row-zero.png": "84832a02ecd9d01c9d3bb38a60451c1b923226fc0671488b70123a0ec9416c82",
+    "png/source.png": "e3117af28dfd676cccb511c3f82927602543ce517bd27e56089c0c927b9e8100",
+    "renderer.log": "d54d4e7ff5e71f736c2733c8de9a77b1e6f8683795ee695af967ac9f19963b2b",
+    "row-comparison.png": "b758ce539670bff9f5ec40cdb1b83e5681fdb6390f17bc50e3e280831d5c7344",
+    "row-gap-expected.pptx": "6cbb9f3fe2494b5cafbbe903c2381d1095f2df0c7a6e686cfd2fcd51a8d6cd80",
+    "row-gap.pptx": "fb1ab7ab9624a5db225d3c32716b49793a695842ad2a93f5a30e829b4ba90af6",
+    "row-gap.toml": "5396375b3e8c8fc8878078785533d2e44fe417f607c731ea8a570622fdba70f5",
+    "row-zero-expected.pptx": "598aec35b4615ab12a63e9a7bdfbfc8b1f8f435f1adde30a6e76cd022c184405",
+    "row-zero.pptx": "b9026a1263b097430b788c793418c11383a4922f5c40d865dc98b013c29212fa",
+    "row-zero.toml": "29aca6dd356c68934c34cb54cfe4b2de2061e8776f6426f22328e7ce8c6b3ca9",
+    "source.pptx": "778c3c2f7021e8f6333920f203119c54c2926fad7b9922b2fb1062e1229f38bb"
+  }
+}

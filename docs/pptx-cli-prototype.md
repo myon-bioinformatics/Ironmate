@@ -383,7 +383,9 @@ Actual Marp rendering and final PowerPoint Web display remain unverified.
 python -m pytest -q tests/test_pptx_pipeline.py tests/test_markdown_pptx.py tests/test_pptx_replace.py tests/test_pptx_diagram_shapes.py
 ```
 
-Existing-shape spacing is a separate proposal in PR #97, with no dependency here.
+Existing-shape spacing from merged PR #97 is available through `pptx_layout.py`,
+documented below. Enrichment and spacing remain separate explicit operations;
+moving one box does not move its separate title/body objects or reroute arrows.
 
 ### Optional configuration example
 
@@ -469,3 +471,61 @@ Criterion,Option A,Option B
 Input,Text,Image
 Output,Report,Grid
 ```
+
+
+## Object spacing and simple layout patterns (#80)
+
+`pptx_layout.py` reproduces **row**, **column**, and **grid** arrangements
+using existing editable native shapes. No new dependency is required: lxml is
+already a python-pptx dependency. This is a geometry prototype, not screenshot
+recognition or automatic visual enrichment. It does not copy reference text.
+
+```toml
+[[rules]]
+pattern = "grid" # row / column / grid
+slide = 1
+shape_ids = [2, 3, 4, 5] # Open XML cNvPr IDs, NOT collection indexes
+columns = 2 # required only for grid
+x = 1.0 # inches, top-left anchor
+ y = 1.0
+gap_x = 0.2
+gap_y = 0.3
+```
+
+```sh
+python pptx_layout.py input.pptx --rules layout.toml --dry-run
+python pptx_layout.py input.pptx --rules layout.toml --output arranged.pptx
+```
+
+Selection order determines placement. Cells use the maximum selected width and
+height; gaps measure the space between cells (unequal shapes can therefore have
+larger visible gaps). Row uses one row, column one column, grid fills rows first.
+All coordinates/gaps must be finite nonnegative inches, at most 100; every
+resulting shape must fit the slide. Rules are sequential; dry-run uses the same
+intermediate geometry and returns before/after EMU coordinates and change count.
+
+Only top-level, unrotated, unflipped `p:sp` objects with explicit geometry are
+supported. Groups, pictures, tables, connectors and shapes attached to connectors
+are rejected when selected. Shape IDs must exist and be unique. This avoids
+silently breaking connected diagrams; automatic arrow routing remains future work.
+Sizes, text, style and IDs stay unchanged. Only selected slide XML is reserialized;
+all other ZIP member bytes (including relationships) are copied unchanged. Input
+and existing output paths are never overwritten. Output is reopened before atomic
+publication. Tests: `python -m pytest -q tests/test_pptx_layout.py`.
+
+Reference-derived structural targets are cards in rows, vertical agenda rows,
+columns with headings and box/arrow flows. This first step implements spacing of
+existing boxes. Pattern generation, arrow routing, text fitting, and final
+PowerPoint Web visual acceptance remain separate work; XML tests do not establish
+pixel equivalence to photographed slides.
+
+### PR #97 synthetic layout acceptance
+
+See [layout evidence](evidence/pr97-layout/README.md) for six literal-coordinate
+regressions across row/column/grid, unequal widths/heights, zero/changed gaps,
+selection order and incomplete grid rows. Actual TOML CLI output preserves all
+non-offset slide content and unrelated ZIP members. An optional local renderer
+check matched independent reference decks with zero pixel difference in all six
+cases; synthetic source/output PPTX and contact sheets are retained with hashes.
+PowerPoint Web and reference-image fidelity remain unverified. No production or
+CI renderer dependency was added.

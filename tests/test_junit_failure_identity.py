@@ -126,7 +126,7 @@ def test_workflow_keeps_suite_failure_and_exact_reports(tmp_path):
     collector = jobs['failure-identity']
     assert collector['needs'] == ['test', 'marp-integration']
     assert collector['if'] == 'always()'
-    assert collector['uses'].endswith('@4dfda95d6573250477f991a0421fa6acb9bc0258')
+    assert collector['uses'].endswith('@652608b16c73ecd1e39db848abba3d08a00a8a3a')
     marp_steps = jobs['marp-integration']['steps']
     marp_upload = next(s for s in marp_steps if s.get('name') == 'Preserve Marp JUnit')
     assert marp_upload['if'] == 'always()'

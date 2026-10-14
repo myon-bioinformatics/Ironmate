@@ -1,28 +1,7 @@
-# Apply to an existing deck with at least five slides.
-# All content is synthetic; regions must be free of existing objects.
-[[patterns]]
-pattern = "agenda"
-slide = 1
-x = 0.5
-y = 1.2
-width = 9.0
-height = 4.0
-[[patterns.items]]
-title = "01 Overview"
-body = "Purpose and scope"
-label = "2–3"
-[[patterns.items]]
-title = "02 Implementation"
-body = "Components and flow"
-label = "4–5"
-[[patterns.items]]
-title = "03 Validation"
-body = "Results and next steps"
-label = "6–7"
-
+# Existing four-slide deck; choose free regions. Agenda is deferred.
 [[patterns]]
 pattern = "cards"
-slide = 2
+slide = 1
 x = 0.5
 y = 1.2
 width = 9.0
@@ -40,12 +19,12 @@ body = "Describe the evidence."
 
 [[patterns]]
 pattern = "regions"
-slide = 3
+slide = 2
 x = 0.5
 y = 1.2
 width = 9.0
 height = 4.0
-accent = "#325A90"
+accent = "#000000"
 [[patterns.items]]
 title = "Input"
 body = "Collect data."
@@ -58,7 +37,7 @@ body = "Present results."
 
 [[patterns]]
 pattern = "flow"
-slide = 4
+slide = 3
 x = 0.5
 y = 1.2
 width = 9.0
@@ -79,9 +58,15 @@ body = "Save a new file."
 
 [[patterns]]
 pattern = "table"
-slide = 5
+slide = 4
 x = 0.5
 y = 1.2
 width = 9.0
 height = 3.0
-rows = [["Criterion", "Option A", "Option B"], ["Input", "Text", "Image"], ["Output", "Report", "Grid"]]
+csv = "comparison.csv"
+# Monochrome defaults apply without color options.
+# Optional overrides:
+# header_fill = "#222222"
+# header_text = "#FFFFFF"
+# row_fills = ["#FFFFFF", "#F2F2F2"]
+# border_color = "#B3B3B3"

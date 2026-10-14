@@ -43,7 +43,11 @@ def test_native_objects_preview_and_preservation(deck,tmp_path,mode):
     else:
         texts=[s.text for s in slide.shapes if s.has_text_frame]
         assert any('Item 0' in t for t in texts)
-        assert sum(s.auto_shape_type==MSO_SHAPE.RIGHT_ARROW for s in slide.shapes if s.shape_type==1)==(2 if mode=='flow' else 0)
+        arrows = [s for s in slide.shapes if s.name.endswith('-arrow')]
+        assert len(arrows)==(2 if mode=='flow' else 0)
+        for arrow in arrows:
+            assert arrow.height == 0
+            assert arrow._element.xpath('.//a:tailEnd')[0].get('type') == 'triangle'
     with ZipFile(deck) as a,ZipFile(out) as b:
         assert a.namelist()==b.namelist()
         assert all(a.read(n)==b.read(n) for n in a.namelist() if n!='ppt/slides/slide1.xml')
@@ -80,11 +84,41 @@ def test_shipped_example_roundtrip(tmp_path):
     import tomllib
     from pathlib import Path
     prs=Presentation()
-    for _ in range(5):prs.slides.add_slide(prs.slide_layouts[6])
+    for _ in range(4):prs.slides.add_slide(prs.slide_layouts[6])
     source=tmp_path/'blank.pptx';prs.save(source)
     with (Path(__file__).parents[1]/'examples/pptx_enrich.toml').open('rb') as stream:
         patterns=tomllib.load(stream)['patterns']
+    for config in patterns:
+        if 'csv' in config:config['csv']=str(Path(__file__).parents[1]/'examples'/config['csv'])
     out=tmp_path/'examples.pptx'
     result=enrich(source,patterns,destination=out)
-    assert [p['pattern'] for p in result['patterns']]==['agenda','cards','regions','flow','table']
+    assert [p['pattern'] for p in result['patterns']]==['cards','regions','flow','table']
     assert all(len(slide.shapes)>0 for slide in Presentation(out).slides)
+
+def test_csv_values_and_explicit_table_colors(deck,tmp_path):
+    path=tmp_path/'comparison.csv'
+    path.write_text('\ufeffCriterion,Value\n"quoted, field",日本語\nNext,42\n',encoding='utf-8')
+    config=spec('table');del config['rows']
+    config.update(csv=str(path),header_fill='#202633',row_fills=['#FFFFFF','#EAF1F8'])
+    out=tmp_path/'csv.pptx'
+    enrich(deck,[config],destination=out)
+    table=Presentation(out).slides[0].shapes[-1].table
+    assert table.cell(1,0).text=='quoted, field'
+    assert table.cell(1,1).text=='日本語'
+    assert str(table.cell(0,0).fill.fore_color.rgb)=='202633'
+    assert str(table.cell(1,0).fill.fore_color.rgb)=='FFFFFF'
+    assert str(table.cell(2,0).fill.fore_color.rgb)=='EAF1F8'
+    assert len(table.cell(0,0)._tc.xpath('./a:tcPr/a:lnL'))==1
+
+@pytest.mark.parametrize('patch',[dict(row_fills=[]),dict(row_fills=['wrong']),dict(header_fill='bad')])
+def test_invalid_table_colors(deck,tmp_path,patch):
+    config=spec('table');config.update(patch)
+    with pytest.raises(ValueError):enrich(deck,[config],dry_run=True)
+
+def test_default_table_is_neutral_grayscale(deck,tmp_path):
+    out=tmp_path/'gray.pptx'
+    enrich(deck,[spec('table')],destination=out)
+    table=Presentation(out).slides[0].shapes[-1].table
+    assert str(table.cell(0,0).fill.fore_color.rgb)=='222222'
+    assert str(table.cell(1,0).fill.fore_color.rgb)=='FFFFFF'
+    assert str(table.cell(2,0).fill.fore_color.rgb)=='F2F2F2'

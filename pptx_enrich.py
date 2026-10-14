@@ -1,5 +1,6 @@
 """Append editable card, region, agenda, flow and table patterns to PPTX slides."""
 import argparse
+import csv
 import json
 import math
 import os
@@ -10,7 +11,8 @@ from zipfile import ZipFile
 
 from pptx import Presentation
 from pptx.dml.color import RGBColor
-from pptx.enum.shapes import MSO_SHAPE
+from pptx.enum.shapes import MSO_SHAPE, MSO_CONNECTOR
+from pptx.oxml.xmlchemy import OxmlElement
 from pptx.enum.text import MSO_ANCHOR, MSO_AUTO_SIZE
 from pptx.util import Inches, Pt
 
@@ -101,7 +103,21 @@ def enrich(source, patterns, *, destination=None, dry_run=False):
         before = len(slide.shapes)
         prefix = f'enrich-{index+1}-{mode}'
         if mode == 'table':
-            rows = spec.get('rows')
+            if 'csv' in spec and 'rows' in spec:
+                raise ValueError('use either csv or rows, not both')
+            if 'csv' in spec:
+                with Path(_text(spec['csv'])).open(encoding='utf-8-sig', newline='') as stream:
+                    rows = list(csv.reader(stream))
+            else:
+                rows = spec.get('rows')
+            header_fill = spec.get('header_fill', '#222222')
+            header_text = spec.get('header_text', '#FFFFFF')
+            row_fills = spec.get('row_fills', ['#FFFFFF', '#F2F2F2'])
+            border = spec.get('border_color', '#B3B3B3')
+            if not isinstance(row_fills, list) or not row_fills:
+                raise ValueError('row_fills must be a nonempty list of colors')
+            for value in [header_fill, header_text, border, *row_fills]:
+                _color(value)
             if (not isinstance(rows,list) or not 2 <= len(rows) <= 30 or not isinstance(rows[0],list)
                     or not 1 <= len(rows[0]) <= 12 or any(not isinstance(r,list) or len(r)!=len(rows[0]) for r in rows)):
                 raise ValueError('table requires 2..30 rectangular rows with 1..12 columns')
@@ -115,8 +131,17 @@ def enrich(source, patterns, *, destination=None, dry_run=False):
                 for ci,value in enumerate(row):
                     cell = table.cell(ri,ci)
                     cell.fill.solid()
-                    cell.fill.fore_color.rgb = _color(accent if ri==0 else '#FFFFFF')
-                    _style(cell.text_frame,value,points,bold=ri==0,color='#FFFFFF' if ri==0 else '#000000')
+                    cell.fill.fore_color.rgb = _color(header_fill if ri==0 else row_fills[(ri-1)%len(row_fills)])
+                    _style(cell.text_frame,value,points,bold=ri==0,color=header_text if ri==0 else '#000000')
+                    props = cell._tc.get_or_add_tcPr()
+                    for side in ('L', 'R', 'T', 'B'):
+                        tag = 'a:ln'+side
+                        line = OxmlElement(tag)
+                        line.set('w', '6350') # 0.5 points
+                        fill = OxmlElement('a:solidFill')
+                        rgb = OxmlElement('a:srgbClr'); rgb.set('val', border[1:].upper())
+                        fill.append(rgb); line.append(fill)
+                        props.append(line)
         else:
             items = spec.get('items')
             if not isinstance(items,list) or not 1 <= len(items) <= 24:
@@ -158,8 +183,16 @@ def enrich(source, patterns, *, destination=None, dry_run=False):
                         _textbox(slide,(cx+.04,cy+.04,cw-.08,header),item.get('title',''),name+'-title',points,bold=True)
                     _textbox(slide,(cx+.04,cy+header+.07,cw-.08,ch-header-.1),item.get('body',''),name+'-body',points)
                 if mode == 'flow' and i<n-1:
-                    ah = min(.32,ch*.3)
-                    _shape(slide,MSO_SHAPE.RIGHT_ARROW,(cx+cw+gap*.15,cy+(ch-ah)/2,gap*.7,ah),name+'-arrow',fill=accent,line=accent)
+                    arrow = slide.shapes.add_connector(MSO_CONNECTOR.STRAIGHT,
+                        Inches(cx+cw+gap*.15), Inches(cy+ch/2),
+                        Inches(cx+cw+gap*.85), Inches(cy+ch/2))
+                    arrow.name = name+'-arrow'
+                    arrow.line.color.rgb = _color(accent)
+                    arrow.line.width = Pt(1.5)
+                    end = OxmlElement('a:tailEnd')
+                    end.set('type', 'triangle')
+                    end.set('w', 'med'); end.set('len', 'med')
+                    arrow.line._get_or_add_ln().append(end)
         member = str(slide.part.partname).lstrip('/')
         changed[member] = slide.part.blob
         report.append(dict(pattern=mode,slide=number,added_shapes=len(slide.shapes)-before,
@@ -189,6 +222,10 @@ def main(argv=None):
     args = parser.parse_args(argv)
     with args.patterns.open('rb') as stream:
         patterns = tomllib.load(stream).get('patterns')
+    if isinstance(patterns, list):
+        for spec in patterns:
+            if isinstance(spec, dict) and isinstance(spec.get('csv'), str):
+                spec['csv'] = str(args.patterns.parent / spec['csv'])
     print(json.dumps(enrich(args.source,patterns,destination=args.output,dry_run=args.dry_run),ensure_ascii=False,indent=2))
 
 

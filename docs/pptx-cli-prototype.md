@@ -529,3 +529,15 @@ check matched independent reference decks with zero pixel difference in all six
 cases; synthetic source/output PPTX and contact sheets are retained with hashes.
 PowerPoint Web and reference-image fidelity remain unverified. No production or
 CI renderer dependency was added.
+
+### Pipeline and layout composition
+
+`tests/test_pptx_pipeline.py::test_pipeline_then_layout_preserves_native_structure`
+checks all nine cards/regions/flow → row/column/grid combinations. It runs the
+pipeline with a stub Marp conversion and real native enrichment, then arranges
+explicit generated box IDs and reopens the final PPTX. A native table on the
+second slide remains editable. Selected offsets are the only permitted XML
+changes; text, style, arrows, tables and all other ZIP members (including
+relationships and the untouched slide) are preserved. Dry-run matches application
+and reapplication makes no changes. This does not imply grouped movement of
+titles/body/arrows or visual acceptance in PowerPoint Web.

@@ -116,6 +116,63 @@ from pptx.enum.shapes import MSO_SHAPE
 from pptx.util import Inches
 from pptx_pipeline import enrich, load_patterns
 
+
+@pytest.mark.parametrize('mode', ['cards', 'regions', 'flow'])
+@pytest.mark.parametrize('layout', ['row', 'column', 'grid'])
+def test_pipeline_then_layout_preserves_native_structure(monkeypatch, tmp_path, mode, layout):
+    from lxml import etree
+    from pptx_layout import arrange
+
+    def fake_marp(source, output, *, marp):
+        prs = Presentation()
+        for _ in range(2):
+            slide = prs.slides.add_slide(prs.slide_layouts[6])
+            slide.shapes.add_textbox(0, 0, Inches(1), Inches(.3)).text = 'Keep me'
+        prs.save(output)
+        return dict(slides=2, backend='marp', output=str(output))
+
+    monkeypatch.setattr(pptx_pipeline, 'convert', fake_marp)
+    enriched, final = tmp_path / 'enriched.pptx', tmp_path / 'final.pptx'
+    diagram = dict(pattern=mode, slide=1, x=.5, y=1, width=4, height=1,
+                   gap=.25, items=[dict(title='A', body='Alpha'), dict(title='B', body='Beta')])
+    table = dict(pattern='table', slide=2, x=1, y=1, width=4, height=2,
+                 rows=[['Name', 'Value'], ['Editable', '42']])
+    pptx_pipeline.run(text='# Source\n', output=enriched, enrich_patterns=[diagram, table])
+    original = enriched.read_bytes()
+    shapes = Presentation(enriched).slides[0].shapes
+    ids = [s.shape_id for s in shapes if s.name.endswith('-box')]
+    assert len(ids) == 2
+    rule = dict(pattern=layout, slide=1, shape_ids=ids, columns=2,
+                x=1, y=3, gap_x=.2, gap_y=.3)
+    preview = arrange(enriched, [rule], dry_run=True)
+    applied = arrange(enriched, [rule], destination=final)
+    assert preview['changes'] == applied['changes']
+    assert applied['change_count'] == 2
+    assert enriched.read_bytes() == original
+    assert arrange(final, [rule], dry_run=True)['change_count'] == 0
+    reopened = Presentation(final)
+    assert len(reopened.slides) == 2
+    assert reopened.slides[1].shapes[-1].table.cell(1, 1).text == '42'
+    assert any(s.has_text_frame and s.text == 'Alpha' for s in reopened.slides[0].shapes)
+    # Only selected box offsets may change. Text, styles, arrows, tables,
+    # relationships, media and untouched slide XML must survive byte-for-byte.
+    ns = {'p': 'http://schemas.openxmlformats.org/presentationml/2006/main',
+          'a': 'http://schemas.openxmlformats.org/drawingml/2006/main'}
+    with ZipFile(enriched) as old, ZipFile(final) as new:
+        assert old.namelist() == new.namelist()
+        for name in old.namelist():
+            if name != 'ppt/slides/slide1.xml':
+                assert old.read(name) == new.read(name)
+                continue
+            roots = [etree.fromstring(z.read(name)) for z in (old, new)]
+            for root in roots:
+                for shape in root.findall('p:cSld/p:spTree/p:sp', ns):
+                    if int(shape.find('p:nvSpPr/p:cNvPr', ns).get('id')) in ids:
+                        off = shape.find('p:spPr/a:xfrm/a:off', ns)
+                        off.set('x', '0')
+                        off.set('y', '0')
+            assert etree.tostring(roots[0], method='c14n') == etree.tostring(roots[1], method='c14n')
+
 @pytest.fixture
 def deck(tmp_path):
     prs=Presentation()

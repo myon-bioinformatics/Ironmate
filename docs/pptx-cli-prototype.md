@@ -541,3 +541,69 @@ changes; text, style, arrows, tables and all other ZIP members (including
 relationships and the untouched slide) are preserved. Dry-run matches application
 and reapplication makes no changes. This does not imply grouped movement of
 titles/body/arrows or visual acceptance in PowerPoint Web.
+
+## Recommended review bundle: no sign-in or LibreOffice
+
+Generate the final PPTX, inspect its structure, and independently preview the
+Markdown source as HTML/PDF/PNG in one invocation:
+
+```sh
+python pptx_pipeline.py slides.md --review build/review-new
+python pptx_pipeline.py slides.md --table comparison.csv --review build/review-table
+python pptx_pipeline.py --text '# Example' --review build/review-inline
+```
+
+`--review DIR` replaces `-o`; supplying both or neither is an error. It uses the
+existing installed Marp CLI (`--marp` can select its path), optional Playwright
+Chromium and `pypdf` from `tests/requirements-preview.txt`. No tools are downloaded by
+the command. No Microsoft session, CDP endpoint, external viewer, LibreOffice or
+PDF desktop application is required. Browser binaries must match the installed
+Playwright version. This same optional dependency set is exercised by CI.
+
+The new directory contains:
+
+- `final.pptx`: the normal Markdown/Marp/native-edit pipeline's final PPTX.
+- `inspection.json`: final PPTX inspection and conversion/native-edit report.
+- `source.md`: Markdown used to produce the preview, with optional Mermaid SVGs
+  embedded as data URIs.
+- `preview.html`: Marp's bare HTML, usable in a browser without sign-in.
+- `preview.pdf`: Chromium's print of that HTML, with CSS page sizes/backgrounds.
+- `slides/slide-NNN.png`: Playwright captures of each Marp SVG slide in print mode.
+- `review.json`: scope, source/final hashes, tested SHA/run identity, browser
+  versions, PDF page count, and shared PNG validation records.
+
+**The PDF and screenshots preview the Markdown/Marp source. They do not render
+the final edited PPTX.** Native tables/cards/regions/flow added through
+`--table`/`--enrich`, and later `pptx_layout.py` changes, are not reflected in this
+preview. The report always sets `is_final_pptx_render=false` and
+`native_pptx_edits_reflected=false`. Final PPTX structure is inspected separately;
+PowerPoint/Web rendering fidelity is not claimed. A real integration test proves
+this boundary by requiring a native-only table in the PPTX and its absence from
+the preview PDF.
+
+The preview waits for fonts/images, rejects broken images, checks Marp SVG count
+against final PPTX slide count (1..100), validates PNG framing/CRC through the
+existing locked `vendor.browser_evidence`, and parses the PDF to check its page
+count. Tests also extract the two synthetic PDF headings. These checks are not an
+automatic detector for clipping/overlap: visually inspect the images/PDF.
+
+Review identity defaults to the code repository's current Git HEAD and a fresh
+UUID run ID. `--review-sha FULL_SHA --review-run-id ID` can supply explicit build
+identity. These values record caller-selected provenance; they do not prove that
+a dirty working tree equals a commit. Outside a Git checkout, pass an explicit
+SHA. Existing output paths, including dangling symlinks, are rejected. Source
+Markdown remains unchanged. The final PPTX is staged privately and published only
+after preview/PDF validation succeeds. A failure records `stage=failed` and its
+stage/error type in `review.json`; retained partial preview files never establish
+a completed bundle. A directory's existence alone does not mean success.
+
+Ordinary relative HTML images resolve against the original Markdown directory
+(or current directory for inline input), so that HTML can depend on those source
+assets when moved to another machine. PDF/PNG are standalone. Use embedded/data
+URI assets for portable HTML. The existing PPTX conversion's asset-access policy
+is unchanged; unsupported local-image access fails rather than silently claiming
+visual success.
+
+The dedicated `HTML PDF preview review` workflow runs the real Marp → PPTX/HTML → Chromium PDF/PNG
+chain using synthetic Markdown, plus bad-asset/count/corrupt-PDF failures. Its artifacts are
+synthetic only; no account session or uploaded user presentation is involved.

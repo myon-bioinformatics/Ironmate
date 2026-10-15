@@ -221,7 +221,7 @@ python -m pip install -r tests/requirements.txt
 git clone https://github.com/myon-bioinformatics/xprobe.git build/shared
 git -C build/shared checkout 7e7015b2df69ad446b968f6fa49711b5b1dbdd3f
 git clone https://github.com/myon-bioinformatics/myon-bioinformatics.git .vendor-sync-tools
-git -C .vendor-sync-tools checkout f907560c2b9b3f7a0f78f4434f547f91cb2ef954
+git -C .vendor-sync-tools checkout ab17b409d82f95abc81116af7ff0d3e7bdc4158c
 python -S .vendor-sync-tools/vendor_sync.py check --manifest vendor.lock.json
 python -m pytest -q -m 'not heavy'
 ```

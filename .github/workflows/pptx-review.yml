@@ -1,0 +1,64 @@
+name: HTML PDF preview review
+
+on:
+  pull_request:
+    paths:
+      - pptx_pipeline.py
+      - pptx_preview.py
+      - tests/test_pptx_pipeline.py
+      - tests/test_pptx_preview.py
+      - tests/requirements-preview.txt
+      - .github/workflows/pptx-review.yml
+  push:
+    branches: [main]
+    paths:
+      - pptx_pipeline.py
+      - pptx_preview.py
+      - tests/test_pptx_pipeline.py
+      - tests/test_pptx_preview.py
+      - tests/requirements-preview.txt
+      - .github/workflows/pptx-review.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  chromium-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install pinned Marp CLI
+        run: npm install --prefix build/preview-tools --no-save --ignore-scripts @marp-team/marp-cli@4.5.1
+      - name: Install optional browser test dependencies
+        run: python -m pip install -r tests/requirements-preview.txt
+      - name: Install matching Chromium
+        run: python -m playwright install --with-deps chromium
+      - name: Test actual Marp HTML PDF PNG and final PPTX inspection
+        env:
+          IRONMATE_RUN_REVIEW: "1"
+          IRONMATE_MARP_BIN: build/preview-tools/node_modules/.bin/marp
+          PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome
+          IRONMATE_REVIEW_EVIDENCE: build/pptx-review
+          IRONMATE_TEST_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: python -m pytest -q tests/test_pptx_preview.py tests/test_pptx_pipeline.py --junitxml=build/pptx-review-junit.xml
+      - name: Preserve synthetic preview PDF and screenshot evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: chromium-marp-preview-evidence
+          path: |
+            build/pptx-review/
+            build/pptx-review-junit.xml
+          if-no-files-found: error
+          retention-days: 14

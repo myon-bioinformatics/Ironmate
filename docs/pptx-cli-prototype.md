@@ -542,100 +542,68 @@ relationships and the untouched slide) are preserved. Dry-run matches applicatio
 and reapplication makes no changes. This does not imply grouped movement of
 titles/body/arrows or visual acceptance in PowerPoint Web.
 
-## Optional PowerPoint Web capture adapter
+## Recommended review bundle: no sign-in or LibreOffice
 
-`pptx_web_capture.py` uses **Playwright Chromium** to capture an already uploaded
-PPTX in a signed-in PowerPoint Web tab. It reuses the unmodified PNG/receipt writer
-and validator from browser-test-kit at `d172b7cb57c0a78bf793b5d3e2f031b14b1db9dc`.
-They are checked out separately, not copied into Ironmate or added to the runtime
-vendor lock. The adapter checks that exact checkout and the bytes of the three
-executed tools before launching a browser. No production dependency is added;
-Playwright is isolated in `tests/requirements-web.txt`.
-
-### Local browser setup and usage
-
-Install the optional requirements and matching Chromium explicitly, check out
-browser-test-kit at the pin above, and open a **dedicated local** Chromium profile
-with loopback remote debugging. Sign in and upload/open the synthetic PPTX yourself
-in that browser. This adapter performs no login, credential export, upload or
-sharing change, and does not connect to the ChatGPT cloud browser automatically.
-A normal browser without remote debugging cannot be attached to just by giving
-its URL. Do not expose the debugger port beyond loopback.
+Generate the final PPTX, inspect its structure, and independently preview the
+Markdown source as HTML/PDF/PNG in one invocation:
 
 ```sh
-python -m pip install -r tests/requirements-web.txt
-python -m playwright install chromium
-git clone https://github.com/myon-bioinformatics/browser-test-kit.git build/browser-test-kit
-git -C build/browser-test-kit checkout d172b7cb57c0a78bf793b5d3e2f031b14b1db9dc
-python pptx_web_capture.py final.pptx --plan viewer-plan.json \
-  --url "$POWERPOINT_DOCUMENT_URL" --cdp http://127.0.0.1:9222 \
-  --kit build/browser-test-kit --output build/web-capture-new \
-  --sha "$TESTED_SHA" --run-id local-review-1 --run-attempt 1
+python pptx_pipeline.py slides.md --review build/review-new
+python pptx_pipeline.py slides.md --table comparison.csv --review build/review-table
+python pptx_pipeline.py --text '# Example' --review build/review-inline
 ```
 
-`POWERPOINT_DOCUMENT_URL` is the actual document URL copied from that signed-in
-tab, not the welcome page. The URL is an argument only: it is not stored in the
-receipt/report. The adapter restricts live URLs to HTTPS PowerPoint/OneDrive or
-SharePoint origins, requires exactly one attached browser context and an
-unambiguous matching tab, and never closes an existing user tab/browser. If it
-opens its own document tab, only that tab is closed afterwards. Authentication
-redirects or absent document/slide markers fail; they never count as screenshots
-of the final deck. External service access is not part of the unattended CI lane.
+`--review DIR` replaces `-o`; supplying both or neither is an error. It uses the
+existing installed Marp CLI (`--marp` can select its path), optional Playwright
+Chromium and `pypdf` from `tests/requirements-preview.txt`. No tools are downloaded by
+the command. No Microsoft session, CDP endpoint, external viewer, LibreOffice or
+PDF desktop application is required. Browser binaries must match the installed
+Playwright version. This same optional dependency set is exercised by CI.
 
-### Observed selectors and readiness
+The new directory contains:
 
-PowerPoint viewer selectors **must be measured in the real viewer**. There is no
-hardcoded, supposedly tested Microsoft DOM mapping. Supply `document` (a unique
-selector in the top-level page), `document_text` (the supplied PPTX filename or
-stem), `blockers` (observed login/loading overlay selectors), optional nested iframe `frames`, the unique slide `surface` selector, and
-1..24 `slides` steps. Every step needs an existing source slide `number`, a unique
-`select` control selector, a `ready` selector and exact `ready_text` asserting the
-selected slide state. These selectors are resolved freshly, with bounded waits,
-and screenshots capture the selected surface with animations disabled.
+- `final.pptx`: the normal Markdown/Marp/native-edit pipeline's final PPTX.
+- `inspection.json`: final PPTX inspection and conversion/native-edit report.
+- `source.md`: Markdown used to produce the preview, with optional Mermaid SVGs
+  embedded as data URIs.
+- `preview.html`: Marp's bare HTML, usable in a browser without sign-in.
+- `preview.pdf`: Chromium's print of that HTML, with CSS page sizes/backgrounds.
+- `slides/slide-NNN.png`: Playwright captures of each Marp SVG slide in print mode.
+- `review.json`: scope, source/final hashes, tested SHA/run identity, browser
+  versions, PDF page count, and shared PNG validation records.
 
-The following is the **local test viewer plan**, not Microsoft selectors:
+**The PDF and screenshots preview the Markdown/Marp source. They do not render
+the final edited PPTX.** Native tables/cards/regions/flow added through
+`--table`/`--enrich`, and later `pptx_layout.py` changes, are not reflected in this
+preview. The report always sets `is_final_pptx_render=false` and
+`native_pptx_edits_reflected=false`. Final PPTX structure is inspected separately;
+PowerPoint/Web rendering fidelity is not claimed. A real integration test proves
+this boundary by requiring a native-only table in the PPTX and its absence from
+the preview PDF.
 
-```json
-{
-  "document": "#document",
-  "document_text": "synthetic.pptx",
-  "frames": ["iframe"],
-  "blockers": ["#signin"],
-  "surface": "#slide",
-  "slides": [
-    {"number": 1, "select": "#one", "ready": "#ready", "ready_text": "Alpha"},
-    {"number": 2, "select": "#two", "ready": "#ready", "ready_text": "Beta"}
-  ]
-}
-```
+The preview waits for fonts/images, rejects broken images, checks Marp SVG count
+against final PPTX slide count (1..100), validates PNG framing/CRC through the
+existing locked `vendor.browser_evidence`, and parses the PDF to check its page
+count. Tests also extract the two synthetic PDF headings. These checks are not an
+automatic detector for clipping/overlap: visually inspect the images/PDF.
 
-### Evidence and measured boundary
+Review identity defaults to the code repository's current Git HEAD and a fresh
+UUID run ID. `--review-sha FULL_SHA --review-run-id ID` can supply explicit build
+identity. These values record caller-selected provenance; they do not prove that
+a dirty working tree equals a commit. Outside a Git checkout, pass an explicit
+SHA. Existing output paths, including dangling symlinks, are rejected. Source
+Markdown remains unchanged. The final PPTX is staged privately and published only
+after preview/PDF validation succeeds. A failure records `stage=failed` and its
+stage/error type in `review.json`; retained partial preview files never establish
+a completed bundle. A directory's existence alone does not mean success.
 
-Each run requires a new output directory, full tested Git SHA, run ID and attempt.
-PNG filenames are generated from validated slide numbers. On success the upstream
-writer seals `evidence.json`, then the upstream validator rechecks every PNG,
-byte count, hash, dimensions, SHA and run identity. `capture.json` records source
-PPTX SHA-256, Chromium/Playwright versions, kit pin, timestamps, reached stage and
-mode. Failure preserves a failed receipt/report, including partial captures when
-available, without recording raw exception messages, login screenshots, DOM,
-authentication state or document URLs. Cleanup failures cannot leave a complete
-receipt behind. Input bytes are unchanged and checked again before sealing.
+Ordinary relative HTML images resolve against the original Markdown directory
+(or current directory for inline input), so that HTML can depend on those source
+assets when moved to another machine. PDF/PNG are standalone. Use embedded/data
+URI assets for portable HTML. The existing PPTX conversion's asset-access policy
+is unchanged; unsupported local-image access fails rather than silently claiming
+visual success.
 
-The document assertion binds the **displayed filename**, not the bytes of the
-remote file. The caller must open the uploaded copy corresponding to the supplied
-local PPTX. A complete capture means the configured checks and PNG validation
-succeeded; it does not mean visual fidelity, text overflow or Microsoft rendering
-correctness was automatically established. Inspect the actual screenshots.
-
-The dedicated `PPTX web capture fixture` workflow installs optional dependencies
-and matching Chromium, serves only a synthetic loopback viewer with an iframe,
-and tests two distinct slide captures, login/overlay/incorrect-slide rejection and
-upstream rejection of a damaged PNG. It uploads synthetic success/failed receipts,
-PNGs and JUnit for 14 days. Its project is `chromium-fixture`; it cannot satisfy
-`chromium-powerpoint-web` acceptance. `--fixture` permits only loopback HTTP and
-cannot attach to a signed-in browser. Default pytest runs deterministic tests and
-explicitly skips the optional real-Chromium lane unless
-`IRONMATE_RUN_WEB_CAPTURE=1`. In that lane `IRONMATE_BTK_ROOT` must point to the
-reviewed checkout. No tests or screenshots from this mock viewer establish that a
-PPTX was rendered in PowerPoint Web. Real Microsoft selector mapping, authenticated
-capture and resulting visual acceptance remain unverified until that live run.
+The dedicated `HTML PDF preview review` workflow runs the real Marp → PPTX/HTML → Chromium PDF/PNG
+chain using synthetic Markdown, plus bad-asset/count/corrupt-PDF failures. Its artifacts are
+synthetic only; no account session or uploaded user presentation is involved.

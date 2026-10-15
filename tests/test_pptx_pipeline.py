@@ -289,3 +289,92 @@ def test_default_table_is_neutral_grayscale(deck,tmp_path):
     assert str(table.cell(0,0).fill.fore_color.rgb)=='222222'
     assert str(table.cell(1,0).fill.fore_color.rgb)=='FFFFFF'
     assert str(table.cell(2,0).fill.fore_color.rgb)=='F2F2F2'
+
+
+@pytest.fixture
+def review_stubs(monkeypatch):
+    import pptx_preview
+    monkeypatch.setattr(pptx_pipeline.shutil, 'which', lambda _: '/installed/marp')
+    seen = {}
+    def convert(source, output, *, marp):
+        seen['source'] = Path(source)
+        prs = Presentation()
+        prs.slides.add_slide(prs.slide_layouts[6])
+        prs.save(output)
+        return {'slides': 1, 'output': str(output), 'backend': 'marp'}
+    def html(argv, **kwargs):
+        from types import SimpleNamespace
+        seen['argv'] = argv
+        Path(argv[-1]).write_text('<html><head></head><body>Preview</body></html>')
+        return SimpleNamespace(returncode=0)
+    monkeypatch.setattr(pptx_pipeline, 'convert', convert)
+    monkeypatch.setattr(pptx_pipeline.subprocess, 'run', html)
+    monkeypatch.setattr(pptx_preview, 'render_preview_html', lambda *a, **kw: {
+        'stage': 'complete', 'is_final_pptx_render': False, 'native_pptx_edits_reflected': False})
+    return seen
+
+
+def test_review_bundle_keeps_preview_and_native_structure_separate(tmp_path, review_stubs):
+    import json
+    source = tmp_path / 'input.md'
+    source.write_text('# Source only')
+    before = source.read_bytes()
+    directory = tmp_path / 'review'
+    pattern = dict(pattern='table', slide=1, x=1, y=1, width=8, height=3,
+                   rows=[['Name', 'Value'], ['Native only', '42']])
+    report = pptx_pipeline.review(source=source, directory=directory, sha='a' * 40,
+                                  run_id='test', enrich_patterns=[pattern])
+    assert report['stage'] == 'complete'
+    assert report['is_final_pptx_render'] is False
+    assert report['native_pptx_edits_reflected'] is False
+    assert source.read_bytes() == before
+    assert 'Native only' not in (directory / 'source.md').read_text()
+    table = Presentation(directory / 'final.pptx').slides[0].shapes[-1].table
+    assert table.cell(1, 0).text == 'Native only'
+    assert (directory / 'inspection.json').is_file()
+    assert json.loads((directory / 'review.json').read_text())['preview']['is_final_pptx_render'] is False
+    assert review_stubs['argv'][2:4] == ['--template', 'bare']
+    assert str(source.parent.as_uri()) in (directory / 'preview.html').read_text()
+    assert not list(directory.glob('.review-*'))
+
+
+def test_failed_preview_never_publishes_final_pptx(tmp_path, monkeypatch, review_stubs):
+    import json
+    import pptx_preview
+    def fail(*a, **kw):
+        raise ValueError('preview failed')
+    monkeypatch.setattr(pptx_preview, 'render_preview_html', fail)
+    directory = tmp_path / 'failed'
+    with pytest.raises(RuntimeError, match='preview'):
+        pptx_pipeline.review(text='# Input', directory=directory, sha='a' * 40)
+    assert not (directory / 'final.pptx').exists()
+    report = json.loads((directory / 'review.json').read_text())
+    assert report['stage'] == 'failed' and report['failed_stage'] == 'preview'
+    assert not list(directory.glob('.review-*'))
+
+
+@pytest.mark.parametrize('kind', ['directory', 'file', 'dangling'])
+def test_review_existing_output_is_untouched(tmp_path, monkeypatch, kind):
+    output = tmp_path / 'old'
+    if kind == 'directory':
+        output.mkdir()
+        (output / 'sentinel').write_text('keep')
+    elif kind == 'file':
+        output.write_text('keep')
+    else:
+        output.symlink_to(tmp_path / 'missing')
+    monkeypatch.setattr(pptx_pipeline.shutil, 'which', lambda *_: pytest.fail('launched conversion'))
+    with pytest.raises(ValueError, match='new'):
+        pptx_pipeline.review(text='# Input', directory=output)
+    assert output.is_symlink() if kind == 'dangling' else output.exists()
+
+
+def test_review_cli_is_one_command_without_output_or_login(tmp_path, review_stubs, capsys):
+    import json
+    directory = tmp_path / 'cli-review'
+    pptx_pipeline.main(['--text', '# Base', '--review', str(directory),
+                        '--review-sha', 'a' * 40, '--review-run-id', 'test'])
+    report = json.loads(capsys.readouterr().out)
+    assert report['stage'] == 'complete'
+    assert (directory / 'final.pptx').exists()
+    assert not any('--allow-local-files' == arg for arg in review_stubs['argv'])

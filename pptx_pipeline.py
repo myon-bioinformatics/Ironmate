@@ -316,6 +316,91 @@ def run(*, source=None, text=None, output, marp="marp", mmdc=None, background="#
     return {"conversion": conversion, "inspection": report}
 
 
+def review(*, source=None, text=None, directory, marp='marp', mmdc=None,
+           background='#FFFFFF', svg_foreground=None, enrich_patterns=None,
+           sha=None, run_id=None):
+    """One-command source preview + final PPTX structural inspection.
+
+    Never claims that Marp HTML/PDF includes later native PPTX edits.
+    Only a completed bundle publishes final.pptx; existing paths are preserved.
+    """
+    import base64
+    import hashlib
+    import html as html_escape
+    import uuid
+    from pptx_preview import render_preview_html
+    target = Path(directory)
+    if os.path.lexists(target) or not target.parent.is_dir():
+        raise ValueError('review directory must be new with an existing parent')
+    raw, _ = read_markdown_input(source=source, text=text)
+    if not raw.strip():
+        raise ValueError('Markdown must not be empty')
+    executable = shutil.which(marp)
+    if executable is None:
+        raise RuntimeError('Marp CLI not installed')
+    if sha is None:
+        sha = subprocess.run(['git', '-C', str(Path(__file__).resolve().parent), 'rev-parse', 'HEAD'],
+                             capture_output=True, text=True, check=True, timeout=10).stdout.strip()
+    if len(sha) != 40 or any(c not in '0123456789abcdef' for c in sha):
+        raise ValueError('review SHA must be a full lowercase Git SHA')
+    run_id = run_id or uuid.uuid4().hex
+    target.mkdir()  # Exclusive, before any render work.
+    report = {'stage': 'source', 'source_sha256': hashlib.sha256(raw.encode()).hexdigest(),
+              'tested_sha': sha, 'run_id': run_id, 'is_final_pptx_render': False,
+              'native_pptx_edits_reflected': False,
+              'scope': 'Marp source preview + separate final PPTX structural inspection'}
+    try:
+        # Keep the final PPTX private until previews and PDF validation succeed.
+        with tempfile.TemporaryDirectory(prefix='.review-', dir=target) as scratch:
+            private = Path(scratch) / 'final.pptx'
+            prepared = raw
+            if mmdc is not None:
+                prepared, images = render_mermaid(raw, target, mmdc=mmdc,
+                                                 background=background, foreground=svg_foreground)
+                # Keep SVG previews portable instead of retaining temporary paths.
+                for image in images:
+                    uri = 'data:image/svg+xml;base64,' + base64.b64encode(image.read_bytes()).decode()
+                    prepared = prepared.replace('./' + image.name, uri)
+            md = target / 'source.md'
+            md.write_text(prepared, encoding='utf-8')
+            report['stage'] = 'pptx'
+            # Keep the existing PPTX path's original asset-resolution behavior.
+            result = run(source=source, text=text, output=private, marp=marp, mmdc=mmdc,
+                         background=background, svg_foreground=svg_foreground, enrich_patterns=enrich_patterns)
+            report['stage'] = 'html'
+            html = target / 'preview.html'
+            proc = subprocess.run([executable, str(md), '--template', 'bare', '-o', str(html)],
+                                  capture_output=True, text=True, timeout=120, check=False)
+            if proc.returncode != 0 or not html.is_file():
+                raise RuntimeError('Marp HTML conversion failed')
+            # Resolve ordinary relative assets against the original source folder.
+            # HTML portability still depends on those assets; PDF/PNG are standalone.
+            base = (Path(source).resolve().parent if source is not None else Path.cwd()).as_uri() + '/'
+            markup = html.read_text(encoding='utf-8')
+            if '<head>' not in markup:
+                raise ValueError('Marp output has no HTML head')
+            markup = markup.replace('<head>', '<head><base href="' + html_escape.escape(base, quote=True) + '">', 1)
+            html.write_text(markup, encoding='utf-8')
+            report['stage'] = 'preview'
+            preview = render_preview_html(html, target, expected_slides=len(result['inspection']['slides']),
+                                          sha=sha, run_id=run_id)
+            if hashlib.sha256((Path(source).read_text(encoding='utf-8') if source is not None else text).encode()).hexdigest() != report['source_sha256']:
+                raise ValueError('Markdown source changed during review')
+            final = target / 'final.pptx'
+            result['conversion']['output'] = str(final)
+            result['inspection']['source'] = str(final)
+            (target / 'inspection.json').write_text(json.dumps(result, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+            final_hash = hashlib.sha256(private.read_bytes()).hexdigest()
+            os.link(private, final)
+            report.update(stage='complete', preview=preview, final_pptx_sha256=final_hash)
+    except Exception as exc:
+        report.update(failed_stage=report['stage'], stage='failed', error_type=type(exc).__name__)
+        raise RuntimeError(f"review failed at {report['failed_stage']} ({type(exc).__name__}); see review.json") from None
+    finally:
+        (target / 'review.json').write_text(json.dumps(report, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+    return report
+
+
 def table_pattern(path, *, pattern="table", slide=1, region=(.5, 1.2, 9, 4), columns=None):
     """Turn CSV or the first live Markdown table into a native table/diagram.
 
@@ -352,7 +437,10 @@ def main(argv=None):
     parser = make_parser([
         Argument(("source",), {"nargs": "?", "help": "Markdown file path or - for stdin"}),
         Argument(("--text",), {"help": "Inline Markdown source"}),
-        Argument(("-o", "--output"), {"type": Path, "required": True}),
+        Argument(("-o", "--output"), {"type": Path}),
+        Argument(("--review",), {"type": Path, "help": "New directory: final PPTX inspection plus Marp HTML/PDF/PNG preview"}),
+        Argument(("--review-sha",), {"help": "Tested Git SHA; defaults to repository HEAD"}),
+        Argument(("--review-run-id",), {}),
         Argument(("--marp",), {"default": "marp"}),
         Argument(("--mmdc",), {"help": "Optional Mermaid SVG pre-renderer"}),
         Argument(("--background",), {"default": "#FFFFFF"}),
@@ -367,6 +455,10 @@ def main(argv=None):
     args = parser.parse_args(argv)
     if (args.source is None) == (args.text is None):
         parser.error("provide exactly one of source or --text")
+    if (args.output is None) == (args.review is None):
+        parser.error("provide exactly one of --output or --review")
+    if args.review is None and (args.review_sha is not None or args.review_run_id is not None):
+        parser.error("review metadata requires --review")
     inline = args.text if args.text is not None else sys.stdin.read() if args.source == "-" else None
     if inline is not None and not inline.strip():
         parser.error("Markdown content must not be empty")
@@ -378,10 +470,14 @@ def main(argv=None):
                                   region=args.table_region, columns=args.table_columns)]
     if args.enrich is not None:
         patterns = load_patterns(args.enrich)
-    result = run(source=None if inline is not None else args.source, text=inline,
-                 output=args.output, marp=args.marp, mmdc=args.mmdc,
-                 background=args.background, svg_foreground=args.svg_foreground, enrich_patterns=patterns)
-    if args.source == "-":
+    common = dict(source=None if inline is not None else args.source, text=inline,
+                  marp=args.marp, mmdc=args.mmdc, background=args.background,
+                  svg_foreground=args.svg_foreground, enrich_patterns=patterns)
+    if args.review is not None:
+        result = review(directory=args.review, sha=args.review_sha, run_id=args.review_run_id, **common)
+    else:
+        result = run(output=args.output, **common)
+    if args.source == "-" and args.review is None:
         result["conversion"]["source"] = "stdin"
     print(json.dumps(result, ensure_ascii=False, indent=2))
 

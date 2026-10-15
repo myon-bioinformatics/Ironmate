@@ -75,7 +75,7 @@ def test_real_preview_rejects_bad_assets_page_counts_and_pdf(tmp_path, monkeypat
     html = directory / 'preview.html'
     image = '<img src="missing.png">' if problem == 'broken-image' else ''
     html.write_text('<html><head></head><body>' + image +
-                    '<svg data-marpit-svg="" width="800" height="450"><rect width="800" height="450" fill="white"/></svg></body></html>')
+                    '<svg data-marpit-svg="" viewBox="0 0 800 450" width="800" height="450"><rect width="800" height="450" fill="white"/></svg></body></html>')
     if problem == 'bad-pdf':
         from playwright.sync_api import Page
         monkeypatch.setattr(Page, 'pdf', lambda self, **kw: Path(kw['path']).write_bytes(b'%PDF-broken'))

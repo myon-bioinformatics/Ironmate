@@ -1,6 +1,7 @@
 """Chromium HTML/PDF preview adapter; this does not render edited PPTX files."""
 import hashlib
 import importlib.metadata
+import math
 import sys
 from pathlib import Path
 
@@ -42,9 +43,20 @@ def render_preview_html(html, directory, *, expected_slides, sha, run_id, timeou
             if count != expected_slides or not 1 <= count <= 100:
                 raise ValueError('Marp HTML and final PPTX slide counts must agree (1..100)')
             for index in range(count):
+                slide = slides.nth(index)
+                view_box = [float(v) for v in (slide.get_attribute('viewBox') or '').split()]
+                if (len(view_box) != 4 or any(not math.isfinite(v) for v in view_box)
+                        or not all(1 <= v <= 4096 for v in view_box[2:])):
+                    raise ValueError('Marp SVG must provide a bounded positive viewBox')
+                width, height = [round(v) for v in view_box[2:]]
+                # Bare Marp print SVGs use viewport units. Match their viewBox
+                # rather than capturing viewport-shaped letterboxing.
+                page.set_viewport_size({'width': width, 'height': height})
                 image = shots / f'slide-{index + 1:03d}.png'
-                slides.nth(index).screenshot(path=str(image), animations='disabled', timeout=timeout)
-                entries.append(record('playwright', image, directory, run_id=run_id, head_sha=sha))
+                slide.screenshot(path=str(image), animations='disabled', timeout=timeout)
+                entry = record('playwright', image, directory, run_id=run_id, head_sha=sha)
+                entry['viewport'] = {'width': width, 'height': height}
+                entries.append(entry)
             pdf = directory / 'preview.pdf'
             page.pdf(path=str(pdf), prefer_css_page_size=True, print_background=True)
             if len(PdfReader(pdf, strict=True).pages) != expected_slides:

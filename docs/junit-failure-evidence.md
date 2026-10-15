@@ -23,7 +23,7 @@ The test and collector use xprobe commit
 under ignored `build/shared`, a test-only dependency outside the vendor lock.
 
 The canonical reusable collector is pinned to
-`myon-bioinformatics/myon-bioinformatics/.github/workflows/reusable-junit-identity.yml@f907560c2b9b3f7a0f78f4434f547f91cb2ef954`.
+`myon-bioinformatics/myon-bioinformatics/.github/workflows/reusable-junit-identity.yml@ab17b409d82f95abc81116af7ff0d3e7bdc4158c`.
 The `failure-identity` job passes `commit-sha: ${{ github.event.pull_request.head.sha || github.sha }}`
 so the collector receipt records the workflow run's head commit.
 Its exact expected report list is the two paths above from the same run;

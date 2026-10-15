@@ -1,0 +1,4 @@
+# Optional capture lane; same Playwright pin as browser-test-kit KIT_SHA.
+playwright==1.63.0
+pytest>=8
+python-pptx>=1.0,<2

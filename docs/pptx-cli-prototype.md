@@ -541,3 +541,101 @@ changes; text, style, arrows, tables and all other ZIP members (including
 relationships and the untouched slide) are preserved. Dry-run matches application
 and reapplication makes no changes. This does not imply grouped movement of
 titles/body/arrows or visual acceptance in PowerPoint Web.
+
+## Optional PowerPoint Web capture adapter
+
+`pptx_web_capture.py` uses **Playwright Chromium** to capture an already uploaded
+PPTX in a signed-in PowerPoint Web tab. It reuses the unmodified PNG/receipt writer
+and validator from browser-test-kit at `d172b7cb57c0a78bf793b5d3e2f031b14b1db9dc`.
+They are checked out separately, not copied into Ironmate or added to the runtime
+vendor lock. The adapter checks that exact checkout and the bytes of the three
+executed tools before launching a browser. No production dependency is added;
+Playwright is isolated in `tests/requirements-web.txt`.
+
+### Local browser setup and usage
+
+Install the optional requirements and matching Chromium explicitly, check out
+browser-test-kit at the pin above, and open a **dedicated local** Chromium profile
+with loopback remote debugging. Sign in and upload/open the synthetic PPTX yourself
+in that browser. This adapter performs no login, credential export, upload or
+sharing change, and does not connect to the ChatGPT cloud browser automatically.
+A normal browser without remote debugging cannot be attached to just by giving
+its URL. Do not expose the debugger port beyond loopback.
+
+```sh
+python -m pip install -r tests/requirements-web.txt
+python -m playwright install chromium
+git clone https://github.com/myon-bioinformatics/browser-test-kit.git build/browser-test-kit
+git -C build/browser-test-kit checkout d172b7cb57c0a78bf793b5d3e2f031b14b1db9dc
+python pptx_web_capture.py final.pptx --plan viewer-plan.json \
+  --url "$POWERPOINT_DOCUMENT_URL" --cdp http://127.0.0.1:9222 \
+  --kit build/browser-test-kit --output build/web-capture-new \
+  --sha "$TESTED_SHA" --run-id local-review-1 --run-attempt 1
+```
+
+`POWERPOINT_DOCUMENT_URL` is the actual document URL copied from that signed-in
+tab, not the welcome page. The URL is an argument only: it is not stored in the
+receipt/report. The adapter restricts live URLs to HTTPS PowerPoint/OneDrive or
+SharePoint origins, requires exactly one attached browser context and an
+unambiguous matching tab, and never closes an existing user tab/browser. If it
+opens its own document tab, only that tab is closed afterwards. Authentication
+redirects or absent document/slide markers fail; they never count as screenshots
+of the final deck. External service access is not part of the unattended CI lane.
+
+### Observed selectors and readiness
+
+PowerPoint viewer selectors **must be measured in the real viewer**. There is no
+hardcoded, supposedly tested Microsoft DOM mapping. Supply `document` (a unique
+selector in the top-level page), `document_text` (the supplied PPTX filename or
+stem), `blockers` (observed login/loading overlay selectors), optional nested iframe `frames`, the unique slide `surface` selector, and
+1..24 `slides` steps. Every step needs an existing source slide `number`, a unique
+`select` control selector, a `ready` selector and exact `ready_text` asserting the
+selected slide state. These selectors are resolved freshly, with bounded waits,
+and screenshots capture the selected surface with animations disabled.
+
+The following is the **local test viewer plan**, not Microsoft selectors:
+
+```json
+{
+  "document": "#document",
+  "document_text": "synthetic.pptx",
+  "frames": ["iframe"],
+  "blockers": ["#signin"],
+  "surface": "#slide",
+  "slides": [
+    {"number": 1, "select": "#one", "ready": "#ready", "ready_text": "Alpha"},
+    {"number": 2, "select": "#two", "ready": "#ready", "ready_text": "Beta"}
+  ]
+}
+```
+
+### Evidence and measured boundary
+
+Each run requires a new output directory, full tested Git SHA, run ID and attempt.
+PNG filenames are generated from validated slide numbers. On success the upstream
+writer seals `evidence.json`, then the upstream validator rechecks every PNG,
+byte count, hash, dimensions, SHA and run identity. `capture.json` records source
+PPTX SHA-256, Chromium/Playwright versions, kit pin, timestamps, reached stage and
+mode. Failure preserves a failed receipt/report, including partial captures when
+available, without recording raw exception messages, login screenshots, DOM,
+authentication state or document URLs. Cleanup failures cannot leave a complete
+receipt behind. Input bytes are unchanged and checked again before sealing.
+
+The document assertion binds the **displayed filename**, not the bytes of the
+remote file. The caller must open the uploaded copy corresponding to the supplied
+local PPTX. A complete capture means the configured checks and PNG validation
+succeeded; it does not mean visual fidelity, text overflow or Microsoft rendering
+correctness was automatically established. Inspect the actual screenshots.
+
+The dedicated `PPTX web capture fixture` workflow installs optional dependencies
+and matching Chromium, serves only a synthetic loopback viewer with an iframe,
+and tests two distinct slide captures, login/overlay/incorrect-slide rejection and
+upstream rejection of a damaged PNG. It uploads synthetic success/failed receipts,
+PNGs and JUnit for 14 days. Its project is `chromium-fixture`; it cannot satisfy
+`chromium-powerpoint-web` acceptance. `--fixture` permits only loopback HTTP and
+cannot attach to a signed-in browser. Default pytest runs deterministic tests and
+explicitly skips the optional real-Chromium lane unless
+`IRONMATE_RUN_WEB_CAPTURE=1`. In that lane `IRONMATE_BTK_ROOT` must point to the
+reviewed checkout. No tests or screenshots from this mock viewer establish that a
+PPTX was rendered in PowerPoint Web. Real Microsoft selector mapping, authenticated
+capture and resulting visual acceptance remain unverified until that live run.

@@ -138,8 +138,9 @@ def server():
         def do_GET(self):
             if self.path == '/frame':
                 body = '''<!doctype html><meta charset="utf-8">
-<button id="one" onclick="show('Alpha','#ddd')">1</button>
-<button id="two" onclick="show('Beta','#eee')">2</button>
+<style>body{margin:0}#controls{height:32px;display:flex}button{height:32px}</style>
+<div id="controls"><button id="one" onclick="show('Alpha','#ddd')">1</button>
+<button id="two" onclick="show('Beta','#eee')">2</button></div>
 <div id="slide" style="width:800px;height:450px;border:1px solid black;background:white">
 <h1 id="ready">Loading</h1></div>
 <script>function show(text,color) {document.querySelector('#ready').textContent=text;
@@ -147,7 +148,7 @@ document.querySelector('#slide').style.background=color;}</script>'''
             elif self.path == '/login':
                 body = '<h1>Sign in</h1>'
             else:
-                body = '<h1 id="document">synthetic.pptx</h1><iframe src="/frame" style="width:1000px;height:650px"></iframe>'
+                body = '<style>body{margin:0}h1{margin:0;height:64px;line-height:64px}iframe{position:absolute;left:0;top:64px;border:0}</style><h1 id="document">synthetic.pptx</h1><iframe src="/frame" style="width:1000px;height:650px"></iframe>'
                 if self.path == '/overlay':
                     body += '<div id="signin" style="position:fixed;inset:0;background:white;z-index:100">Sign in</div>'
             self.send_response(200)

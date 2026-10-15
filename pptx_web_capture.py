@@ -178,9 +178,11 @@ def capture(source, plan, *, url, output, kit, sha, run_id, attempt,
                     report['stage'] = 'blocker'
                     guard()
                     report['stage'] = 'screenshot'
+                    bounds = surface.bounding_box(timeout=timeout)
                     surface.screenshot(path=str(output / name), animations='disabled', timeout=timeout)
                     guard()
-                    report['captures'].append({'file': name, 'slide': step['number']})
+                    report['captures'].append({'file': name, 'slide': step['number'],
+                                               'surface_css_box': bounds})
                 if hashlib.sha256(source.read_bytes()).hexdigest() != digest:
                     raise ValueError('source PPTX changed during capture')
                 report['stage'] = 'validate'

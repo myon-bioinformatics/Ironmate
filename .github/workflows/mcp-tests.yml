@@ -9,6 +9,8 @@ on:
       - "scripts/**"
       - "tests/**"
       - "pytest.ini"
+      - "package.json"
+      - "package-lock.json"
       - ".github/workflows/mcp-tests.yml"
   push:
     branches: [main]
@@ -19,6 +21,8 @@ on:
       - "scripts/**"
       - "tests/**"
       - "pytest.ini"
+      - "package.json"
+      - "package-lock.json"
       - ".github/workflows/mcp-tests.yml"
 
 permissions:
@@ -57,8 +61,13 @@ jobs:
           PY
           python -S .vendor-sync-tools/vendor_sync.py materialize --manifest vendor.lock.json
           python -S .vendor-sync-tools/vendor_sync.py check --manifest vendor.lock.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
       - run: python -m pip install --upgrade pip
       - run: python -m pip install -r tests/requirements.txt
+      - name: Install pinned ExcelJS and SheetJS
+        run: npm ci
       - name: Check out pinned test-only JUnit importer
         uses: actions/checkout@v7
         with:

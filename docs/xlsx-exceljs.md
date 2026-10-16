@@ -1,25 +1,75 @@
 # Excel workbooks
 
-Ironmate does not generate or edit `.xlsx` files. This note is the path to use when a concrete workbook need appears. It adds no package, CLI, sample file, or test.
+CSV files become `.xlsx` workbooks. Ironmate detects the CSV encoding, then ExcelJS or SheetJS writes the package and Ironmate sets the cell styles in the workbook XML. openpyxl and pandas are not used.
 
-The PowerPoint package split in draft PR [#104](https://github.com/myon-bioinformatics/Ironmate/pull/104) is the model: a pinned Node library writes the OOXML package, and Ironmate owns any JSON ↔ XML mapping that has to be checked without a desktop app.
+```sh
+python xlsx_csv.py -o book.xlsx --border --autofilter 売上=costs.csv メモ=notes.csv
+python xlsx_csv.py --spec book.json -o book.xlsx
+```
 
-## What is already here
+Node.js 22 and `npm ci` are required (pinned `exceljs@4.4.0` and `xlsx@0.18.5`). Ironmate does not install them. They are not in `vendor.lock.json`.
 
-A search of requirements, workflows, `vendor.lock.json`, Python sources, and docs found no `openpyxl`, `xlsxwriter`, `xlrd`, ExcelJS, or SheetJS.
+`vendor/oci-cost-analysis.py` still imports pandas to print two columns from a CSV. That file is a locked vendor copy and is not part of this converter. PowerPoint tables still read CSV with the stdlib `csv` module.
 
-`vendor/oci-cost-analysis.py` is a locked copy of `myon-bioinformatics/oci-cost-analysis`. It imports pandas, calls `pd.read_csv`, and prints `Date (UTC)` and `Total (USD)`. It never opens a workbook. Leave it on the vendor lock.
+## Encoding
 
-Tables that Ironmate does write are PowerPoint tables. CSV and Markdown supply the rows, and CSV parsing is the stdlib `csv` module in `pptx_pipeline.py`. That path stays a CSV-to-slide-table path.
+`decode_csv_bytes` labels each file:
 
-`docs/pixel-grid-prototype.md` already records the policy: skip openpyxl, meet table needs with CSV/TSV or an existing service, and add Excel-only create or edit only after a specific demand exists.
+| Bytes | Result |
+| --- | --- |
+| UTF-8 BOM | `utf-8-sig` |
+| valid UTF-8 | `utf-8` |
+| Shift_JIS that CP932 decodes the same way | `shift_jis` |
+| CP932, including bytes Shift_JIS rejects (`①`, `髙`) | `cp932` |
+| `0x8160`, where the codecs disagree | `cp932` → `～` (U+FF5E), the Windows mapping Excel writes |
 
-## When a workbook caller exists
+Anything else raises. `--encoding utf-8|utf-8-sig|shift_jis|cp932` forces one codec. The xlsx stores Unicode, so Excel does not guess Shift_JIS when the file is opened.
 
-1. Keep rows as rows. CSV read and write stay in the stdlib `csv` module. ExcelJS 4.4.0 (the stable release on 2026-10-16; recheck the registry on the day it is added) can also read and write CSV. SheetJS (`xlsx`, 0.18.5 on the same date) is the fallback for a file that is not rectangular CSV, such as legacy `.xls`, and only when a caller has that file and neither the stdlib nor ExcelJS can read it.
-2. Pin ExcelJS in `package.json` and `package-lock.json` at that day's exact stable version. Ignore `node_modules/`. Keep the package out of `vendor.lock.json`. Ironmate does not auto-install it. Add `npm ci` only to the workflow job that runs the new tests. Leave workflow `permissions` unchanged.
-3. ExcelJS performs create and edit: `Workbook`, worksheets, cell values, and only the number formats and fills that caller needs, then `writeBuffer` or `xlsx.writeFile`. An edit reads with `workbook.xlsx.readFile` and writes a new file.
-4. When that subset has to be checked without Excel, document each JSON field against the worksheet XML (shared strings, cell types, styles, column widths) and add round-trip tests: JSON → worksheet XML → JSON equals the original, and XML → JSON → XML matches after canonicalization. List what the reader will not preserve in the same document: charts, pivot tables, VBA, drawings, comments, defined names, conditional formatting outside the subset, the calc chain, and ZIP part order. The mapping stays in Ironmate. The first caller sets the subset.
-5. Keep the existing tests. New tests cover the operations that caller uses. There is no Python workbook behavior to port today.
+## Workbook subset
 
-Until that caller exists, the tree stays without an `exceljs` or `xlsx` dependency, without a workflow change, and without a sample workbook.
+A sheet has a name, a rectangular `rows` grid, and an optional `autofilter` ref (`A1:C10`). A cell is omitted when it is empty. Present fields:
+
+| JSON | Workbook XML |
+| --- | --- |
+| `v` string | shared string, inline string, or `t="str"` |
+| `v` number | `<v>` without `t`, or `t="n"`. Integers stay integers. More than 15 digits, or leading zeros (`001`), stay text. |
+| `f` | `<f>` without a leading `=`. A CSV field that starts with `=` is a formula. A cached `<v>` is ignored on read. |
+| `z` | `xf/@numFmtId`. Builtins `0`, `0.00`, `#,##0`, `#,##0.00`, `0%`, `0.00%`, `0.00E+00`, `@` use their ECMA ids. Any other code is a `numFmt` from id 164. |
+| `align` | `alignment/@horizontal` `left`, `center`, or `right` |
+| `border: "thin"` | border id with `left`/`right`/`top`/`bottom` `style="thin"` and `color/@rgb="FF000000"` (罫線) |
+| `autofilter` | worksheet `autoFilter/@ref` over the whole grid |
+
+`--border` draws that thin border on every cell, including empty ones, so the grid lines stay continuous. A column with `"clear": true` opts out of the border, number format, and alignment. Column `numFmt` and `align` apply to values and formulas in that column.
+
+Spec shape:
+
+```json
+{
+  "borders": true,
+  "autofilter": true,
+  "sheets": [
+    {
+      "name": "売上",
+      "csv": "costs.csv",
+      "columns": [{}, {"numFmt": "#,##0", "align": "right"}, {"numFmt": "0.000", "align": "left"}]
+    }
+  ]
+}
+```
+
+`formulas` can set a cell inside the grid: `{"cell": "C2", "formula": "B2*1.1"}`. `rows` can be used instead of `csv`.
+
+## How the two libraries are checked
+
+Both engines write values, formulas, sheet names, and autofilter. Ironmate then rewrites `xl/styles.xml` and each cell's `s` attribute so borders, alignment, and number formats do not depend on which library wrote the package. SheetJS community does not write those styles, and its reader does not return them.
+
+Tests, with no Excel and no Google account:
+
+- Unzip the xlsx and require `autoFilter`, `<f>`, thin borders, `numFmt`, alignment, and both sheet names.
+- XML → JSON equals the spec for a package from either engine.
+- ExcelJS write → SheetJS read matches values, formulas, number formats, sheet names, and autofilter.
+- SheetJS write → ExcelJS read matches the full spec, including borders and alignment.
+
+## Not in this subset
+
+Merged cells, images, drawings, and conditional formatting are rejected. Also untouched: charts, pivot tables, VBA, comments, defined names, column widths, fonts, fills, and the calc chain. ZIP part order is whatever the writer produced. A second style pass does not try to make the two engines' packages byte-identical.

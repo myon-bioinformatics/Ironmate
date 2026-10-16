@@ -228,3 +228,4 @@ python -m pytest -q -m 'not heavy'
 
 xprobeと親のvendorツールはテスト用の別checkoutです。実行時依存として自動取得しません。
 PPTX機能の実行には `python-pptx` が必要です。Marp変換時のみ別途インストール済みのMarp CLIが必要です。
+CSVをxlsxにする場合は [Excelワークブック](docs/xlsx-exceljs.md) を使います。文字コードの判定はUTF-8 / BOM / Shift_JIS / CP932です。openpyxlとpandasは使いません。

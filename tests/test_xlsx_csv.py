@@ -75,6 +75,22 @@ def test_dangerous_formulas_are_rejected():
         '=HYPERLINK("http://evil","x")',
         '=WEBSERVICE("http://evil")',
         "='https://evil.example/book.xlsx'!A1",
+        '=IMAGE(A2)',
+        '=image(A2)',
+        '=Image(A2)',
+        '=IMAGE (A2)',
+        '= IMAGE( A2 )',
+        '=SUM(IMAGE(A2))',
+        '=SUM( 1, image ( A2 ) )',
+        '=IF(A1,IMAGE(A2),ROUND(B1,0))',
+        '=_xlfn.IMAGE(A2)',
+        '=INDIRECT(A2)',
+        '=indirect( A2 )',
+        '=SUM(INDIRECT(A2))',
+        '=FILTERXML(A2,"//a")',
+        '=RTD("a","b","c")',
+        '=CALL("a")',
+        '=REGISTER.ID("a","b")',
     ]
     for raw in dangerous:
         buffer = io.StringIO(newline='')
@@ -85,6 +101,14 @@ def test_dangerous_formulas_are_rejected():
         sheet_from_csv('S', 'h\n1\n', formulas=[{'cell': 'A2', 'formula': '=EXEC("calc")'}])
     allowed = sheet_from_csv('S', 'h\n=SUM(A1:A1)\n')
     assert allowed['rows'][1][0]['f'] == 'SUM(A1:A1)'
+
+    def _one(formula):
+        buffer = io.StringIO(newline='')
+        csv.writer(buffer, lineterminator='\n').writerows([['h'], [formula]])
+        return sheet_from_csv('S', buffer.getvalue())['rows'][1][0]['f']
+
+    assert _one('=ROUND(AVERAGE(A1:A2),2)') == 'ROUND(AVERAGE(A1:A2),2)'
+    assert _one('=IF(A1="IMAGE(A2)",SUM(B1:B2),0)') == 'IF(A1="IMAGE(A2)",SUM(B1:B2),0)'
 
 
 def test_rejected_features_and_sheet_names():

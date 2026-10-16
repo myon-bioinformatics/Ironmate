@@ -13,12 +13,17 @@ _ALIGN = {'left', 'center', 'right'}
 _ENCODINGS = ('auto', 'utf-8', 'utf-8-sig', 'shift_jis', 'cp932')
 _NUMBER = re.compile(r'-?(?:0|[1-9]\d*)(?:\.\d+)?\Z')
 _ADDRESS = re.compile(r'([A-Z]+)([1-9]\d*)\Z')
-# CSV "=" becomes a formula. Reject DDE/commands, other workbooks, and remote calls.
-_FORMULA_REJECT = re.compile(
-    r'\|' r'|\[|\]' r'|://'
-    r'|\b(?:HYPERLINK|WEBSERVICE|FILTERXML|RTD|CALL|REGISTER(?:\.ID)?|EXEC|DDE|IMPORTDATA|IMPORTXML|ENCODEURL)\s*\(',
-    re.IGNORECASE,
-)
+_CELL_REF = re.compile(r'\$?[A-Z]{1,3}\$?[1-9][0-9]*\Z')
+# Arithmetic and in-sheet calculations only. IMAGE, HYPERLINK, INDIRECT, and
+# other calls are rejected because they are not in this set.
+_FUNCTIONS = frozenset({
+    'ABS', 'AND', 'AVERAGE', 'CONCAT', 'COUNT', 'COUNTA', 'COUNTIF',
+    'DATE', 'IF', 'IFERROR', 'INT', 'LEFT', 'LEN', 'LOWER', 'MAX', 'MID',
+    'MIN', 'MOD', 'NOT', 'OR', 'POWER', 'PRODUCT', 'RIGHT', 'ROUND',
+    'ROUNDDOWN', 'ROUNDUP', 'SQRT', 'SUBSTITUTE', 'SUM', 'SUMIF', 'TEXT',
+    'TRIM', 'UPPER', 'VALUE',
+})
+_CONSTANTS = frozenset({'TRUE', 'FALSE'})
 
 
 def decode_csv_bytes(data, encoding='auto'):
@@ -114,10 +119,102 @@ def _number(text):
     return int(text)
 
 
+def _reject_formula():
+    raise ValueError('formula is outside the xlsx subset')
+
+
 def _check_formula(formula):
-    """Allow ordinary cell formulas. Reject command, external, and remote formulas."""
-    if _FORMULA_REJECT.search(formula):
-        raise ValueError('formula is outside the xlsx subset')
+    """Allow arithmetic, cell refs, and the function allowlist.
+
+    Every call is checked, including calls nested inside an allowed function
+    and names written in any case with space before ``(``. Text in double
+    quotes is not a call. ``|``, ``[``, ``]``, and ``://`` outside those quotes
+    are rejected.
+    """
+    if any(ord(char) < 32 for char in formula):
+        _reject_formula()
+    index = 0
+    length = len(formula)
+    while index < length:
+        char = formula[index]
+        if char.isspace():
+            index += 1
+            continue
+        if char == '"':
+            index += 1
+            while index < length:
+                if formula[index] == '"':
+                    index += 1
+                    if index < length and formula[index] == '"':
+                        index += 1
+                        continue
+                    break
+                index += 1
+            else:
+                _reject_formula()
+            continue
+        if char == "'":
+            index += 1
+            sheet = []
+            while index < length:
+                if formula[index] == "'":
+                    index += 1
+                    if index < length and formula[index] == "'":
+                        sheet.append("'")
+                        index += 1
+                        continue
+                    break
+                sheet.append(formula[index])
+                index += 1
+            else:
+                _reject_formula()
+            if '://' in ''.join(sheet) or any(mark in sheet for mark in '[]|'):
+                _reject_formula()
+            continue
+        if char == ':':
+            if formula.startswith('//', index + 1):
+                _reject_formula()
+            index += 1
+            continue
+        if char in '+-*/^&=<>%,().!':
+            index += 1
+            continue
+        if char in '[]|':
+            _reject_formula()
+        if char.isdigit() or char == '.':
+            start = index
+            saw_digit = False
+            while index < length and formula[index].isdigit():
+                saw_digit = True
+                index += 1
+            if index < length and formula[index] == '.':
+                index += 1
+                while index < length and formula[index].isdigit():
+                    saw_digit = True
+                    index += 1
+            if not saw_digit or (char == '.' and index == start + 1):
+                _reject_formula()
+            continue
+        if char == '$' or char.isalpha() or char in '_\\':
+            start = index
+            index += 1
+            while index < length and (formula[index].isalnum() or formula[index] in '_.\\$'):
+                index += 1
+            token = formula[start:index]
+            probe = index
+            while probe < length and formula[probe].isspace():
+                probe += 1
+            if probe < length and formula[probe] == '(':
+                if token.upper() not in _FUNCTIONS:
+                    _reject_formula()
+                index = probe
+                continue
+            if token.upper() in _CONSTANTS or _CELL_REF.fullmatch(token.upper()):
+                continue
+            if probe < length and formula[probe] == '!':
+                continue
+            _reject_formula()
+        _reject_formula()
     return formula
 
 

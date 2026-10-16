@@ -63,7 +63,7 @@ jobs:
       - name: Install optional browser test dependencies
         run: python -m pip install -r tests/requirements-preview.txt
       - name: Install matching Chromium
-        run: python -m playwright install --with-deps chromium
+        run: python -m playwright install --with-deps --only-shell chromium
       - name: Test actual Marp HTML PDF PNG and final PPTX inspection
         env:
           IRONMATE_RUN_REVIEW: "1"

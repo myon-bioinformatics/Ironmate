@@ -59,10 +59,9 @@ def test_numbers_formulas_borders_and_clear_cells():
         'S', 'code,n,whole\n001,=A1,1.0\n', borders=True,
         columns=[{'clear': True}, {'numFmt': '0', 'align': 'right'}, {}],
     )
-    code, literal, whole = sheet['rows'][1]
+    code, formula, whole = sheet['rows'][1]
     assert code == {'v': '001'}
-    assert literal == {'v': '=A1', 'align': 'right', 'border': 'thin'}
-    assert 'f' not in literal
+    assert formula == {'f': 'A1', 'z': '0', 'align': 'right', 'border': 'thin'}
     assert 'border' not in code
     assert whole == {'v': 1, 'border': 'thin'}
     assert type(whole['v']) is int
@@ -76,56 +75,103 @@ def _csv_cell(formula):
     return sheet_from_csv('S', buffer.getvalue())['rows'][1][0]
 
 
-def test_equals_cells_are_text_while_the_allowlist_is_empty():
-    assert xlsx_spec._FUNCTIONS == frozenset()
-    for raw in ('=IMAGE(A2)', '=image(A2)', '=IMAGE (A2)', '=B2*1.1', '=SUM(A1:A1)'):
-        cell = _csv_cell(raw)
-        assert cell == {'v': raw}
-        assert 'f' not in cell
-    with pytest.raises(ValueError, match='allowlist is empty'):
-        sheet_from_csv('S', 'h\n1\n', formulas=[{'cell': 'A2', 'formula': '=B2*1.1'}])
-    with pytest.raises(ValueError, match='allowlist is empty'):
-        sheet_from_csv('S', 'h\n1\n', formulas=[{'cell': 'A2', 'formula': '=IMAGE(A2)'}])
-
-
-def test_allowlist_machinery_rejects_calls_that_are_not_named(monkeypatch):
-    """Adding names turns formulas back on. Calls outside that set still fail."""
-    monkeypatch.setattr(xlsx_spec, '_FUNCTIONS', frozenset({
-        'AVERAGE', 'IF', 'ROUND', 'SUM',
-    }))
-    dangerous = [
-        "=cmd|'/c calc'!A0",
-        '=HYPERLINK("http://evil","x")',
-        '=WEBSERVICE("http://evil")',
-        "='https://evil.example/book.xlsx'!A1",
-        '=IMAGE(A2)',
-        '=image(A2)',
-        '=Image(A2)',
-        '=IMAGE (A2)',
-        '= IMAGE( A2 )',
-        '=SUM(IMAGE(A2))',
-        '=SUM( 1, image ( A2 ) )',
-        '=IF(A1,IMAGE(A2),ROUND(B1,0))',
-        '=_xlfn.IMAGE(A2)',
-        '=INDIRECT(A2)',
-        '=indirect( A2 )',
-        '=SUM(INDIRECT(A2))',
-        '=FILTERXML(A2,"//a")',
-        '=RTD("a","b","c")',
-        '=CALL("a")',
-        '=REGISTER.ID("a","b")',
-    ]
-    for raw in dangerous:
-        buffer = io.StringIO(newline='')
-        csv.writer(buffer, lineterminator='\n').writerows([['h'], [raw]])
-        with pytest.raises(ValueError, match='formula is outside'):
-            sheet_from_csv('S', buffer.getvalue())
+@pytest.mark.parametrize('raw', [
+    '=IMAGE(A2)', '=image(A2)', '=Image ( A2 )', '= IMAGE( A2 )',
+    '=SUM(IMAGE(A2))', '=SUM( 1, image ( A2 ) )',
+    '=IF(A1,IMAGE(A2),ROUND(B1,0))', '=_xlfn.IMAGE(A2)',
+    '=HYPERLINK(A2,"x")', '=WEBSERVICE(A2)', '=FILTERXML(A2,"//a")',
+    '=RTD(A2,B2,C2)', '=CALL(A2)', '=REGISTER.ID(A2,B2)', '=EXEC(A2)',
+    '=INDIRECT(A2)', '=SUM(indirect ( A2 ))', '=FUTUREFUNCTION(A2)',
+    "=cmd|'/c calc'!A0", "='https://evil.example/book.xlsx'!A1",
+    "='C:\\evil.xlsx'!A1", "='\\\\server\\book.xlsx'!A1", "='[book.xlsx]S'!A1",
+    '=[book.xlsx]S!A1', '=Sheet1:Sheet3!A1', '=named_formula',
+    '=A0', '=XFE1', '=A1048577', '=SUM(A1;A2)', '=SUM(A1)IMAGE(A2)',
+    '=SUM(A1', '=A1 A2', '=1+', '=()', '=SUM(,A1)', '=SUM(A1,)',
+    '="unterminated', "='IMAGE'(A2)", '=A1#', '=@SUM(A1)', '=1\t+2',
+])
+@pytest.mark.parametrize('source', ['csv', 'explicit'])
+def test_formula_policy_rejects_external_calls_and_unsupported_syntax(raw, source):
+    # The URL lives in A2, never in the formula itself. No lexical URL test
+    # can catch IMAGE(A2). Exercise real workbook input for both entry points.
+    spec = {'sheets': [{'name': 'S', 'rows': [
+        ['url', 'result'], ['https://example.invalid/pixel.png', raw if source == 'csv' else ''],
+    ]}]}
+    if source == 'explicit':
+        spec['sheets'][0]['formulas'] = [{'cell': 'B2', 'formula': raw}]
     with pytest.raises(ValueError, match='formula is outside'):
-        sheet_from_csv('S', 'h\n1\n', formulas=[{'cell': 'A2', 'formula': '=EXEC("calc")'}])
-    assert _csv_cell('=SUM(A1:A1)')['f'] == 'SUM(A1:A1)'
-    assert _csv_cell('=B2*1.1')['f'] == 'B2*1.1'
-    assert _csv_cell('=ROUND(AVERAGE(A1:A2),2)')['f'] == 'ROUND(AVERAGE(A1:A2),2)'
-    assert _csv_cell('=IF(A1="IMAGE(A2)",SUM(B1:B2),0)')['f'] == 'IF(A1="IMAGE(A2)",SUM(B1:B2),0)'
+        workbook_from_spec(spec, '.')
+
+
+@pytest.mark.parametrize('raw', [
+    '=B2*1.1', '=SUM(A1:A2)', '=sum ( $A$1:A2 )',
+    '=ROUND(AVERAGE(A1:A2),2)', '=IF(A1>0,SUM(B1:B2),0)',
+    '=IF(A1="IMAGE(A2)",SUM(B1:B2),0)',
+    '=IF(A1="a""IMAGE(A2)",1,0)', '=SUM(1,2,3)',
+    '=-(A1+2)^2/100%', '=TRUE', '=AND(TRUE,NOT(FALSE))',
+    '=CONCAT("https://example.invalid/",A1)', '=1.2E-3+2E3',
+    "='売上 メモ'!$A$1+'O''Brien'!B2", '=Sheet2!A1:A2',
+    '=IFERROR(ROUND(B2*1.1,0),0)',
+])
+@pytest.mark.parametrize('source', ['csv', 'explicit'])
+def test_safe_formulas_remain_formulas(raw, source):
+    if source == 'csv':
+        cell = _csv_cell(raw)
+    else:
+        sheet = sheet_from_csv('S', 'h\n1\n', formulas=[{'cell': 'A2', 'formula': raw}])
+        cell = sheet['rows'][1][0]
+    assert cell == {'f': raw[1:]}
+
+
+@pytest.mark.parametrize('engine', ['exceljs', 'sheetjs'])
+@pytest.mark.parametrize('raw', ['IMAGE(A2)', 'SUM(IMAGE(A2))', 'WEBSERVICE(A2)',
+                                 'INDIRECT(A2)', 'FUTUREFUNCTION(A2)', '', None])
+def test_canonical_spec_cannot_bypass_formula_policy(engine, raw, monkeypatch):
+    spec = {'sheets': [{'name': 'S', 'rows': [[{'v': 'https://example.invalid/pixel.png'}, {'f': raw}]]}]}
+    def unexpected_writer(*args):
+        pytest.fail('rejected formula reached the Node writer')
+    monkeypatch.setattr('xlsx_render._run', unexpected_writer)
+    with pytest.raises(ValueError, match='formula is outside'):
+        write_workbook(spec, engine)
+
+
+@pytest.mark.parametrize('engine', ['exceljs', 'sheetjs'])
+@pytest.mark.parametrize('source', ['csv', 'explicit'])
+def test_url_cells_and_safe_formulas_write_without_external_relationships(engine, source):
+    entry = {'name': 'S', 'rows': [
+        ['url', 'result'], ['https://example.invalid/pixel.png', '=SUM(1,2)' if source == 'csv' else ''],
+    ]}
+    if source == 'explicit':
+        entry['formulas'] = [{'cell': 'B2', 'formula': 'SUM(1,2)'}]
+    spec = workbook_from_spec({'sheets': [entry]}, '.')
+    payload = write_workbook(spec, engine)
+    assert read_spec(payload) == spec
+    root = ET.fromstring(archive_sheet(payload, 0))
+    assert [node.text for node in root.findall('.//m:f', NS)] == ['SUM(1,2)']
+    assert spec['sheets'][0]['rows'][1][0] == {'v': 'https://example.invalid/pixel.png'}
+    with ZipFile(BytesIO(payload)) as archive:
+        assert not any(name.startswith(('xl/media/', 'xl/externalLinks/')) for name in archive.namelist())
+        for name in archive.namelist():
+            if name.endswith('.rels'):
+                assert all(rel.get('TargetMode') != 'External' for rel in ET.fromstring(archive.read(name)))
+
+
+@pytest.mark.parametrize('engine', ['exceljs', 'sheetjs'])
+def test_sheet_qualifiers_must_resolve_inside_the_written_workbook(engine):
+    spec = workbook_from_spec({'sheets': [
+        {'name': 'S', 'rows': [["='売上 メモ'!A1+other!A1"]]},
+        {'name': '売上 メモ', 'rows': [[2]]},
+        {'name': 'Other', 'rows': [[3]]},
+    ]}, '.')
+    assert read_spec(write_workbook(spec, engine)) == spec
+    for raw in ("'missing.xlsx'!A1", 'MissingSheet!A1'):
+        spec['sheets'][0]['rows'][0][0] = {'f': raw}
+        with pytest.raises(ValueError, match='formula is outside'):
+            write_workbook(spec, engine)
+
+
+def test_formula_nesting_limit_is_a_validation_error():
+    with pytest.raises(ValueError, match='formula is outside'):
+        _csv_cell('=' + 'SUM(' * 66 + 'A1' + ')' * 66)
 
 
 def test_rejected_features_and_sheet_names():
@@ -150,9 +196,8 @@ def test_workbook_xml_round_trip(engine):
         sheets = [name for name in archive.namelist() if name.startswith('xl/worksheets/sheet')]
     assert '売上' in workbook.decode('utf-8') and 'メモ' in workbook.decode('utf-8')
     root = ET.fromstring(archive_sheet(payload, 0))
-    assert root.find('.//m:f', NS) is None
-    assert b'<f>' not in payload
-    assert read_spec(payload)['sheets'][0]['rows'][1][2]['v'] == '=B2*1.1'
+    assert root.find('.//m:f', NS).text == 'B2*1.1'
+    assert read_spec(payload)['sheets'][0]['rows'][1][2]['f'] == 'B2*1.1'
     assert root.find('m:autoFilter', NS).get('ref') == 'A1:C3'
     bordered = [cell for cell in root.findall('.//m:c', NS) if cell.get('s') not in (None, '0')]
     assert bordered

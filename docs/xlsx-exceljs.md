@@ -33,7 +33,7 @@ A sheet has a name, a rectangular `rows` grid, and an optional `autofilter` ref 
 | --- | --- |
 | `v` string | shared string, inline string, or `t="str"` |
 | `v` number | `<v>` without `t`, or `t="n"`. Integers stay integers. More than 15 digits, or leading zeros (`001`), stay text. |
-| `f` | Not written while `_FUNCTIONS` is empty. A CSV field that starts with `=` is the literal text (`=IMAGE(A2)`, `=B2*1.1`), stored as a string, with no `<f>`. An explicit `formulas` entry raises `formulas are disabled while the function allowlist is empty`. Adding names to `_FUNCTIONS` turns the checker back on: a call is kept only when its name is in that set, arithmetic and cell refs are allowed, and any other call (`IMAGE`, `HYPERLINK`, `WEBSERVICE`, `FILTERXML`, `RTD`, `CALL`, `REGISTER.ID`, `INDIRECT`, including lowercase, space before `(`, and nested calls) is rejected. A cached `<v>` is ignored on read. |
+| `f` | `<f>` with its leading `=` removed. CSV fields beginning with `=` and explicit `formulas` use the same formula subset below. Unsupported expressions raise instead of becoming executable formulas. A cached `<v>` is ignored on read. |
 | `z` | `xf/@numFmtId`. Builtins `0`, `0.00`, `#,##0`, `#,##0.00`, `0%`, `0.00%`, `0.00E+00`, `@` use their ECMA ids. Any other code is a `numFmt` from id 164. |
 | `align` | `alignment/@horizontal` `left`, `center`, or `right` |
 | `border: "thin"` | border id with `left`/`right`/`top`/`bottom` `style="thin"` and `color/@rgb="FF000000"` (罫線) |
@@ -57,7 +57,41 @@ Spec shape:
 }
 ```
 
-`rows` can be used instead of `csv`. `formulas` is rejected while the allowlist is empty. With names added, an entry `{"cell": "C2", "formula": "B2*1.1"}` sets that cell inside the grid.
+`rows` can be used instead of `csv`. An entry `"formulas": [{"cell": "C2", "formula": "B2*1.1"}]` sets that cell inside the grid; a leading `=` is optional for this explicit form.
+
+## Formula subset
+
+`xlsx_spec._check_formula` validates the complete expression before it reaches
+ExcelJS or SheetJS. At write time sheet qualifiers must match a sheet in this
+workbook (case-insensitively). `write_workbook` applies the same check to canonical specs,
+so constructing a cell with `f` directly does not bypass validation. Expressions
+are stored unchanged after stripping the optional leading `=` and outer spaces;
+Ironmate does not calculate them.
+
+Supported syntax:
+
+- Decimal/scientific numbers, double-quoted strings (escaped quotes use `""`), and `TRUE` / `FALSE`.
+- A1 cell references, including `$A$1`, and rectangular ranges such as `A1:B10`, within Excel's row/column bounds. Local sheet qualifiers such as `Sheet2!A1` and `'売上 メモ'!A1` are allowed; escaped apostrophes use `''`.
+- Parentheses, unary `+` / `-`, postfix `%`, and binary `+ - * / ^ & = <> <= >= < >`. Commas separate function arguments only. Excel applies operator precedence.
+- Function names are case-insensitive; spaces before `(` and nested allowed calls are supported. The complete allowlist is: `ABS`, `AND`, `AVERAGE`, `CONCAT`, `COUNT`, `COUNTA`, `COUNTIF`, `DATE`, `IF`, `IFERROR`, `INT`, `LEFT`, `LEN`, `LOWER`, `MAX`, `MID`, `MIN`, `MOD`, `NOT`, `OR`, `POWER`, `PRODUCT`, `RIGHT`, `ROUND`, `ROUNDDOWN`, `ROUNDUP`, `SQRT`, `SUBSTITUTE`, `SUM`, `SUMIF`, `TEXT`, `TRIM`, `UPPER`, `VALUE`.
+
+Every other function is rejected, including `IMAGE`, `HYPERLINK`, `WEBSERVICE`,
+`FILTERXML`, `RTD`, `CALL`, `REGISTER.ID`, `INDIRECT`, and prefixed calls such as
+`_xlfn.IMAGE`. This also applies inside allowed calls, so `SUM(IMAGE(A2))` raises
+without having to inspect the contents of A2. URL text and text resembling calls
+inside double quotes are ordinary string literals; they do not execute.
+
+External workbook references, paths, DDE, defined names, structured references,
+3D ranges, array/union/intersection syntax, spill/implicit-intersection operators,
+and locale-specific argument separators are outside the subset. Control
+characters, unbalanced/unterminated expressions, more than 8192 characters, and
+nesting deeper than 64 are rejected. Function arity, types,
+and calculation results are left to Excel and may produce ordinary cell errors.
+
+Verification covers both input paths and both writer engines, inspecting the
+resulting worksheet formulas and checking that literal URL cells introduce no
+external relationships or image parts. Excel desktop rendering, calculation,
+and network traffic have not been tested.
 
 ## How the two libraries are checked
 
@@ -65,7 +99,7 @@ Both engines write values, formulas, sheet names, and autofilter. Ironmate then 
 
 Tests, with no Excel and no Google account:
 
-- Unzip the xlsx and require `autoFilter`, thin borders, `numFmt`, alignment, and both sheet names. A cell whose CSV text is `=B2*1.1` or `=IMAGE(A2)` is that literal string, and the package has no `<f>`.
+- Unzip the xlsx and require `autoFilter`, thin borders, `numFmt`, alignment, and both sheet names. A safe CSV formula such as `=B2*1.1` stays a formula in `<f>`. `=IMAGE(A2)` raises for both CSV input and explicit formula entries, including when A2 contains the URL.
 - XML → JSON equals the spec for a package from either engine.
 - ExcelJS write → SheetJS read matches values, formulas, number formats, sheet names, and autofilter.
 - SheetJS write → ExcelJS read matches the full spec, including borders and alignment. An empty bordered cell stays in the grid for that read. SheetJS's own reader keeps the width and autofilter and returns that cell as empty, because it does not return borders.

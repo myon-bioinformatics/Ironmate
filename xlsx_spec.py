@@ -13,10 +13,23 @@ _ALIGN = {'left', 'center', 'right'}
 _ENCODINGS = ('auto', 'utf-8', 'utf-8-sig', 'shift_jis', 'cp932')
 _NUMBER = re.compile(r'-?(?:0|[1-9]\d*)(?:\.\d+)?\Z')
 _ADDRESS = re.compile(r'([A-Z]+)([1-9]\d*)\Z')
-_CELL_REF = re.compile(r'\$?[A-Z]{1,3}\$?[1-9][0-9]*\Z')
-# Empty disables every formula. Adding a name here turns formula writing back
-# on for that call; every other call is still rejected by ``_check_formula``.
-_FUNCTIONS = frozenset()
+_CELL_REF = re.compile(r'\$?[A-Z]{1,3}\$?[1-9][0-9]{0,6}\Z')
+# Only pure calculations over workbook cells/literals. Unknown functions,
+# including future Excel functions, remain outside the subset.
+_FUNCTIONS = frozenset({
+    'ABS', 'AND', 'AVERAGE', 'CONCAT', 'COUNT', 'COUNTA', 'COUNTIF',
+    'DATE', 'IF', 'IFERROR', 'INT', 'LEFT', 'LEN', 'LOWER', 'MAX', 'MID',
+    'MIN', 'MOD', 'NOT', 'OR', 'POWER', 'PRODUCT', 'RIGHT', 'ROUND',
+    'ROUNDDOWN', 'ROUNDUP', 'SQRT', 'SUBSTITUTE', 'SUM', 'SUMIF', 'TEXT',
+    'TRIM', 'UPPER', 'VALUE',
+})
+_FORMULA_TOKEN = re.compile(
+    r'(?P<string>"(?:[^"]|"")*")|'
+    r"(?P<sheet>'(?:[^']|'')*')|"
+    r'(?P<number>(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[Ee][+-]?[0-9]+)?)|'
+    r'(?P<name>[$A-Za-z_][$A-Za-z_0-9.]*)|'
+    r'(?P<op><>|<=|>=|[+*/^&=<>%,():!\-])'
+)
 _CONSTANTS = frozenset({'TRUE', 'FALSE'})
 
 
@@ -117,111 +130,118 @@ def _reject_formula():
     raise ValueError('formula is outside the xlsx subset')
 
 
-def _check_formula(formula):
-    """Allow arithmetic, cell refs, and the function allowlist.
+def _check_formula(formula, *, sheet_names=None):
+    """Validate the entire documented expression grammar without evaluating it.
 
-    Every call is checked, including calls nested inside an allowed function
-    and names written in any case with space before ``(``. Text in double
-    quotes is not a call. ``|``, ``[``, ``]``, and ``://`` outside those quotes
-    are rejected.
+    Commas only separate function arguments; colons only join cell references.
+    Sheet-qualified references are local: paths, URLs and external books are
+    rejected. Names cannot resolve to defined names, add-ins or arbitrary calls.
     """
+    if not isinstance(formula, str) or not formula or len(formula) > 8192:
+        _reject_formula()
     if any(ord(char) < 32 for char in formula):
         _reject_formula()
+    tokens = []
     index = 0
-    length = len(formula)
-    while index < length:
-        char = formula[index]
-        if char.isspace():
+    while index < len(formula):
+        if formula[index] == ' ':
             index += 1
             continue
-        if char == '"':
-            index += 1
-            while index < length:
-                if formula[index] == '"':
-                    index += 1
-                    if index < length and formula[index] == '"':
-                        index += 1
-                        continue
-                    break
-                index += 1
-            else:
-                _reject_formula()
-            continue
-        if char == "'":
-            index += 1
-            sheet = []
-            while index < length:
-                if formula[index] == "'":
-                    index += 1
-                    if index < length and formula[index] == "'":
-                        sheet.append("'")
-                        index += 1
-                        continue
-                    break
-                sheet.append(formula[index])
-                index += 1
-            else:
-                _reject_formula()
-            if '://' in ''.join(sheet) or any(mark in sheet for mark in '[]|'):
-                _reject_formula()
-            continue
-        if char == ':':
-            if formula.startswith('//', index + 1):
-                _reject_formula()
-            index += 1
-            continue
-        if char in '+-*/^&=<>%,().!':
-            index += 1
-            continue
-        if char in '[]|':
+        match = _FORMULA_TOKEN.match(formula, index)
+        if not match:
             _reject_formula()
-        if char.isdigit() or char == '.':
-            start = index
-            saw_digit = False
-            while index < length and formula[index].isdigit():
-                saw_digit = True
-                index += 1
-            if index < length and formula[index] == '.':
-                index += 1
-                while index < length and formula[index].isdigit():
-                    saw_digit = True
-                    index += 1
-            if not saw_digit or (char == '.' and index == start + 1):
-                _reject_formula()
-            continue
-        if char == '$' or char.isalpha() or char in '_\\':
-            start = index
-            index += 1
-            while index < length and (formula[index].isalnum() or formula[index] in '_.\\$'):
-                index += 1
-            token = formula[start:index]
-            probe = index
-            while probe < length and formula[probe].isspace():
-                probe += 1
-            if probe < length and formula[probe] == '(':
-                if token.upper() not in _FUNCTIONS:
-                    _reject_formula()
-                index = probe
-                continue
-            if token.upper() in _CONSTANTS or _CELL_REF.fullmatch(token.upper()):
-                continue
-            if probe < length and formula[probe] == '!':
-                continue
+        tokens.append((match.lastgroup, match.group()))
+        index = match.end()
+    tokens.append(('end', ''))
+    position = 0
+
+    def peek():
+        return tokens[position][1]
+
+    def take(value):
+        nonlocal position
+        if peek() != value:
             _reject_formula()
+        position += 1
+
+    def reference():
+        nonlocal position
+        kind, value = tokens[position]
+        if kind not in ('name', 'sheet'):
+            _reject_formula()
+        if tokens[position + 1][1] == '!':
+            name = value[1:-1].replace("''", "'") if kind == 'sheet' else value
+            if (not name or len(name) > 31 or any(char in name for char in '\\/?*[]:|')
+                    or name.startswith("'") or name.endswith("'")):
+                _reject_formula()
+            if sheet_names is not None and name.casefold() not in sheet_names:
+                _reject_formula()
+            position += 2
+            kind, value = tokens[position]
+        if kind != 'name' or not _CELL_REF.fullmatch(value.upper()):
+            _reject_formula()
+        row, column = parse_address(value.replace('$', ''))
+        if row > 1048576 or column > 16384:
+            _reject_formula()
+        position += 1
+
+    def operand(depth):
+        nonlocal position
+        if depth > 64:
+            _reject_formula()
+        while peek() in ('+', '-'):
+            position += 1
+        kind, value = tokens[position]
+        if value == '(':
+            position += 1
+            expression(depth + 1)
+            take(')')
+        elif kind == 'name' and tokens[position + 1][1] == '(':
+            if value.upper() not in _FUNCTIONS:
+                _reject_formula()
+            position += 2
+            if peek() != ')':
+                expression(depth + 1)
+                while peek() == ',':
+                    position += 1
+                    expression(depth + 1)
+            take(')')
+        elif kind in ('string', 'number'):
+            position += 1
+        elif kind == 'name' and value.upper() in _CONSTANTS and tokens[position + 1][1] != '!':
+            position += 1
+        else:
+            reference()
+            if peek() == ':':
+                position += 1
+                reference()
+        while peek() == '%':
+            position += 1
+
+    def expression(depth):
+        nonlocal position
+        operand(depth)
+        # Precedence is Excel's job; validation only needs alternating operands
+        # and operators. This never rewrites the user's formula.
+        while peek() in ('+', '-', '*', '/', '^', '&', '=', '<>', '<=', '>=', '<', '>'):
+            position += 1
+            operand(depth)
+
+    expression(0)
+    if tokens[position][0] != 'end':
         _reject_formula()
     return formula
 
 
 def assert_formulas_allowed(spec):
-    """Reject stored formulas while ``_FUNCTIONS`` is empty, and check the rest."""
+    """Apply the same policy to canonical specs before either writer runs."""
+    sheet_names = {sheet['name'].casefold() for sheet in spec.get('sheets') or []}
     for sheet in spec.get('sheets') or []:
         for row in sheet.get('rows') or []:
             for cell in row:
                 if not cell or 'f' not in cell:
                     continue
-                if not _FUNCTIONS:
-                    raise ValueError('formulas are disabled while the function allowlist is empty')
-                _check_formula(cell['f'])
+                _check_formula(cell['f'], sheet_names=sheet_names)
 
 
 def _cell_from_field(text, column, *, borders):
@@ -238,7 +258,7 @@ def _cell_from_field(text, column, *, borders):
         if num_fmt is not None and not isinstance(num_fmt, str):
             raise ValueError('numFmt must be a format string')
     cell = {}
-    if text.startswith('=') and _FUNCTIONS:
+    if text.startswith('='):
         formula = _check_formula(text[1:].strip())
         if not formula:
             raise ValueError('a formula cell is empty')
@@ -290,8 +310,6 @@ def sheet_from_csv(name, data, *, borders=False, autofilter=False, columns=None,
             _cell_from_field(field, styles[index] if index < len(styles) else {}, borders=borders)
             for index, field in enumerate(row)
         ])
-    if formulas and not _FUNCTIONS:
-        raise ValueError('formulas are disabled while the function allowlist is empty')
     for item in formulas or []:
         if not isinstance(item, dict) or 'cell' not in item or 'formula' not in item:
             raise ValueError('formula entries need cell and formula')

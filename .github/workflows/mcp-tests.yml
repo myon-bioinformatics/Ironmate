@@ -66,7 +66,7 @@ jobs:
           python -S .vendor-sync-tools/vendor_sync.py check --manifest vendor.lock.json
       - run: python -m pip install --upgrade pip
       - run: python -m pip install -r tests/requirements.txt
-      - name: Install pinned pptxgenjs
+      - name: Install pinned pptxgenjs, ExcelJS, and SheetJS
         run: npm ci
       - name: Check out pinned test-only JUnit importer
         uses: actions/checkout@v7
@@ -133,7 +133,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Install pytest, pinned pptxgenjs, and pinned Marp CLI
+      - name: Install pytest, pinned Node packages, and pinned Marp CLI
         run: |
           python -m pip install "pytest>=8,<10"
           npm ci

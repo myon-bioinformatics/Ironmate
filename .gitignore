@@ -1,4 +1,4 @@
-# Pinned Node renderer (pptxgenjs). package-lock.json is the pin.
+# Pinned Node packages (pptxgenjs, exceljs, xlsx). package-lock.json is the pin.
 node_modules/
 
 # Byte-compiled / optimized / DLL files

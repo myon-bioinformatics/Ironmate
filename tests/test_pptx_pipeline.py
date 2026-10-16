@@ -1,4 +1,8 @@
-"""Pipeline contract tests without invoking a browser or installing Node."""
+"""Pipeline contract tests without invoking a browser.
+
+Creating a blank deck uses the pinned Node renderer. Enrichment itself only
+appends canonical slide XML.
+"""
 from pathlib import Path
 import pytest
 import pptx_pipeline
@@ -45,7 +49,7 @@ def test_markdown_marp_native_enrichment_chain(monkeypatch,tmp_path):
     assert calls==['# Markdown\n']
     assert result['conversion']['backend']=='marp'
     assert result['conversion']['output']==str(output)
-    assert result['enrichment']['added_shapes']==9
+    assert result['enrichment']['added_shapes']==10
     assert result['inspection']['slides'][0]['editable_runs']>0
     assert not list(tmp_path.glob('ironmate-enrich-*'))
 
@@ -99,7 +103,7 @@ def test_direct_csv_cli_needs_no_toml(monkeypatch,tmp_path,capsys):
     path=tmp_path/'data.csv';path.write_text('Name,Detail\nA,one\nB,two\n')
     output=tmp_path/'out.pptx'
     pptx_pipeline.main(['--text','# Base','--table',str(path),'--table-pattern','flow','-o',str(output)])
-    assert len(Presentation(output).slides[0].shapes)==9
+    assert len(Presentation(output).slides[0].shapes)==10
     assert '"enrichment"' in capsys.readouterr().out
 
 @pytest.mark.parametrize('content',['no table','| H |\n| --- |\n','```\n| H |\n| --- |\n| x |\n```'])
@@ -120,7 +124,7 @@ from pptx_pipeline import enrich, load_patterns
 @pytest.mark.parametrize('mode', ['cards', 'regions', 'flow'])
 @pytest.mark.parametrize('layout', ['row', 'column', 'grid'])
 def test_pipeline_then_layout_preserves_native_structure(monkeypatch, tmp_path, mode, layout):
-    from lxml import etree
+    from xml.etree import ElementTree as ET
     from pptx_layout import arrange
 
     def fake_marp(source, output, *, marp):
@@ -164,14 +168,14 @@ def test_pipeline_then_layout_preserves_native_structure(monkeypatch, tmp_path, 
             if name != 'ppt/slides/slide1.xml':
                 assert old.read(name) == new.read(name)
                 continue
-            roots = [etree.fromstring(z.read(name)) for z in (old, new)]
+            roots = [ET.fromstring(z.read(name)) for z in (old, new)]
             for root in roots:
                 for shape in root.findall('p:cSld/p:spTree/p:sp', ns):
                     if int(shape.find('p:nvSpPr/p:cNvPr', ns).get('id')) in ids:
                         off = shape.find('p:spPr/a:xfrm/a:off', ns)
                         off.set('x', '0')
                         off.set('y', '0')
-            assert etree.tostring(roots[0], method='c14n') == etree.tostring(roots[1], method='c14n')
+            assert ET.canonicalize(ET.tostring(roots[0], encoding='unicode')) == ET.canonicalize(ET.tostring(roots[1], encoding='unicode'))
 
 @pytest.fixture
 def deck(tmp_path):
@@ -211,11 +215,14 @@ def test_native_objects_preview_and_preservation(deck,tmp_path,mode):
     else:
         texts=[s.text for s in slide.shapes if s.has_text_frame]
         assert any('Item 0' in t for t in texts)
-        arrows = [s for s in slide.shapes if s.name.endswith('-arrow')]
-        assert len(arrows)==(2 if mode=='flow' else 0)
-        for arrow in arrows:
-            assert arrow.height == 0
-            assert arrow._element.xpath('.//a:tailEnd')[0].get('type') == 'triangle'
+        lines = [s for s in slide.shapes if s.name.endswith('-arrow-line')]
+        heads = [s for s in slide.shapes if s.name.endswith('-arrow-head')]
+        assert len(lines) == (2 if mode == 'flow' else 0)
+        assert len(heads) == len(lines)
+        for line in lines:
+            assert line.height == 0
+        for head in heads:
+            assert head._prst == 'triangle'
     with ZipFile(deck) as a,ZipFile(out) as b:
         assert a.namelist()==b.namelist()
         assert all(a.read(n)==b.read(n) for n in a.namelist() if n!='ppt/slides/slide1.xml')
@@ -294,7 +301,12 @@ def test_default_table_is_neutral_grayscale(deck,tmp_path):
 @pytest.fixture
 def review_stubs(monkeypatch):
     import pptx_preview
-    monkeypatch.setattr(pptx_pipeline.shutil, 'which', lambda _: '/installed/marp')
+    real_which = pptx_pipeline.shutil.which
+    def which(command):
+        if command == 'marp':
+            return '/installed/marp'
+        return real_which(command)
+    monkeypatch.setattr(pptx_pipeline.shutil, 'which', which)
     seen = {}
     def convert(source, output, *, marp):
         seen['source'] = Path(source)
@@ -302,8 +314,12 @@ def review_stubs(monkeypatch):
         prs.slides.add_slide(prs.slide_layouts[6])
         prs.save(output)
         return {'slides': 1, 'output': str(output), 'backend': 'marp'}
+    real_run = pptx_pipeline.subprocess.run
     def html(argv, **kwargs):
         from types import SimpleNamespace
+        # Only the Marp HTML step is stubbed. Package creation still calls Node.
+        if not argv or Path(str(argv[0])).name != 'marp':
+            return real_run(argv, **kwargs)
         seen['argv'] = argv
         Path(argv[-1]).write_text('<html><head></head><body>Preview</body></html>')
         return SimpleNamespace(returncode=0)

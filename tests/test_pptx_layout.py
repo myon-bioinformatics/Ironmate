@@ -4,7 +4,7 @@ import subprocess
 import sys
 from zipfile import ZipFile
 
-from lxml import etree
+from xml.etree import ElementTree as ET
 from tests.fixture_pptx_layout import CASES, IDS, case_rule, make_source
 import pytest
 from pptx import Presentation
@@ -122,12 +122,12 @@ def test_unequal_sizes_literal_coordinates_and_preservation(tmp_path, case):
             if name != 'ppt/slides/slide1.xml':
                 assert old.read(name) == new.read(name)
                 continue
-            roots = [etree.fromstring(z.read(name)) for z in (old, new)]
+            roots = [ET.fromstring(z.read(name)) for z in (old, new)]
             for root in roots:
                 for shape in root.findall('p:cSld/p:spTree/p:sp', ns):
                     if int(shape.find('p:nvSpPr/p:cNvPr', ns).get('id')) in IDS:
                         off = shape.find('p:spPr/a:xfrm/a:off', ns)
                         off.set('x', '0')
                         off.set('y', '0')
-            assert etree.tostring(roots[0], method='c14n') == etree.tostring(roots[1], method='c14n')
+            assert ET.canonicalize(ET.tostring(roots[0], encoding='unicode')) == ET.canonicalize(ET.tostring(roots[1], encoding='unicode'))
     assert arrange(output, [config], dry_run=True)['change_count'] == 0

@@ -8,6 +8,15 @@ on:
       - tests/test_pptx_pipeline.py
       - tests/test_pptx_preview.py
       - tests/requirements-preview.txt
+      - pptx_mapping.py
+      - pptx_spec.py
+      - pptx_ooxml.py
+      - pptx_render.py
+      - pptx/**
+      - package.json
+      - package-lock.json
+      - scripts/pptxgen_render.mjs
+      - scripts/pptxgen_allowlist.json
       - .github/workflows/pptx-review.yml
   push:
     branches: [main]
@@ -17,6 +26,15 @@ on:
       - tests/test_pptx_pipeline.py
       - tests/test_pptx_preview.py
       - tests/requirements-preview.txt
+      - pptx_mapping.py
+      - pptx_spec.py
+      - pptx_ooxml.py
+      - pptx_render.py
+      - pptx/**
+      - package.json
+      - package-lock.json
+      - scripts/pptxgen_render.mjs
+      - scripts/pptxgen_allowlist.json
       - .github/workflows/pptx-review.yml
   workflow_dispatch:
 
@@ -38,6 +56,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - name: Install pinned pptxgenjs
+        run: npm ci
       - name: Install pinned Marp CLI
         run: npm install --prefix build/preview-tools --no-save --ignore-scripts @marp-team/marp-cli@4.5.1
       - name: Install optional browser test dependencies

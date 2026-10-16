@@ -14,15 +14,9 @@ _ENCODINGS = ('auto', 'utf-8', 'utf-8-sig', 'shift_jis', 'cp932')
 _NUMBER = re.compile(r'-?(?:0|[1-9]\d*)(?:\.\d+)?\Z')
 _ADDRESS = re.compile(r'([A-Z]+)([1-9]\d*)\Z')
 _CELL_REF = re.compile(r'\$?[A-Z]{1,3}\$?[1-9][0-9]*\Z')
-# Arithmetic and in-sheet calculations only. IMAGE, HYPERLINK, INDIRECT, and
-# other calls are rejected because they are not in this set.
-_FUNCTIONS = frozenset({
-    'ABS', 'AND', 'AVERAGE', 'CONCAT', 'COUNT', 'COUNTA', 'COUNTIF',
-    'DATE', 'IF', 'IFERROR', 'INT', 'LEFT', 'LEN', 'LOWER', 'MAX', 'MID',
-    'MIN', 'MOD', 'NOT', 'OR', 'POWER', 'PRODUCT', 'RIGHT', 'ROUND',
-    'ROUNDDOWN', 'ROUNDUP', 'SQRT', 'SUBSTITUTE', 'SUM', 'SUMIF', 'TEXT',
-    'TRIM', 'UPPER', 'VALUE',
-})
+# Empty disables every formula. Adding a name here turns formula writing back
+# on for that call; every other call is still rejected by ``_check_formula``.
+_FUNCTIONS = frozenset()
 _CONSTANTS = frozenset({'TRUE', 'FALSE'})
 
 
@@ -218,6 +212,18 @@ def _check_formula(formula):
     return formula
 
 
+def assert_formulas_allowed(spec):
+    """Reject stored formulas while ``_FUNCTIONS`` is empty, and check the rest."""
+    for sheet in spec.get('sheets') or []:
+        for row in sheet.get('rows') or []:
+            for cell in row:
+                if not cell or 'f' not in cell:
+                    continue
+                if not _FUNCTIONS:
+                    raise ValueError('formulas are disabled while the function allowlist is empty')
+                _check_formula(cell['f'])
+
+
 def _cell_from_field(text, column, *, borders):
     if column.get('clear'):
         style_border = False
@@ -232,7 +238,7 @@ def _cell_from_field(text, column, *, borders):
         if num_fmt is not None and not isinstance(num_fmt, str):
             raise ValueError('numFmt must be a format string')
     cell = {}
-    if text.startswith('='):
+    if text.startswith('=') and _FUNCTIONS:
         formula = _check_formula(text[1:].strip())
         if not formula:
             raise ValueError('a formula cell is empty')
@@ -284,6 +290,8 @@ def sheet_from_csv(name, data, *, borders=False, autofilter=False, columns=None,
             _cell_from_field(field, styles[index] if index < len(styles) else {}, borders=borders)
             for index, field in enumerate(row)
         ])
+    if formulas and not _FUNCTIONS:
+        raise ValueError('formulas are disabled while the function allowlist is empty')
     for item in formulas or []:
         if not isinstance(item, dict) or 'cell' not in item or 'formula' not in item:
             raise ValueError('formula entries need cell and formula')

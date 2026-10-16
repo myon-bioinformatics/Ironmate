@@ -6,6 +6,7 @@ import tempfile
 from pathlib import Path
 
 from xlsx_ooxml import canonicalize
+from xlsx_spec import assert_formulas_allowed
 
 ROOT = Path(__file__).resolve().parent
 
@@ -40,6 +41,7 @@ def write_workbook(spec, engine='exceljs'):
     """Return xlsx bytes. ``engine`` is ``exceljs`` or ``sheetjs``."""
     if engine not in ('exceljs', 'sheetjs'):
         raise ValueError('engine must be exceljs or sheetjs')
+    assert_formulas_allowed(spec)
     with tempfile.TemporaryDirectory(prefix='xlsx-') as directory:
         directory = Path(directory)
         spec_path = directory / 'spec.json'

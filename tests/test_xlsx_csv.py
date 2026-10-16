@@ -14,13 +14,14 @@ import pytest
 from xlsx_csv import convert_paths, main, write_csv_workbook
 from xlsx_ooxml import read_spec
 from xlsx_render import read_workbook, write_workbook
+import xlsx_spec
 from xlsx_spec import decode_csv_bytes, sheet_from_csv, workbook_from_sheets, workbook_from_spec
 
 NS = {'m': 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'}
 
 
 def _book():
-    text = '名前,金額,税込\n"東京,本店",1200,=B2*1.1\n'
+    text = '名前,金額,税込\n"東京,本店",1200,=B2*1.1\n予備,15,2.5\n'
     columns = [{}, {'numFmt': '#,##0', 'align': 'right'}, {'numFmt': '0.000', 'align': 'left'}]
     sales = sheet_from_csv('売上', text.encode('cp932'), borders=True, autofilter=True, columns=columns)
     notes = sheet_from_csv('メモ', '区分,内容\nA,\n'.encode('utf-8'), borders=True, autofilter=True,
@@ -58,10 +59,10 @@ def test_numbers_formulas_borders_and_clear_cells():
         'S', 'code,n,whole\n001,=A1,1.0\n', borders=True,
         columns=[{'clear': True}, {'numFmt': '0', 'align': 'right'}, {}],
     )
-    code, formula, whole = sheet['rows'][1]
+    code, literal, whole = sheet['rows'][1]
     assert code == {'v': '001'}
-    assert formula['f'] == 'A1'
-    assert formula['z'] == '0' and formula['align'] == 'right' and formula['border'] == 'thin'
+    assert literal == {'v': '=A1', 'align': 'right', 'border': 'thin'}
+    assert 'f' not in literal
     assert 'border' not in code
     assert whole == {'v': 1, 'border': 'thin'}
     assert type(whole['v']) is int
@@ -69,7 +70,29 @@ def test_numbers_formulas_borders_and_clear_cells():
     assert kept['rows'][1][0]['v'] == 2.5 and type(kept['rows'][1][0]['v']) is float
 
 
-def test_dangerous_formulas_are_rejected():
+def _csv_cell(formula):
+    buffer = io.StringIO(newline='')
+    csv.writer(buffer, lineterminator='\n').writerows([['h'], [formula]])
+    return sheet_from_csv('S', buffer.getvalue())['rows'][1][0]
+
+
+def test_equals_cells_are_text_while_the_allowlist_is_empty():
+    assert xlsx_spec._FUNCTIONS == frozenset()
+    for raw in ('=IMAGE(A2)', '=image(A2)', '=IMAGE (A2)', '=B2*1.1', '=SUM(A1:A1)'):
+        cell = _csv_cell(raw)
+        assert cell == {'v': raw}
+        assert 'f' not in cell
+    with pytest.raises(ValueError, match='allowlist is empty'):
+        sheet_from_csv('S', 'h\n1\n', formulas=[{'cell': 'A2', 'formula': '=B2*1.1'}])
+    with pytest.raises(ValueError, match='allowlist is empty'):
+        sheet_from_csv('S', 'h\n1\n', formulas=[{'cell': 'A2', 'formula': '=IMAGE(A2)'}])
+
+
+def test_allowlist_machinery_rejects_calls_that_are_not_named(monkeypatch):
+    """Adding names turns formulas back on. Calls outside that set still fail."""
+    monkeypatch.setattr(xlsx_spec, '_FUNCTIONS', frozenset({
+        'AVERAGE', 'IF', 'ROUND', 'SUM',
+    }))
     dangerous = [
         "=cmd|'/c calc'!A0",
         '=HYPERLINK("http://evil","x")',
@@ -99,16 +122,10 @@ def test_dangerous_formulas_are_rejected():
             sheet_from_csv('S', buffer.getvalue())
     with pytest.raises(ValueError, match='formula is outside'):
         sheet_from_csv('S', 'h\n1\n', formulas=[{'cell': 'A2', 'formula': '=EXEC("calc")'}])
-    allowed = sheet_from_csv('S', 'h\n=SUM(A1:A1)\n')
-    assert allowed['rows'][1][0]['f'] == 'SUM(A1:A1)'
-
-    def _one(formula):
-        buffer = io.StringIO(newline='')
-        csv.writer(buffer, lineterminator='\n').writerows([['h'], [formula]])
-        return sheet_from_csv('S', buffer.getvalue())['rows'][1][0]['f']
-
-    assert _one('=ROUND(AVERAGE(A1:A2),2)') == 'ROUND(AVERAGE(A1:A2),2)'
-    assert _one('=IF(A1="IMAGE(A2)",SUM(B1:B2),0)') == 'IF(A1="IMAGE(A2)",SUM(B1:B2),0)'
+    assert _csv_cell('=SUM(A1:A1)')['f'] == 'SUM(A1:A1)'
+    assert _csv_cell('=B2*1.1')['f'] == 'B2*1.1'
+    assert _csv_cell('=ROUND(AVERAGE(A1:A2),2)')['f'] == 'ROUND(AVERAGE(A1:A2),2)'
+    assert _csv_cell('=IF(A1="IMAGE(A2)",SUM(B1:B2),0)')['f'] == 'IF(A1="IMAGE(A2)",SUM(B1:B2),0)'
 
 
 def test_rejected_features_and_sheet_names():
@@ -133,9 +150,10 @@ def test_workbook_xml_round_trip(engine):
         sheets = [name for name in archive.namelist() if name.startswith('xl/worksheets/sheet')]
     assert '売上' in workbook.decode('utf-8') and 'メモ' in workbook.decode('utf-8')
     root = ET.fromstring(archive_sheet(payload, 0))
-    formula = root.find('.//m:f', NS)
-    assert formula is not None and formula.text == 'B2*1.1'
-    assert root.find('m:autoFilter', NS).get('ref') == 'A1:C2'
+    assert root.find('.//m:f', NS) is None
+    assert b'<f>' not in payload
+    assert read_spec(payload)['sheets'][0]['rows'][1][2]['v'] == '=B2*1.1'
+    assert root.find('m:autoFilter', NS).get('ref') == 'A1:C3'
     bordered = [cell for cell in root.findall('.//m:c', NS) if cell.get('s') not in (None, '0')]
     assert bordered
     style_root = ET.fromstring(styles)

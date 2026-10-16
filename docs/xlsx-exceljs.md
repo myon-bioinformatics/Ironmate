@@ -33,7 +33,7 @@ A sheet has a name, a rectangular `rows` grid, and an optional `autofilter` ref 
 | --- | --- |
 | `v` string | shared string, inline string, or `t="str"` |
 | `v` number | `<v>` without `t`, or `t="n"`. Integers stay integers. More than 15 digits, or leading zeros (`001`), stay text. |
-| `f` | `<f>` without a leading `=`. A CSV field that starts with `=` is a formula. A cached `<v>` is ignored on read. Calls are allowed only for `ABS`, `AND`, `AVERAGE`, `CONCAT`, `COUNT`, `COUNTA`, `COUNTIF`, `DATE`, `IF`, `IFERROR`, `INT`, `LEFT`, `LEN`, `LOWER`, `MAX`, `MID`, `MIN`, `MOD`, `NOT`, `OR`, `POWER`, `PRODUCT`, `RIGHT`, `ROUND`, `ROUNDDOWN`, `ROUNDUP`, `SQRT`, `SUBSTITUTE`, `SUM`, `SUMIF`, `TEXT`, `TRIM`, `UPPER`, and `VALUE`, plus arithmetic and cell or range refs (`B2*1.1`, `SUM(A1:A2)`). Any other call is rejected, including `IMAGE`, `HYPERLINK`, `WEBSERVICE`, `FILTERXML`, `RTD`, `CALL`, `REGISTER.ID`, and `INDIRECT`, in any case, with space before `(`, and when nested inside an allowed call. `|`, `[` `]`, and `://` outside a double-quoted string are rejected. |
+| `f` | Not written while `_FUNCTIONS` is empty. A CSV field that starts with `=` is the literal text (`=IMAGE(A2)`, `=B2*1.1`), stored as a string, with no `<f>`. An explicit `formulas` entry raises `formulas are disabled while the function allowlist is empty`. Adding names to `_FUNCTIONS` turns the checker back on: a call is kept only when its name is in that set, arithmetic and cell refs are allowed, and any other call (`IMAGE`, `HYPERLINK`, `WEBSERVICE`, `FILTERXML`, `RTD`, `CALL`, `REGISTER.ID`, `INDIRECT`, including lowercase, space before `(`, and nested calls) is rejected. A cached `<v>` is ignored on read. |
 | `z` | `xf/@numFmtId`. Builtins `0`, `0.00`, `#,##0`, `#,##0.00`, `0%`, `0.00%`, `0.00E+00`, `@` use their ECMA ids. Any other code is a `numFmt` from id 164. |
 | `align` | `alignment/@horizontal` `left`, `center`, or `right` |
 | `border: "thin"` | border id with `left`/`right`/`top`/`bottom` `style="thin"` and `color/@rgb="FF000000"` (罫線) |
@@ -57,7 +57,7 @@ Spec shape:
 }
 ```
 
-`formulas` can set a cell inside the grid: `{"cell": "C2", "formula": "B2*1.1"}`. `rows` can be used instead of `csv`.
+`rows` can be used instead of `csv`. `formulas` is rejected while the allowlist is empty. With names added, an entry `{"cell": "C2", "formula": "B2*1.1"}` sets that cell inside the grid.
 
 ## How the two libraries are checked
 
@@ -65,7 +65,7 @@ Both engines write values, formulas, sheet names, and autofilter. Ironmate then 
 
 Tests, with no Excel and no Google account:
 
-- Unzip the xlsx and require `autoFilter`, `<f>`, thin borders, `numFmt`, alignment, and both sheet names.
+- Unzip the xlsx and require `autoFilter`, thin borders, `numFmt`, alignment, and both sheet names. A cell whose CSV text is `=B2*1.1` or `=IMAGE(A2)` is that literal string, and the package has no `<f>`.
 - XML → JSON equals the spec for a package from either engine.
 - ExcelJS write → SheetJS read matches values, formulas, number formats, sheet names, and autofilter.
 - SheetJS write → ExcelJS read matches the full spec, including borders and alignment. An empty bordered cell stays in the grid for that read. SheetJS's own reader keeps the width and autofilter and returns that cell as empty, because it does not return borders.

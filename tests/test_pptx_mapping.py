@@ -123,6 +123,41 @@ def test_package_round_trip_uses_the_pptxgenjs_shell(tmp_path):
     assert canonical_spec(read_package_spec(path)) == spec
 
 
+def _sp_tree_names(payload):
+    presentation = '{http://schemas.openxmlformats.org/presentationml/2006/main}'
+    root = ET.fromstring(payload)
+    tree = root.find(f'.//{presentation}spTree')
+    names = []
+    for child in list(tree):
+        if child.tag in (f'{presentation}nvGrpSpPr', f'{presentation}grpSpPr'):
+            continue
+        names.append(child.find(f'.//{presentation}cNvPr').get('name'))
+    return names
+
+
+def test_one_deck_json_and_object_array_order_is_z_order():
+    line = {'op': 'line', 'name': 'back-line', 'options': {
+        'x': 0, 'y': 0, 'w': 1, 'h': 0, 'line': {'color': '000000', 'width': 1}}}
+    box = {'op': 'shape', 'name': 'box', 'shape': 'rect', 'options': {
+        'x': 0.2, 'y': 0.2, 'w': 1, 'h': 1, 'fill': {'color': 'FFFFFF'}}}
+    head = {'op': 'shape', 'name': 'head', 'shape': 'triangle', 'options': {
+        'x': 0.4, 'y': 0.4, 'w': 0.2, 'h': 0.2, 'fill': {'color': '000000'}}}
+    deck = {'width': 10, 'height': 7.5, 'slides': [{
+        'behind': [line], 'objects': [box], 'inFront': [head],
+    }]}
+    spec = canonical_spec(deck)
+    assert set(spec) == {'width', 'height', 'slides'}
+    slide = spec['slides'][0]
+    assert set(slide) == {'objects'}
+    assert [obj['name'] for obj in slide['objects']] == ['back-line', 'box', 'head']
+    assert _sp_tree_names(write_slide_xml(deck['slides'][0])) == ['back-line', 'box', 'head']
+    assert [obj['name'] for obj in xml_round_trip(slide)['objects']] == ['back-line', 'box', 'head']
+    with pytest.raises(ValueError, match='list of slide documents'):
+        canonical_spec([deck['slides'][0]])
+    with pytest.raises(ValueError, match='objects array'):
+        canonical_spec({'slides': [{'back': [line], 'items': [box], 'front': [head]}]})
+
+
 def test_not_reversible_is_explicit():
     assert 'theme' in NOT_REVERSIBLE
     assert 'built-in connectors' in NOT_REVERSIBLE

@@ -1,9 +1,10 @@
 """One-to-one JSON slide spec ↔ OOXML for the supported subset.
 
-See docs/pptx-ooxml-mapping.md. Shape ids are assigned from z-order and are not
-JSON fields. ``canonical_spec`` is the lossless form: JSON → XML → JSON of a
-canonical spec equals that spec, and writing the read spec is an XML no-op
-under canonicalization.
+See docs/pptx-ooxml-mapping.md. One deck is one JSON object. Each slide has one
+``objects`` array; index 0 is the back and matches ``p:spTree`` order. Shape
+ids are assigned from that order and are not JSON fields. ``canonical_spec``
+is the lossless form: JSON → XML → JSON of a canonical spec equals that spec,
+and writing the read spec is an XML no-op under canonicalization.
 """
 import copy
 import math
@@ -518,7 +519,7 @@ def write_slide_xml(slide, ids=None):
     _sub(grp, 'a', 'ext', {'cx': '0', 'cy': '0'})
     _sub(grp, 'a', 'chOff', {'x': '0', 'y': '0'})
     _sub(grp, 'a', 'chExt', {'cx': '0', 'cy': '0'})
-    objects = slide.get('objects') or []
+    objects = objects_in_z_order(slide)
     if ids is None:
         ids = list(range(2, len(objects) + 2))
     if len(ids) != len(objects):
@@ -658,17 +659,38 @@ def canonical_object(obj):
     return spec
 
 
+def objects_in_z_order(slide):
+    """Return the single object list for one slide.
+
+    Index 0 is the back. That index order is ``p:spTree`` child order and the
+    order PptxGenJS would add shapes. Optional ``behind`` is prepended and
+    ``inFront`` is appended; both are conveniences, not stored fields.
+    """
+    if not isinstance(slide, dict):
+        raise ValueError('a slide is one object with an objects array')
+    for key in ('back', 'front', 'items'):
+        if key in slide:
+            raise ValueError('z-order is the objects array (spTree order); behind and inFront normalize into that array')
+    for key in ('behind', 'inFront', 'objects'):
+        if key in slide and not isinstance(slide[key], list):
+            raise ValueError(f'{key} must be an array')
+    return [*(slide.get('behind') or []), *(slide.get('objects') or []), *(slide.get('inFront') or [])]
+
+
 def canonical_spec(spec):
-    """Return the lossless subset form of a deck or one-slide spec."""
+    """Return the lossless subset form of one deck JSON object, or one slide."""
     _reject_arrows(spec)
+    if isinstance(spec, list):
+        raise ValueError('a deck is one JSON object with slides[], not a list of slide documents')
     if 'slides' in spec:
-        deck = {
+        if not isinstance(spec['slides'], list):
+            raise ValueError('slides must be an array')
+        return {
             'width': emu_inches(spec.get('width', 10)),
             'height': emu_inches(spec.get('height', 7.5)),
             'slides': [canonical_spec(slide) for slide in spec['slides']],
         }
-        return deck
-    slide = {'objects': [canonical_object(obj) for obj in spec.get('objects') or []]}
+    slide = {'objects': [canonical_object(obj) for obj in objects_in_z_order(spec)]}
     if spec.get('name'):
         slide['name'] = spec['name']
     if spec.get('background'):

@@ -1,6 +1,10 @@
 # JSON slide spec ↔ OOXML
 
-Ironmate's supported slide spec is a flat z-ordered `slides[].objects` list. For that subset the mapping is one-to-one: `canonical_spec` → slide XML → `canonical_spec` is identical, and writing the spec read back from that XML is the same document under XML canonicalization (`xml.etree.ElementTree.canonicalize`).
+One JSON object is one deck: `width`, `height`, and `slides[]`. Each slide has one `objects` array. Index 0 is the back. That array order is z-order, `p:spTree` child order (after `nvGrpSpPr` and `grpSpPr`), and the order PptxGenJS adds shapes. The mapping does not keep a second layering scheme.
+
+For that subset the mapping is one-to-one: `canonical_spec` → slide XML → `canonical_spec` is identical, and writing the spec read back from that XML is the same document under XML canonicalization (`xml.etree.ElementTree.canonicalize`).
+
+Optional `behind` and `inFront` arrays are authoring conveniences. `canonical_spec` prepends `behind` and appends `inFront`, then drops both keys. The stored form and the XML reader have only `objects`. Slide keys `back`, `front`, and `items` are rejected so a bucket layout is not a second spec.
 
 Tests live in `tests/test_pptx_mapping.py`. They do not open PowerPoint or a browser. A package-level test also builds the ZIP with pinned **PptxGenJS 4.0.1** and then replaces each slide part with this mapping, so the package shell comes from PptxGenJS and the shape XML does not.
 
@@ -31,7 +35,7 @@ These are package structure. The writer emits them and the reader ignores them, 
 
 ## Objects
 
-`p:spTree` child order is `objects` order.
+`p:spTree` child order is `objects` order, back to front. `behind` and `inFront` are not written.
 
 ### `op: "shape"`
 
@@ -128,5 +132,7 @@ Preserved in the ZIP when an edit copies untouched members, but not represented 
 - custom `roundRect` adjustments
 - PptxGenJS extras stripped on overlay: `a:rPr/@lang`, `@dirty`, `a:ea`, `a:cs`, `pitchFamily`, `charset`, `a:endParaRPr`, `a:buNone`, `p14:modId`, default cell margins, cell-border `headEnd`/`tailEnd`
 - Excel / xlsx — same JSON ↔ OOXML approach later, not in this change
+- `behind` and `inFront` after normalization (they are input-only)
+- a separate `back` / `items` / `front` layering scheme (rejected; z-order stays the `objects` array)
 
 The compatibility shim can still write a legacy `p:cxnSp` with `a:stCxn` so older layout tests can reject connected shapes. That element is outside the spec.

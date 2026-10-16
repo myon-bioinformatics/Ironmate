@@ -13,6 +13,12 @@ _ALIGN = {'left', 'center', 'right'}
 _ENCODINGS = ('auto', 'utf-8', 'utf-8-sig', 'shift_jis', 'cp932')
 _NUMBER = re.compile(r'-?(?:0|[1-9]\d*)(?:\.\d+)?\Z')
 _ADDRESS = re.compile(r'([A-Z]+)([1-9]\d*)\Z')
+# CSV "=" becomes a formula. Reject DDE/commands, other workbooks, and remote calls.
+_FORMULA_REJECT = re.compile(
+    r'\|' r'|\[|\]' r'|://'
+    r'|\b(?:HYPERLINK|WEBSERVICE|FILTERXML|RTD|CALL|REGISTER(?:\.ID)?|EXEC|DDE|IMPORTDATA|IMPORTXML|ENCODEURL)\s*\(',
+    re.IGNORECASE,
+)
 
 
 def decode_csv_bytes(data, encoding='auto'):
@@ -34,7 +40,10 @@ def decode_csv_bytes(data, encoding='auto'):
         except UnicodeDecodeError as exc:
             raise ValueError(f'CSV is not valid {encoding}') from exc
     if data.startswith(b'\xef\xbb\xbf'):
-        return data.decode('utf-8-sig'), 'utf-8-sig'
+        try:
+            return data.decode('utf-8-sig'), 'utf-8-sig'
+        except UnicodeDecodeError as exc:
+            raise ValueError('CSV is not valid UTF-8 with BOM') from exc
     try:
         return data.decode('utf-8'), 'utf-8'
     except UnicodeDecodeError:
@@ -98,8 +107,18 @@ def _number(text):
     if len(whole) > 15:
         return None
     if '.' in text:
-        return float(text)
+        number = float(text)
+        if number.is_integer():
+            return int(number)
+        return number
     return int(text)
+
+
+def _check_formula(formula):
+    """Allow ordinary cell formulas. Reject command, external, and remote formulas."""
+    if _FORMULA_REJECT.search(formula):
+        raise ValueError('formula is outside the xlsx subset')
+    return formula
 
 
 def _cell_from_field(text, column, *, borders):
@@ -117,7 +136,7 @@ def _cell_from_field(text, column, *, borders):
             raise ValueError('numFmt must be a format string')
     cell = {}
     if text.startswith('='):
-        formula = text[1:].strip()
+        formula = _check_formula(text[1:].strip())
         if not formula:
             raise ValueError('a formula cell is empty')
         cell['f'] = formula
@@ -175,6 +194,7 @@ def sheet_from_csv(name, data, *, borders=False, autofilter=False, columns=None,
         formula = str(item['formula']).strip()
         if formula.startswith('='):
             formula = formula[1:].strip()
+        formula = _check_formula(formula)
         if not formula:
             raise ValueError('a formula cell is empty')
         row_number, column = parse_address(item['cell'])

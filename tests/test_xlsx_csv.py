@@ -1,4 +1,6 @@
 """CSV encoding and xlsx Open XML checks. No spreadsheet app."""
+import csv
+import io
 import json
 import subprocess
 import sys
@@ -33,21 +35,56 @@ def test_encoding_detection_covers_utf8_bom_shift_jis_and_cp932():
     assert decode_csv_bytes(text.encode('shift_jis')) == (text, 'shift_jis')
     special = '髙島,①\n'
     assert decode_csv_bytes(special.encode('cp932')) == (special, 'cp932')
-    # 0x8160 is the Windows fullwidth tilde when the two codecs disagree.
+    # These bytes decode differently in Shift_JIS and CP932. Windows Excel uses CP932.
     assert decode_csv_bytes(b'\x81\x60') == ('～', 'cp932')
+    assert decode_csv_bytes(b'\x81\x61') == ('∥', 'cp932')
+    assert decode_csv_bytes(b'\x81\x7c') == ('－', 'cp932')
+    assert decode_csv_bytes(b'\x81\x91') == ('￠', 'cp932')
+    assert decode_csv_bytes(b'\x81\x92') == ('￡', 'cp932')
+    assert decode_csv_bytes(b'\x81\xca') == ('￢', 'cp932')
+    # The same character stored as UTF-8, with or without a BOM, stays UTF-8.
+    assert decode_csv_bytes('～'.encode('utf-8')) == ('～', 'utf-8')
+    assert decode_csv_bytes(b'\xef\xbb\xbf' + '～'.encode('utf-8')) == ('～', 'utf-8-sig')
+    # Halfwidth katakana is a single Shift_JIS byte and is not valid UTF-8.
+    assert decode_csv_bytes('ｱ'.encode('shift_jis')) == ('ｱ', 'shift_jis')
     with pytest.raises(ValueError, match='Shift_JIS'):
         decode_csv_bytes(b'\x81')
+    with pytest.raises(ValueError, match='UTF-8 with BOM'):
+        decode_csv_bytes(b'\xef\xbb\xbf\xff')
 
 
 def test_numbers_formulas_borders_and_clear_cells():
     sheet = sheet_from_csv(
-        'S', 'code,n\n001,=A1\n', borders=True, columns=[{'clear': True}, {'numFmt': '0', 'align': 'right'}],
+        'S', 'code,n,whole\n001,=A1,1.0\n', borders=True,
+        columns=[{'clear': True}, {'numFmt': '0', 'align': 'right'}, {}],
     )
-    code, formula = sheet['rows'][1]
+    code, formula, whole = sheet['rows'][1]
     assert code == {'v': '001'}
     assert formula['f'] == 'A1'
     assert formula['z'] == '0' and formula['align'] == 'right' and formula['border'] == 'thin'
     assert 'border' not in code
+    assert whole == {'v': 1, 'border': 'thin'}
+    assert type(whole['v']) is int
+    kept = sheet_from_csv('S', 'n\n2.5\n')
+    assert kept['rows'][1][0]['v'] == 2.5 and type(kept['rows'][1][0]['v']) is float
+
+
+def test_dangerous_formulas_are_rejected():
+    dangerous = [
+        "=cmd|'/c calc'!A0",
+        '=HYPERLINK("http://evil","x")',
+        '=WEBSERVICE("http://evil")',
+        "='https://evil.example/book.xlsx'!A1",
+    ]
+    for raw in dangerous:
+        buffer = io.StringIO(newline='')
+        csv.writer(buffer, lineterminator='\n').writerows([['h'], [raw]])
+        with pytest.raises(ValueError, match='formula is outside'):
+            sheet_from_csv('S', buffer.getvalue())
+    with pytest.raises(ValueError, match='formula is outside'):
+        sheet_from_csv('S', 'h\n1\n', formulas=[{'cell': 'A2', 'formula': '=EXEC("calc")'}])
+    allowed = sheet_from_csv('S', 'h\n=SUM(A1:A1)\n')
+    assert allowed['rows'][1][0]['f'] == 'SUM(A1:A1)'
 
 
 def test_rejected_features_and_sheet_names():
@@ -84,6 +121,33 @@ def test_workbook_xml_round_trip(engine):
     assert style_root.find('.//m:numFmt[@formatCode="0.000"]', NS) is not None
     assert style_root.find('.//m:alignment[@horizontal="right"]', NS) is not None
     assert len(sheets) == 2
+    xfs = style_root.findall('m:cellXfs/m:xf', NS)
+    assert xfs
+    assert int(style_root.find('m:cellXfs', NS).get('count')) == len(xfs)
+    for cell in root.findall('.//m:c', NS):
+        assert 0 <= int(cell.get('s')) < len(xfs)
+
+
+def test_empty_cells_keep_grid_borders():
+    sheet = sheet_from_csv('S', 'a,b,\n1,2,\n', borders=True, autofilter=True)
+    spec = workbook_from_sheets([sheet])
+    for name in ('exceljs', 'sheetjs'):
+        payload = write_workbook(spec, name)
+        assert read_spec(payload) == spec
+        root = ET.fromstring(archive_sheet(payload, 0))
+        empty = root.find('m:sheetData/m:row[@r="1"]/m:c[@r="C1"]', NS)
+        assert empty is not None and empty.find('m:v', NS) is None
+        with ZipFile(BytesIO(payload)) as archive:
+            styles = ET.fromstring(archive.read('xl/styles.xml'))
+        xf = styles.findall('m:cellXfs/m:xf', NS)[int(empty.get('s'))]
+        assert xf.get('borderId') == '1'
+        assert xf.get('applyBorder') == '1'
+    from_sheet = write_workbook(spec, 'sheetjs')
+    assert read_workbook(from_sheet, 'exceljs') == spec
+    sheetjs_view = read_workbook(write_workbook(spec, 'exceljs'), 'sheetjs')
+    assert [len(row) for row in sheetjs_view['sheets'][0]['rows']] == [3, 3]
+    assert sheetjs_view['sheets'][0]['autofilter'] == 'A1:C2'
+    assert sheetjs_view['sheets'][0]['rows'][0][2] is None
 
 
 def archive_sheet(payload, index):

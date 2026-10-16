@@ -1,0 +1,7 @@
+{
+  "private": true,
+  "description": "Pinned PptxGenJS package shell for Ironmate. Slide XML is owned by the OOXML mapping, not by this package.",
+  "dependencies": {
+    "pptxgenjs": "4.0.1"
+  }
+}

@@ -5,7 +5,7 @@ from pathlib import Path
 from xml.etree import ElementTree as ET
 from zipfile import ZipFile
 
-from pptx import Presentation
+from pptx_ooxml import require_package
 
 P = "{http://schemas.openxmlformats.org/presentationml/2006/main}"
 
@@ -40,7 +40,7 @@ def set_slide_name(source, destination, *, slide=1, name="Diagram"):
         except BaseException:
             destination.unlink(missing_ok=True)
             raise
-    Presentation(destination)
+    require_package(destination)
     return {"source": str(source), "output": str(destination), "member": member, "name": name}
 
 
@@ -98,7 +98,7 @@ def set_run_style(source, destination, *, slide=1, rgb=None, points=None, bold=N
                 for entry in original.infolist():
                     changed.writestr(entry, replacement if entry.filename == member
                                      else original.read(entry.filename))
-            Presentation(destination)
+            require_package(destination)
         except BaseException:
             destination.unlink(missing_ok=True)
             raise
@@ -109,8 +109,7 @@ def set_run_style(source, destination, *, slide=1, rgb=None, points=None, bold=N
 from pathlib import Path
 from zipfile import ZipFile
 from xml.etree import ElementTree as ET
-from pptx import Presentation
-from pptx.util import Emu
+from pptx_ooxml import require_package
 
 A = "{http://schemas.openxmlformats.org/drawingml/2006/main}"
 P = "{http://schemas.openxmlformats.org/presentationml/2006/main}"
@@ -176,7 +175,7 @@ def edit_shape(source, destination, *, slide=1, shape_name, fill_rgb=None, line_
                 for entry in entries:
                     changed.writestr(entry, replacement if entry.filename == member
                                      else package.read(entry.filename))
-            Presentation(destination)
+            require_package(destination)
         except BaseException:
             destination.unlink(missing_ok=True)
             raise
@@ -189,7 +188,7 @@ from pathlib import Path, PurePosixPath
 from zipfile import ZipFile
 from xml.etree import ElementTree as ET
 
-from pptx import Presentation
+from pptx_ooxml import require_package
 
 A = "{http://schemas.openxmlformats.org/drawingml/2006/main}"
 P = "{http://schemas.openxmlformats.org/presentationml/2006/main}"
@@ -233,14 +232,13 @@ def edit_shape_fills(source, destination, rules):
         raise ValueError("destination must be a new, distinct file")
     if not isinstance(rules, list) or not rules:
         raise ValueError("nonempty rules list required")
-    presentation = Presentation(source)
     parsed = {}
     targets = set()
     with ZipFile(source) as package:
         entries = package.infolist()
         names = [entry.filename for entry in entries]
         parts = _ordered_slide_members(package)
-        if len(parts) != len(presentation.slides):
+        if len(parts) != require_package(source):
             raise ValueError("slide count does not match presentation order")
         if len(names) != len(set(names)) or any(part not in names for part in parts):
             raise ValueError("invalid slide package members")
@@ -283,8 +281,7 @@ def edit_shape_fills(source, destination, rules):
             with ZipFile(destination, "x") as output:
                 for entry in entries:
                     output.writestr(entry, replacements.get(entry.filename, package.read(entry.filename)))
-            check = Presentation(destination)
-            if len(check.slides) != len(parts):
+            if require_package(destination) != len(parts):
                 raise ValueError("slide count changed")
         except BaseException:
             destination.unlink(missing_ok=True)

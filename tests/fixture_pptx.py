@@ -1,11 +1,14 @@
 """Test-only fixture: generate a small editable PPTX from limited Markdown.
 
-Python 3.11+; requires python-pptx. This is only a test helper, not a
-general-purpose Markdown or Marp parser.
+Python 3.11+. This is only a test helper, not a general-purpose Markdown or
+Marp parser. The local ``pptx`` package stands in for the old python-pptx API.
 """
 import argparse
 import json
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from pptx import Presentation
 from pptx.dml.color import RGBColor

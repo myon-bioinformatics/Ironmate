@@ -227,4 +227,4 @@ python -m pytest -q -m 'not heavy'
 ```
 
 xprobeと親のvendorツールはテスト用の別checkoutです。実行時依存として自動取得しません。
-PPTX機能の実行には `python-pptx` が必要です。Marp変換時のみ別途インストール済みのMarp CLIが必要です。
+PPTXの新規パッケージには Node.js 22 と `npm ci`（固定の `pptxgenjs@4.0.1`）が必要です。Ironmate は依存関係を自動インストールしません。スライド図形の正本は [JSON ↔ OOXML 対応](docs/pptx-ooxml-mapping.md) です。Marp変換時のみ別途インストール済みのMarp CLIが必要です。

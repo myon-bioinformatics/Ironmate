@@ -5,25 +5,38 @@ from pathlib import Path
 from zipfile import ZipFile
 from xml.etree import ElementTree as ET
 
-from pptx import Presentation
+from pptx_ooxml import ordered_slide_members
 
 A = "{http://schemas.openxmlformats.org/drawingml/2006/main}"
 P = "{http://schemas.openxmlformats.org/presentationml/2006/main}"
 
 
+def _editable_runs(root):
+    """Count a:r under top-level p:sp and p:cxnSp text bodies, not tables."""
+    tree = root.find(f"{P}cSld/{P}spTree")
+    if tree is None:
+        return 0
+    total = 0
+    for child in list(tree):
+        if child.tag not in (P + "sp", P + "cxnSp"):
+            continue
+        body = child.find(P + "txBody")
+        if body is not None:
+            total += len(body.findall(".//" + A + "r"))
+    return total
+
+
 def inspect(path):
     path = Path(path)
-    presentation = Presentation(path)
     slides = []
     with ZipFile(path) as package:
-        for number, slide in enumerate(presentation.slides, 1):
-            root = ET.fromstring(package.read(f"ppt/slides/slide{number}.xml"))
-            runs = sum(len(paragraph.runs) for shape in slide.shapes
-                       if shape.has_text_frame for paragraph in shape.text_frame.paragraphs)
+        for number, member in enumerate(ordered_slide_members(package), 1):
+            root = ET.fromstring(package.read(member))
+            runs = _editable_runs(root)
             pictures = len(root.findall(f".//{P}pic"))
             texts = [node.text or "" for node in root.findall(f".//{A}t")]
-            # A slide may have mixed raster and native text. Do not infer
-            # all-or-nothing editability from the presence of one text run.
+            # A slide may mix raster and native text. One run does not make
+            # the whole slide editable, and a picture does not make it empty.
             status = "editable" if runs and not pictures else "unknown" if runs else "unsupported"
             slides.append({"slide": number, "status": status, "editable_runs": runs,
                            "pictures": pictures, "text_nodes": len(texts)})

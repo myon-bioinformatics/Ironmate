@@ -289,6 +289,10 @@ The web-review PPTX fixture generator now lives alongside its regression test in
 Ironmate now tracks a copy of the parent's 30-entry `vendor-catalog/1` recommendations in `vendor-catalog.json`, including upstream tools marked `default_enrollment: skipped`. This is **discovery inventory only**, not a materialized vendor lock. `vendor.lock.json` remains the authority for checked-in bytes and is deliberately unchanged until each source path, license, full commit, Git blob and SHA-256 have been verified and enrolled using the canonical `vendor_sync.py enroll` workflow. Do not import or execute skipped catalog tools merely because they appear in the inventory. Since the catalog enrollment, all 53 selected source/LICENSE artifacts (including `vendor/cli_args.py`) are checked into `vendor.lock.json` and verified by the canonical tooling. The parent-owned `vendor-consumers.json` was updated separately and merged in parent PR #66.
 
 
+## Current package
+
+Native shapes are no longer created with python-pptx. A new package is a PptxGenJS 4.0.1 shell; slide contents are the reversible JSON ↔ OOXML mapping in [pptx-ooxml-mapping.md](pptx-ooxml-mapping.md). Edits to an existing deck copy every untouched ZIP member and change only the slide XML that the edit names. `python-pptx` is not a runtime or test dependency. Earlier sections, including the PR #85 CLI notes, record the contract as it stood then. Where they name python-pptx as the shape writer, this section and the mapping doc replace that part.
+
 ## Current Markdown/Marp CLI (PR #85)
 
 `pptx_pipeline.py` is the supported Markdown-to-PPTX command. The legacy `marp_pptx.py` standalone CLI is removed; callers should migrate to the unified command instead of expecting an alias. `vendor.cli_args.Argument` and `make_parser` define its arguments. The generated PPTX is inspected and the JSON result contains both `conversion` and `inspection` fields. An installed pinned Marp CLI is required for conversion; optional Mermaid pre-rendering additionally needs `mmdc` and allows local files for trusted input only.
@@ -305,7 +309,7 @@ Input modes and actual Marp conversion are covered by tests. `pptx_replace.py` r
 
 # Markdown / CSV tables and simple PPTX diagrams (#80)
 
-Creation follows **Markdown → Marp → python-pptx → PPTX inspection**.
+Creation follows **Markdown → Marp → Ironmate OOXML shapes → PPTX inspection**. The shape XML is the mapping in [pptx-ooxml-mapping.md](pptx-ooxml-mapping.md), not python-pptx. Arrows are a line plus a triangle.
 `pptx_pipeline.py` owns conversion and native editing in one file. No separate
 enrichment runtime module or added dependency. Use the existing vendored
 `markdown.py` table parser rather than implementing another Markdown parser.

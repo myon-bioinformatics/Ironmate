@@ -7,9 +7,9 @@ from pathlib import Path
 import tempfile
 import tomllib
 from zipfile import ZipFile
+from xml.etree import ElementTree as ET
 
-from pptx import Presentation
-from lxml import etree
+from pptx_ooxml import ordered_slide_members, require_package, slide_size
 
 P = '{http://schemas.openxmlformats.org/presentationml/2006/main}'
 A = '{http://schemas.openxmlformats.org/drawingml/2006/main}'
@@ -34,16 +34,17 @@ def arrange(source, rules, *, destination=None, dry_run=False):
     if not dry_run and (destination is None or Path(destination).resolve() == Path(source).resolve()
                         or os.path.lexists(destination)):
         raise ValueError('destination must be a new file distinct from source')
-    prs = Presentation(str(source))
     changes, roots = [], {}
     with ZipFile(source) as original:
         if len(original.namelist()) != len(set(original.namelist())):
             raise ValueError('duplicate ZIP members unsupported')
+        members = ordered_slide_members(original)
+        width, height = slide_size(original)
         for rule_index, rule in enumerate(rules):
             mode, number, ids = rule.get('pattern'), rule.get('slide'), rule.get('shape_ids')
             if mode not in ('row', 'column', 'grid'):
                 raise ValueError('pattern must be row, column or grid')
-            if type(number) is not int or not 1 <= number <= len(prs.slides):
+            if type(number) is not int or not 1 <= number <= len(members):
                 raise ValueError('slide must be a valid 1-based slide number')
             if (not isinstance(ids, list) or not ids or any(type(i) is not int or i < 1 for i in ids)
                     or len(ids) != len(set(ids))):
@@ -53,9 +54,9 @@ def arrange(source, rules, *, destination=None, dry_run=False):
             columns = rule.get('columns') if mode == 'grid' else (len(ids) if mode == 'row' else 1)
             if type(columns) is not int or not 1 <= columns <= len(ids):
                 raise ValueError('columns must be between 1 and selected shape count')
-            member = str(prs.slides[number - 1].part.partname).lstrip('/')
+            member = members[number - 1]
             if member not in roots:
-                roots[member] = etree.fromstring(original.read(member))
+                roots[member] = ET.fromstring(original.read(member))
             tree = roots[member].find(P + 'cSld/' + P + 'spTree')
             selected = []
             for shape_id in ids:
@@ -73,16 +74,16 @@ def arrange(source, rules, *, destination=None, dry_run=False):
                     if any(c.get('id') == str(shape_id) for c in tree.findall('.//' + A + tag)):
                         raise ValueError('connected shapes require explicit connector routing')
                 ext = xf.find(A + 'ext')
-                width, height = int(ext.get('cx')), int(ext.get('cy'))
-                if width <= 0 or height <= 0:
+                shape_w, shape_h = int(ext.get('cx')), int(ext.get('cy'))
+                if shape_w <= 0 or shape_h <= 0:
                     raise ValueError('positive shape dimensions required')
-                selected.append((shape_id, xf.find(A + 'off'), width, height))
-            cell_w = max(s[2] for s in selected)
-            cell_h = max(s[3] for s in selected)
-            for index, (shape_id, off, width, height) in enumerate(selected):
+                selected.append((shape_id, xf.find(A + 'off'), shape_w, shape_h))
+            cell_w = max(item[2] for item in selected)
+            cell_h = max(item[3] for item in selected)
+            for index, (shape_id, off, shape_w, shape_h) in enumerate(selected):
                 left = x + (index % columns) * (cell_w + gap_x)
                 top = y + (index // columns) * (cell_h + gap_y)
-                if left + width > prs.slide_width or top + height > prs.slide_height:
+                if left + shape_w > width or top + shape_h > height:
                     raise ValueError('layout extends beyond slide bounds')
                 before = [int(off.get('x')), int(off.get('y'))]
                 after = [left, top]
@@ -98,10 +99,15 @@ def arrange(source, rules, *, destination=None, dry_run=False):
                 with ZipFile(staged, 'w') as output:
                     output.comment = original.comment
                     for entry in original.infolist():
-                        payload = (etree.tostring(roots[entry.filename], xml_declaration=True, encoding='UTF-8', standalone=True)
-                                   if entry.filename in roots else original.read(entry.filename))
+                        if entry.filename in roots:
+                            ET.register_namespace('p', P[1:-1])
+                            ET.register_namespace('a', A[1:-1])
+                            ET.register_namespace('r', 'http://schemas.openxmlformats.org/officeDocument/2006/relationships')
+                            payload = ET.tostring(roots[entry.filename], xml_declaration=True, encoding='UTF-8')
+                        else:
+                            payload = original.read(entry.filename)
                         output.writestr(entry, payload)
-                Presentation(staged)
+                require_package(staged)
                 os.link(staged, dst)
     return dict(dry_run=dry_run, change_count=len(changes), changes=changes)
 

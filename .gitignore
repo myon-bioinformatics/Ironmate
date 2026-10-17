@@ -1,3 +1,6 @@
+# Pinned Node packages (pptxgenjs, exceljs, xlsx). package-lock.json is the pin.
+node_modules/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

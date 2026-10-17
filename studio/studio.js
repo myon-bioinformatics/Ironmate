@@ -1,0 +1,631 @@
+/* Local-only UI; all output passes through the same SVG composition function. */
+"use strict";
+const C = window.StudioCore,
+  $ = (id) => document.getElementById(id),
+  copy = C.clone;
+let serial = 0,
+  tool = "select",
+  selected = null,
+  template = null,
+  dirty = false,
+  drag = null,
+  paintSerial = 0;
+const blank = () => ({
+  schema: C.SCHEMA,
+  width: 1280,
+  height: 720,
+  background: "#F8F7F2",
+  layers: [],
+});
+let scene = blank(),
+  history = new C.History(scene);
+const images = new Map(),
+  processed = new Map();
+const uid = () => `layer-${Date.now()}-${++serial}`;
+const selectedLayer = () => scene.layers.find((l) => l.id === selected);
+const message = (text) => {
+  $("status").textContent = text;
+};
+function error(e) {
+  $("error-text").textContent = e.message || String(e);
+  $("error").showModal();
+}
+function guarded(fn) {
+  return async (...args) => {
+    try {
+      await fn(...args);
+    } catch (e) {
+      error(e);
+    }
+  };
+}
+function base(kind, x = 80, y = 80, w = 180, h = 120) {
+  return { id: uid(), kind, name: kind, x, y, w, h, rotation: 0, opacity: 1 };
+}
+async function decoded(src) {
+  if (!images.has(src))
+    images.set(
+      src,
+      new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+          if (img.naturalWidth * img.naturalHeight > 4194304) {
+            reject(new Error("画像は4MP以下にしてください"));
+            return;
+          }
+          resolve(img);
+        };
+        img.onerror = () => reject(new Error("画像を読み込めません"));
+        img.src = src;
+      }),
+    );
+  return images.get(src);
+}
+async function prepare(doc) {
+  const sources = new Map();
+  for (const l of doc.layers.filter((l) => l.kind === "image")) {
+    const key = l.src + ":" + l.cell + ":" + l.levels;
+    if (processed.has(key)) {
+      sources.set(key, processed.get(key));
+      continue;
+    }
+    const img = await decoded(l.src);
+    if (l.cell === 1 && l.levels === 256) {
+      processed.set(key, l.src);
+      sources.set(key, l.src);
+      continue;
+    }
+    const canvas = document.createElement("canvas");
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    ctx.drawImage(img, 0, 0);
+    const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    data.data.set(
+      C.mosaicRGBA(data.data, canvas.width, canvas.height, l.cell, l.levels),
+    );
+    ctx.putImageData(data, 0, 0);
+    processed.set(key, canvas.toDataURL("image/png"));
+    sources.set(key, processed.get(key));
+    // Processed previews are disposable; the immutable source always remains in JSON.
+    if (processed.size > 16) processed.delete(processed.keys().next().value);
+  }
+  return (l) => sources.get(l.src + ":" + l.cell + ":" + l.levels) || l.src;
+}
+function selectionSVG(l) {
+  return `<g class="selection" transform="translate(${l.x} ${l.y}) rotate(${l.rotation} ${l.w / 2} ${l.h / 2})"><rect width="${l.w}" height="${l.h}" fill="none" stroke="#126fef" stroke-width="2" stroke-dasharray="8 5"/><rect class="handle" data-handle="resize" x="${l.w - 9}" y="${l.h - 9}" width="18" height="18" rx="3" fill="#126fef" stroke="white" stroke-width="2"/></g>`;
+}
+function updateInspector() {
+  const l = selectedLayer();
+  $("selection").textContent = l ? `${l.name || l.kind}` : "レイヤーを選択";
+  for (const f of ["x", "y", "w", "h", "rotation", "opacity"]) {
+    $(f).disabled = !l;
+    $(f).value = l?.[f] ?? "";
+  }
+  $("font-size").disabled = l?.kind !== "text";
+  $("font-size").value = l?.fontSize ?? 48;
+  $("cell").disabled = l?.kind !== "image";
+  $("cell").value = l?.cell ?? 1;
+  $("cell-value").textContent = `${l?.cell ?? 1} px`;
+  $("levels").disabled = !["image", "heatmap"].includes(l?.kind);
+  $("levels").value = l?.levels || 256;
+  $("levels-value").textContent =
+    l?.kind === "heatmap" && !l.levels ? "連続" : (l?.levels ?? 256);
+  $("value-labels").disabled = l?.kind !== "heatmap";
+  $("value-labels").checked = l?.labels ?? true;
+  $("continuous").disabled = l?.kind !== "heatmap";
+  for (const id of ["delete", "duplicate", "front", "back", "custom"])
+    $(id).disabled = !l;
+  $("undo").disabled = history.index === 0;
+  $("redo").disabled = history.index === history.items.length - 1;
+  $("size-note").textContent = `${scene.width} × ${scene.height}`;
+  $("canvas-width").value = scene.width;
+  $("canvas-height").value = scene.height;
+  $("transparent").checked = scene.background === "none";
+  if (scene.background !== "none") $("background").value = scene.background;
+  $("layers").replaceChildren();
+  for (const layer of [...scene.layers].reverse()) {
+    const button = document.createElement("button");
+    button.textContent = layer.name || layer.kind;
+    button.dataset.layerId = layer.id;
+    if (layer.id === selected) button.classList.add("active");
+    button.onclick = () => {
+      selected = layer.id;
+      if (layer.kind === "text") $("text").value = layer.text;
+      render();
+    };
+    $("layers").append(button);
+  }
+}
+async function render() {
+  const n = ++paintSerial;
+  const doc = copy(scene);
+  const imageSource = await prepare(doc);
+  if (n !== paintSerial) return;
+  let svg = C.svg(doc, imageSource);
+  const l = doc.layers.find((l) => l.id === selected);
+  if (l) svg = svg.replace("</svg>", selectionSVG(l) + "</svg>");
+  $("board").innerHTML = svg;
+  $("board").style.aspectRatio = `${doc.width} / ${doc.height}`;
+  updateInspector();
+}
+function change(fn) {
+  const next = copy(scene);
+  fn(next);
+  C.validate(next);
+  history.commit(next);
+  scene = next;
+  dirty = true;
+  if (!selectedLayer()) selected = null;
+  render().catch(error);
+}
+function add(layer) {
+  if (scene.layers.length >= 100) throw new Error("レイヤーは100件までです");
+  selected = layer.id;
+  change((doc) => doc.layers.push(layer));
+  message(`${layer.name || layer.kind}を追加しました`);
+}
+function setTool(value) {
+  tool = value;
+  document
+    .querySelectorAll("[data-tool]")
+    .forEach((b) => b.classList.toggle("active", b.dataset.tool === value));
+}
+function textLayer(text, x, y) {
+  const size = 48,
+    lines = text.split("\n");
+  return {
+    ...base(
+      "text",
+      x,
+      y,
+      Math.min(
+        700,
+        Math.max(
+          120,
+          Math.max(...lines.map((s) => Array.from(s).length)) * size,
+        ),
+      ),
+      Math.max(70, lines.length * size * 1.3),
+    ),
+    name: "文字 / " + text.slice(0, 12),
+    text,
+    fill: $("fill").value,
+    fontSize: size,
+  };
+}
+function place(x, y) {
+  if (tool === "stamp") {
+    if (template) {
+      const l = copy(template);
+      l.id = uid();
+      l.x = x - l.w / 2;
+      l.y = y - l.h / 2;
+      add(l);
+    } else add(textLayer($("text").value, x, y));
+  } else if (tool === "text") add(textLayer($("text").value, x, y));
+  else
+    add({
+      ...base(tool, x, y),
+      name: { rect: "四角", ellipse: "丸", triangle: "三角" }[tool],
+      fill: $("outline").checked ? "none" : $("fill").value,
+      stroke: $("stroke").value,
+      strokeWidth: 3,
+    });
+}
+function point(e) {
+  const svg = $("board").querySelector("svg");
+  return new DOMPoint(e.clientX, e.clientY).matrixTransform(
+    svg.getScreenCTM().inverse(),
+  );
+}
+$("board").addEventListener(
+  "pointerdown",
+  guarded(async (e) => {
+    if (e.button !== 0) return;
+    const p = point(e),
+      handle = e.target.closest("[data-handle]"),
+      node = e.target.closest("[data-layer]");
+    if (tool !== "select") {
+      place(p.x, p.y);
+      return;
+    }
+    if (!handle) selected = node?.dataset.layer ?? null;
+    const l = selectedLayer();
+    if (l) {
+      drag = { point: p, layer: copy(l), resize: !!handle, changed: false };
+      $("board").setPointerCapture(e.pointerId);
+    }
+    await render();
+  }),
+);
+$("board").addEventListener("pointermove", (e) => {
+  if (!drag) return;
+  const p = point(e),
+    dx = p.x - drag.point.x,
+    dy = p.y - drag.point.y,
+    l = selectedLayer();
+  if (!l) return;
+  const old = drag.layer;
+  if (drag.resize) {
+    const a = (old.rotation * Math.PI) / 180,
+      c = Math.cos(a),
+      s = Math.sin(a);
+    l.w = Math.max(8, Math.min(8192, old.w + c * dx + s * dy));
+    l.h = Math.max(8, Math.min(8192, old.h - s * dx + c * dy));
+    const dw = l.w - old.w,
+      dh = l.h - old.h;
+    l.x = old.x + ((c - 1) * dw) / 2 - (s * dh) / 2;
+    l.y = old.y + (s * dw) / 2 + ((c - 1) * dh) / 2;
+    if (l.kind === "text")
+      l.fontSize = Math.max(
+        4,
+        Math.min(512, old.fontSize * Math.min(l.w / old.w, l.h / old.h)),
+      );
+  } else {
+    l.x = Math.max(-8192, Math.min(8192, old.x + dx));
+    l.y = Math.max(-8192, Math.min(8192, old.y + dy));
+  }
+  drag.changed = drag.changed || Math.abs(dx) + Math.abs(dy) > 1;
+  render().catch(error);
+});
+function finishDrag() {
+  if (drag?.changed) {
+    history.commit(scene);
+    dirty = true;
+    message("位置・サイズを変更しました");
+  }
+  drag = null;
+  updateInspector();
+}
+$("board").addEventListener("pointerup", finishDrag);
+$("board").addEventListener("pointercancel", () => {
+  if (drag) {
+    Object.assign(selectedLayer(), drag.layer);
+    drag = null;
+    render().catch(error);
+  }
+});
+for (const button of document.querySelectorAll("[data-tool]"))
+  button.onclick = () => setTool(button.dataset.tool);
+for (const button of $("emojis").children)
+  button.onclick = () => {
+    $("text").value = button.textContent;
+    template = null;
+    setTool("stamp");
+    $("stamp-note").textContent = `${button.textContent}をキャンバスに押せます`;
+  };
+$("text").oninput = () => {
+  template = null;
+};
+$("custom").onclick = () => {
+  const l = selectedLayer();
+  if (l) {
+    template = copy(l);
+    setTool("stamp");
+    $("stamp-note").textContent = `「${l.name || l.kind}」を繰り返し押せます`;
+  }
+};
+$("undo").onclick = () => {
+  scene = history.undo();
+  dirty = true;
+  selected = null;
+  render().catch(error);
+};
+$("redo").onclick = () => {
+  scene = history.redo();
+  dirty = true;
+  selected = null;
+  render().catch(error);
+};
+$("duplicate").onclick = guarded(() => {
+  const l = copy(selectedLayer());
+  l.id = uid();
+  l.x += 24;
+  l.y += 24;
+  add(l);
+});
+$("delete").onclick = () => {
+  if (selected)
+    change((doc) => {
+      doc.layers = doc.layers.filter((l) => l.id !== selected);
+    });
+};
+for (const [id, delta] of [
+  ["front", 1],
+  ["back", -1],
+])
+  $(id).onclick = () =>
+    change((doc) => {
+      const i = doc.layers.findIndex((l) => l.id === selected),
+        j = Math.max(0, Math.min(doc.layers.length - 1, i + delta));
+      if (i >= 0)
+        [doc.layers[i], doc.layers[j]] = [doc.layers[j], doc.layers[i]];
+    });
+for (const f of ["x", "y", "w", "h", "rotation", "opacity"])
+  $(f).onchange = guarded(() => {
+    if (selectedLayer())
+      change((doc) => {
+        doc.layers.find((l) => l.id === selected)[f] = Number($(f).value);
+      });
+  });
+$("font-size").onchange = guarded(() => {
+  if (selectedLayer()?.kind === "text")
+    change((doc) => {
+      doc.layers.find((l) => l.id === selected).fontSize = Number(
+        $("font-size").value,
+      );
+    });
+});
+$("apply-text").onclick = guarded(() => {
+  if (!selectedLayer()) return;
+  change((doc) => {
+    const l = doc.layers.find((l) => l.id === selected);
+    if (l.kind === "text") {
+      l.text = $("text").value;
+      l.fill = $("fill").value;
+    } else if (["rect", "ellipse", "triangle"].includes(l.kind)) {
+      l.fill = $("outline").checked ? "none" : $("fill").value;
+      l.stroke = $("stroke").value;
+    }
+  });
+});
+for (const [id, field] of [
+  ["cell", "cell"],
+  ["levels", "levels"],
+])
+  $(id).onchange = guarded(() => {
+    if (selectedLayer())
+      change((doc) => {
+        doc.layers.find((l) => l.id === selected)[field] = Number($(id).value);
+      });
+  });
+$("value-labels").onchange = () => {
+  if (selectedLayer()?.kind === "heatmap")
+    change((doc) => {
+      doc.layers.find((l) => l.id === selected).labels =
+        $("value-labels").checked;
+    });
+};
+$("continuous").onclick = () => {
+  if (selectedLayer()?.kind === "heatmap")
+    change((doc) => {
+      doc.layers.find((l) => l.id === selected).levels = 0;
+    });
+};
+$("background").onchange = () =>
+  change((doc) => {
+    doc.background = $("background").value;
+  });
+$("transparent").onchange = () =>
+  change((doc) => {
+    doc.background = $("transparent").checked ? "none" : $("background").value;
+  });
+$("canvas-size").onclick = guarded(() =>
+  change((doc) => {
+    doc.width = Number($("canvas-width").value);
+    doc.height = Number($("canvas-height").value);
+  }),
+);
+function download(name, data, type) {
+  const url = URL.createObjectURL(
+    data instanceof Blob ? data : new Blob([data], { type }),
+  );
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+  message(`${name}を書き出しました`);
+}
+$("save").onclick = () => {
+  download(
+    "ironmate-scene.json",
+    JSON.stringify(C.validate(scene), null, 2),
+    "application/json",
+  );
+  dirty = false;
+};
+$("svg").onclick = guarded(async () => {
+  const doc = copy(scene),
+    imageSource = await prepare(doc);
+  download("ironmate-image.svg", C.svg(doc, imageSource), "image/svg+xml");
+});
+async function pngBlob() {
+  const doc = copy(scene),
+    imageSource = await prepare(doc);
+  const source = C.svg(doc, imageSource),
+    url = URL.createObjectURL(new Blob([source], { type: "image/svg+xml" }));
+  try {
+    const img = new Image();
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = () => reject(new Error("SVGの画像化に失敗しました"));
+      img.src = url;
+    });
+    const canvas = document.createElement("canvas");
+    canvas.width = doc.width;
+    canvas.height = doc.height;
+    canvas.getContext("2d").drawImage(img, 0, 0);
+    return await new Promise((resolve, reject) =>
+      canvas.toBlob(
+        (b) => (b ? resolve(b) : reject(new Error("PNG出力に失敗しました"))),
+        "image/png",
+      ),
+    );
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+$("png").onclick = guarded(async () =>
+  download("ironmate-image.png", await pngBlob(), "image/png"),
+);
+$("open").onchange = guarded(async () => {
+  const file = $("open").files[0];
+  if (!file) return;
+  if (file.size > 20000000) throw new Error("JSONは20MB以下にしてください");
+  const next = C.validate(JSON.parse(await file.text()));
+  await prepare(next);
+  // Loading is an undoable edit; an existing composition is never silently lost.
+  history.commit(next);
+  scene = next;
+  selected = null;
+  dirty = false;
+  await render();
+  message("JSONを読み込みました（戻すで前の編集へ戻れます）");
+  $("open").value = "";
+});
+$("image").onchange = guarded(async () => {
+  const file = $("image").files[0];
+  if (!file) return;
+  if (file.size > 12000000) throw new Error("画像は12MB以下にしてください");
+  if (!["image/png", "image/jpeg", "image/webp"].includes(file.type))
+    throw new Error("PNG / JPEG / WebPを選んでください");
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await decoded(url),
+      cv = document.createElement("canvas");
+    cv.width = img.naturalWidth;
+    cv.height = img.naturalHeight;
+    cv.getContext("2d").drawImage(img, 0, 0);
+    const w = Math.min(700, scene.width * 0.65),
+      h = (w * img.naturalHeight) / img.naturalWidth;
+    add({
+      ...base("image", 80, 90, w, h),
+      name: file.name,
+      src: cv.toDataURL("image/png"),
+      cell: 1,
+      levels: 256,
+    });
+    setTool("select");
+  } finally {
+    URL.revokeObjectURL(url);
+    images.delete(url);
+    $("image").value = "";
+  }
+});
+function addMatrix(source) {
+  add({
+    ...base(
+      "heatmap",
+      80,
+      100,
+      Math.min(1050, scene.width - 100),
+      Math.min(480, scene.height - 120),
+    ),
+    name: "ヒートマップ",
+    ...C.matrix(source),
+    source: copy(source),
+  });
+  setTool("select");
+}
+$("heatmap").onclick = guarded(() => addMatrix(JSON.parse($("matrix").value)));
+$("matrix-file").onchange = guarded(async () => {
+  const file = $("matrix-file").files[0];
+  if (!file) return;
+  if (file.size > 2000000) throw new Error("行列JSONは2MB以下にしてください");
+  addMatrix(JSON.parse(await file.text()));
+  $("matrix-file").value = "";
+});
+$("blank").onclick = () => {
+  change((doc) => {
+    doc.layers = [];
+  });
+  selected = null;
+  message("新しいキャンバス（戻すで復帰できます）");
+};
+function demo() {
+  const doc = blank();
+  doc.layers.push({
+    ...base("text", 64, 40, 900, 60),
+    name: "タイトル",
+    text: "小さな部品から、大きな表現へ。",
+    fill: "#163B3B",
+    fontSize: 38,
+  });
+  doc.layers.push({
+    ...base("text", 68, 105, 900, 40),
+    name: "サブタイトル",
+    text: "STAMP / COLOR / MATRIX     —     Ironmate Image Studio",
+    fill: "#56766D",
+    fontSize: 17,
+  });
+  doc.layers.push({
+    ...base("rect", 68, 178, 1144, 430),
+    name: "白いカード",
+    fill: "#FFFFFF",
+    stroke: "#D6DFD2",
+    strokeWidth: 1,
+  });
+  doc.layers.push({
+    ...base("heatmap", 90, 220, 680, 350),
+    name: "色の行列",
+    ...C.matrix({
+      z: [
+        [2, 3, 4, 6, 8, 9, 10],
+        [1, 3, 5, 7, 9, null, 12],
+        [2, 4, 6, 8, 10, 12, 14],
+        [0, 2, 5, 8, 11, 14, 16],
+      ],
+      x: ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"],
+      y: ["A", "B", "C", "D"],
+    }),
+  });
+  doc.layers.push({
+    ...base("triangle", 890, 264, 170, 150),
+    name: "三角のスタンプ",
+    fill: "none",
+    stroke: "#EFBE4C",
+    strokeWidth: 7,
+  });
+  doc.layers.push({
+    ...base("text", 910, 294, 140, 90),
+    name: "絵文字スタンプ",
+    text: "🌱",
+    fill: "#163B3B",
+    fontSize: 70,
+  });
+  doc.layers.push({
+    ...base("text", 840, 445, 320, 100),
+    name: "カスタム文字",
+    text: "色を置く。\nかたちが生まれる。",
+    fill: "#163B3B",
+    fontSize: 25,
+  });
+  doc.layers.push({
+    ...base("text", 70, 646, 1100, 35),
+    name: "フッター",
+    text: "01  COMPOSE                         02  EXPLORE COLOR                         03  EXPORT",
+    fill: "#71887C",
+    fontSize: 14,
+  });
+  return doc;
+}
+$("demo").onclick = () => {
+  const next = demo();
+  history.commit(next);
+  scene = next;
+  selected = null;
+  dirty = true;
+  render().catch(error);
+  message("独自の合成サンプルです。データは説明用の架空値です。");
+};
+window.addEventListener("beforeunload", (e) => {
+  if (dirty) {
+    e.preventDefault();
+    e.returnValue = "";
+  }
+});
+// Read-only snapshots and export entry point also make browser regression tests observable.
+window.IronmateStudio = {
+  get scene() {
+    return copy(scene);
+  },
+  get ready() {
+    return render();
+  },
+  pngBlob,
+};
+scene = demo();
+history = new C.History(scene);
+render().catch(error);

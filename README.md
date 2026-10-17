@@ -6,6 +6,12 @@ PPTXの文字・色・矢印属性の置換を今後の対象とし、画素／�
 ドット表現の試作は [PR #79](https://github.com/myon-bioinformatics/Ironmate/pull/79) で追跡します。
 Markdown→PPTX変換と既存PPTXの属性編集CLIは試作実装済みです。写真変換は第1段階（Base64→色番号グリッド）のみ試作済みで、キャラクター部品合成は未実装です。実装済みのドット表現の範囲は次節を参照してください。
 
+## Image Studio：図形・文字・絵文字を押して画像にする
+
+`python -S image_studio.py` でローカル編集画面を開けます。図形・画像・カスタムスタンプを重ね、ヒートマップの色段階やモザイク粒度を変えて、PNG・SVG・再編集用JSONを出力します。
+
+[操作方法と検証範囲](docs/image-studio.md) ／ [実ブラウザの画面と検証証跡](docs/evidence/image-studio/report.md)。
+
 ## PPTX変換・編集
 
 MarkdownからPPTXを生成する入口は **`pptx_pipeline.py`** に統一しています。旧`marp_pptx.py`は削除済みで、互換CLIは提供しません。引数の構築には固定vendorの`vendor/cli_args.py`を使用します。

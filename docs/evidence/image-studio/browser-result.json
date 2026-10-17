@@ -1,0 +1,20 @@
+{
+  "browser": "133.0.6943.0",
+  "checks": [
+    "place",
+    "move",
+    "resize",
+    "custom-stamp",
+    "emoji",
+    "undo-redo",
+    "exact-matrix",
+    "mosaic-original-retained",
+    "20-image-cache",
+    "JSON-PNG-roundtrip",
+    "offline-export",
+    "mobile-no-overflow",
+    "PPTX-image"
+  ],
+  "pageErrors": [],
+  "remoteRequests": []
+}

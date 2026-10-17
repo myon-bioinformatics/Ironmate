@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Ironmate — Image Studio</title>
+    <link rel="stylesheet" href="style.css" />
+    <script defer src="core.js"></script>
+    <script defer src="studio.js"></script>
+  </head>
+  <body>
+    <header>
+      <div class="brand">◈ IRONMATE <span>IMAGE STUDIO / 01</span></div>
+      <div class="top-actions">
+        <button id="undo">↶ 戻す</button><button id="redo">↷ やり直す</button
+        ><button id="save">JSON保存</button
+        ><label class="button"
+          >開く<input id="open" type="file" accept=".json" /></label
+        ><button id="svg">SVG</button
+        ><button id="png" class="primary">PNGを書き出す ↗</button>
+      </div>
+    </header>
+    <main>
+      <aside class="tools">
+        <p class="eyebrow">01 / COMPOSE</p>
+        <h1>置いて、重ねて。<br />画像にする。</h1>
+        <p class="hint">
+          図形も文字も、スタンプのように。<br />キャンバスを押して配置できます。
+        </p>
+        <div id="tools" class="tool-grid">
+          <button data-tool="select" class="active">↖ 選択</button
+          ><button data-tool="rect">▭ 四角</button
+          ><button data-tool="ellipse">◯ 丸</button
+          ><button data-tool="triangle">△ 三角</button
+          ><button data-tool="text">T 文字</button
+          ><button data-tool="stamp">✦ スタンプ</button>
+        </div>
+        <label
+          >文字・カスタムスタンプ<textarea id="text" rows="2">
+検証できたら、次へ。</textarea
+          >
+        </label>
+        <div id="emojis" class="emojis">
+          <button>❤️</button><button>😊</button><button>🌱</button
+          ><button>📊</button><button>✨</button><button>📌</button>
+        </div>
+        <div class="two">
+          <label>塗り<input id="fill" type="color" value="#18a7a1" /></label
+          ><label>線<input id="stroke" type="color" value="#183c42" /></label>
+        </div>
+        <label class="check"
+          ><input id="outline" type="checkbox" />枠線だけにする</label
+        >
+        <label class="button wide"
+          >＋ 写真・画像スタンプ<input
+            id="image"
+            type="file"
+            accept="image/png,image/jpeg,image/webp" /></label
+        ><button id="custom" class="wide">選択したレイヤーをスタンプに</button>
+        <p id="stamp-note" class="hint">
+          文字・絵文字・図形・画像を繰り返し配置。
+        </p>
+        <div class="section">
+          <p class="eyebrow">02 / MATRIX</p>
+          <label
+            >数値行列 / Plotly heatmap JSON<textarea id="matrix" rows="3">
+[[0,1,2,3],[3,2,1,0],[1,null,2,3]]</textarea
+            ></label
+          ><button id="heatmap" class="wide">＋ ヒートマップを置く</button
+          ><label class="button wide"
+            >行列JSONファイルを読む<input
+              id="matrix-file"
+              type="file"
+              accept=".json"
+          /></label>
+          <p class="hint">
+            先頭行が上。元の数値と欠測を保持し、色の段階だけを変更します。
+          </p>
+        </div>
+      </aside>
+      <section class="workspace">
+        <div class="canvas-heading">
+          <div>
+            <p class="eyebrow">YOUR CANVAS</p>
+            <h2>小さな部品から、大きな表現へ。</h2>
+          </div>
+          <span id="size-note">1280 × 720</span>
+        </div>
+        <div
+          id="board"
+          class="board"
+          tabindex="0"
+          aria-label="画像編集キャンバス"
+        ></div>
+        <div class="canvas-footer">
+          <span id="status" role="status">準備できました。</span
+          ><span>ドラッグで移動 / 右下の点で拡縮</span>
+        </div>
+        <div class="examples">
+          <button id="demo">✦ スタンプとヒートマップの例</button
+          ><button id="blank">＋ 新しいキャンバス</button
+          ><label
+            >背景<input id="background" type="color" value="#f8f7f2" /></label
+          ><label class="check"
+            ><input id="transparent" type="checkbox" />透明</label
+          ><label
+            >幅<input
+              id="canvas-width"
+              type="number"
+              value="1280"
+              min="64"
+              max="4096" /></label
+          ><label
+            >高さ<input
+              id="canvas-height"
+              type="number"
+              value="720"
+              min="64"
+              max="4096" /></label
+          ><button id="canvas-size">適用</button>
+        </div>
+        <div class="note">
+          PNGは表示と同じ構成を画像化。SVGは図形・文字を保持。JSONで元画像とレイヤーを再編集できます。
+        </div>
+      </section>
+      <aside class="inspector">
+        <p class="eyebrow">03 / LAYERS</p>
+        <div id="layers" class="layers"></div>
+        <div class="two">
+          <button id="duplicate">複製</button><button id="delete">削除</button
+          ><button id="front">前へ</button><button id="back">後ろへ</button>
+        </div>
+        <div class="section">
+          <h2 id="selection">レイヤーを選択</h2>
+          <div class="two">
+            <label>X<input id="x" type="number" /></label
+            ><label>Y<input id="y" type="number" /></label
+            ><label>幅<input id="w" type="number" min="1" /></label
+            ><label>高さ<input id="h" type="number" min="1" /></label>
+          </div>
+          <label
+            >角度<input
+              id="rotation"
+              type="range"
+              min="-180"
+              max="180"
+              value="0" /></label
+          ><label
+            >不透明度<input
+              id="opacity"
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              value="1" /></label
+          ><label
+            >文字サイズ<input
+              id="font-size"
+              type="number"
+              min="4"
+              max="512"
+              value="48" /></label
+          ><button id="apply-text" class="wide">入力した文字・色を適用</button>
+        </div>
+        <div class="section">
+          <p class="eyebrow">04 / RESOLUTION</p>
+          <label
+            >モザイクのセル幅 <output id="cell-value">1 px</output
+            ><input id="cell" type="range" min="1" max="128" value="1" /></label
+          ><label
+            >色の段階 <output id="levels-value">256</output
+            ><input
+              id="levels"
+              type="range"
+              min="2"
+              max="256"
+              value="256" /></label
+          ><button id="continuous" class="wide">ヒートマップを連続色に</button
+          ><label class="check"
+            ><input
+              id="value-labels"
+              type="checkbox"
+              checked
+            />数値ラベル</label
+          >
+          <p class="hint">
+            画像は保持した元画像から再計算します。モザイクで失われた細部の推測・復元ではありません。
+          </p>
+        </div>
+      </aside>
+    </main>
+    <dialog id="error">
+      <h2>操作を完了できませんでした</h2>
+      <p id="error-text"></p>
+      <form method="dialog"><button>閉じる</button></form>
+    </dialog>
+  </body>
+</html>

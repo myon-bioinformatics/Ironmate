@@ -12,9 +12,24 @@ const root = path.resolve(__dirname, ".."),
     process.env.IRONMATE_STUDIO_EVIDENCE ||
       path.join(root, "build/image-studio"),
   );
+const staticMode = process.env.IRONMATE_STUDIO_STATIC === "1";
+const staticRoot = staticMode
+  ? fs.mkdtempSync(path.join(require("node:os").tmpdir(), "ironmate-site-"))
+  : null;
+const staticCode = `from image_studio import build_site
+from pathlib import Path
+from functools import partial
+from http.server import ThreadingHTTPServer,SimpleHTTPRequestHandler
+root=Path(__import__('sys').argv[1])
+build_site(root/'Ironmate')
+s=ThreadingHTTPServer(('127.0.0.1',0),partial(SimpleHTTPRequestHandler,directory=str(root)))
+print(f'Ironmate Studio: http://127.0.0.1:{s.server_port}',flush=True)
+s.serve_forever()`;
 const server = spawn(
   process.env.PYTHON || "python",
-  ["-S", "image_studio.py", "--port", "0"],
+  staticMode
+    ? ["-u", "-c", staticCode, staticRoot]
+    : ["-S", "image_studio.py", "--port", "0"],
   { cwd: root, stdio: ["ignore", "pipe", "pipe"] },
 );
 let browser;
@@ -27,7 +42,7 @@ const failures = [],
     server.stdout.on("data", (chunk) => {
       data += chunk;
       const m = data.match(/http:\/\/127\.0\.0\.1:\d+/);
-      if (m) resolve(m[0]);
+      if (m) resolve(m[0] + (staticMode ? "/Ironmate/" : ""));
     });
     server.on("error", reject);
     server.on("exit", (code) =>
@@ -58,9 +73,27 @@ const failures = [],
   });
   const initial = await page.evaluate(() => window.IronmateStudio.scene);
   assert.equal(initial.layers.length, 8);
-  fs.writeFileSync(path.join(out, "demo-scene.json"), JSON.stringify(initial, null, 2));
-  fs.writeFileSync(path.join(out, "demo.svg"), await page.evaluate(() => StudioCore.svg(IronmateStudio.scene)));
-  fs.writeFileSync(path.join(out, "demo.png"), Buffer.from(await page.evaluate(async () => Array.from(new Uint8Array(await (await IronmateStudio.pngBlob()).arrayBuffer())))));
+  const legacyText = initial.layers.find((l) => l.kind === "text");
+  await page.click(`[data-layer-id="${legacyText.id}"]`);
+  assert.equal(await page.isChecked("#monochrome"), false);
+  fs.writeFileSync(
+    path.join(out, "demo-scene.json"),
+    JSON.stringify(initial, null, 2),
+  );
+  fs.writeFileSync(
+    path.join(out, "demo.svg"),
+    await page.evaluate(() => StudioCore.svg(IronmateStudio.scene)),
+  );
+  fs.writeFileSync(
+    path.join(out, "demo.png"),
+    Buffer.from(
+      await page.evaluate(async () =>
+        Array.from(
+          new Uint8Array(await (await IronmateStudio.pngBlob()).arrayBuffer()),
+        ),
+      ),
+    ),
+  );
 
   await page.click("#blank");
   await page.evaluate(() => window.IronmateStudio.ready);
@@ -227,6 +260,50 @@ const failures = [],
     saved,
   );
   // Editing and exports continue after network is disabled.
+  await page.click("#base64");
+  await page.waitForFunction(() =>
+    document
+      .getElementById("base64-text")
+      .value.startsWith("data:image/png;base64,"),
+  );
+  const dataUri = await page.locator("#base64-text").inputValue();
+  assert.deepEqual(
+    Buffer.from(dataUri.split(",")[1], "base64"),
+    fs.readFileSync(path.join(out, "composition.png")),
+  );
+  await page.selectOption("#base64-mode", "base64");
+  const raw = await page.locator("#base64-text").inputValue();
+  assert.equal(raw, dataUri.split(",")[1]);
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.click("#copy-base64");
+  assert.equal(await page.evaluate(() => navigator.clipboard.readText()), raw);
+  await page.evaluate(() => {
+    window.savedClipboardWrite = navigator.clipboard.writeText;
+    navigator.clipboard.writeText = async () => {
+      throw new DOMException("denied", "NotAllowedError");
+    };
+  });
+  await page.click("#copy-base64");
+  assert(
+    (await page.locator("#base64-status").textContent()).includes(
+      "自動コピーが使えません",
+    ),
+  );
+  await page.evaluate(() => {
+    navigator.clipboard.writeText = window.savedClipboardWrite;
+    delete window.savedClipboardWrite;
+  });
+
+  await page
+    .locator("#base64-dialog button")
+    .filter({ hasText: "閉じる" })
+    .click();
+  await page.selectOption("#export-scale", "2");
+  await download("#png", "composition-2x.png");
+  const enlarged = fs.readFileSync(path.join(out, "composition-2x.png"));
+  assert.equal(enlarged.readUInt32BE(16), saved.width * 2);
+  assert.equal(enlarged.readUInt32BE(20), saved.height * 2);
+  await page.selectOption("#export-scale", "1");
   await page.context().setOffline(true);
   await download("#png", "offline.png");
   assert.deepEqual(
@@ -299,6 +376,7 @@ const failures = [],
     ),
     "no horizontal page overflow on mobile",
   );
+  await require("./studio_scale_browser.cjs")({ page, out, root, download });
   assert.equal(failures.length, 0, failures.join("\n"));
   assert(
     requests.every(
@@ -313,17 +391,15 @@ const failures = [],
   const PptxGenJS = require("pptxgenjs"),
     pptx = new PptxGenJS();
   pptx.layout = "LAYOUT_WIDE";
-  pptx
-    .addSlide()
-    .addImage({
-      data:
-        "image/png;base64," +
-        fs.readFileSync(path.join(out, "composition.png")).toString("base64"),
-      x: 0,
-      y: 0,
-      w: 13.333333,
-      h: 7.5,
-    });
+  pptx.addSlide().addImage({
+    data:
+      "image/png;base64," +
+      fs.readFileSync(path.join(out, "composition.png")).toString("base64"),
+    x: 0,
+    y: 0,
+    w: 13.333333,
+    h: 7.5,
+  });
   await pptx.writeFile({ fileName: path.join(out, "composition.pptx") });
   const zip = await require("jszip").loadAsync(
     fs.readFileSync(path.join(out, "composition.pptx")),
@@ -341,6 +417,7 @@ const failures = [],
     JSON.stringify(
       {
         browser: browser.version(),
+        hosting: staticMode ? "static under /Ironmate/" : "loopback",
         checks: [
           "place",
           "move",
@@ -355,6 +432,14 @@ const failures = [],
           "offline-export",
           "mobile-no-overflow",
           "PPTX-image",
+          staticMode ? "static-subpath" : "loopback",
+          "Base64-Flutter-PNG",
+          "clipboard-copy",
+          "clipboard-denied-fallback",
+          "vector-export-2x",
+          "clock-arrow-monochrome",
+          "CPU-CLI-PNG-Base64",
+          "scale-controls",
         ],
         pageErrors: failures,
         remoteRequests: requests.filter(
@@ -377,4 +462,5 @@ const failures = [],
   .finally(async () => {
     if (browser) await browser.close();
     server.kill();
+    if (staticRoot) fs.rmSync(staticRoot, { recursive: true, force: true });
   });

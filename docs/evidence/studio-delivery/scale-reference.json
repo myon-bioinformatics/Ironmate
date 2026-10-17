@@ -1,0 +1,1 @@
+{"schema":"ironmate-image-studio/1","width":256,"height":256,"background":"#FFFFFF","layers":[{"id":"circle","kind":"ellipse","x":19,"y":19,"w":217,"h":217,"fill":"#087D79","stroke":"none","strokeWidth":0,"rotation":0,"opacity":1},{"id":"triangle","kind":"triangle","x":65,"y":50,"w":126,"h":151,"fill":"#EFBE4C","stroke":"none","strokeWidth":0,"rotation":0,"opacity":1}]}

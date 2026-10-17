@@ -78,7 +78,13 @@
       fail("有限の数値またはnullを指定してください（巨大な整数は非対応）");
     const low = t.zmin ?? (values.length ? Math.min(...values) : 0),
       high = t.zmax ?? (values.length ? Math.max(...values) : 1);
-    if ([low, high].some(v => !Number.isFinite(v) || (Number.isInteger(v) && !Number.isSafeInteger(v))))
+    if (
+      [low, high].some(
+        (v) =>
+          !Number.isFinite(v) ||
+          (Number.isInteger(v) && !Number.isSafeInteger(v)),
+      )
+    )
       fail("色の範囲には有限の安全な数値を指定してください");
     heatColor(low, low, high);
     const xlabels = t.x ?? Array.from({ length: cols }, (_, i) => i),
@@ -121,9 +127,16 @@
         typeof l.id !== "string" ||
         l.id.length > 100 ||
         ids.has(l.id) ||
-        !["rect", "ellipse", "triangle", "text", "image", "heatmap"].includes(
-          l.kind,
-        )
+        ![
+          "rect",
+          "ellipse",
+          "triangle",
+          "text",
+          "image",
+          "heatmap",
+          "arrow",
+          "clock",
+        ].includes(l.kind)
       )
         fail("レイヤーのIDまたは種類が不正です");
       ids.add(l.id);
@@ -133,7 +146,12 @@
         if (!num(l[f], 1, 8192)) fail("サイズが不正です");
       if (!num(l.rotation, -360, 360) || !num(l.opacity, 0, 1))
         fail("角度または不透明度が不正です");
+      if (l.mono !== undefined && typeof l.mono !== "boolean")
+        fail("単色設定が不正です");
+      if (l.mono && !color(l.fill)) fail("単色の色が不正です");
       if (l.kind === "text") {
+        if (l.font !== undefined && !["sans", "mono"].includes(l.font))
+          fail("フォント設定が不正です");
         if (
           typeof l.text !== "string" ||
           l.text.length > 2000 ||
@@ -158,6 +176,11 @@
           !num(l.levels, 2, 256)
         )
           fail("モザイク設定が不正です");
+        if (
+          l.sampling !== undefined &&
+          !["pixelated", "smooth"].includes(l.sampling)
+        )
+          fail("補間方式が不正です");
       } else if (l.kind === "heatmap") {
         matrix({
           z: l.z,
@@ -173,6 +196,16 @@
         !num(l.strokeWidth, 0, 64)
       )
         fail("図形の色または線幅が不正です");
+      if (l.kind === "arrow")
+        arrowGeometry(l.w, l.h, l.headSize, l.headPlacement);
+      if (
+        l.kind === "clock" &&
+        (!Number.isInteger(l.hour) ||
+          !num(l.hour, 0, 23) ||
+          !Number.isInteger(l.minute) ||
+          !num(l.minute, 0, 59))
+      )
+        fail("時計の時刻が不正です");
     }
     return clone(scene);
   }
@@ -223,6 +256,58 @@
       }
     return out;
   }
+  function arrowGeometry(w, h, head = 28, placement = "tip") {
+    if (
+      !num(w, 1, 8192) ||
+      !num(h, 1, 8192) ||
+      !num(head, 1, 512) ||
+      !["tip", "middle"].includes(placement)
+    )
+      fail("矢印の寸法が不正です");
+    const size = Math.min(head, w, h),
+      cx = placement === "middle" ? w / 2 : w - size / 2;
+    return {
+      line: [0, h / 2, w, h / 2],
+      points: [
+        [cx + size / 2, h / 2],
+        [cx - size / 2, h / 2 + size / 2],
+        [cx - size / 2, h / 2 - size / 2],
+      ],
+    };
+  }
+  function outputSize(scene, scale = 1) {
+    if (!num(scale, 0.25, 8)) fail("出力倍率は0.25〜8です");
+    const width = Math.round(scene.width * scale),
+      height = Math.round(scene.height * scale);
+    if (width > 8192 || height > 8192 || width * height > 16777216)
+      fail("出力は各辺8192px・合計16MP以下にしてください");
+    return { width, height };
+  }
+  function pngPayload(bytes) {
+    const a = Uint8Array.from(bytes),
+      signature = [137, 80, 78, 71, 13, 10, 26, 10];
+    if (
+      a.length < 8 ||
+      a.length > 32 * 1024 * 1024 ||
+      signature.some((v, i) => a[i] !== v)
+    )
+      fail("32MiB以下のPNGが必要です");
+    let base64;
+    if (typeof Buffer !== "undefined")
+      base64 = Buffer.from(a).toString("base64");
+    else {
+      let binary = "";
+      for (let i = 0; i < a.length; i += 8192)
+        binary += String.fromCharCode(...a.subarray(i, i + 8192));
+      base64 = btoa(binary);
+    }
+    return {
+      base64,
+      dataUri: "data:image/png;base64," + base64,
+      mimeType: "image/png",
+      bytes: a.length,
+    };
+  }
   function layerSVG(l, imageSource = (x) => x.src) {
     let body = "";
     if (["rect", "ellipse", "triangle"].includes(l.kind)) {
@@ -235,7 +320,7 @@
         body = `<polygon points="${l.w / 2},0 ${l.w},${l.h} 0,${l.h}" ${attrs}/>`;
     } else if (l.kind === "text") {
       body =
-        `<text fill="${l.fill}" font-family="Meiryo, 'Noto Sans', 'Noto Color Emoji', sans-serif" font-size="${l.fontSize}" dominant-baseline="text-before-edge">` +
+        `<text fill="${l.fill}" font-family="${l.font === "mono" ? "ui-monospace, 'Noto Sans Mono', monospace" : "Meiryo, 'Noto Sans', 'Noto Color Emoji', sans-serif"}" font-size="${l.fontSize}" dominant-baseline="text-before-edge">` +
         l.text
           .split("\n")
           .map(
@@ -245,8 +330,36 @@
           .join("") +
         "</text>";
     } else if (l.kind === "image")
-      body = `<image href="${escape(imageSource(l))}" width="${l.w}" height="${l.h}" preserveAspectRatio="none"/>`;
-    else if (l.kind === "heatmap") {
+      body = `<image href="${escape(imageSource(l))}" width="${l.w}" height="${l.h}" preserveAspectRatio="none" image-rendering="${l.sampling === "smooth" ? "auto" : "pixelated"}"/>`;
+    else if (l.kind === "arrow") {
+      const g = arrowGeometry(l.w, l.h, l.headSize, l.headPlacement);
+      body = `<line x1="${g.line[0]}" y1="${g.line[1]}" x2="${g.line[2]}" y2="${g.line[3]}" stroke="${l.stroke}" stroke-width="${l.strokeWidth}"/><polygon points="${g.points.map((p) => p.join(",")).join(" ")}" fill="${l.stroke}"/>`;
+    } else if (l.kind === "clock") {
+      const cx = l.w / 2,
+        cy = l.h / 2,
+        r = Math.max(0.1, Math.min(l.w, l.h) / 2 - l.strokeWidth),
+        ink = l.stroke;
+      const point = (a, k) => [
+        cx + Math.sin(a) * r * k,
+        cy - Math.cos(a) * r * k,
+      ];
+      const line = (p, q, width) =>
+        `<line x1="${p[0]}" y1="${p[1]}" x2="${q[0]}" y2="${q[1]}" stroke="${ink}" stroke-width="${width}"/>`;
+      body = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${l.fill}" stroke="${ink}" stroke-width="${l.strokeWidth}"/>`;
+      for (let i = 0; i < 12; i++)
+        body += line(
+          point((i * Math.PI) / 6, 0.85),
+          point((i * Math.PI) / 6, 0.96),
+          l.strokeWidth,
+        );
+      body +=
+        line(
+          [cx, cy],
+          point((((l.hour % 12) + l.minute / 60) * Math.PI) / 6, 0.52),
+          l.strokeWidth * 1.5,
+        ) +
+        line([cx, cy], point((l.minute * Math.PI) / 30, 0.76), l.strokeWidth);
+    } else if (l.kind === "heatmap") {
       const left = 90,
         top = 28,
         right = 24,
@@ -267,11 +380,20 @@
         body += `<text x="${left + (x + 0.5) * cw}" y="${l.h - bottom + 20}" text-anchor="middle" font-family="Meiryo,sans-serif" font-size="12">${escape(l.xlabels[x])}</text>`;
       body += `<text x="${left}" y="${l.h - 5}" font-family="Meiryo,sans-serif" font-size="12">${escape(l.low)} → ${escape(l.high)} ・ ${l.levels ? l.levels + "段階" : "連続色"} ・ 欠測は透明</text>`;
     }
+    if (l.mono && ["text", "image"].includes(l.kind)) {
+      const id =
+        "ink-" +
+        Array.from(l.id)
+          .map((c) => c.codePointAt(0).toString(16))
+          .join("-");
+      body = `<defs><mask id="${id}" mask-type="alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="${l.w}" height="${l.h}">${body}</mask></defs><rect width="${l.w}" height="${l.h}" fill="${l.fill}" mask="url(#${id})"/>`;
+    }
     return `<g data-layer="${escape(l.id)}" transform="translate(${l.x} ${l.y}) rotate(${l.rotation} ${l.w / 2} ${l.h / 2})" opacity="${l.opacity}">${body}</g>`;
   }
-  function svg(scene, imageSource) {
+  function svg(scene, imageSource, scale = 1) {
     validate(scene);
-    return `<svg xmlns="http://www.w3.org/2000/svg" width="${scene.width}" height="${scene.height}" viewBox="0 0 ${scene.width} ${scene.height}"><rect width="100%" height="100%" fill="${scene.background}"/>${scene.layers.map((l) => layerSVG(l, imageSource)).join("")}</svg>`;
+    const size = outputSize(scene, scale);
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${size.width}" height="${size.height}" viewBox="0 0 ${scene.width} ${scene.height}"><rect width="${scene.width}" height="${scene.height}" fill="${scene.background}"/>${scene.layers.map((l) => layerSVG(l, imageSource)).join("")}</svg>`;
   }
   class History {
     constructor(scene) {
@@ -308,6 +430,9 @@
     matrix,
     validate,
     mosaicRGBA,
+    arrowGeometry,
+    outputSize,
+    pngPayload,
     layerSVG,
     svg,
     History,

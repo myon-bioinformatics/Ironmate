@@ -1,0 +1,29 @@
+{
+  "browser": "133.0.6943.0",
+  "hosting": "static under /Ironmate/",
+  "checks": [
+    "place",
+    "move",
+    "resize",
+    "custom-stamp",
+    "emoji",
+    "undo-redo",
+    "exact-matrix",
+    "mosaic-original-retained",
+    "20-image-cache",
+    "JSON-PNG-roundtrip",
+    "offline-export",
+    "mobile-no-overflow",
+    "PPTX-image",
+    "static-subpath",
+    "Base64-Flutter-PNG",
+    "clipboard-copy",
+    "clipboard-denied-fallback",
+    "vector-export-2x",
+    "clock-arrow-monochrome",
+    "CPU-CLI-PNG-Base64",
+    "scale-controls"
+  ],
+  "pageErrors": [],
+  "remoteRequests": []
+}

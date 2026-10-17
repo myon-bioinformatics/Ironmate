@@ -5,7 +5,9 @@ python -S image_studio.py
 ```
 
 表示された `http://127.0.0.1:8765` をブラウザで開く。Python標準ライブラリとブラウザだけで動く。
-Dart・Flutter・Plotly・画像生成APIは不要。Webへのデプロイや外部サーバーへの画像送信はしない。
+Dart・Flutter・Plotly・画像生成APIは不要。画像やシーンはブラウザ内で処理し、サーバーへ送信しない。
+公開用の静的画面は https://myon-bioinformatics.github.io/Ironmate/ に配信する。
+GitHub Pages上ではPythonなしで動く。公開対象は固定したHTML/JS/CSSだけで、作成した画像・シーンJSONは含めない。
 
 ![Image Studioの実ブラウザ画面](evidence/image-studio/desktop.png)
 
@@ -26,7 +28,56 @@ PNGは初期1280×720で、資料用の16:9画像として使える。背景は�
 幅・高さを変更して任意の比率で作成できる（最大4MP、各辺64〜4096）。
 ブラウザのJSON再読込で配置と元画像を保持し、同一ブラウザ・フォントではPNGのバイト一致を検証している。
 フォント・絵文字の見た目は端末依存であり、環境をまたぐ画素一致は保証しない。
-SVGの文字・絵文字はアウトライン化しないため、見た目を固定して配布する場合はPNGを使う。
+SVGの文字・絵文字はフォントに依存するalphaマスクまたはtextで、アウトライン化しないため、見た目を固定して配布する場合はPNGを使う。
+
+## Base64でFlutterへ渡す
+
+「Base64 / 渡す」で出力PNGを標準Base64にする。PNG data URI／Base64のみを切り替え、
+コピーまたはテキスト保存できる。コピーを拒否された場合は文字列を選択して手動コピーできる。
+出力はPNGのバイト列と完全一致する。URL-safe化、padding除去、百分率エンコードはしない。
+
+Flutter main `13905a4d90f97daa73069d6fbff43acd6a65a760` の
+`lib/shared/clipboard/base64_image_bridge.dart` を参照して確認した。
+同実装が受け取れるPNG data URI／標準Base64、32MiB以下の条件で出力する。
+Flutterのコード・ビルド・CIを変更せず、既存のクリップボード欄へ貼り付けるための受け渡しである。
+Flutter上の実操作を今回再実行したという意味ではない。既存Pythonの厳密なBase64 decoderとPNGバイト一致で検証した。
+
+## 時計・矢印・顔文字と単色のスタンプ
+
+「時計」は入力した時刻のスナップショットで、12目盛りと2本の針を図形として保存する。
+「矢印」は直線＋独立した三角形で描き、矢羽根を先端／中央へ配置できる。
+中央配置は既存PPTXの `arrow_geometry` と同じ中心・方向の契約で比較する。
+回転で任意の方向を向けられ、SVG markerやネイティブ矢印には置換しない。
+
+文字・顔文字・絵文字・画像を「単色で描く」にすると、元のalphaをマスクとして指定色を塗る。
+カラーフォントが色を内蔵する場合も、単にtextのfillを変えることに頼らない。
+写真を単色化すると不透明な範囲全体が塗られる。輪郭抽出・被写体の切り抜き機能ではない。
+顔文字は文字入力から任意に追加できる。ASCIIアートには「等幅」を選べる。
+「時計・矢印・顔文字の例」でそのまま試せる。
+
+## 出力倍率とCLI
+
+画面上部の1×／2×／4×／8×は、同じviewBoxを保ってSVG・PNG・Base64を再描画する。
+元のシーンサイズやレイヤー座標は変更しない。最大8192px／辺・合計16MP。
+文字・図形は元データから描き直し、埋込画像は「ドットを保持」／「なめらかに補間」で拡大する。
+補間が細部を取り戻すという意味ではない。
+
+GUIで保存したJSONも、Pythonで用意したJSONも同じレンダラーでCLI出力できる。
+SVGにはNode.js、PNG/Base64にはNode.js 22以降とインストール済みChrome/Chromiumが必要。
+画像生成API、GPU、Playwright/Puppeteerの実行時依存は不要。フォントはホストOSのものを使う。
+
+```sh
+python -S image_studio.py --render scene.json --format svg --scale 4 -o poster.svg
+python -S image_studio.py --render scene.json --format png --scale 2 -o poster.png
+python -S image_studio.py --render scene.json --format base64 --data-uri -o image.base64.txt
+# ChromeがPATHにない場合のみ --chrome /path/to/chrome を付ける
+python -S image_studio.py --build-site build/studio-site
+```
+
+出力先の既存ファイルは拒否し、明示した `--force` の場合だけ置換する。
+静的サイト用の出力先は新しいディレクトリまたは空ディレクトリを指定する。
+
+[拡大比較と受け渡しの検証記録](evidence/studio-delivery/report.md) に、成功・誤差・処理時間を残す。
 
 ## 数値 → 色 → ヒートマップ
 
@@ -83,7 +134,7 @@ with open('mosaic.png', 'wb') as out:
 ブラウザ検証では、既存の固定PptxGenJS 4.0.1を使って1スライドPPTXに出力PNGを挿入し、
 ZIP内の `ppt/media/*.png` が元PNGとバイト単位で一致することを確認する。
 PPTX上で個々のスタンプをネイティブ図形として編集できるという意味ではない。
-画面の書出し対象はPNG・SVG・JSON。PPTXのサンプル生成は検証スクリプトで行う。
+画面の書出し対象はPNG・SVG・JSON・PNG Base64。PPTXのサンプル生成は検証スクリプトで行う。
 
 ## 先行実装から引き継いだ範囲
 

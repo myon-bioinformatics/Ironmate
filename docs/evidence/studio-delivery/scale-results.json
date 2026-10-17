@@ -1,0 +1,19 @@
+{
+  "fixture": "known vector circle and triangle -> 16x16 raster -> 256x256",
+  "gpu": "disabled in test browser and CLI",
+  "cli_single_64px_ms": 1381.553629,
+  "methods": {
+    "nearest": {
+      "rgb_mae": 14.497629801432291,
+      "rgb_rmse": 36.02362599237717
+    },
+    "smooth": {
+      "rgb_mae": 16.515345255533855,
+      "rgb_rmse": 30.6190683861587
+    },
+    "vector": {
+      "rgb_mae": 0,
+      "rgb_rmse": 0
+    }
+  }
+}

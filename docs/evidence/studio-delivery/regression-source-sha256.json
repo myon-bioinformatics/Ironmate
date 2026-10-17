@@ -1,0 +1,14 @@
+{
+  "image_studio.py": "f910fe39b3b72b4799a75f0b017068acc2734e356d201e01099b76d80d11e7e4",
+  "studio/core.js": "243f637a20c50574ccaff322c045dc7025ba318554117fc04378efb5b77b872e",
+  "studio/index.html": "dec81c68747e49e495df56223c9309c61b07a824ca64f6193cfd20d7151a84e6",
+  "studio/studio.js": "8db1a8c44a642fadf3a188948175b2c802be8f235c4f1768ae2f9eb99f1ea82f",
+  "studio/style.css": "f23ccec2f3c9eb88df388668c2161ade6fc68dbed47b51dc79efbff517ed96e9",
+  "studio/render.cjs": "ebd69430adb76bf5268a781ffae1f096a68643c33e64dfed1bedc456c5b7dd85",
+  "studio/raster.cjs": "33aae0bed8864d8678f3feec6628c49dc2690faf2e2999643726e4faf1867e45",
+  "tests/test_studio_delivery.py": "0e432d7e7c27eee444e17497a56b99354e487f5cc9752ca34655d4cb6b1f188a",
+  "tests/image_studio_browser.cjs": "0bebf0eb7e88a475cc3b1074e103f4ce25e422f723af92edba88d1064fbcc006",
+  "tests/studio_scale_browser.cjs": "9c69fc85daee7f48374dbdff6c58a549d97c50abf8d7802db9ad9259b5ee70cf",
+  ".github/workflows/studio-pages.yml": "d7cee34bc288cc8c52e859d321227d99c4deeed2002e0fc825e81d2898d8685b",
+  ".github/workflows/mcp-tests.yml": "73dc715ada8fd06623444480cf570eb1b8c9798787488f649df58cad788cb358"
+}

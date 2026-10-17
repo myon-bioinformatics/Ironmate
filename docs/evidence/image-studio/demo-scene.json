@@ -1,0 +1,174 @@
+{
+  "schema": "ironmate-image-studio/1",
+  "width": 1280,
+  "height": 720,
+  "background": "#F8F7F2",
+  "layers": [
+    {
+      "id": "layer-1792242988676-1",
+      "kind": "text",
+      "name": "タイトル",
+      "x": 64,
+      "y": 40,
+      "w": 900,
+      "h": 60,
+      "rotation": 0,
+      "opacity": 1,
+      "text": "小さな部品から、大きな表現へ。",
+      "fill": "#163B3B",
+      "fontSize": 38
+    },
+    {
+      "id": "layer-1792242988676-2",
+      "kind": "text",
+      "name": "サブタイトル",
+      "x": 68,
+      "y": 105,
+      "w": 900,
+      "h": 40,
+      "rotation": 0,
+      "opacity": 1,
+      "text": "STAMP / COLOR / MATRIX     —     Ironmate Image Studio",
+      "fill": "#56766D",
+      "fontSize": 17
+    },
+    {
+      "id": "layer-1792242988676-3",
+      "kind": "rect",
+      "name": "白いカード",
+      "x": 68,
+      "y": 178,
+      "w": 1144,
+      "h": 430,
+      "rotation": 0,
+      "opacity": 1,
+      "fill": "#FFFFFF",
+      "stroke": "#D6DFD2",
+      "strokeWidth": 1
+    },
+    {
+      "id": "layer-1792242988676-4",
+      "kind": "heatmap",
+      "name": "色の行列",
+      "x": 90,
+      "y": 220,
+      "w": 680,
+      "h": 350,
+      "rotation": 0,
+      "opacity": 1,
+      "z": [
+        [
+          2,
+          3,
+          4,
+          6,
+          8,
+          9,
+          10
+        ],
+        [
+          1,
+          3,
+          5,
+          7,
+          9,
+          null,
+          12
+        ],
+        [
+          2,
+          4,
+          6,
+          8,
+          10,
+          12,
+          14
+        ],
+        [
+          0,
+          2,
+          5,
+          8,
+          11,
+          14,
+          16
+        ]
+      ],
+      "xlabels": [
+        "MON",
+        "TUE",
+        "WED",
+        "THU",
+        "FRI",
+        "SAT",
+        "SUN"
+      ],
+      "ylabels": [
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "low": 0,
+      "high": 16,
+      "levels": 0,
+      "labels": true
+    },
+    {
+      "id": "layer-1792242988677-5",
+      "kind": "triangle",
+      "name": "三角のスタンプ",
+      "x": 890,
+      "y": 264,
+      "w": 170,
+      "h": 150,
+      "rotation": 0,
+      "opacity": 1,
+      "fill": "none",
+      "stroke": "#EFBE4C",
+      "strokeWidth": 7
+    },
+    {
+      "id": "layer-1792242988677-6",
+      "kind": "text",
+      "name": "絵文字スタンプ",
+      "x": 910,
+      "y": 294,
+      "w": 140,
+      "h": 90,
+      "rotation": 0,
+      "opacity": 1,
+      "text": "🌱",
+      "fill": "#163B3B",
+      "fontSize": 70
+    },
+    {
+      "id": "layer-1792242988677-7",
+      "kind": "text",
+      "name": "カスタム文字",
+      "x": 840,
+      "y": 445,
+      "w": 320,
+      "h": 100,
+      "rotation": 0,
+      "opacity": 1,
+      "text": "色を置く。\nかたちが生まれる。",
+      "fill": "#163B3B",
+      "fontSize": 25
+    },
+    {
+      "id": "layer-1792242988677-8",
+      "kind": "text",
+      "name": "フッター",
+      "x": 70,
+      "y": 646,
+      "w": 1100,
+      "h": 35,
+      "rotation": 0,
+      "opacity": 1,
+      "text": "01  COMPOSE                         02  EXPLORE COLOR                         03  EXPORT",
+      "fill": "#71887C",
+      "fontSize": 14
+    }
+  ]
+}

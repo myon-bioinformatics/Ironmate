@@ -1,0 +1,9 @@
+{
+  "image_studio.py": "addc7e1aa30a6abbcfb31ccd9e3ace3886baa9c49ff5f80e8b6218731f39d562",
+  "studio/core.js": "12f5dedfdf60a8f9df11d4fc41e9d40518c07453dc891ed9c42da3fbcbbfe649",
+  "studio/studio.js": "7d882ebef07a6d2a9e3ef0989dd9f213cbfa6367b93ffeabefce10e3fe846605",
+  "studio/index.html": "3dafac7891ad609ca7a5e3e85e01a09510bfe95ef6dcadb37781e9cc8e79eeef",
+  "studio/style.css": "3fb3cb06a707657b8c022bfccd6e40b9d341ea0361ffcc26fdf2bdd9ac90c223",
+  "tests/image_studio_browser.cjs": "78ecd0eb45bcdc32bc509c3af6a3efa8f81e77a66636738f5b59238043c66f37",
+  "tests/test_image_studio.py": "88c407d6a53bb5fefd117a54a2c76f0150286e24436a2b55cc5db50507b9386c"
+}

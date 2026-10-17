@@ -73,6 +73,9 @@ const failures = [],
   });
   const initial = await page.evaluate(() => window.IronmateStudio.scene);
   assert.equal(initial.layers.length, 8);
+  const legacyText = initial.layers.find((l) => l.kind === "text");
+  await page.click(`[data-layer-id="${legacyText.id}"]`);
+  assert.equal(await page.isChecked("#monochrome"), false);
   fs.writeFileSync(
     path.join(out, "demo-scene.json"),
     JSON.stringify(initial, null, 2),

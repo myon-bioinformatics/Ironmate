@@ -103,7 +103,7 @@ function updateInspector() {
     $(f).value = l?.[f] ?? "";
   }
   $("monochrome").disabled = !["text", "image"].includes(l?.kind);
-  $("monochrome").checked = l?.mono ?? l?.kind === "text";
+  $("monochrome").checked = l?.mono ?? false;
   $("sampling").disabled = l?.kind !== "image";
   $("sampling").value = l?.sampling ?? "pixelated";
   $("arrow-placement").disabled = l?.kind !== "arrow";

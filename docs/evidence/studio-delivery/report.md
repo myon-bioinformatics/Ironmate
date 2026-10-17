@@ -82,3 +82,8 @@ IRONMATE_STUDIO_STATIC=1 IRONMATE_CHROME=/path/to/chrome node tests/image_studio
   フォントやChromeが違うCIとPNGのハッシュが一致することは要件にしていない。
 
 ここでのコード確認とテストは実装者によるもので、独立した第三者の承認レビューとは区別する。
+
+最終のUI確認で、旧sceneの`mono`省略時は元の描画どおり単色チェックをoffとする修正を追加。
+旧scene選択時のチェック状態をブラウザで回帰確認し、全ブラウザ検証も再成功した。
+そのコードは[regression-source-sha256.json](regression-source-sha256.json) に記録する。
+上記の測定値・画像・最初のsource hashは変更せず保持した。

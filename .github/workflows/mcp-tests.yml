@@ -157,7 +157,8 @@ jobs:
         if: ${{ !cancelled() }}
         shell: bash
         run: |
-          export IRONMATE_CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          IRONMATE_CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          export IRONMATE_CHROME
           node tests/image_studio_browser.cjs
       - name: Preserve Marp JUnit
         if: always()

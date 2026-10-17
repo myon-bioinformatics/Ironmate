@@ -14,4 +14,4 @@ permissions:
 jobs:
   # Shared actionlint uses a SHA-256 verified official binary without Docker.
   actionlint:
-    uses: myon-bioinformatics/myon-bioinformatics/.github/workflows/reusable-actionlint.yml@b000e5967cb7596f6f9f20fe396a686fdc700c16
+    uses: myon-bioinformatics/myon-bioinformatics/.github/workflows/reusable-actionlint.yml@1eda992aa6fa31a902e2c06428e53ab17e8fe3c1

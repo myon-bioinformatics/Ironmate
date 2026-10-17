@@ -102,6 +102,17 @@ function updateInspector() {
     $(f).disabled = !l;
     $(f).value = l?.[f] ?? "";
   }
+  $("monochrome").disabled = !["text", "image"].includes(l?.kind);
+  $("monochrome").checked = l?.mono ?? l?.kind === "text";
+  $("sampling").disabled = l?.kind !== "image";
+  $("sampling").value = l?.sampling ?? "pixelated";
+  $("arrow-placement").disabled = l?.kind !== "arrow";
+  $("arrow-placement").value = l?.headPlacement ?? "tip";
+  if (l?.kind === "clock")
+    $("clock-time").value =
+      String(l.hour).padStart(2, "0") + ":" + String(l.minute).padStart(2, "0");
+  $("font-family").disabled = l?.kind !== "text";
+  $("font-family").value = l?.font ?? "sans";
   $("font-size").disabled = l?.kind !== "text";
   $("font-size").value = l?.fontSize ?? 48;
   $("cell").disabled = l?.kind !== "image";
@@ -192,6 +203,8 @@ function textLayer(text, x, y) {
     text,
     fill: $("fill").value,
     fontSize: size,
+    font: $("font-family").value,
+    mono: true,
   };
 }
 function place(x, y) {
@@ -204,7 +217,28 @@ function place(x, y) {
       add(l);
     } else add(textLayer($("text").value, x, y));
   } else if (tool === "text") add(textLayer($("text").value, x, y));
-  else
+  else if (tool === "arrow")
+    add({
+      ...base("arrow", x, y, 200, 80),
+      name: "直線＋矢羽根",
+      fill: $("fill").value,
+      stroke: $("stroke").value,
+      strokeWidth: 4,
+      headSize: 28,
+      headPlacement: $("arrow-placement").value,
+    });
+  else if (tool === "clock") {
+    const [hour, minute] = $("clock-time").value.split(":").map(Number);
+    add({
+      ...base("clock", x, y, 160, 160),
+      name: "時計 " + $("clock-time").value,
+      hour,
+      minute,
+      fill: $("fill").value,
+      stroke: $("stroke").value,
+      strokeWidth: 3,
+    });
+  } else
     add({
       ...base(tool, x, y),
       name: { rect: "四角", ellipse: "丸", triangle: "三角" }[tool],
@@ -288,7 +322,7 @@ $("board").addEventListener("pointercancel", () => {
 });
 for (const button of document.querySelectorAll("[data-tool]"))
   button.onclick = () => setTool(button.dataset.tool);
-for (const button of $("emojis").children)
+for (const button of [...$("emojis").children, ...$("kaomojis").children])
   button.onclick = () => {
     $("text").value = button.textContent;
     template = null;
@@ -363,12 +397,53 @@ $("apply-text").onclick = guarded(() => {
     const l = doc.layers.find((l) => l.id === selected);
     if (l.kind === "text") {
       l.text = $("text").value;
+      l.font = $("font-family").value;
       l.fill = $("fill").value;
-    } else if (["rect", "ellipse", "triangle"].includes(l.kind)) {
+      l.mono = $("monochrome").checked;
+    } else if (l.kind === "image") {
+      l.fill = $("fill").value;
+      l.mono = $("monochrome").checked;
+    } else if (
+      ["rect", "ellipse", "triangle", "arrow", "clock"].includes(l.kind)
+    ) {
       l.fill = $("outline").checked ? "none" : $("fill").value;
       l.stroke = $("stroke").value;
     }
   });
+});
+$("font-family").onchange = () => {
+  if (selectedLayer()?.kind === "text")
+    change((doc) => {
+      doc.layers.find((l) => l.id === selected).font = $("font-family").value;
+    });
+};
+$("monochrome").onchange = () => {
+  if (["text", "image"].includes(selectedLayer()?.kind))
+    change((doc) => {
+      const l = doc.layers.find((l) => l.id === selected);
+      l.mono = $("monochrome").checked;
+      l.fill = $("fill").value;
+    });
+};
+$("sampling").onchange = () => {
+  if (selectedLayer()?.kind === "image")
+    change((doc) => {
+      doc.layers.find((l) => l.id === selected).sampling = $("sampling").value;
+    });
+};
+$("arrow-placement").onchange = () => {
+  if (selectedLayer()?.kind === "arrow")
+    change((doc) => {
+      doc.layers.find((l) => l.id === selected).headPlacement =
+        $("arrow-placement").value;
+    });
+};
+$("clock-time").onchange = guarded(() => {
+  if (selectedLayer()?.kind === "clock")
+    change((doc) => {
+      const l = doc.layers.find((l) => l.id === selected);
+      [l.hour, l.minute] = $("clock-time").value.split(":").map(Number);
+    });
 });
 for (const [id, field] of [
   ["cell", "cell"],
@@ -429,12 +504,17 @@ $("save").onclick = () => {
 $("svg").onclick = guarded(async () => {
   const doc = copy(scene),
     imageSource = await prepare(doc);
-  download("ironmate-image.svg", C.svg(doc, imageSource), "image/svg+xml");
+  download(
+    "ironmate-image.svg",
+    C.svg(doc, imageSource, Number($("export-scale").value)),
+    "image/svg+xml",
+  );
 });
-async function pngBlob() {
+async function pngBlob(scale = Number($("export-scale").value)) {
   const doc = copy(scene),
     imageSource = await prepare(doc);
-  const source = C.svg(doc, imageSource),
+  const size = C.outputSize(doc, scale);
+  const source = C.svg(doc, imageSource, scale),
     url = URL.createObjectURL(new Blob([source], { type: "image/svg+xml" }));
   try {
     const img = new Image();
@@ -444,8 +524,8 @@ async function pngBlob() {
       img.src = url;
     });
     const canvas = document.createElement("canvas");
-    canvas.width = doc.width;
-    canvas.height = doc.height;
+    canvas.width = size.width;
+    canvas.height = size.height;
     canvas.getContext("2d").drawImage(img, 0, 0);
     return await new Promise((resolve, reject) =>
       canvas.toBlob(
@@ -460,6 +540,35 @@ async function pngBlob() {
 $("png").onclick = guarded(async () =>
   download("ironmate-image.png", await pngBlob(), "image/png"),
 );
+let clipboardPayload = null;
+function showBase64() {
+  if (clipboardPayload)
+    $("base64-text").value = clipboardPayload[$("base64-mode").value];
+}
+$("base64").onclick = guarded(async () => {
+  clipboardPayload = C.pngPayload(
+    new Uint8Array(await (await pngBlob()).arrayBuffer()),
+  );
+  showBase64();
+  $("base64-status").textContent =
+    `PNG ${clipboardPayload.bytes.toLocaleString()} bytes ・ 32MiB以下`;
+  $("base64-dialog").showModal();
+});
+$("base64-mode").onchange = showBase64;
+$("copy-base64").onclick = async () => {
+  try {
+    await navigator.clipboard.writeText($("base64-text").value);
+    $("base64-status").textContent =
+      "コピーしました。Flutterのクリップボード欄へ貼り付けられます。";
+  } catch {
+    $("base64-text").focus();
+    $("base64-text").select();
+    $("base64-status").textContent =
+      "自動コピーが使えません。選択した文字をコピーするか、テキスト保存を使ってください。";
+  }
+};
+$("download-base64").onclick = () =>
+  download("ironmate-image.base64.txt", $("base64-text").value, "text/plain");
 $("open").onchange = guarded(async () => {
   const file = $("open").files[0];
   if (!file) return;
@@ -496,6 +605,8 @@ $("image").onchange = guarded(async () => {
       src: cv.toDataURL("image/png"),
       cell: 1,
       levels: 256,
+      sampling: "pixelated",
+      mono: false,
     });
     setTool("select");
   } finally {
@@ -609,6 +720,77 @@ $("demo").onclick = () => {
   dirty = true;
   render().catch(error);
   message("独自の合成サンプルです。データは説明用の架空値です。");
+};
+function stampDemo() {
+  const d = blank();
+  const text = (id, text, x, y, w, h, size, fill) => ({
+    ...base("text", x, y, w, h),
+    id,
+    name: text,
+    text,
+    fontSize: size,
+    fill,
+    mono: true,
+  });
+  d.layers = [
+    text(
+      "title",
+      "STAMP LAB / 色を変えて、重ねる。",
+      60,
+      45,
+      1160,
+      70,
+      38,
+      "#163B3B",
+    ),
+    {
+      ...base("rect", 60, 150, 1160, 420),
+      name: "カード",
+      fill: "#FFFFFF",
+      stroke: "#D6DFD2",
+      strokeWidth: 1,
+    },
+    {
+      ...base("clock", 100, 210, 230, 230),
+      name: "10:10の時計",
+      hour: 10,
+      minute: 10,
+      fill: "#F8F7F2",
+      stroke: "#087D79",
+      strokeWidth: 4,
+    },
+    {
+      ...base("arrow", 390, 260, 230, 80),
+      name: "直線＋中央の矢羽根",
+      headSize: 40,
+      headPlacement: "middle",
+      fill: "#EFBE4C",
+      stroke: "#D59C22",
+      strokeWidth: 6,
+    },
+    text("face", "(・∀・)", 710, 225, 450, 105, 68, "#D05B78"),
+    text("emoji", "🌱", 750, 365, 160, 130, 100, "#087D79"),
+    text("emoji2", "❤️", 990, 365, 180, 130, 100, "#D05B78"),
+    text(
+      "footer",
+      "CLOCK     →     LINE + TRIANGLE     →     TEXT / EMOJI / KAOMOJI",
+      65,
+      635,
+      1150,
+      50,
+      18,
+      "#56766D",
+    ),
+  ];
+  return d;
+}
+$("stamp-demo").onclick = () => {
+  scene = stampDemo();
+  history.commit(scene);
+  selected = null;
+  dirty = true;
+  render().catch(error);
+  message("時計も顔文字も、保持した図形・文字を拡大して再描画します。");
 };
 window.addEventListener("beforeunload", (e) => {
   if (dirty) {

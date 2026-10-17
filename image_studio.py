@@ -2,14 +2,25 @@
 
     python -S image_studio.py
     python -S image_studio.py --heatmap matrix.json -o scene.json
+    python -S image_studio.py --render scene.json --format svg --scale 4 -o image.svg
+    python -S image_studio.py --build-site build/site
 
 The server serves only four fixed UI assets on loopback; it never accepts uploads
 or writes files. Browser exports are explicit downloads. Existing grid tools own
 PNG encoding; numeric source data is kept separate from its display colors.
+The web editor runs without Python. Scene CLI rendering uses Node.js; PNG/Base64
+also use installed Chrome through Node 22 built-in WebSocket (no runtime npm package).
 """
 from __future__ import annotations
 
 import argparse
+import base64
+import os
+import shutil
+import struct
+import subprocess
+import sys
+import tempfile
 import json
 import math
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -113,6 +124,105 @@ def mosaic(artifact, cell=8, levels=256):
     return {'schema': 'ironmate-pixel-grid/1', 'width': width, 'height': height, 'colors': palette, 'pixels': pixels}
 
 
+def build_site(directory):
+    """Publish only the four standalone UI assets, never scenes or local images."""
+    directory = Path(directory)
+    names = ('index.html', 'core.js', 'studio.js', 'style.css')
+    payloads = {name: (ROOT / 'studio' / name).read_bytes() for name in names}
+    if directory.is_symlink() or (directory.exists() and (not directory.is_dir() or any(directory.iterdir()))):
+        raise FileExistsError('site output must be a new or empty directory')
+    directory.mkdir(parents=True, exist_ok=True)
+    from grid_output import write_output
+    for name, payload in payloads.items():
+        write_output(str(directory / name), payload)
+    write_output(str(directory / '.nojekyll'), b'')
+    return directory
+
+
+def _node_scene(scene, mode='svg', scale=1):
+    node = shutil.which('node')
+    if not node:
+        raise RuntimeError('Node.js is required for scene SVG rendering; it is not auto-installed')
+    run = subprocess.run([node, str(ROOT / 'studio' / 'render.cjs')],
+                         input=json.dumps({'scene': scene, 'mode': mode, 'scale': scale}, allow_nan=False),
+                         text=True, capture_output=True, timeout=30)
+    if run.returncode:
+        raise ValueError(run.stderr.strip() or 'scene rendering failed')
+    return run.stdout
+
+
+def _processed_scene(scene):
+    scene = json.loads(_node_scene(scene, 'validate'))
+    for layer in scene['layers']:
+        if layer['kind'] != 'image' or (layer['cell'] == 1 and layer['levels'] == 256):
+            continue
+        # Use original pixel dimensions; don't auto-infer a dot-art cell scale.
+        from photo_grid import decode_png
+        from grid_png import to_png
+        width, height, rows = decode_png(base64.b64decode(layer['src'].split(',', 1)[1], validate=True), max_pixels=4194304)
+        palette, indexes, pixels = [], {}, []
+        for row in rows:
+            line = []
+            for x in range(width):
+                color = '#' + bytes(row[x*4:x*4+4]).hex().upper()
+                if color not in indexes:
+                    indexes[color] = len(palette)
+                    palette.append(color)
+                line.append(indexes[color])
+            pixels.append(line)
+        art = {'schema': 'ironmate-pixel-grid/1', 'width': width, 'height': height, 'colors': palette, 'pixels': pixels}
+        data = to_png(mosaic(art, layer['cell'], layer['levels']))
+        layer['src'] = 'data:image/png;base64,' + base64.b64encode(data).decode()
+    return scene
+
+
+def _find_chrome(chrome=None):
+    candidates = [chrome or os.environ.get('CHROME'), 'google-chrome', 'chromium', 'chromium-browser', 'chrome',
+                  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome']
+    for key in ('PROGRAMFILES', 'PROGRAMFILES(X86)', 'LOCALAPPDATA'):
+        if os.environ.get(key):
+            candidates.append(str(Path(os.environ[key]) / 'Google/Chrome/Application/chrome.exe'))
+    for candidate in filter(None, candidates):
+        executable = shutil.which(candidate)
+        if executable:
+            return executable
+    raise RuntimeError('PNG/Base64 needs local Chrome/Chromium; use --chrome PATH (SVG needs Node.js only)')
+
+
+def render_scene(scene, format='svg', scale=1, chrome=None, data_uri=False):
+    """CPU-only SVG re-render; PNG uses installed headless Chrome, no GPU/AI API.
+
+    The original scene is untouched. SVG remains vector; raster images can only
+    interpolate their existing samples. Fonts are supplied by the host system.
+    """
+    if format not in ('svg', 'png', 'base64'):
+        raise ValueError('format must be svg, png or base64')
+    processed = _processed_scene(scene)
+    svg = _node_scene(processed, scale=scale).encode()
+    if format == 'svg':
+        return svg
+    from xml.etree import ElementTree
+    root = ElementTree.fromstring(svg)
+    width, height = int(root.attrib['width']), int(root.attrib['height'])
+    with tempfile.TemporaryDirectory(prefix='ironmate-studio-render-') as temp:
+        directory = Path(temp)
+        html = directory / 'render.html'
+        html.write_bytes(b'<!doctype html><meta charset="utf-8"><style>html,body{margin:0;padding:0;overflow:hidden}svg{display:block}</style>' + svg)
+        command = [shutil.which('node'), str(ROOT / 'studio' / 'raster.cjs'), _find_chrome(chrome),
+                   str(html), str(directory / 'profile'), str(width), str(height)]
+        run = subprocess.run(command, capture_output=True, timeout=40)
+        if run.returncode:
+            raise RuntimeError('Chrome PNG render failed: ' + run.stderr.decode(errors='replace')[-1000:])
+        png = run.stdout
+        if png[:8] != b'\x89PNG\r\n\x1a\n' or struct.unpack('>II', png[16:24]) != (width, height):
+            raise RuntimeError('Chrome returned unexpected PNG dimensions')
+    if format == 'png':
+        return png
+    if len(png) > 32*1024*1024:
+        raise ValueError('Flutter clipboard PNG must be at most 32MiB; reduce output scale')
+    return (('data:image/png;base64,' if data_uri else '') + base64.b64encode(png).decode()).encode()
+
+
 class StudioHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         assets = {'/': ('index.html', 'text/html'), '/core.js': ('core.js', 'text/javascript'),
@@ -139,10 +249,28 @@ class StudioHandler(BaseHTTPRequestHandler):
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument('--port', type=int, default=8765)
-    p.add_argument('--heatmap', type=Path)
+    mode = p.add_mutually_exclusive_group()
+    mode.add_argument('--heatmap', type=Path)
+    mode.add_argument('--render', type=Path, help='scene JSON -> SVG/PNG/Base64')
+    mode.add_argument('--build-site', type=Path, help='write standalone GitHub Pages assets')
+    p.add_argument('--format', choices=('svg', 'png', 'base64'), default='svg')
+    p.add_argument('--scale', type=float, default=1)
+    p.add_argument('--chrome', help='installed Chrome/Chromium executable')
+    p.add_argument('--data-uri', action='store_true', help='prefix Base64 with data:image/png;base64,')
     p.add_argument('-o', '--output', type=Path)
     p.add_argument('--force', action='store_true')
     args = p.parse_args(argv)
+    if args.build_site:
+        print(build_site(args.build_site))
+        return 0
+    if args.render:
+        data = render_scene(json.loads(args.render.read_text(encoding='utf-8')), args.format, args.scale, args.chrome, args.data_uri)
+        if args.output:
+            from grid_output import write_output
+            write_output(str(args.output), data, args.force)
+        else:
+            sys.stdout.buffer.write(data)
+        return 0
     if args.heatmap:
         if not args.output:
             p.error('--heatmap needs -o scene.json')
@@ -161,4 +289,8 @@ def main(argv=None):
 
 
 if __name__ == '__main__':
-    raise SystemExit(main())
+    try:
+        raise SystemExit(main())
+    except (OSError, ValueError, RuntimeError, subprocess.TimeoutExpired) as exc:
+        print(f'error: {exc}', file=sys.stderr)
+        raise SystemExit(2)

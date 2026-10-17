@@ -408,3 +408,40 @@ dialog::backdrop {
     grid-template-columns: repeat(3, 1fr);
   }
 }
+select {
+  font: inherit;
+  border: 1px solid #d1d9d0;
+  border-radius: 5px;
+  padding: 8px;
+  background: #fff;
+  color: #23483d;
+  max-width: 100%;
+}
+header select {
+  background: #244a49;
+  color: white;
+  border-color: #406261;
+}
+.kaomojis button {
+  font-size: 13px;
+  padding: 7px 4px;
+}
+dialog textarea {
+  max-width: 100%;
+  word-break: break-all;
+}
+#base64-dialog {
+  width: min(600px, 92vw);
+  max-width: 600px;
+}
+#base64-text {
+  font: 11px monospace;
+  resize: vertical;
+}
+#base64-dialog form {
+  display: inline;
+}
+#base64-dialog p {
+  font-size: 12px;
+  line-height: 1.8;
+}

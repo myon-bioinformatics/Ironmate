@@ -3,6 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; img-src data: blob:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'"
+    />
     <title>Ironmate — Image Studio</title>
     <link rel="stylesheet" href="style.css" />
     <script defer src="core.js"></script>
@@ -16,8 +20,14 @@
         ><button id="save">JSON保存</button
         ><label class="button"
           >開く<input id="open" type="file" accept=".json" /></label
-        ><button id="svg">SVG</button
-        ><button id="png" class="primary">PNGを書き出す ↗</button>
+        ><button id="svg">SVG</button><button id="base64">Base64 / 渡す</button>
+        <select id="export-scale" aria-label="出力倍率">
+          <option value="1">1×</option>
+          <option value="2">2×</option>
+          <option value="4">4×</option>
+          <option value="8">8×</option>
+        </select>
+        <button id="png" class="primary">PNGを書き出す ↗</button>
       </div>
     </header>
     <main>
@@ -34,7 +44,16 @@
           ><button data-tool="triangle">△ 三角</button
           ><button data-tool="text">T 文字</button
           ><button data-tool="stamp">✦ スタンプ</button>
+          <button data-tool="arrow">→ 矢印</button
+          ><button data-tool="clock">◷ 時計</button>
         </div>
+        <div id="kaomojis" class="emojis kaomojis">
+          <button>(・∀・)</button><button>(｡•̀ᴗ-)✧</button
+          ><button>٩(๑❛ᴗ❛๑)۶</button>
+        </div>
+        <label
+          >時計の時刻<input id="clock-time" type="time" value="10:10"
+        /></label>
         <label
           >文字・カスタムスタンプ<textarea id="text" rows="2">
 検証できたら、次へ。</textarea
@@ -97,7 +116,8 @@
           ><span>ドラッグで移動 / 右下の点で拡縮</span>
         </div>
         <div class="examples">
-          <button id="demo">✦ スタンプとヒートマップの例</button
+          <button id="stamp-demo">◷ 時計・矢印・顔文字の例</button
+          ><button id="demo">✦ スタンプとヒートマップの例</button
           ><button id="blank">＋ 新しいキャンバス</button
           ><label
             >背景<input id="background" type="color" value="#f8f7f2" /></label
@@ -160,7 +180,32 @@
               min="4"
               max="512"
               value="48" /></label
-          ><button id="apply-text" class="wide">入力した文字・色を適用</button>
+          ><label
+            >文字の配置<select id="font-family">
+              <option value="sans">標準</option>
+              <option value="mono">等幅（ASCIIアート・顔文字）</option>
+            </select></label
+          >
+          <button id="apply-text" class="wide">入力した文字・色を適用</button>
+          <label class="check"
+            ><input
+              id="monochrome"
+              type="checkbox"
+              checked
+            />文字・絵文字・画像を単色で描く</label
+          >
+          <label
+            >矢羽根の位置<select id="arrow-placement">
+              <option value="tip">先端</option>
+              <option value="middle">中央（PPTXと同じ）</option>
+            </select></label
+          >
+          <label
+            >画像の拡大<select id="sampling">
+              <option value="pixelated">ドットを保持</option>
+              <option value="smooth">なめらかに補間</option>
+            </select></label
+          >
         </div>
         <div class="section">
           <p class="eyebrow">04 / RESOLUTION</p>
@@ -189,6 +234,25 @@
         </div>
       </aside>
     </main>
+    <dialog id="base64-dialog">
+      <h2>Flutterなどへ画像を渡す</h2>
+      <p>PNGの標準Base64です。画像や元のシーンをサーバーへ送信しません。</p>
+      <label
+        >形式<select id="base64-mode">
+          <option value="dataUri">PNG data URI</option>
+          <option value="base64">Base64のみ</option>
+        </select></label
+      ><textarea
+        id="base64-text"
+        rows="7"
+        readonly
+        aria-label="Base64画像"
+      ></textarea>
+      <p id="base64-status" role="status"></p>
+      <button id="copy-base64">コピー</button
+      ><button id="download-base64">テキスト保存</button>
+      <form method="dialog"><button>閉じる</button></form>
+    </dialog>
     <dialog id="error">
       <h2>操作を完了できませんでした</h2>
       <p id="error-text"></p>

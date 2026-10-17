@@ -1,0 +1,66 @@
+name: Image Studio Pages
+
+on:
+  push:
+    branches: [main]
+    paths: ["studio/**", "image_studio.py", ".github/workflows/studio-pages.yml"]
+  pull_request:
+    paths: ["studio/**", "image_studio.py", ".github/workflows/studio-pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: studio-pages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check the dependency-free client and build only public assets
+        run: |
+          node --check studio/core.js
+          node --check studio/studio.js
+          python -S image_studio.py --build-site build/studio-site
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: build/studio-site
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@v5
+      - uses: actions/deploy-pages@v4
+        id: deployment
+      - name: Verify the published editor is available
+        env:
+          SITE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          curl --fail --location --retry 6 --retry-delay 3 --retry-all-errors "$SITE_URL" --output /tmp/studio-index.html
+          python -S - <<'PY'
+          from pathlib import Path
+          text = Path('/tmp/studio-index.html').read_text()
+          assert 'Base64 / 渡す' in text and 'core.js' in text
+          print('Published Image Studio HTML verified')
+          PY

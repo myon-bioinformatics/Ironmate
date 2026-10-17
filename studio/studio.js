@@ -596,36 +596,94 @@ $("open").onchange = guarded(async () => {
   message("JSONを読み込みました（戻すで前の編集へ戻れます）");
   $("open").value = "";
 });
-$("image").onchange = guarded(async () => {
-  const file = $("image").files[0];
-  if (!file) return;
-  if (file.size > 12000000) throw new Error("画像は12MB以下にしてください");
-  if (!["image/png", "image/jpeg", "image/webp"].includes(file.type))
-    throw new Error("PNG / JPEG / WebPを選んでください");
-  const url = URL.createObjectURL(file);
+// Keep acquisition (picker, camera capture, clipboard) separate from normalization.
+async function importImageBytes(bytes, declaredMime, name = "取り込み画像") {
+  if (!(bytes instanceof Uint8Array) || !bytes.length || bytes.length > 32 * 1024 * 1024)
+    throw new Error("画像は32MiB以下にしてください");
+  const mime = sniffImageMime(bytes);
+  if (!mime || (declaredMime && declaredMime.toLowerCase() !== mime))
+    throw new Error("画像形式またはMIME宣言が実データと一致しません");
+  const blob = new Blob([bytes], { type: mime });
+  const url = URL.createObjectURL(blob);
   try {
-    const img = await decoded(url),
-      cv = document.createElement("canvas");
+    const img = await decoded(url);
+    const cv = document.createElement("canvas");
     cv.width = img.naturalWidth;
     cv.height = img.naturalHeight;
     cv.getContext("2d").drawImage(img, 0, 0);
-    const w = Math.min(700, scene.width * 0.65),
-      h = (w * img.naturalHeight) / img.naturalWidth;
+    const w = Math.min(700, scene.width * 0.65);
     add({
-      ...base("image", 80, 90, w, h),
-      name: file.name,
-      src: cv.toDataURL("image/png"),
-      cell: 1,
-      levels: 256,
-      sampling: "pixelated",
-      mono: false,
+      ...base("image", 80, 90, w, (w * img.naturalHeight) / img.naturalWidth),
+      name, src: cv.toDataURL("image/png"),
+      cell: 1, levels: 256, sampling: "pixelated", mono: false,
     });
     setTool("select");
+    message(mime + "を取り込みました");
   } finally {
     URL.revokeObjectURL(url);
     images.delete(url);
-    $("image").value = "";
   }
+}
+function sniffImageMime(bytes) {
+  if ([137,80,78,71,13,10,26,10].every((v,i)=>bytes[i]===v)) return "image/png";
+  if (bytes[0]===255&&bytes[1]===216&&bytes[2]===255) return "image/jpeg";
+  if (bytes.length>=12&&[82,73,70,70].every((v,i)=>bytes[i]===v)
+      &&[87,69,66,80].every((v,i)=>bytes[i+8]===v)) return "image/webp";
+  return null;
+}
+function imageBase64(text) {
+  let value = text.replace(/^\uFEFF/, "").trim();
+  const header = /^data:([a-z0-9.+-]+\/[a-z0-9.+-]+)?(?:;[a-z0-9.+-]+=[a-z0-9.+-]+)*;base64,/i.exec(value);
+  let mime = null;
+  if (header) {
+    mime = header[1]?.toLowerCase() || null;
+    if (mime === "image/jpg") mime = "image/jpeg";
+    value = value.slice(header[0].length);
+  } else if (/^data:/i.test(value)) throw new Error("data URIが不正です");
+  const compact = value.replace(/\s+/g, "");
+  if (!compact || compact.length > 4 * Math.ceil(32 * 1024 * 1024 / 3)
+      || compact.length % 4 || !/^[A-Za-z0-9+/]*={0,2}$/.test(compact))
+    throw new Error("Base64形式または容量が不正です");
+  const binary = atob(compact);
+  const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
+  if (bytes.length > 32 * 1024 * 1024 || btoa(binary) !== compact)
+    throw new Error("Base64のパディングまたは容量が不正です");
+  return { bytes, mime };
+}
+async function importPickedFile(input) {
+  const file = input.files?.[0];
+  if (!file) return; // A cancelled picker is not a failed import.
+  try {
+    if (file.size > 32 * 1024 * 1024) throw new Error("画像は32MiB以下にしてください");
+    await importImageBytes(new Uint8Array(await file.arrayBuffer()), file.type || null, file.name);
+  } finally { input.value = ""; }
+}
+$("image").onchange = guarded(() => importPickedFile($("image")));
+$("camera-image").onchange = guarded(() => importPickedFile($("camera-image")));
+$("import-base64-button").onclick = guarded(async () => {
+  const { bytes, mime } = imageBase64($("import-base64").value);
+  await importImageBytes(bytes, mime, "Base64画像");
+});
+$("paste-image").onclick = guarded(async () => {
+  if (!navigator.clipboard) throw new Error("このブラウザではClipboard APIを利用できません");
+  // Prefer image bytes when the browser exposes ClipboardItem.
+  if (navigator.clipboard.read) {
+    try {
+      for (const item of await navigator.clipboard.read()) {
+        const type = item.types.find(t => ["image/png","image/jpeg","image/webp"].includes(t));
+        if (type) {
+          const blob = await item.getType(type);
+          return await importImageBytes(new Uint8Array(await blob.arrayBuffer()), type, "クリップボード画像");
+        }
+      }
+    } catch (e) {
+      // Text fallback is useful where clipboard.read is denied but readText is available.
+      if (!navigator.clipboard.readText) throw e;
+    }
+  }
+  if (!navigator.clipboard.readText) throw new Error("画像またはテキストの読取APIがありません");
+  const { bytes, mime } = imageBase64(await navigator.clipboard.readText());
+  await importImageBytes(bytes, mime, "クリップボードBase64");
 });
 function addMatrix(source) {
   add({

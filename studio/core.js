@@ -196,8 +196,14 @@
         !num(l.strokeWidth, 0, 64)
       )
         fail("図形の色または線幅が不正です");
-      if (l.kind === "arrow")
+      if (l.kind === "arrow") {
         arrowGeometry(l.w, l.h, l.headSize, l.headPlacement);
+        if (
+          l.headStyle !== undefined &&
+          !["triangle", "beginner"].includes(l.headStyle)
+        )
+          fail("矢羽根の形が不正です");
+      }
       if (
         l.kind === "clock" &&
         (!Number.isInteger(l.hour) ||
@@ -333,7 +339,21 @@
       body = `<image href="${escape(imageSource(l))}" width="${l.w}" height="${l.h}" preserveAspectRatio="none" image-rendering="${l.sampling === "smooth" ? "auto" : "pixelated"}"/>`;
     else if (l.kind === "arrow") {
       const g = arrowGeometry(l.w, l.h, l.headSize, l.headPlacement);
-      body = `<line x1="${g.line[0]}" y1="${g.line[1]}" x2="${g.line[2]}" y2="${g.line[3]}" stroke="${l.stroke}" stroke-width="${l.strokeWidth}"/><polygon points="${g.points.map((p) => p.join(",")).join(" ")}" fill="${l.stroke}"/>`;
+      body = `<line x1="${g.line[0]}" y1="${g.line[1]}" x2="${g.line[2]}" y2="${g.line[3]}" stroke="${l.stroke}" stroke-width="${l.strokeWidth}"/>`;
+      if (l.headStyle === "beginner") {
+        const size = Math.min(l.headSize ?? 28, l.w, l.h),
+          x = g.points[0][0] - size,
+          y = l.h / 2 - size / 2;
+        // The emoji points down; rotate -90 degrees to point along +x.
+        // Alpha masking removes the font's embedded yellow/green colors.
+        const id =
+          "head-" +
+          Array.from(l.id)
+            .map((c) => c.codePointAt(0).toString(16))
+            .join("-");
+        body += `<svg x="${x}" y="${y}" width="${size}" height="${size}" viewBox="0 0 100 100"><defs><mask id="${id}" mask-type="alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100"><text x="50" y="50" text-anchor="middle" dominant-baseline="central" font-family="'Noto Color Emoji', 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif" font-size="90" transform="rotate(-90 50 50)">🔰</text></mask></defs><rect width="100" height="100" fill="#000000" mask="url(#${id})"/></svg>`;
+      } else
+        body += `<polygon points="${g.points.map((p) => p.join(",")).join(" ")}" fill="${l.stroke}"/>`;
     } else if (l.kind === "clock") {
       const cx = l.w / 2,
         cy = l.h / 2,

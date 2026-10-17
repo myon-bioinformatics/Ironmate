@@ -1,0 +1,17 @@
+{
+  "image_compare.py": "9d83da4f4c258ba0d2802b6b9733dc09174b534bde69fe1eac6dc69fb6ca4ccb",
+  "tests/test_image_compare.py": "c10810460f6ae3c8754b984b23b5eafbb9045d121e8020bd16f13c86906ac6eb",
+  "tests/studio_tradeoff_browser.cjs": "5c0f66049514f11ca91e308a8398f2f6354d7205ca565acd4b5ebb56441d2e7d",
+  "image_studio.py": "f910fe39b3b72b4799a75f0b017068acc2734e356d201e01099b76d80d11e7e4",
+  "studio/core.js": "43e2e623e5a4fe0152c7c33aca7b084645a98674950e1a35927d7b90024e0a41",
+  "studio/studio.js": "66378cb310311bb4009d4571c8d9e5f65e3c12a6cec56ac9a33caa442353a8d9",
+  "studio/index.html": "0ed436e03ea964fdabe7a8ef2a08a4e94432b6e4d7cc796f400a5616cb9ef022",
+  "studio/style.css": "f23ccec2f3c9eb88df388668c2161ade6fc68dbed47b51dc79efbff517ed96e9",
+  "studio/render.cjs": "ebd69430adb76bf5268a781ffae1f096a68643c33e64dfed1bedc456c5b7dd85",
+  "studio/raster.cjs": "33aae0bed8864d8678f3feec6628c49dc2690faf2e2999643726e4faf1867e45",
+  "tests/image_studio_browser.cjs": "bd63daf2bc8f2c443ca1d3eb8fdcde68f497334faef72200b5b42eddf17348b1",
+  "tests/studio_scale_browser.cjs": "34410f7e4fa08a7f828c95b6efce286923018b1ac6c49712544a8a712c4db52e",
+  "tests/test_studio_delivery.py": "f332a0da95da9086eeba86e7be35ed67234d84de2b456a24889e9d28add21225",
+  ".github/workflows/studio-pages.yml": "d7cee34bc288cc8c52e859d321227d99c4deeed2002e0fc825e81d2898d8685b",
+  ".github/workflows/mcp-tests.yml": "73dc715ada8fd06623444480cf570eb1b8c9798787488f649df58cad788cb358"
+}

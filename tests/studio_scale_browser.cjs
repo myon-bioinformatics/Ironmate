@@ -33,6 +33,57 @@ module.exports = async function ({ page, out, root, download }) {
     .locator("#layers button")
     .filter({ hasText: "直線＋中央" })
     .click();
+  assert.equal(
+    await page.locator("#arrow-style").getAttribute("disabled"),
+    null,
+  );
+  const headPixels = await page.evaluate(async () => {
+    const bmp = await createImageBitmap(await IronmateStudio.pngBlob()),
+      canvas = document.createElement("canvas");
+    canvas.width = bmp.width;
+    canvas.height = bmp.height;
+    const t = canvas.getContext("2d");
+    t.drawImage(bmp, 0, 0);
+    let black = 0,
+      colored = 0;
+    // The sample head's 40px square; omit the gold shaft through its center.
+    for (let y = 280; y < 320; y++) {
+      if (Math.abs(y - 300) <= 4) continue;
+      const row = t.getImageData(485, y, 40, 1).data;
+      for (let i = 0; i < row.length; i += 4) {
+        if (row[i] === 0 && row[i + 1] === 0 && row[i + 2] === 0) black++;
+        if (row[i] !== row[i + 1] || row[i] !== row[i + 2]) colored++;
+      }
+    }
+    return { black, colored };
+  });
+  assert(headPixels.black > 10, "the beginner emoji arrowhead is visible");
+  assert.equal(
+    headPixels.colored,
+    0,
+    "the emoji head has no yellow/green pixels",
+  );
+  await page.selectOption("#arrow-style", "triangle");
+  assert.equal(
+    await page.evaluate(
+      () =>
+        IronmateStudio.scene.layers.find((l) => l.kind === "arrow").headStyle,
+    ),
+    "triangle",
+  );
+  await page.click("#undo");
+  await page.evaluate(() => IronmateStudio.ready);
+  assert.equal(
+    await page.evaluate(
+      () =>
+        IronmateStudio.scene.layers.find((l) => l.kind === "arrow").headStyle,
+    ),
+    "beginner",
+  );
+  await page
+    .locator("#layers button")
+    .filter({ hasText: "直線＋中央" })
+    .click();
   await page.selectOption("#arrow-placement", "tip");
   await page.evaluate(() => IronmateStudio.ready);
   assert.equal(

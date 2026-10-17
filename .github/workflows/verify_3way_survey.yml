@@ -1,0 +1,45 @@
+name: LittleBit-Jev 3-Way Survey Verification
+
+on:
+  pull_request:
+    paths:
+      - "scripts/littlebit_jev_3way_survey.py"
+      - "tests/test_three_way_survey.py"
+      - ".github/workflows/verify_3way_survey.yml"
+  push:
+    branches: [main]
+    paths:
+      - "scripts/littlebit_jev_3way_survey.py"
+      - "tests/test_three_way_survey.py"
+      - ".github/workflows/verify_3way_survey.yml"
+  workflow_dispatch:
+  schedule:
+    - cron: "0 23 * * *" # 08:00 JST, default branch only
+
+permissions:
+  contents: read
+
+jobs:
+  verify-survey-engine:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      # Regression tests/JUnit remain in the existing Python test workflow.
+      - name: Run paired held-out CPU benchmark
+        run: python -S scripts/littlebit_jev_3way_survey.py --trials 40 --train-trials 4 --large-raster
+      - name: Write readable summary
+        run: cat build/three-way-survey/report.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve raw measurements and colored comparisons
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: three-way-survey
+          path: build/three-way-survey/
+          if-no-files-found: error
+          retention-days: 14

@@ -377,6 +377,7 @@ const failures = [],
     "no horizontal page overflow on mobile",
   );
   await require("./studio_scale_browser.cjs")({ page, out, root, download });
+  await require("./studio_tradeoff_browser.cjs")({ page, out, root });
   assert.equal(failures.length, 0, failures.join("\n"));
   assert(
     requests.every(

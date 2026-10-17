@@ -108,6 +108,9 @@ function updateInspector() {
   $("sampling").value = l?.sampling ?? "pixelated";
   $("arrow-placement").disabled = l?.kind !== "arrow";
   $("arrow-placement").value = l?.headPlacement ?? "tip";
+  $("arrow-style").disabled = l?.kind !== "arrow";
+  $("arrow-style").value =
+    l?.kind === "arrow" ? (l.headStyle ?? "triangle") : "beginner";
   if (l?.kind === "clock")
     $("clock-time").value =
       String(l.hour).padStart(2, "0") + ":" + String(l.minute).padStart(2, "0");
@@ -226,6 +229,7 @@ function place(x, y) {
       strokeWidth: 4,
       headSize: 28,
       headPlacement: $("arrow-placement").value,
+      headStyle: $("arrow-style").value,
     });
   else if (tool === "clock") {
     const [hour, minute] = $("clock-time").value.split(":").map(Number);
@@ -325,6 +329,7 @@ for (const button of document.querySelectorAll("[data-tool]"))
 for (const button of [...$("emojis").children, ...$("kaomojis").children])
   button.onclick = () => {
     $("text").value = button.textContent;
+    if (button.textContent === "🔰") $("fill").value = "#000000";
     template = null;
     setTool("stamp");
     $("stamp-note").textContent = `${button.textContent}をキャンバスに押せます`;
@@ -429,6 +434,13 @@ $("sampling").onchange = () => {
   if (selectedLayer()?.kind === "image")
     change((doc) => {
       doc.layers.find((l) => l.id === selected).sampling = $("sampling").value;
+    });
+};
+$("arrow-style").onchange = () => {
+  if (selectedLayer()?.kind === "arrow")
+    change((doc) => {
+      doc.layers.find((l) => l.id === selected).headStyle =
+        $("arrow-style").value;
     });
 };
 $("arrow-placement").onchange = () => {
@@ -764,6 +776,7 @@ function stampDemo() {
       name: "直線＋中央の矢羽根",
       headSize: 40,
       headPlacement: "middle",
+      headStyle: "beginner",
       fill: "#EFBE4C",
       stroke: "#D59C22",
       strokeWidth: 6,

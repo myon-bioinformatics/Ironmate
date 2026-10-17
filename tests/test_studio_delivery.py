@@ -122,3 +122,22 @@ def test_cli_mosaic_uses_original_pixel_dimensions_without_modifying_source():
     assert scene==original and processed['layers'][0]['src']!=scene['layers'][0]['src']
     from photo_grid import decode_png
     assert decode_png(base64.b64decode(processed['layers'][0]['src'].split(',')[1]))[:2]==(16,16)
+
+
+def test_beginner_arrowhead_is_rotated_black_alpha_mask_and_style_is_validated():
+    scene=s.heatmap_scene([[1]])
+    scene['layers']=[{'id':'arrow)mask','kind':'arrow','x':0,'y':0,'w':200,'h':80,
+                     'rotation':0,'opacity':1,'fill':'none','stroke':'#D59C22','strokeWidth':4,
+                     'headSize':40,'headPlacement':'middle','headStyle':'beginner'}]
+    svg=node('console.log(JSON.stringify(c.svg(input)))',scene)
+    root=ET.fromstring(svg);ns={'s':'http://www.w3.org/2000/svg'}
+    mask=root.find('.//s:mask',ns)
+    text=mask.find('s:text',ns)
+    assert text.text=='🔰' and text.attrib['transform']=='rotate(-90 50 50)'
+    assert mask.attrib['mask-type']=='alpha' and ')' not in mask.attrib['id']
+    head=root.find('.//s:svg',ns)
+    assert head.attrib['x']=='80' and head.attrib['y']=='20'
+    assert head.find('s:rect',ns).attrib['fill']=='#000000'
+    assert len(root.findall('.//s:line',ns))==1 and not root.findall('.//s:polygon',ns)
+    scene['layers'][0]['headStyle']='external-url'
+    assert node('try{c.validate(input);console.log(false)}catch{console.log(true)}',scene)

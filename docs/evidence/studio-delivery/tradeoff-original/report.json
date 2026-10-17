@@ -1,0 +1,160 @@
+{
+  "schema": "ironmate-image-tradeoff/1",
+  "width": 256,
+  "height": 256,
+  "background_rgb": [
+    255,
+    255,
+    255
+  ],
+  "mae_weight": 0.5,
+  "score_definition": "100*(1-(mae_weight*RGB_MAE+(1-mae_weight)*RGB_RMSE)/255)",
+  "blend_definition": "premultiplied 8-bit sRGB, integer rounding; 0=nearest, 1=smooth",
+  "selection_scope": "oracle on this reference only; not an unknown-image quality estimate",
+  "roles": {
+    "mae_priority": 0,
+    "rmse_priority": 9,
+    "midpoint": 5,
+    "balanced": 8
+  },
+  "pareto_indices": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "candidates": [
+    {
+      "index": 0,
+      "smooth_fraction": 0.0,
+      "rgb_mae": 14.497629801432291,
+      "rgb_rmse": 36.02362599237717,
+      "alpha_mae": 0.0,
+      "exact_rgba_pixels": 44032,
+      "pixels": 65536,
+      "balance_score": 90.09387141297853,
+      "file": "variant-00.png"
+    },
+    {
+      "index": 1,
+      "smooth_fraction": 0.1,
+      "rgb_mae": 14.672800699869791,
+      "rgb_rmse": 35.00477451274541,
+      "alpha_mae": 0.0,
+      "exact_rgba_pixels": 31312,
+      "pixels": 65536,
+      "balance_score": 90.25929897791859,
+      "file": "variant-01.png"
+    },
+    {
+      "index": 2,
+      "smooth_fraction": 0.2,
+      "rgb_mae": 14.861404418945312,
+      "rgb_rmse": 34.074290101046856,
+      "alpha_mae": 0.0,
+      "exact_rgba_pixels": 29699,
+      "pixels": 65536,
+      "balance_score": 90.40476578039369,
+      "file": "variant-02.png"
+    },
+    {
+      "index": 3,
+      "smooth_fraction": 0.3,
+      "rgb_mae": 15.056666056315104,
+      "rgb_rmse": 33.23760380474674,
+      "alpha_mae": 0.0,
+      "exact_rgba_pixels": 28769,
+      "pixels": 65536,
+      "balance_score": 90.53053532136042,
+      "file": "variant-03.png"
+    },
+    {
+      "index": 4,
+      "smooth_fraction": 0.4,
+      "rgb_mae": 15.243586222330729,
+      "rgb_rmse": 32.50344493899098,
+      "alpha_mae": 0.0,
+      "exact_rgba_pixels": 28768,
+      "pixels": 65536,
+      "balance_score": 90.63783702719182,
+      "file": "variant-04.png"
+    },
+    {
+      "index": 5,
+      "smooth_fraction": 0.5,
+      "rgb_mae": 15.440592447916666,
+      "rgb_rmse": 31.883026907512345,
+      "alpha_mae": 0.0,
+      "exact_rgba_pixels": 28337,
+      "pixels": 65536,
+      "balance_score": 90.72085894991588,
+      "file": "variant-05.png"
+    },
+    {
+      "index": 6,
+      "smooth_fraction": 0.6,
+      "rgb_mae": 15.679972330729166,
+      "rgb_rmse": 31.378864835520826,
+      "alpha_mae": 0.0,
+      "exact_rgba_pixels": 25912,
+      "pixels": 65536,
+      "balance_score": 90.7727770262255,
+      "file": "variant-06.png"
+    },
+    {
+      "index": 7,
+      "smooth_fraction": 0.7,
+      "rgb_mae": 15.877934773763021,
+      "rgb_rmse": 30.993625354612362,
+      "alpha_mae": 0.0,
+      "exact_rgba_pixels": 25912,
+      "pixels": 65536,
+      "balance_score": 90.80949801404404,
+      "file": "variant-07.png"
+    },
+    {
+      "index": 8,
+      "smooth_fraction": 0.8,
+      "rgb_mae": 16.094146728515625,
+      "rgb_rmse": 30.73789131750069,
+      "alpha_mae": 0.0,
+      "exact_rgba_pixels": 25911,
+      "pixels": 65536,
+      "balance_score": 90.81724744195758,
+      "file": "variant-08.png"
+    },
+    {
+      "index": 9,
+      "smooth_fraction": 0.9,
+      "rgb_mae": 16.307891845703125,
+      "rgb_rmse": 30.6124035731072,
+      "alpha_mae": 0.0,
+      "exact_rgba_pixels": 25912,
+      "pixels": 65536,
+      "balance_score": 90.79994207474307,
+      "file": "variant-09.png"
+    },
+    {
+      "index": 10,
+      "smooth_fraction": 1.0,
+      "rgb_mae": 16.515345255533855,
+      "rgb_rmse": 30.6190683861587,
+      "alpha_mae": 0.0,
+      "exact_rgba_pixels": 25914,
+      "pixels": 65536,
+      "balance_score": 90.75795810947204,
+      "file": "variant-10.png"
+    }
+  ],
+  "input_sha256": {
+    "reference": "b0aa2dc08e55ad21961740b338b21d894425cd696584d6cd99c26680e501faf6",
+    "nearest": "e9e2ca84d54c2e309a3fe93f78867088fa7f9974ea723236fad0a6c7a8e80abb",
+    "smooth": "4068f86c6b7524aabeb2b63ee9ad459ec4dcbd4fdb31b1c4b829c2dfb91afecf"
+  }
+}

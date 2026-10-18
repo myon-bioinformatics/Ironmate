@@ -11,7 +11,7 @@ import subprocess
 _FENCE = re.compile(r"(?m)^```mermaid[ \t]*\r?\n(.*?)^```[ \t]*$", re.DOTALL | re.MULTILINE)
 
 
-def render_mermaid(source, directory, *, mmdc="mmdc", background="#FFFFFF", foreground=None):
+def render_mermaid(source, directory, *, mmdc="mmdc", background="#FFFFFF", foreground=None, config=None, puppeteer_config=None):
     """Return (transformed Markdown, SVG paths); reject unsupported fenced variants."""
     if background is not None and (not isinstance(background, str) or len(background) != 7 or
             not background.startswith("#") or any(ch not in "0123456789abcdefABCDEF" for ch in background[1:])):
@@ -43,14 +43,17 @@ def render_mermaid(source, directory, *, mmdc="mmdc", background="#FFFFFF", fore
         if foreground is not None:
             # Mermaid theme variables belong to the diagram source, never Marp CSS.
             node_fill = "#243552" if foreground.upper() == "#FFFFFF" else "#FFF4DD"
-            config = '%%{init: {"theme": "base", "themeVariables": {"primaryTextColor": "' + foreground + '", "lineColor": "' + foreground + '", "textColor": "' + foreground + '", "primaryColor": "' + node_fill + '", "secondaryColor": "' + node_fill + '", "tertiaryColor": "' + node_fill + '", "mainBkg": "' + node_fill + '"}}}%%\n'
-            diagram_for_render = config + diagram
+            directive = '%%{init: {"theme": "base", "themeVariables": {"primaryTextColor": "' + foreground + '", "lineColor": "' + foreground + '", "textColor": "' + foreground + '", "primaryColor": "' + node_fill + '", "secondaryColor": "' + node_fill + '", "tertiaryColor": "' + node_fill + '", "mainBkg": "' + node_fill + '"}}}%%\n'
+            diagram_for_render = directive + diagram
         else:
             diagram_for_render = diagram
         source_file.write_text(diagram_for_render, encoding="utf-8")
         command = [executable, "-i", str(source_file), "-o", str(svg)]
-        if background is not None:
-            command.extend(["-b", background])
+        command.extend(["-b", background if background is not None else "transparent"])
+        if config is not None:
+            command.extend(["-c", str(config)])
+        if puppeteer_config is not None:
+            command.extend(["-p", str(puppeteer_config)])
         result = subprocess.run(command,
                                 capture_output=True, text=True, timeout=120, check=False)
         if result.returncode != 0 or not svg.is_file():

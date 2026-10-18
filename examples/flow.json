@@ -1,0 +1,28 @@
+{
+  "title": "Ironmate Image Studio 統合フロー",
+  "sources_label": "変更元のPR",
+  "sources": [
+    {
+      "title": "#115",
+      "note": "画像入力"
+    },
+    {
+      "title": "#116",
+      "note": "画像評価"
+    },
+    {
+      "title": "#117",
+      "note": "作業履歴"
+    }
+  ],
+  "steps": [
+    {
+      "title": "統合 PR #119",
+      "note": "integration/image-studio-115-117"
+    },
+    {
+      "title": "main",
+      "note": "CI・レビュー成功後に1回だけマージ"
+    }
+  ]
+}

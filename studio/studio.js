@@ -28,6 +28,7 @@ const message = (text) => {
 };
 function error(e) {
   $("error-text").textContent = e.message || String(e);
+  $("error").dataset.code = e.code || "";
   $("error").showModal();
 }
 function guarded(fn) {
@@ -717,34 +718,73 @@ $("import-base64-button").onclick = guarded(async () => {
   const { bytes, mime } = imageBase64($("import-base64").value);
   await importImageBytes(bytes, mime, "Base64画像");
 });
+function clipboardError(code, message, cause) {
+  return Object.assign(new Error(message), { code, cause });
+}
+function clipboardImageText(text) {
+  const value = text.replace(/^\uFEFF/, "").trim();
+  const explicit = /^data:image(?:\/|[;,]|$)/i.test(value);
+  // A raw image signature also makes malformed/oversized Base64 an image error.
+  // Inspect only a small prefix; do not decode an unbounded clipboard string.
+  const prefix = value.replace(/\s+/g, "").slice(0, 16);
+  const rawImage = /^[A-Za-z0-9+/]{16}$/.test(prefix) &&
+    sniffImageMime(Uint8Array.from(atob(prefix), c => c.charCodeAt(0)));
+  try {
+    const payload = imageBase64(value);
+    if (sniffImageMime(payload.bytes)) return payload;
+    if (explicit) throw new Error("PNG・JPEG・WebP画像ではありません");
+  } catch (e) {
+    if (explicit || rawImage)
+      throw clipboardError("clipboard-invalid-image", "クリップボードの画像テキストが不正です: " + e.message, e);
+  }
+  return null; // Ordinary text, even if it happens to be valid Base64.
+}
 $("paste-image").onclick = guarded(async () => {
-  if (!navigator.clipboard) throw new Error("このブラウザではClipboard APIを利用できません");
-  // Text-first: explicit Base64 must not be shadowed by a stale image ClipboardItem.
-  if (navigator.clipboard.readText) {
-    const text = await navigator.clipboard.readText();
-    if (text.trim()) {
-      const { bytes, mime } = imageBase64(text);
-      return await importImageBytes(bytes, mime, "クリップボードBase64");
+  const clipboard = navigator.clipboard;
+  if (!clipboard || (typeof clipboard.readText !== "function" && typeof clipboard.read !== "function"))
+    throw clipboardError("clipboard-unsupported", "このブラウザにはクリップボード読取APIがありません。ファイル選択またはBase64入力を利用してください");
+  const failures = [];
+  if (typeof clipboard.readText === "function") {
+    let text = "";
+    try { text = await clipboard.readText(); }
+    catch (e) { failures.push(e); }
+    const payload = clipboardImageText(text);
+    if (payload) {
+      // Explicit/recognized image text wins over a possibly stale binary image.
+      // Validation/decode failures must not silently import different content.
+      try { return await importImageBytes(payload.bytes, payload.mime, "クリップボードBase64"); }
+      catch (e) { throw clipboardError("clipboard-invalid-image", e.message, e); }
     }
   }
-  // Binary image fallback for clipboard providers without Base64 text.
-  if (navigator.clipboard.read) {
-    try {
-      for (const item of await navigator.clipboard.read()) {
-        const type = item.types.find(t => ["image/png","image/jpeg","image/webp"].includes(t));
-        if (type) {
+  if (typeof clipboard.read === "function") {
+    let items = [];
+    try { items = await clipboard.read(); }
+    catch (e) { failures.push(e); }
+    for (const item of items) {
+      for (const type of item.types.filter(t => ["image/png", "image/jpeg", "image/webp"].includes(t))) {
+        try {
           const blob = await item.getType(type);
+          if (blob.size > 32 * 1024 * 1024) throw new Error("画像は32MiB以下にしてください");
           return await importImageBytes(new Uint8Array(await blob.arrayBuffer()), type, "クリップボード画像");
+        } catch (e) {
+          // Other representations/items may still contain a usable image.
+          failures.push(e.name === "NotAllowedError" || e.name === "SecurityError" || e.name === "NotSupportedError"
+            ? e : clipboardError("clipboard-invalid-image", e.message, e));
         }
       }
-    } catch (e) {
-      // Text fallback is useful where clipboard.read is denied but readText is available.
-      if (!navigator.clipboard.readText) throw e;
     }
   }
-  if (!navigator.clipboard.readText) throw new Error("画像またはテキストの読取APIがありません");
-  const { bytes, mime } = imageBase64(await navigator.clipboard.readText());
-  await importImageBytes(bytes, mime, "クリップボードBase64");
+  const denied = failures.find(e => ["NotAllowedError", "SecurityError"].includes(e.name));
+  if (denied)
+    throw clipboardError("clipboard-denied", "クリップボードの読み取りが許可されていません。権限を確認するか、ファイル選択またはBase64入力を利用してください", denied);
+  const invalid = failures.find(e => e.code === "clipboard-invalid-image");
+  if (invalid) throw invalid;
+  if (failures.length) {
+    const unsupported = failures.every(e => e.name === "NotSupportedError");
+    throw clipboardError(unsupported ? "clipboard-unsupported" : "clipboard-read-failed",
+      unsupported ? "このブラウザではクリップボードの読み取りに対応していません" : "クリップボードの取得に失敗しました。再試行するかファイル選択を利用してください", failures[0]);
+  }
+  throw clipboardError("clipboard-no-image", "クリップボードにPNG・JPEG・WebP画像または画像Base64テキストがありません");
 });
 function addMatrix(source) {
   add({

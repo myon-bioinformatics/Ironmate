@@ -166,3 +166,17 @@ def test_shared_raster_rejects_truncated_browser_output(monkeypatch,payload):
     monkeypatch.setattr(image_studio.subprocess,'run',lambda *a,**k: SimpleNamespace(returncode=0,stdout=payload))
     with pytest.raises(RuntimeError,match='unexpected PNG dimensions'):
         image_studio.raster_svg(b'<svg width="100" height="100"/>')
+
+
+def test_shared_raster_png_byte_limit_is_inclusive(monkeypatch):
+    import struct
+    monkeypatch.setattr(image_studio.shutil,'which',lambda _: '/fake/node')
+    monkeypatch.setattr(image_studio,'_find_chrome',lambda _: '/fake/chrome')
+    prefix=b'\x89PNG\r\n\x1a\n'+b'\0'*8+struct.pack('>II',100,100)
+    limit=32*1024*1024
+    payload=prefix+b'\0'*(limit-len(prefix))
+    monkeypatch.setattr(image_studio.subprocess,'run',lambda *a,**k: SimpleNamespace(returncode=0,stdout=payload))
+    assert len(image_studio.raster_svg(b'<svg width="100" height="100"/>'))==limit
+    payload+=b'x'
+    with pytest.raises(ValueError,match='32MiB'):
+        image_studio.raster_svg(b'<svg width="100" height="100"/>')

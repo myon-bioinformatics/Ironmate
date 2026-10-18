@@ -12,8 +12,8 @@ THEMES = ("modern", "github-like")
 def _label(value, required=True, length=240):
     if not isinstance(value, str) or len(value) > length:
         raise ValueError("labels must be bounded strings")
-    if any(ord(char) < 32 or ord(char) == 127 for char in value):
-        raise ValueError("control characters in label")
+    if any(ord(char) < 32 or ord(char) == 127 or 0xD800 <= ord(char) <= 0xDFFF for char in value):
+        raise ValueError("control characters or unpaired surrogates in label")
     if required and not value.strip():
         raise ValueError("empty label")
     return value

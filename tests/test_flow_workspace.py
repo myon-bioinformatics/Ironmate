@@ -101,7 +101,8 @@ def test_cli_persistence_and_failed_operations_never_replace_files(tmp_path):
 
 
 @pytest.mark.parametrize('raw', [b'\xff', b' '* (w.MAX_WORKSPACE+1), b'{}', b'null',
-    b'{"schema":"ironmate-flow/2","original_json":"{}","spec":{}}'])
+    b'{"schema":"ironmate-flow/2","original_json":"{}","spec":{}}'],
+    ids=["malformed_utf8", "oversize", "missing_keys", "null", "wrong_schema"])
 def test_invalid_workspace(raw):
     with pytest.raises(ValueError): w.read_workspace(raw)
 
@@ -140,9 +141,31 @@ def test_vendor_runtime_is_one_merged_commit_and_license_is_exact():
     import hashlib
     lock=json.loads((ROOT/'vendor.lock.json').read_text())
     files=[x for x in lock['files'] if x['repository'].endswith('/web-ui')]
-    assert {x['commit'] for x in files} == {'fe00d9fab3366f6f51af640ad19168194bb8fc2c'}
+    assert {x['commit'] for x in files} == {'95dcfc6f3fa764249566bf2f9df90dcead7c64db'}
     assert len(files) == 7
     for entry in files:
         data=(ROOT/entry['destination']).read_bytes()
         assert hashlib.sha256(data).hexdigest() == entry['sha256']
         assert hashlib.sha1(b'blob '+str(len(data)).encode()+b'\0'+data).hexdigest() == entry['blob_sha']
+
+
+@pytest.mark.parametrize('path,value,accepted', [
+    ('/steps/0/note',None,False), ('/sources_label',None,False),
+    ('/steps/0/title','😀'*120,True), ('/steps/0/title','😀'*121,False),
+    ('/sources/0/note','😀'*240,True), ('/sources/0/note','😀'*241,False),
+    ('/steps/0/title','\ufeff',True), ('/steps/0/title','\x85',False),
+    ('/steps/0/title','\ud800',False),
+], ids=['null_note','null_sources_label','title_120_emoji','title_121_emoji',
+        'note_240_emoji','note_241_emoji','feff_label','blank_nel','lone_surrogate'])
+def test_native_python_node_patch_boundary_parity(path,value,accepted):
+    state=w.import_flow(RAW); before=w.workspace_bytes(state)
+    operations=[{'path':'/title','value':'first valid edit'}, {'path':path,'value':value}]
+    node=subprocess.run(['node',str(w.UPSTREAM/'js/flow-patch.cjs')],
+        input=json.dumps(dict(spec=state['spec'],patch=operations)).encode(),capture_output=True,timeout=10)
+    assert node.returncode == (0 if accepted else 2),node.stderr
+    if accepted:
+        assert json.loads(node.stdout)==w.patch_workspace(state,operations)['spec']
+    else:
+        assert node.stdout==b''
+        with pytest.raises(ValueError): w.patch_workspace(state,operations)
+    assert w.workspace_bytes(state)==before

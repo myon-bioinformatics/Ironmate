@@ -462,17 +462,17 @@
     },
     {
       "repository": "myon-bioinformatics/web-ui",
-      "ref": "fe00d9fab3366f6f51af640ad19168194bb8fc2c",
-      "commit": "fe00d9fab3366f6f51af640ad19168194bb8fc2c",
+      "ref": "95dcfc6f3fa764249566bf2f9df90dcead7c64db",
+      "commit": "95dcfc6f3fa764249566bf2f9df90dcead7c64db",
       "source": "tool/flow_diagram.py",
       "destination": "vendor/web_ui_flow.py",
-      "blob_sha": "599e10c40032f562eb2ced3509ad91b233ff74af",
-      "sha256": "70babc9c8f35bc368b21b67b38ec827e36b0382a5ce349c7ab10eb5fb33661be"
+      "blob_sha": "d4d64f6530d92a8cac0a5a04a1a4325243db5045",
+      "sha256": "ddc8203917829c4de6f6c21404cf4d42d83af78f7bd90ff2bfe81d3fe1cd5be6"
     },
     {
       "repository": "myon-bioinformatics/web-ui",
-      "ref": "fe00d9fab3366f6f51af640ad19168194bb8fc2c",
-      "commit": "fe00d9fab3366f6f51af640ad19168194bb8fc2c",
+      "ref": "95dcfc6f3fa764249566bf2f9df90dcead7c64db",
+      "commit": "95dcfc6f3fa764249566bf2f9df90dcead7c64db",
       "source": "LICENSE",
       "destination": "vendor/web-ui-LICENSE",
       "blob_sha": "4ec4989b801bf1a3df6184d21f79e6e7ed5931f6",
@@ -480,8 +480,8 @@
     },
     {
       "repository": "myon-bioinformatics/web-ui",
-      "ref": "fe00d9fab3366f6f51af640ad19168194bb8fc2c",
-      "commit": "fe00d9fab3366f6f51af640ad19168194bb8fc2c",
+      "ref": "95dcfc6f3fa764249566bf2f9df90dcead7c64db",
+      "commit": "95dcfc6f3fa764249566bf2f9df90dcead7c64db",
       "source": "examples/pr-flow.json",
       "destination": "examples/flow.json",
       "blob_sha": "5e2a96bc83f86bfe82058ffae48b6c4e229f285d",
@@ -491,17 +491,17 @@
       "repository": "myon-bioinformatics/web-ui",
       "source": "tool/flow_diagram.py",
       "destination": "vendor/web_ui/tool/flow_diagram.py",
-      "ref": "fe00d9fab3366f6f51af640ad19168194bb8fc2c",
-      "commit": "fe00d9fab3366f6f51af640ad19168194bb8fc2c",
-      "blob_sha": "599e10c40032f562eb2ced3509ad91b233ff74af",
-      "sha256": "70babc9c8f35bc368b21b67b38ec827e36b0382a5ce349c7ab10eb5fb33661be"
+      "ref": "95dcfc6f3fa764249566bf2f9df90dcead7c64db",
+      "commit": "95dcfc6f3fa764249566bf2f9df90dcead7c64db",
+      "blob_sha": "d4d64f6530d92a8cac0a5a04a1a4325243db5045",
+      "sha256": "ddc8203917829c4de6f6c21404cf4d42d83af78f7bd90ff2bfe81d3fe1cd5be6"
     },
     {
       "repository": "myon-bioinformatics/web-ui",
       "source": "tool/flow_patch.py",
       "destination": "vendor/web_ui/tool/flow_patch.py",
-      "ref": "fe00d9fab3366f6f51af640ad19168194bb8fc2c",
-      "commit": "fe00d9fab3366f6f51af640ad19168194bb8fc2c",
+      "ref": "95dcfc6f3fa764249566bf2f9df90dcead7c64db",
+      "commit": "95dcfc6f3fa764249566bf2f9df90dcead7c64db",
       "blob_sha": "d89e0151918009b9d29e66592a04edc3e9430a2b",
       "sha256": "6136c2c050eb18509b1a45e1c92a10a3092141ea6d266a1ab69ddca1879817ee"
     },
@@ -509,19 +509,19 @@
       "repository": "myon-bioinformatics/web-ui",
       "source": "js/flow.cjs",
       "destination": "vendor/web_ui/js/flow.cjs",
-      "ref": "fe00d9fab3366f6f51af640ad19168194bb8fc2c",
-      "commit": "fe00d9fab3366f6f51af640ad19168194bb8fc2c",
-      "blob_sha": "edc9e9a290e8fb2ba4a9e300939fcdc26a8c41d4",
-      "sha256": "63f243ac785f526012aa163a73f2f500cc8f088e6450cf3f22636a51034ace41"
+      "ref": "95dcfc6f3fa764249566bf2f9df90dcead7c64db",
+      "commit": "95dcfc6f3fa764249566bf2f9df90dcead7c64db",
+      "blob_sha": "240c2192f2808d463f01dba9a8969181045e8b9f",
+      "sha256": "0d3259c293811221fb6366fb6df849e64a9e146202fc28a732b0e60f7828fb7f"
     },
     {
       "repository": "myon-bioinformatics/web-ui",
       "source": "js/flow-patch.cjs",
       "destination": "vendor/web_ui/js/flow-patch.cjs",
-      "ref": "fe00d9fab3366f6f51af640ad19168194bb8fc2c",
-      "commit": "fe00d9fab3366f6f51af640ad19168194bb8fc2c",
-      "blob_sha": "4188616ebc29bdf91d7b13efe9cd52ba8b42f54f",
-      "sha256": "a4e249d5c2b7819c3fc3d2df5b2882696d0058bd2dbee78546cdcc49296b7705"
+      "ref": "95dcfc6f3fa764249566bf2f9df90dcead7c64db",
+      "commit": "95dcfc6f3fa764249566bf2f9df90dcead7c64db",
+      "blob_sha": "4e50aa3d59d390adb5d241f240d04982069d4f1d",
+      "sha256": "e4d0bdf3851f4f479f4f2caae1958d10b62d080e4c11bd26f96c3a01597fc4ab"
     }
   ]
 }

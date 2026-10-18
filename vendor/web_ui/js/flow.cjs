@@ -2,9 +2,12 @@
 /** Node CommonJS flow wrapper. No browser, npm package or Python subprocess required. */
 const fs = require("node:fs");
 const MAX_BYTES = 256 * 1024;
+// Match Python str.isspace/strip and code-point length, not UTF-16 units.
+const blank = /^[\u0009-\u000d\u001c-\u0020\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]*$/u;
+const own = (value, key, fallback) => Object.prototype.hasOwnProperty.call(value, key) ? value[key] : fallback;
 function label(value, required = true, max = 240) {
-  if (typeof value !== "string" || value.length > max || /[\x00-\x1f\x7f]/.test(value) ||
-      (required && !value.trim())) throw new Error("invalid label");
+  if (typeof value !== "string" || [...value].length > max || /[\x00-\x1f\x7f\uD800-\uDFFF]/u.test(value) ||
+      (required && blank.test(value))) throw new Error("invalid label");
   return value;
 }
 function cards(value) {
@@ -13,15 +16,15 @@ function cards(value) {
     if (!item || typeof item !== "object" || Array.isArray(item) ||
         !Object.prototype.hasOwnProperty.call(item, "title") ||
         Object.keys(item).some(k => !["title", "note"].includes(k))) throw new Error("invalid card");
-    return {title: label(item.title, true, 120), note: label(item.note ?? "", false)};
+    return {title: label(item.title, true, 120), note: label(own(item, "note", ""), false)};
   });
 }
 function validate(spec) {
   if (!spec || typeof spec !== "object" || Array.isArray(spec) ||
       Object.keys(spec).some(k => !["title", "sources_label", "sources", "steps"].includes(k)))
     throw new Error("invalid flow");
-  return {title: label(spec.title ?? "", true, 120),
-    sources_label: label(spec.sources_label ?? "Sources", true, 120),
+  return {title: label(own(spec, "title", ""), true, 120),
+    sources_label: label(own(spec, "sources_label", "Sources"), true, 120),
     sources: cards(spec.sources), steps: cards(spec.steps)};
 }
 const htmlEscape = value => value.replace(/&/g, "&amp;").replace(/</g, "&lt;")
@@ -76,9 +79,18 @@ function main(argv = process.argv.slice(2)) {
   if (!["html", "mermaid", "fragment"].includes(format) ||
       (flag >= 0 && (argv.length !== 2 || flag !== 0)) ||
       (flag < 0 && argv.length)) throw Error("usage: node js/flow.cjs [--format html|mermaid|fragment]");
-  const input = fs.readFileSync(0);
-  if (input.length > MAX_BYTES) throw Error("flow JSON exceeds 256KiB");
-  const data = JSON.parse(input.toString("utf8"));
+  const chunks = [];
+  let total = 0;
+  while (true) {
+    const chunk = Buffer.allocUnsafe(Math.min(65536, MAX_BYTES + 1 - total));
+    const count = fs.readSync(0, chunk, 0, chunk.length, null);
+    if (!count) break;
+    total += count;
+    if (total > MAX_BYTES) throw Error("flow JSON exceeds 256KiB");
+    chunks.push(chunk.subarray(0, count));
+  }
+  const data = JSON.parse(new TextDecoder("utf-8", {fatal:true, ignoreBOM:true})
+    .decode(Buffer.concat(chunks, total)));
   process.stdout.write(format === "mermaid" ? flowMermaid(data) :
     format === "fragment" ? flowHtml(data) + "\n" : flowDocument(data));
 }

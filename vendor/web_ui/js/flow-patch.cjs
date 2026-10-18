@@ -42,7 +42,7 @@ if (require.main === module) {
     const input = Buffer.concat(chunks, total);
     const pretty = process.argv.slice(2);
     if (pretty.length > 1 || (pretty.length && pretty[0] !== "--pretty")) throw Error("unknown arguments");
-    const result = applyDocument(JSON.parse(new TextDecoder("utf-8", {fatal:true}).decode(input)));
+    const result = applyDocument(JSON.parse(new TextDecoder("utf-8", {fatal:true, ignoreBOM:true}).decode(input)));
     process.stdout.write(JSON.stringify(result, null, pretty.length ? 2 : undefined) + "\n");
   } catch (error) {
     process.stderr.write("flow patch: " + error.message + "\n");

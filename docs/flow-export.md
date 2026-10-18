@@ -113,7 +113,7 @@ under `vendor/web_ui/`. The Node workspace API wraps this same Python path. The
 locked native Node patcher and validator are also exercised for cross-language
 contract comparison. The existing flat renderer copy remains for compatibility;
 both validators, both patchers, the sample and MIT LICENSE are pinned together to
-merged web-ui #70, `fe00d9fab3366f6f51af640ad19168194bb8fc2c`.
+merged web-ui #71 (including #70), `95dcfc6f3fa764249566bf2f9df90dcead7c64db`.
 Do not edit these vendor bytes. Parent PR #112 registers the four additional
 runtime sources; the child lock records commit, Git blob and SHA-256 for each.
 

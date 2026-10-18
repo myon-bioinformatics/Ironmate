@@ -666,7 +666,15 @@ $("import-base64-button").onclick = guarded(async () => {
 });
 $("paste-image").onclick = guarded(async () => {
   if (!navigator.clipboard) throw new Error("このブラウザではClipboard APIを利用できません");
-  // Prefer image bytes when the browser exposes ClipboardItem.
+  // Text-first: explicit Base64 must not be shadowed by a stale image ClipboardItem.
+  if (navigator.clipboard.readText) {
+    const text = await navigator.clipboard.readText();
+    if (text.trim()) {
+      const { bytes, mime } = imageBase64(text);
+      return await importImageBytes(bytes, mime, "クリップボードBase64");
+    }
+  }
+  // Binary image fallback for clipboard providers without Base64 text.
   if (navigator.clipboard.read) {
     try {
       for (const item of await navigator.clipboard.read()) {

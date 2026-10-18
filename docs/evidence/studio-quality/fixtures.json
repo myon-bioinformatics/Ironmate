@@ -1,0 +1,40 @@
+{
+  "browser": "133.0.6943.0",
+  "fixtures": [
+    {
+      "name": "pixel-art",
+      "seed": 20261018,
+      "file": "pixel-art-20261018.png"
+    },
+    {
+      "name": "shapes",
+      "seed": 20261018,
+      "file": "shapes-20261018.png"
+    },
+    {
+      "name": "gradient",
+      "seed": 20261018,
+      "file": "gradient-20261018.png"
+    },
+    {
+      "name": "pixel-art",
+      "seed": 20261019,
+      "file": "pixel-art-20261019.png"
+    },
+    {
+      "name": "shapes",
+      "seed": 20261019,
+      "file": "shapes-20261019.png"
+    },
+    {
+      "name": "gradient",
+      "seed": 20261019,
+      "file": "gradient-20261019.png"
+    },
+    {
+      "name": "studio-demo",
+      "seed": null,
+      "file": "studio-demo.png"
+    }
+  ]
+}

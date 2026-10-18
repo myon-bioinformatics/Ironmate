@@ -139,6 +139,8 @@ const failures = [],
       moved.w,
   );
   await page.click("#custom");
+  // Explicitly choose stamp mode: editor state must not depend on previous tool.
+  await page.click('[data-tool="stamp"]');
   await page.mouse.click(box.x + box.width * 0.7, box.y + box.height * 0.25);
   await page.evaluate(() => window.IronmateStudio.ready);
   assert.equal(
@@ -366,6 +368,30 @@ const failures = [],
     }),
     "all 20 image previews use their processed pixels, including evicted cache entries",
   );
+  // Restore connectivity after the preceding offline-export regression.
+  await page.context().setOffline(false);
+  // Isolate the new ingress smoke from legacy editor tool/selection state.
+  await page.goto(url);
+  await page.evaluate(() => window.IronmateStudio.ready);
+  // Same real browser: feed exported PNG back via Base64 and clipboard.
+  const pngIn = await page.evaluate(async () => Array.from(
+    new Uint8Array(await (await IronmateStudio.pngBlob()).arrayBuffer())));
+  const inputText = "data:image/png;base64," + Buffer.from(pngIn).toString("base64");
+  await page.click("#blank");
+  await page.fill("#import-base64", inputText);
+  await page.click("#import-base64-button");
+  await page.waitForFunction(() => IronmateStudio.scene.layers.some(l => l.kind === "image"));
+  assert.equal(await page.evaluate(() => IronmateStudio.scene.layers.at(-1).kind), "image");
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.evaluate(text => navigator.clipboard.writeText(text), inputText);
+  await page.click("#paste-image");
+  await page.waitForFunction(() => IronmateStudio.scene.layers.filter(l => l.kind === "image").length === 2 || document.querySelector("#error")?.open);
+  assert.equal(await page.evaluate(() => IronmateStudio.scene.layers.filter(l => l.kind === "image").length), 2);
+  await page.fill("#import-base64", inputText.replace("image/png", "image/jpeg"));
+  await page.click("#import-base64-button");
+  await assert.doesNotReject(() => page.locator("#error").waitFor({state: "visible", timeout: 3000}));
+  assert.equal(await page.evaluate(() => IronmateStudio.scene.layers.filter(l => l.kind === "image").length), 2);
+  await page.locator("#error button").click();
   await page.setViewportSize({ width: 390, height: 844 });
   await page.click("#demo");
   await page.evaluate(() => window.IronmateStudio.ready);

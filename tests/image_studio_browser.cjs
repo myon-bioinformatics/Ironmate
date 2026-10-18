@@ -33,6 +33,7 @@ const server = spawn(
   { cwd: root, stdio: ["ignore", "pipe", "pipe"] },
 );
 let browser;
+let acceptHistoryTrim = true;
 const failures = [],
   requests = [];
 (async () => {
@@ -64,8 +65,12 @@ const failures = [],
   });
   page.on("pageerror", (e) => failures.push(e.message));
   page.on("request", (r) => requests.push(r.url()));
-  page.on("dialog", (dialog) => dialog.accept());
+  page.on("dialog", (dialog) =>
+    dialog.type() === "confirm" && !acceptHistoryTrim ? dialog.dismiss() : dialog.accept());
   await page.goto(url);
+  for (const id of ["save", "save-workspace", "trim-history", "open-workspace"])
+    assert.equal(await page.locator(`#${id}`).count(), 1, `required Studio control: ${id}`);
+  await page.waitForFunction(() => !!window.IronmateStudio, null, {timeout:10000});
   await page.evaluate(() => window.IronmateStudio.ready);
   await page.screenshot({
     path: path.join(out, "desktop.png"),
@@ -139,6 +144,8 @@ const failures = [],
       moved.w,
   );
   await page.click("#custom");
+  // Explicitly choose stamp mode: editor state must not depend on previous tool.
+  await page.click('[data-tool="stamp"]');
   await page.mouse.click(box.x + box.width * 0.7, box.y + box.height * 0.25);
   await page.evaluate(() => window.IronmateStudio.ready);
   assert.equal(
@@ -366,6 +373,71 @@ const failures = [],
     }),
     "all 20 image previews use their processed pixels, including evicted cache entries",
   );
+  // Restore connectivity after the preceding offline-export regression.
+  await page.context().setOffline(false);
+  // Workspace history roundtrip: retain undo/redo states and selected index.
+  const workspaceDownload = page.waitForEvent("download");
+  await page.click("#save-workspace");
+  const workspace = await workspaceDownload;
+  const workspacePath = path.join(out, "workspace-history.json");
+  await workspace.saveAs(workspacePath);
+  const historyData = JSON.parse(fs.readFileSync(workspacePath, "utf8"));
+  assert.equal(historyData.schema, "ironmate-studio-workspace/1");
+  assert(historyData.items.length >= 1 && historyData.items.length <= 40);
+  const historyCurrent = historyData.items[historyData.index];
+  await page.click("#blank");
+  await page.setInputFiles("#open-workspace", workspacePath);
+  await page.waitForFunction(() => document.querySelector("#status").textContent === "作業履歴を復元しました");
+  assert.deepEqual(await page.evaluate(() => IronmateStudio.scene), historyCurrent);
+  assert.equal(await page.locator("#history-list li").count(), historyData.items.length);
+  const restoredDownload = page.waitForEvent("download");
+  await page.click("#save-workspace");
+  const restoredPath = path.join(out, "workspace-restored.json");
+  await (await restoredDownload).saveAs(restoredPath);
+  assert.deepEqual(JSON.parse(fs.readFileSync(restoredPath, "utf8")), historyData);
+  await page.locator("#workspace-history summary").click();
+  acceptHistoryTrim = false;
+  await page.click("#trim-history");
+  assert.equal(await page.locator("#history-list li").count(), historyData.items.length);
+  acceptHistoryTrim = true;
+  await page.click("#trim-history");
+  await page.waitForFunction(() => document.querySelectorAll("#history-list li").length === 1);
+  assert.deepEqual(await page.evaluate(() => IronmateStudio.scene), historyCurrent);
+  assert(await page.locator("#undo").isDisabled());
+  assert(await page.locator("#redo").isDisabled());
+  // Invalid embedded PNG must leave the complete current workspace intact.
+  const brokenWorkspace = structuredClone(historyData);
+  const brokenImage = brokenWorkspace.items.flatMap(s => s.layers).find(l => l.kind === "image");
+  assert(brokenImage, "workspace fixture includes an embedded image");
+  brokenImage.src = "data:image/png;base64,AAAA";
+  await page.setInputFiles("#open-workspace", {name:"broken.json",mimeType:"application/json",
+    buffer:Buffer.from(JSON.stringify(brokenWorkspace))});
+  await page.locator("#error").waitFor({state:"visible"});
+  assert.deepEqual(await page.evaluate(() => IronmateStudio.scene), historyCurrent);
+  assert.equal(await page.locator("#history-list li").count(), 1);
+  await page.locator("#error button").click();
+  // Isolate the new ingress smoke from legacy editor tool/selection state.
+  await page.goto(url);
+  await page.evaluate(() => window.IronmateStudio.ready);
+  // Same real browser: feed exported PNG back via Base64 and clipboard.
+  const pngIn = await page.evaluate(async () => Array.from(
+    new Uint8Array(await (await IronmateStudio.pngBlob()).arrayBuffer())));
+  const inputText = "data:image/png;base64," + Buffer.from(pngIn).toString("base64");
+  await page.click("#blank");
+  await page.fill("#import-base64", inputText);
+  await page.click("#import-base64-button");
+  await page.waitForFunction(() => IronmateStudio.scene.layers.some(l => l.kind === "image"));
+  assert.equal(await page.evaluate(() => IronmateStudio.scene.layers.at(-1).kind), "image");
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.evaluate(text => navigator.clipboard.writeText(text), inputText);
+  await page.click("#paste-image");
+  await page.waitForFunction(() => IronmateStudio.scene.layers.filter(l => l.kind === "image").length === 2 || document.querySelector("#error")?.open);
+  assert.equal(await page.evaluate(() => IronmateStudio.scene.layers.filter(l => l.kind === "image").length), 2);
+  await page.fill("#import-base64", inputText.replace("image/png", "image/jpeg"));
+  await page.click("#import-base64-button");
+  await assert.doesNotReject(() => page.locator("#error").waitFor({state: "visible", timeout: 3000}));
+  assert.equal(await page.evaluate(() => IronmateStudio.scene.layers.filter(l => l.kind === "image").length), 2);
+  await page.locator("#error button").click();
   await page.setViewportSize({ width: 390, height: 844 });
   await page.click("#demo");
   await page.evaluate(() => window.IronmateStudio.ready);

@@ -16,11 +16,13 @@
     <header>
       <div class="brand">◈ IRONMATE <span>IMAGE STUDIO / 01</span></div>
       <div class="top-actions">
-        <button id="undo">↶ 戻す</button><button id="redo">↷ やり直す</button
-        ><button id="save">JSON保存</button
-        ><label class="button"
-          >開く<input id="open" type="file" accept=".json" /></label
-        ><button id="svg">SVG</button><button id="base64">Base64 / 渡す</button>
+        <button id="undo">↶ 戻す</button>
+        <button id="redo">↷ やり直す</button>
+        <button id="save">JSON保存</button>
+        <button id="save-workspace">作業履歴を保存</button>
+        <label class="button">作業履歴を開く<input id="open-workspace" type="file" accept=".json,application/json" /></label>
+        <label class="button">開く<input id="open" type="file" accept=".json" /></label>
+        <button id="svg">SVG</button><button id="base64">Base64 / 渡す</button>
         <select id="export-scale" aria-label="出力倍率">
           <option value="1">1×</option>
           <option value="2">2×</option>
@@ -76,7 +78,11 @@
             id="image"
             type="file"
             accept="image/png,image/jpeg,image/webp" /></label
-        ><button id="custom" class="wide">選択したレイヤーをスタンプに</button>
+        ><label class="button wide">＋ カメラから写真<input id="camera-image" type="file" accept="image/png,image/jpeg,image/webp" capture="environment" /></label
+        ><button id="paste-image" class="wide">クリップボードの画像を取り込む</button>
+        <label>Base64 / PNG data URIを貼り付け<textarea id="import-base64" rows="3" aria-label="画像Base64入力"></textarea></label>
+        <button id="import-base64-button" class="wide">Base64画像を取り込む</button>
+        <button id="custom" class="wide">選択したレイヤーをスタンプに</button>
         <p id="stamp-note" class="hint">
           文字・絵文字・図形・画像を繰り返し配置。
         </p>
@@ -143,6 +149,13 @@
         <div class="note">
           PNGは表示と同じ構成を画像化。SVGは図形・文字を保持。JSONで元画像とレイヤーを再編集できます。
         </div>
+        <details id="workspace-history">
+          <summary>作業履歴（最大40状態）</summary>
+          <ol id="history-list" aria-label="作業履歴"></ol>
+          <button id="trim-history">現在の状態だけ残す</button>
+          <p class="hint">履歴を整理すると過去の状態へ戻せなくなります。現在の画像・レイヤーは保持します。</p>
+          <p class="hint">履歴JSONは画像データを含む場合があります。共有時は内容を確認してください。</p>
+        </details>
       </section>
       <aside class="inspector">
         <p class="eyebrow">03 / LAYERS</p>

@@ -2,6 +2,8 @@
 (function (root) {
   "use strict";
   const SCHEMA = "ironmate-image-studio/1";
+  const WORKSPACE_SCHEMA = "ironmate-studio-workspace/1";
+  const WORKSPACE_MAX_BYTES = 32 * 1024 * 1024;
   const PALETTE = ["#440154", "#3B528B", "#21918C", "#5EC962", "#FDE725"];
   const clone = (x) => JSON.parse(JSON.stringify(x));
   const escape = (x) =>
@@ -441,8 +443,48 @@
       return this.current;
     }
   }
+  function workspaceShape(record) {
+    if (record?.schema !== WORKSPACE_SCHEMA ||
+        !Array.isArray(record.items) || record.items.length < 1 || record.items.length > 40 ||
+        !Number.isInteger(record.index) || record.index < 0 || record.index >= record.items.length)
+      fail("作業履歴の形式が不正です");
+  }
+  function workspaceSize(text) {
+    const bytes = new TextEncoder().encode(text).length;
+    if (bytes > WORKSPACE_MAX_BYTES) fail("作業履歴は32MiB以下にしてください。履歴を整理して再保存できます");
+    return bytes;
+  }
+  function workspaceText(history) {
+    const record = { schema: WORKSPACE_SCHEMA, items: history.items, index: history.index };
+    workspaceShape(record);
+    const parts = ['{"schema":' + JSON.stringify(WORKSPACE_SCHEMA) + ',"items":['];
+    const tail = '],"index":' + record.index + '}';
+    let bytes = workspaceSize(parts[0]) + workspaceSize(tail);
+    // Validate/serialize one state at a time and stop before assembling an oversize record.
+    for (let i = 0; i < record.items.length; i++) {
+      const part = (i ? ',' : '') + JSON.stringify(validate(record.items[i]));
+      bytes += workspaceSize(part);
+      if (bytes > WORKSPACE_MAX_BYTES) fail("作業履歴は32MiB以下にしてください。履歴を整理して再保存できます");
+      parts.push(part);
+    }
+    parts.push(tail);
+    return parts.join('');
+  }
+  function workspaceHistory(text) {
+    if (typeof text !== "string") fail("作業履歴の形式が不正です");
+    workspaceSize(text);
+    const record = JSON.parse(text);
+    workspaceShape(record);
+    const states = record.items.map(validate);
+    const next = new History(states[0]);
+    next.items = states;
+    next.index = record.index;
+    return next;
+  }
   const api = {
     SCHEMA,
+    WORKSPACE_SCHEMA,
+    WORKSPACE_MAX_BYTES,
     PALETTE,
     clone,
     escape,
@@ -456,6 +498,8 @@
     layerSVG,
     svg,
     History,
+    workspaceText,
+    workspaceHistory,
   };
   if (typeof module !== "undefined") module.exports = api;
   else root.StudioCore = api;

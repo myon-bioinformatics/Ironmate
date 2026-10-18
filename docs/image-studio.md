@@ -161,8 +161,25 @@ PPTX上で個々のスタンプをネイティブ図形として編集できる�
 ブラウザを閉じても自動復旧する機能はない。
 元画像を含むシーン全体を履歴に保持するため、画像が多いとメモリ消費が増える。
 
+### 作業履歴の保存・復元と整理
+
+「作業履歴を保存」は最大40状態と現在の位置を
+`ironmate-studio-workspace/1` JSONに保存する。「作業履歴を開く」で、画像を含む過去の状態と
+undo/redoの位置まで復元できる。単一シーンのJSON保存とは別のファイル形式である。
+保存・読込は共通の `StudioCore.workspaceText` / `workspaceHistory` を使い、
+32MiB以下のUTF-8実byte数、状態数、現在位置、各シーンを検査する。
+保存は状態ごとに容量を数え、上限超過時はdownloadも保存成功表示も行わない。
+読込は全状態の埋め込み画像をデコードできた後で編集状態を置き換える。
+読めない画像や不正な履歴を開いた場合、現在のシーン・履歴を保持する。
+
+履歴欄の「現在の状態だけ残す」は確認後に過去のundo/redo履歴を削除する。
+現在の画像・文字・図形・レイヤー属性は変更しない。容量超過時には、必要な履歴を先に別保存したうえで
+この操作を使い、現在のシーンから履歴を保存し直せる。
+画像を履歴状態間で重複排除する形式への変更や、ブラウザを閉じた後の自動復旧は含まない。
+
 ```sh
 python -m pytest -q tests/test_image_studio.py
+python -m pytest -q tests/test_studio_workspace.py
 # ブラウザとPPTXの証跡。test-only Playwrightと既存pptxgenjsが必要
 IRONMATE_CHROME=/path/to/chrome node tests/image_studio_browser.cjs
 ```

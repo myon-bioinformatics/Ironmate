@@ -95,6 +95,27 @@ async function prepare(doc) {
 function selectionSVG(l) {
   return `<g class="selection" transform="translate(${l.x} ${l.y}) rotate(${l.rotation} ${l.w / 2} ${l.h / 2})"><rect width="${l.w}" height="${l.h}" fill="none" stroke="#126fef" stroke-width="2" stroke-dasharray="8 5"/><rect class="handle" data-handle="resize" x="${l.w - 9}" y="${l.h - 9}" width="18" height="18" rx="3" fill="#126fef" stroke="white" stroke-width="2"/></g>`;
 }
+function updateHistoryTimeline() {
+  const list = $("history-list");
+  list.replaceChildren();
+  history.items.forEach((state, index) => {
+    const row = document.createElement("li");
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = (index === history.index ? "● " : "○ ") +
+      "状態 " + (index + 1) + " / " + state.layers.length + "レイヤー";
+    button.setAttribute("aria-current", index === history.index ? "step" : "false");
+    button.onclick = () => {
+      history.index = index;
+      scene = history.current;
+      selected = null;
+      dirty = true;
+      render().catch(error);
+    };
+    row.append(button);
+    list.append(row);
+  });
+}
 function updateInspector() {
   const l = selectedLayer();
   $("selection").textContent = l ? `${l.name || l.kind}` : "レイヤーを選択";
@@ -137,6 +158,7 @@ function updateInspector() {
   $("canvas-height").value = scene.height;
   $("transparent").checked = scene.background === "none";
   if (scene.background !== "none") $("background").value = scene.background;
+  updateHistoryTimeline();
   $("layers").replaceChildren();
   for (const layer of [...scene.layers].reverse()) {
     const button = document.createElement("button");
@@ -505,6 +527,38 @@ function download(name, data, type) {
   setTimeout(() => URL.revokeObjectURL(url), 10000);
   message(`${name}を書き出しました`);
 }
+$("save-workspace").onclick = guarded(async () => {
+  const record = {
+    schema: "ironmate-studio-workspace/1",
+    items: history.items.map(item => C.validate(copy(item))),
+    index: history.index,
+  };
+  download("ironmate-workspace.json", JSON.stringify(record, null, 2), "application/json");
+  message("作業履歴を保存しました");
+});
+$("open-workspace").onchange = guarded(async () => {
+  const input = $("open-workspace");
+  const file = input.files?.[0];
+  if (!file) return;
+  try {
+    if (file.size > 32 * 1024 * 1024) throw new Error("作業履歴は32MiB以下にしてください");
+    const record = JSON.parse(await file.text());
+    if (record?.schema !== "ironmate-studio-workspace/1" ||
+        !Array.isArray(record.items) || record.items.length < 1 || record.items.length > 40 ||
+        !Number.isInteger(record.index) || record.index < 0 || record.index >= record.items.length)
+      throw new Error("作業履歴の形式が不正です");
+    const states = record.items.map(item => C.validate(copy(item)));
+    const next = new C.History(states[0]);
+    next.items = states;
+    next.index = record.index;
+    history = next;
+    scene = next.current;
+    selected = null;
+    dirty = true;
+    await render();
+    message("作業履歴を復元しました");
+  } finally { input.value = ""; }
+});
 $("save").onclick = () => {
   download(
     "ironmate-scene.json",

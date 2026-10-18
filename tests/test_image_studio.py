@@ -1,4 +1,5 @@
 """Cross-runtime color/mosaic oracles, editable data, local server and output contracts."""
+import functools
 import json
 import random
 import shutil
@@ -124,18 +125,20 @@ def test_loopback_server_exposes_only_fixed_assets_no_project_files_or_posts():
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     base = f'http://127.0.0.1:{server.server_port}'
+    # fetch-guard: a stuck loopback server fails this test in 10 s instead of hanging CI.
+    get = functools.partial(urllib.request.urlopen, timeout=10)
     try:
-        with urllib.request.urlopen(base) as r:
+        with get(base) as r:
             assert 'Ironmate' in r.read().decode()
             assert "connect-src 'none'" in r.headers['Content-Security-Policy']
-        with urllib.request.urlopen(base+'/core.js') as r:
+        with get(base+'/core.js') as r:
             assert r.headers['Content-Type'].startswith('text/javascript')
         for path in ('/../AGENTS.md', '/vendor.lock.json', '/studio.js/../../README.md'):
             with pytest.raises(urllib.error.HTTPError) as err:
-                urllib.request.urlopen(base+path)
+                get(base+path)
             assert err.value.code == 404
         with pytest.raises(urllib.error.HTTPError) as err:
-            urllib.request.urlopen(urllib.request.Request(base, data=b'test'))
+            get(urllib.request.Request(base, data=b'test'))
         assert err.value.code == 501
     finally:
         server.shutdown()

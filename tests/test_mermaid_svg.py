@@ -72,6 +72,7 @@ def test_foreground_is_applied_before_svg_render_not_by_marp(monkeypatch, tmp_pa
     monkeypatch.setattr(mermaid_svg.shutil, "which", lambda binary: "/fake/mmdc")
     observed = []
     def fake_run(command, **kwargs):
+        assert "-c" not in command  # theme directive is not a config-file path
         source = Path(command[command.index("-i") + 1])
         observed.append(source.read_text(encoding="utf-8"))
         Path(command[command.index("-o") + 1]).write_text("<svg></svg>", encoding="utf-8")

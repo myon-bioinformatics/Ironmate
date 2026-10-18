@@ -43,8 +43,8 @@ def render_mermaid(source, directory, *, mmdc="mmdc", background="#FFFFFF", fore
         if foreground is not None:
             # Mermaid theme variables belong to the diagram source, never Marp CSS.
             node_fill = "#243552" if foreground.upper() == "#FFFFFF" else "#FFF4DD"
-            config = '%%{init: {"theme": "base", "themeVariables": {"primaryTextColor": "' + foreground + '", "lineColor": "' + foreground + '", "textColor": "' + foreground + '", "primaryColor": "' + node_fill + '", "secondaryColor": "' + node_fill + '", "tertiaryColor": "' + node_fill + '", "mainBkg": "' + node_fill + '"}}}%%\n'
-            diagram_for_render = config + diagram
+            directive = '%%{init: {"theme": "base", "themeVariables": {"primaryTextColor": "' + foreground + '", "lineColor": "' + foreground + '", "textColor": "' + foreground + '", "primaryColor": "' + node_fill + '", "secondaryColor": "' + node_fill + '", "tertiaryColor": "' + node_fill + '", "mainBkg": "' + node_fill + '"}}}%%\n'
+            diagram_for_render = directive + diagram
         else:
             diagram_for_render = diagram
         source_file.write_text(diagram_for_render, encoding="utf-8")

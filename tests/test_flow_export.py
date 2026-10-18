@@ -157,3 +157,12 @@ def test_cli_rejects_oversize_and_preserves_destination(tmp_path):
     src.write_text(json.dumps(SAMPLE)); out=tmp_path/'keep'; out.write_bytes(b'keep')
     result=subprocess.run([sys.executable,'-S',str(ROOT/'flow_export.py'),str(src),'--format','mermaid','-o',str(out)],capture_output=True)
     assert result.returncode==2 and out.read_bytes()==b'keep'
+
+
+@pytest.mark.parametrize('payload', [b'', b'\x89PNG\r\n\x1a\n', b'not PNG'])
+def test_shared_raster_rejects_truncated_browser_output(monkeypatch,payload):
+    monkeypatch.setattr(image_studio.shutil,'which',lambda _: '/fake/node')
+    monkeypatch.setattr(image_studio,'_find_chrome',lambda _: '/fake/chrome')
+    monkeypatch.setattr(image_studio.subprocess,'run',lambda *a,**k: SimpleNamespace(returncode=0,stdout=payload))
+    with pytest.raises(RuntimeError,match='unexpected PNG dimensions'):
+        image_studio.raster_svg(b'<svg width="100" height="100"/>')

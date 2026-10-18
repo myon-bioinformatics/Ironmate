@@ -236,7 +236,7 @@ def raster_svg(svg, *, chrome=None):
         if run.returncode:
             raise RuntimeError('Chrome PNG render failed: ' + run.stderr.decode(errors='replace')[-1000:])
         png = run.stdout
-        if png[:8] != b'\x89PNG\r\n\x1a\n' or struct.unpack('>II', png[16:24]) != (width, height):
+        if len(png) < 24 or png[:8] != b'\x89PNG\r\n\x1a\n' or struct.unpack('>II', png[16:24]) != (width, height):
             raise RuntimeError('Chrome returned unexpected PNG dimensions')
     if len(png) > 32*1024*1024:
         raise ValueError('PNG must be at most 32MiB; reduce output scale')

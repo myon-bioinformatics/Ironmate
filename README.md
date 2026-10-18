@@ -239,3 +239,5 @@ CSVをxlsxにする場合は [Excelワークブック](docs/xlsx-exceljs.md) を
 ## Common JSON flow diagrams
 
 [web-ui flow export](docs/flow-export.md) connects a single bounded JSON input to Mermaid Markdown, SVG, PNG, standard Base64 and PNG data URI, through Python/Node APIs and CLIs. It reuses the upstream contract and Image Studio raster output.
+
+Retain, edit and regenerate flow JSON with the [flow workspace CLI and Python/Node APIs](docs/flow-export.md#retained-json-workspace-import--patch--regenerate), while preserving the original UTF-8 source.

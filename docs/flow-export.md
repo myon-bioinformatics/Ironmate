@@ -92,3 +92,84 @@ these artifacts and installs/identifies Noto CJK for the Japanese fixture; fast
 unit tests do not require an external renderer. Inspect the preserved screenshot
 as well as numeric parity: identical missing-glyph boxes are not valid Japanese
 rendering.
+
+## Retained JSON workspace: import → patch → regenerate
+
+`flow_workspace.py` / `flow_workspace.cjs` add a reproducible **structural JSON**
+editing path. This is separate from the Image Studio pixel canvas: editing an
+imported PNG there does not update flow labels, and a PNG cannot recover the source
+JSON. A visual Studio scene importer is still outside this path.
+
+The `ironmate-flow/1` workspace stores `original_json` (the exact input UTF-8 text,
+including whitespace and omitted defaults) and `spec` (the validated, current
+web-ui JSON). Saving and loading preserves both. Original text is never patched;
+`original` extracts its bytes, while `spec` extracts the current JSON. Importing a
+new source creates a new workspace. Workspace files are bounded to 2MiB, original
+JSON to 256KiB, and patch documents including the working spec to 320KiB.
+
+Editing uses web-ui's byte-identical `tool/flow_patch.py` in an isolated Python
+process, with its required `tool/flow_diagram.py` kept in upstream relative layout
+under `vendor/web_ui/`. The Node workspace API wraps this same Python path. The
+locked native Node patcher and validator are also exercised for cross-language
+contract comparison. The existing flat renderer copy remains for compatibility;
+both validators, both patchers, the sample and MIT LICENSE are pinned together to
+merged web-ui #70, `fe00d9fab3366f6f51af640ad19168194bb8fc2c`.
+Do not edit these vendor bytes. Parent PR #112 registers the four additional
+runtime sources; the child lock records commit, Git blob and SHA-256 for each.
+
+```sh
+python -S flow_workspace.py import examples/flow.json -o work.flow.json
+# edits.json: [{"path":"/steps/0/title","value":"Reviewed"}]
+python -S flow_workspace.py patch work.flow.json edits.json -o edited.flow.json
+python -S flow_workspace.py render edited.flow.json --format svg -o edited.svg
+python -S flow_workspace.py render edited.flow.json --format png -o edited.png
+python -S flow_workspace.py render edited.flow.json --format base64 -o edited.base64.txt
+python -S flow_workspace.py original edited.flow.json -o original.json
+python -S flow_workspace.py spec edited.flow.json -o edited.json
+# Same CLI, including renderer options:
+node flow_workspace.cjs render edited.flow.json --format mermaid -o edited.md
+```
+
+Supported operations are exactly web-ui's array of `{path,value}` entries:
+`/title`, `/sources_label`, `/sources/<index>/title`, `/sources/<index>/note`,
+`/steps/<index>/title`, `/steps/<index>/note`. Indices are canonical decimal and
+must already exist. Up to 64 operations apply atomically, with final web-ui
+validation. No insertion/deletion, arbitrary JSON pointers or pixel changes.
+The upstream Mermaid renderer uses card labels and `sources_label`; `title` is
+retained metadata and is not drawn by that renderer.
+
+```python
+from pathlib import Path
+from flow_workspace import import_flow, patch_and_render, workspace_bytes
+workspace = import_flow(Path('examples/flow.json').read_bytes())
+updated, svg = patch_and_render(workspace,
+    [{'path': '/steps/0/note', 'value': 'reviewed'}], 'svg', mmdc='/path/to/mmdc')
+# Only receive replacement state and image after both patch and drawing succeed.
+Path('edited.flow.json').write_bytes(workspace_bytes(updated))
+Path('edited.svg').write_bytes(svg)
+```
+
+```js
+const {importFlow, patchAndRender} = require('./flow_workspace.cjs');
+const fs = require('node:fs');
+const original = importFlow(fs.readFileSync('examples/flow.json', 'utf8'));
+const {workspace, image} = patchAndRender(original,
+  [{path:'/steps/0/note', value:'reviewed'}], {format:'png', mmdc:'/path/to/mmdc'});
+// workspace is detached; image is the existing Buffer-returning PNG export.
+```
+
+Invalid patches and renderer failures leave caller state untouched. CLI output is
+fully computed before any destination is opened; `--force` uses the shared atomic
+file replacement. Each CLI command writes one file. Saving a workspace and image
+in two separate commands is not a multi-file transaction; a later drawing failure
+does not roll back a previously saved valid workspace. Use `patch_and_render` /
+`patchAndRender` to compute both before deciding to persist either.
+
+`tests/test_flow_workspace.py` covers exact original-byte recovery, detached state,
+64/65 operations, invalid late operations, files surviving failure, and Python /
+Node wrapper / native upstream parity. The existing real-renderer integration
+also saves original/edited JSON, before/after PNG, edited SVG/Mermaid/Base64/data URI,
+and hashes under `build/test-results/flow-export/workspace/`. It checks changed
+pixels and exact Python/Node PNG and transport identity. These artifacts are
+included by the existing browser CI lane. Run with the same environment shown
+above plus `python -m pytest -q tests/test_flow_workspace.py`.

@@ -17,7 +17,7 @@ ALM agents can use the same mechanism in a disposable checkout:
 
 ```bash
 git clone https://github.com/myon-bioinformatics/myon-bioinformatics.git .vendor-sync-tools
-git -C .vendor-sync-tools checkout --detach 147deb3f8695ee166b67ff79cbef56f4de92cb6c
+git -C .vendor-sync-tools checkout --detach 3016beba79b2818e810d5ac1132fe901266f296b
 python -S .vendor-sync-tools/vendor_sync.py check --manifest vendor.lock.json
 python -S .vendor-sync-tools/vendor_sync.py materialize --manifest vendor.lock.json
 python -S .vendor-sync-tools/vendor_sync.py check --manifest vendor.lock.json

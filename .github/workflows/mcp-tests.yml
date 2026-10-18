@@ -50,7 +50,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: myon-bioinformatics/myon-bioinformatics
-          ref: 147deb3f8695ee166b67ff79cbef56f4de92cb6c
+          ref: 3016beba79b2818e810d5ac1132fe901266f296b
           path: .vendor-sync-tools
           persist-credentials: false
       - name: Verify checked-in vendor copies

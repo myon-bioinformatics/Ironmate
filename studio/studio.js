@@ -528,14 +528,7 @@ function download(name, data, type) {
   message(`${name}を書き出しました`);
 }
 $("save-workspace").onclick = guarded(async () => {
-  const record = {
-    schema: "ironmate-studio-workspace/1",
-    items: history.items.map(item => C.validate(copy(item))),
-    index: history.index,
-  };
-  const serialized = JSON.stringify(record, null, 2);
-  if (new Blob([serialized]).size > 32 * 1024 * 1024)
-    throw new Error("作業履歴が32MiBを超えました。単一シーン保存または履歴の整理を行ってください");
+  const serialized = C.workspaceText(history);
   download("ironmate-workspace.json", serialized, "application/json");
   message("作業履歴を保存しました");
 });
@@ -544,16 +537,12 @@ $("open-workspace").onchange = guarded(async () => {
   const file = input.files?.[0];
   if (!file) return;
   try {
-    if (file.size > 32 * 1024 * 1024) throw new Error("作業履歴は32MiB以下にしてください");
-    const record = JSON.parse(await file.text());
-    if (record?.schema !== "ironmate-studio-workspace/1" ||
-        !Array.isArray(record.items) || record.items.length < 1 || record.items.length > 40 ||
-        !Number.isInteger(record.index) || record.index < 0 || record.index >= record.items.length)
-      throw new Error("作業履歴の形式が不正です");
-    const states = record.items.map(item => C.validate(copy(item)));
-    const next = new C.History(states[0]);
-    next.items = states;
-    next.index = record.index;
+    if (file.size > C.WORKSPACE_MAX_BYTES) throw new Error("作業履歴は32MiB以下にしてください");
+    const next = C.workspaceHistory(await file.text());
+    // Decode every state's images before replacing the editable workspace.
+    const sources = new Set(next.items.flatMap(state => state.layers
+      .filter(layer => layer.kind === "image").map(layer => layer.src)));
+    for (const src of sources) await decoded(src);
     history = next;
     scene = next.current;
     selected = null;
@@ -561,6 +550,13 @@ $("open-workspace").onchange = guarded(async () => {
     await render();
     message("作業履歴を復元しました");
   } finally { input.value = ""; }
+});
+$("trim-history").onclick = guarded(async () => {
+  if (!window.confirm("現在の状態だけ残して、過去の作業履歴を削除しますか？")) return;
+  history = new C.History(scene);
+  dirty = true;
+  await render();
+  message("現在の画像・レイヤーを残して履歴を整理しました");
 });
 $("save").onclick = () => {
   download(

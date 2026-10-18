@@ -16,11 +16,13 @@
     <header>
       <div class="brand">◈ IRONMATE <span>IMAGE STUDIO / 01</span></div>
       <div class="top-actions">
-        <button id="undo">↶ 戻す</button><button id="redo">↷ やり直す</button
-        ><button id="save">JSON保存</button<button id="save-workspace">作業履歴を保存</button><label class="button">作業履歴を開く<input id="open-workspace" type="file" accept=".json,application/json" /></label>
-        ><label class="button"
-          >開く<input id="open" type="file" accept=".json" /></label
-        ><button id="svg">SVG</button><button id="base64">Base64 / 渡す</button>
+        <button id="undo">↶ 戻す</button>
+        <button id="redo">↷ やり直す</button>
+        <button id="save">JSON保存</button>
+        <button id="save-workspace">作業履歴を保存</button>
+        <label class="button">作業履歴を開く<input id="open-workspace" type="file" accept=".json,application/json" /></label>
+        <label class="button">開く<input id="open" type="file" accept=".json" /></label>
+        <button id="svg">SVG</button><button id="base64">Base64 / 渡す</button>
         <select id="export-scale" aria-label="出力倍率">
           <option value="1">1×</option>
           <option value="2">2×</option>
@@ -147,7 +149,13 @@
         <div class="note">
           PNGは表示と同じ構成を画像化。SVGは図形・文字を保持。JSONで元画像とレイヤーを再編集できます。
         </div>
-<details id="workspace-history"><summary>作業履歴（最大40状態）</summary><ol id="history-list" aria-label="作業履歴"></ol><p class="hint">履歴JSONは画像データを含む場合があります。共有時は内容を確認してください。</p></details>
+        <details id="workspace-history">
+          <summary>作業履歴（最大40状態）</summary>
+          <ol id="history-list" aria-label="作業履歴"></ol>
+          <button id="trim-history">現在の状態だけ残す</button>
+          <p class="hint">履歴を整理すると過去の状態へ戻せなくなります。現在の画像・レイヤーは保持します。</p>
+          <p class="hint">履歴JSONは画像データを含む場合があります。共有時は内容を確認してください。</p>
+        </details>
       </section>
       <aside class="inspector">
         <p class="eyebrow">03 / LAYERS</p>

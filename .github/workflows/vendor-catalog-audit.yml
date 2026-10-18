@@ -26,7 +26,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           repository: myon-bioinformatics/myon-bioinformatics
-          ref: 1eda992aa6fa31a902e2c06428e53ab17e8fe3c1
+          ref: a9df23dec720f125772a24b77b413552d60060ba
           path: .vendor-audit-tools
           persist-credentials: false
           sparse-checkout: |

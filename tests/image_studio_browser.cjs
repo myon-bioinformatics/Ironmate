@@ -368,6 +368,8 @@ const failures = [],
     }),
     "all 20 image previews use their processed pixels, including evicted cache entries",
   );
+  // Restore connectivity after the preceding offline-export regression.
+  await page.context().setOffline(false);
   // Isolate the new ingress smoke from legacy editor tool/selection state.
   await page.goto(url);
   await page.evaluate(() => window.IronmateStudio.ready);

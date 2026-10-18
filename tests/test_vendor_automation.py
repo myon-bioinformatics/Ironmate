@@ -12,7 +12,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ".github/workflows/mcp-tests.yml"
-PIN = "1eda992aa6fa31a902e2c06428e53ab17e8fe3c1"
+PIN = "24d2fbed652872266b3f73a05fc8b0d5013519c4"
 
 
 def _workflow():

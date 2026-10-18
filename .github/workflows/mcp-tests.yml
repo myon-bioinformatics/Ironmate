@@ -200,6 +200,41 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+  studio-clipboard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install isolated test-only Playwright and browser
+        run: |
+          npm install --prefix build/clipboard-tools --no-save --ignore-scripts --package-lock=false playwright@1.58.2
+          node build/clipboard-tools/node_modules/playwright/cli.js install --with-deps ${{ matrix.browser }}
+      - name: Verify clipboard ingress in the static Pages build
+        env:
+          IRONMATE_BROWSERS: ${{ matrix.browser }}
+          IRONMATE_PLAYWRIGHT_MODULE: ${{ github.workspace }}/build/clipboard-tools/node_modules/playwright
+        run: node tests/studio_clipboard.cjs
+      - name: Preserve clipboard browser evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: studio-clipboard-${{ matrix.browser }}
+          path: build/studio-clipboard/
+          if-no-files-found: warn
+          retention-days: 14
+
   failure-identity:
     needs: [test, marp-integration]
     if: always()

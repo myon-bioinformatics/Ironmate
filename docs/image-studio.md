@@ -42,6 +42,57 @@ Flutter main `13905a4d90f97daa73069d6fbff43acd6a65a760` の
 Flutterのコード・ビルド・CIを変更せず、既存のクリップボード欄へ貼り付けるための受け渡しである。
 Flutter上の実操作を今回再実行したという意味ではない。既存Pythonの厳密なBase64 decoderとPNGバイト一致で検証した。
 
+## 画像入力とクリップボードの形式選択
+
+ファイル選択・カメラ用file input・明示的なBase64入力・クリップボード画像を同じ検証・PNG正規化経路に渡す。
+ファイル選択のキャンセルではシーンを変更しない。`capture`はOS/ブラウザへのヒントであり、カメラ起動を保証しない。
+
+クリップボードの「画像を取り込む」は次の順で選択する。
+
+1. 有効な画像Base64/data URIがテキストとして読めれば優先する。
+2. 明示的な`data:image/...`、またはPNG/JPEG/WebPの先頭バイトを持つ生Base64が不正ならエラーにする。
+   別の古い画像を黙って取り込まない。MIME不一致、デコード失敗、容量超過も含む。
+3. 無関係な通常テキスト（画像以外のBase64を含む）・空文字列・テキスト取得失敗では、
+   `clipboard.read()`からPNG/JPEG/WebPを探す。取得できない形式/項目があっても後続の画像を試す。
+4. 取得できなければ、権限拒否・API非対応・取得失敗・画像なし・不正画像を区別する。
+   テキスト取得の権限拒否だけで中断しない。両方失敗した場合の優先度は、権限拒否→不正画像→その他取得失敗。
+
+エラーダイアログの`data-code`には`clipboard-denied`、`clipboard-unsupported`、
+`clipboard-read-failed`、`clipboard-no-image`、`clipboard-invalid-image`を設定する。
+Clipboard APIには安全なコンテキスト（HTTPS/localhost）、ユーザー操作や権限が必要で、対応範囲はOS/ブラウザ依存。
+非対応/拒否時は既存のファイル選択・Base64入力を利用できる。
+
+Flutter main `f8fe4e81d783258a4b8c730ea400acb7167372a2`の
+[PhotoImportLimits](https://github.com/myon-bioinformatics/flutter_navigation_basic/blob/f8fe4e81d783258a4b8c730ea400acb7167372a2/lib/features/photo_studio/data/photo_import_limits.dart)と
+[Base64ImageBridge](https://github.com/myon-bioinformatics/flutter_navigation_basic/blob/f8fe4e81d783258a4b8c730ea400acb7167372a2/lib/shared/clipboard/base64_image_bridge.dart)を参照した仕様差：
+
+| 項目 | Ironmate | Flutter Photo Studio |
+| --- | --- | --- |
+| 入力byte上限 | 32MiB（Base64復号後、バイナリも同じ） | 32MiB |
+| 画像画素上限 | 4,194,304画素（既存の4MP制限を維持） | 40,000,000画素 |
+| 取込時の縮小 | なし。上限超過は明示的に拒否 | 既定2/3、文書の長辺4096以下へ縮小 |
+| 保存画像 | 検証後PNG正規化、取込寸法を維持 | PNG正規化・縮小 |
+
+Ironmateの4MPは既存のモザイク処理・描画負荷を制限する意図的な上限。
+40MPの取得・安全な縮小は今回未対応。デコード後にCanvas縮小するだけではデコード時のメモリ負荷は抑えられず、
+元画像を保持する仕様にも影響するため、自動縮小・40MP対応への変更は別途検証する。
+既存シーンの埋込PNGは1画像12,000,000文字、合計20,000,000文字の制限もあり、入力32MiBがすべて保存可能という意味ではない。
+
+再現（テスト専用Playwright 1.58.2、ランタイム依存の追加なし）：
+
+```sh
+npm install --prefix build/clipboard-tools --no-save --ignore-scripts --package-lock=false playwright@1.58.2
+node build/clipboard-tools/node_modules/playwright/cli.js install --with-deps chromium firefox webkit
+IRONMATE_PLAYWRIGHT_MODULE="$PWD/build/clipboard-tools/node_modules/playwright" node tests/studio_clipboard.cjs
+```
+
+静的ビルドの`/Ironmate/`サブパスで、実ブラウザのUI・PNG/JPEG/WebPデコード・RGBA・入力byte/画素境界・キャンセルを確認する。
+形式の共存・権限拒否・非対応はClipboard API境界のテストダブルで再現する。
+Chromiumでは追加で実`ClipboardItem`に通常テキストとPNGを同時に書き、ボタン経由で読む。
+Firefox/WebKitのOSクリップボード連携、Android/iOS実機、実カメラはこのテストの成功からは主張しない。
+CIは3エンジンを独立実行し、バージョン・検証項目・画面を`studio-clipboard-*` artifactへ保存する。
+今回の取得処理はIronmate内に留め、2系統以上での実利用を確認するまでweb-uiへ移さない。
+
 ## 時計・矢印・顔文字と単色のスタンプ
 
 「時計」は入力した時刻のスナップショットで、12目盛りと2本の針を図形として保存する。

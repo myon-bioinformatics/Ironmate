@@ -139,6 +139,8 @@ const failures = [],
       moved.w,
   );
   await page.click("#custom");
+  // Explicitly choose stamp mode: editor state must not depend on previous tool.
+  await page.click('[data-tool="stamp"]');
   await page.mouse.click(box.x + box.width * 0.7, box.y + box.height * 0.25);
   await page.evaluate(() => window.IronmateStudio.ready);
   assert.equal(

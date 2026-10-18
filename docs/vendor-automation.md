@@ -17,7 +17,7 @@ ALM agents can use the same mechanism in a disposable checkout:
 
 ```bash
 git clone https://github.com/myon-bioinformatics/myon-bioinformatics.git .vendor-sync-tools
-git -C .vendor-sync-tools checkout --detach 3016beba79b2818e810d5ac1132fe901266f296b
+git -C .vendor-sync-tools checkout --detach 990f5165da97214e8213ea0a99ae1b03569efe0c
 python -S .vendor-sync-tools/vendor_sync.py check --manifest vendor.lock.json
 python -S .vendor-sync-tools/vendor_sync.py materialize --manifest vendor.lock.json
 python -S .vendor-sync-tools/vendor_sync.py check --manifest vendor.lock.json
@@ -44,8 +44,8 @@ Pages/Docker continue shipping checked-in bytes; CI does not write back to main.
 The existing `paths` trigger means upstream-only changes wait for a matching
 consumer change.
 
-The shared profile MIT LICENSE is locked at `443b8a94bbc6801332e0abd9f2e56da68173b38d`
-and included in staged evidence.
+The shared profile MIT LICENSE is included in staged evidence. Its adopted
+commit and exact hashes are recorded in `vendor.lock.json`.
 
 The PR observation consumer enrolls the parent's canonical `gh_ops.py` with
 adjacent GHI. Its baseline is recorded in `vendor.lock.json`.
@@ -53,6 +53,8 @@ adjacent GHI. Its baseline is recorded in `vendor.lock.json`.
 The catalog audit compares the checked-in lock before candidate enrollment.
 Candidates are checked in a separate disposable root and never replace the
 adopted lock or vendor bytes. Explicit catalog skips are not enrollment targets.
-The pinned parent registry still contains retired git_inspector/vendor_sync
-entries; the existing CI projection removes only those two entries until the
-parent registry correction is adopted. This does not certify parent-main parity.
+The existing projection of retired git_inspector/vendor_sync entries remains
+idempotent. The pinned merged parent #112 registry includes the flow workspace
+runtime and records Ironmate #126 as its reviewed baseline. Parent CI verified
+the adopted source blobs, LICENSE and child files at that immutable revision;
+a later CI-only pin update leaves that adopted lock and runtime byte-for-byte unchanged.

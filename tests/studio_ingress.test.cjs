@@ -14,5 +14,5 @@ test("MIME mismatch and limit", () => {
   assert.throws(() => decode(b64, png.length - 1));
 });
 test("missing padding", () => {
-  assert.throws(() => decode(png.toString("base64").replace(/=+$/, "")));
+  assert.throws(() => decode(Buffer.concat([png, Buffer.from("x")]).toString("base64").replace(/=+$/, "")));
 });

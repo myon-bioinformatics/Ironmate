@@ -95,6 +95,21 @@ const failures = [],
     ),
   );
 
+  // Workspace history roundtrip: retain undo/redo states and selected index.
+  const workspaceDownload = page.waitForEvent("download");
+  await page.click("#save-workspace");
+  const workspace = await workspaceDownload;
+  const workspacePath = path.join(out, "workspace-history.json");
+  await workspace.saveAs(workspacePath);
+  const historyData = JSON.parse(fs.readFileSync(workspacePath, "utf8"));
+  assert.equal(historyData.schema, "ironmate-studio-workspace/1");
+  assert(historyData.items.length >= 1 && historyData.items.length <= 40);
+  const historyCurrent = historyData.items[historyData.index];
+  await page.click("#blank");
+  await page.setInputFiles("#open-workspace", workspacePath);
+  await page.waitForFunction(expected => JSON.stringify(IronmateStudio.scene) === JSON.stringify(expected), historyCurrent);
+  assert.deepEqual(await page.evaluate(() => IronmateStudio.scene), historyCurrent);
+  assert.equal(await page.locator("#history-list li").count(), historyData.items.length);
   await page.click("#blank");
   await page.evaluate(() => window.IronmateStudio.ready);
   assert.equal(

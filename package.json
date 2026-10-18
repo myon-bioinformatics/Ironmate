@@ -4,6 +4,10 @@
   "dependencies": {
     "exceljs": "4.4.0",
     "pptxgenjs": "4.0.1",
-    "xlsx": "0.18.5"
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
+  },
+  "overrides": {
+    "image-size": "2.0.4",
+    "uuid": "14.0.3"
   }
 }

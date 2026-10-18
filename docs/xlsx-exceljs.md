@@ -7,7 +7,7 @@ python xlsx_csv.py -o book.xlsx --border --autofilter 売上=costs.csv メモ=no
 python xlsx_csv.py --spec book.json -o book.xlsx
 ```
 
-Node.js 22 and `npm ci` are required (pinned `exceljs@4.4.0` and `xlsx@0.18.5`). The same lockfile also pins `pptxgenjs@4.0.1` for the slide package. Ironmate does not install them. They are not in `vendor.lock.json`.
+Node.js 22 and `npm ci` are required (pinned `exceljs@4.4.0` and SheetJS `xlsx@0.20.3` from the official CDN tarball). The same lockfile also pins `pptxgenjs@4.0.1` for the slide package. Ironmate does not install them. They are not in `vendor.lock.json`.
 
 `vendor/oci-cost-analysis.py` still imports pandas to print two columns from a CSV. That file is a locked vendor copy and is not part of this converter. PowerPoint tables still read CSV with the stdlib `csv` module.
 

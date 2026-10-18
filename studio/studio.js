@@ -533,7 +533,10 @@ $("save-workspace").onclick = guarded(async () => {
     items: history.items.map(item => C.validate(copy(item))),
     index: history.index,
   };
-  download("ironmate-workspace.json", JSON.stringify(record, null, 2), "application/json");
+  const serialized = JSON.stringify(record, null, 2);
+  if (new Blob([serialized]).size > 32 * 1024 * 1024)
+    throw new Error("作業履歴が32MiBを超えました。単一シーン保存または履歴の整理を行ってください");
+  download("ironmate-workspace.json", serialized, "application/json");
   message("作業履歴を保存しました");
 });
 $("open-workspace").onchange = guarded(async () => {

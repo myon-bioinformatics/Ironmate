@@ -88,4 +88,7 @@ Python/Node PNG byte identity and Base64/data URI decoding identity. The browser
 check opens the fixed sample, compares exact PNG/transport pixels through Canvas and records the
 SVG-to-PNG white-composited mean error (tolerance <2 on a 0–255 scale), verifies escaping without remote requests or script execution,
 and saves `sample.html` and `browser.png`. The existing browser CI lane preserves
-these artifacts; fast unit tests do not require an external renderer.
+these artifacts and installs/identifies Noto CJK for the Japanese fixture; fast
+unit tests do not require an external renderer. Inspect the preserved screenshot
+as well as numeric parity: identical missing-glyph boxes are not valid Japanese
+rendering.

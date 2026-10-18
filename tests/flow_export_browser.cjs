@@ -5,6 +5,11 @@ const http = require("node:http");
 const {chromium} = require("playwright");
 const root = path.resolve(__dirname,".."), dir = path.join(root,"build/test-results/flow-export");
 (async()=>{
+  let cjkFont=null;
+  if(process.env.IRONMATE_FLOW_REQUIRE_CJK === "1") {
+    cjkFont=require("node:child_process").execFileSync("fc-match",["-f","%{family}",":lang=ja"],{encoding:"utf8"});
+    assert(/Noto.*CJK/i.test(cjkFont),'Japanese evidence requires Noto CJK, got '+cjkFont);
+  }
   const allowed = new Set(['sample.html','sample.svg','sample.png','escaped.svg']);
   const server = http.createServer((req,res)=>{
     const name=req.url.slice(1);
@@ -63,7 +68,7 @@ const root = path.resolve(__dirname,".."), dir = path.join(root,"build/test-resu
     assert.deepEqual(errors,[]);assert.deepEqual(remote,[]);
     const report=JSON.parse(fs.readFileSync(path.join(dir,"report.json"),"utf8"));
     Object.assign(report,{browser:await browser.version(),png_transport_pixels_match:true,svg_png_white_composited_mae:mae,svg_png_changed_pixels:changed,
-      image_count:images.length,page_errors:errors,remote_requests:remote});
+      image_count:images.length,cjk_font:cjkFont,page_errors:errors,remote_requests:remote});
     fs.writeFileSync(path.join(dir,"report.json"),JSON.stringify(report,null,2)+'\n');
     console.log(JSON.stringify(report));
   } finally {if(browser) await browser.close();await new Promise(resolve=>server.close(resolve));}

@@ -140,6 +140,11 @@ jobs:
           python -m pip install "pytest>=8,<10"
           npm ci
           npm install --no-save --ignore-scripts @marp-team/marp-cli@4.5.1 @mermaid-js/mermaid-cli@12.0.0 playwright@1.58.2
+      - name: Install Japanese fonts for diagram evidence
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y fonts-noto-cjk
+          fc-match ':lang=ja'
       - name: Locate browser
         shell: bash
         run: |
@@ -154,6 +159,7 @@ jobs:
       - name: Exercise common JSON flow formats and browser pixel parity
         env:
           IRONMATE_RUN_FLOW_INTEGRATION: "1"
+          IRONMATE_FLOW_REQUIRE_CJK: "1"
           IRONMATE_MMDC_BIN: node_modules/.bin/mmdc
           IRONMATE_CHROME: /usr/bin/google-chrome
           PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome

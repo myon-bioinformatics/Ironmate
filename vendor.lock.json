@@ -57,8 +57,8 @@
     },
     {
       "repository": "myon-bioinformatics/myon-bioinformatics",
-      "ref": "a9df23dec720f125772a24b77b413552d60060ba",
-      "commit": "a9df23dec720f125772a24b77b413552d60060ba",
+      "ref": "8faa7a74895a48cf33a46f0c9fcb0210f61f81a8",
+      "commit": "8faa7a74895a48cf33a46f0c9fcb0210f61f81a8",
       "source": "LICENSE",
       "destination": "vendor/myon-bioinformatics-LICENSE",
       "blob_sha": "4ec4989b801bf1a3df6184d21f79e6e7ed5931f6",
@@ -66,26 +66,26 @@
     },
     {
       "repository": "myon-bioinformatics/myon-bioinformatics",
-      "ref": "a9df23dec720f125772a24b77b413552d60060ba",
-      "commit": "a9df23dec720f125772a24b77b413552d60060ba",
+      "ref": "8faa7a74895a48cf33a46f0c9fcb0210f61f81a8",
+      "commit": "8faa7a74895a48cf33a46f0c9fcb0210f61f81a8",
       "source": "gh_ops.py",
       "destination": "vendor/gh_ops.py",
-      "blob_sha": "46813b3bfab179b68ac7242935d106b785e68b71",
-      "sha256": "07e13926140647b2979a1d17e224989d2f812f915890251e9d63d296f85483be"
+      "blob_sha": "1741ffedf55cb9624507224ad8a00cf78553c4c2",
+      "sha256": "3f9be2015bdfa86daec100b9595db8b6f78511d83f1e8b3f48b8fed60e594dba"
     },
     {
       "repository": "myon-bioinformatics/gh_identity",
-      "ref": "fc2c527257b12eb99c00637bbae74f8988fd6bf4",
-      "commit": "fc2c527257b12eb99c00637bbae74f8988fd6bf4",
+      "ref": "8a04a246484b3d73e1e2d41d70b14ac4e476bdf3",
+      "commit": "8a04a246484b3d73e1e2d41d70b14ac4e476bdf3",
       "source": "gh_identity.py",
       "destination": "vendor/gh_identity.py",
-      "blob_sha": "57f96181fecaef0a6f19bf5052b93d9bdcab69c5",
-      "sha256": "864c63af6f68d4d2baeb076bbcad0905f1973d3b0092f8f8b3f776f3ecd5ad95"
+      "blob_sha": "2c48d5352330990ce0e0415e8ef0474a5c3c68e5",
+      "sha256": "a4d5908074094070369505e13d8e379b8b6869f1de328d433ed102bbbf9e8470"
     },
     {
       "repository": "myon-bioinformatics/gh_identity",
-      "ref": "fc2c527257b12eb99c00637bbae74f8988fd6bf4",
-      "commit": "fc2c527257b12eb99c00637bbae74f8988fd6bf4",
+      "ref": "8a04a246484b3d73e1e2d41d70b14ac4e476bdf3",
+      "commit": "8a04a246484b3d73e1e2d41d70b14ac4e476bdf3",
       "source": "LICENSE",
       "destination": "vendor/gh_identity-LICENSE",
       "blob_sha": "4ec4989b801bf1a3df6184d21f79e6e7ed5931f6",

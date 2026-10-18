@@ -107,7 +107,7 @@ const failures = [],
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
   await page.evaluate(text => navigator.clipboard.writeText(text), inputText);
   await page.click("#paste-image");
-  await page.waitForFunction(() => IronmateStudio.scene.layers.filter(l => l.kind === "image").length === 2);
+  await page.waitForFunction(() => IronmateStudio.scene.layers.filter(l => l.kind === "image").length === 2 || document.querySelector("#error")?.open);
   assert.equal(await page.evaluate(() => IronmateStudio.scene.layers.filter(l => l.kind === "image").length), 2);
   await page.fill("#import-base64", inputText.replace("image/png", "image/jpeg"));
   await page.click("#import-base64-button");

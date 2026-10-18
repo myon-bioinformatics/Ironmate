@@ -201,14 +201,36 @@ def render_scene(scene, format='svg', scale=1, chrome=None, data_uri=False):
     svg = _node_scene(processed, scale=scale).encode()
     if format == 'svg':
         return svg
+    return _png_output(raster_svg(svg, chrome=chrome), format, data_uri)
+
+
+def _png_output(png, format='png', data_uri=False):
+    if format == 'png':
+        return png
+    if len(png) > 32*1024*1024:
+        raise ValueError('Flutter clipboard PNG must be at most 32MiB; reduce output scale')
+    return (('data:image/png;base64,' if data_uri else '') + base64.b64encode(png).decode()).encode()
+
+
+def raster_svg(svg, *, chrome=None):
+    """Rasterize trusted, locally generated SVG using the Studio Chrome backend.
+
+    This is not an arbitrary/untrusted SVG import API. Callers validate their
+    source and dimensions; remote HTTP(S) resources are blocked by raster.cjs.
+    """
     from xml.etree import ElementTree
     root = ElementTree.fromstring(svg)
     width, height = int(root.attrib['width']), int(root.attrib['height'])
+    if not (1 <= width <= 8192 and 1 <= height <= 8192 and width * height <= 16777216):
+        raise ValueError('output must be each side <=8192px and <=16MP')
+    node = shutil.which('node')
+    if not node:
+        raise RuntimeError('PNG export requires Node.js 22 or newer')
     with tempfile.TemporaryDirectory(prefix='ironmate-studio-render-') as temp:
         directory = Path(temp)
         html = directory / 'render.html'
         html.write_bytes(b'<!doctype html><meta charset="utf-8"><style>html,body{margin:0;padding:0;overflow:hidden}svg{display:block}</style>' + svg)
-        command = [shutil.which('node'), str(ROOT / 'studio' / 'raster.cjs'), _find_chrome(chrome),
+        command = [node, str(ROOT / 'studio' / 'raster.cjs'), _find_chrome(chrome),
                    str(html), str(directory / 'profile'), str(width), str(height)]
         run = subprocess.run(command, capture_output=True, timeout=40)
         if run.returncode:
@@ -216,11 +238,10 @@ def render_scene(scene, format='svg', scale=1, chrome=None, data_uri=False):
         png = run.stdout
         if png[:8] != b'\x89PNG\r\n\x1a\n' or struct.unpack('>II', png[16:24]) != (width, height):
             raise RuntimeError('Chrome returned unexpected PNG dimensions')
-    if format == 'png':
-        return png
     if len(png) > 32*1024*1024:
-        raise ValueError('Flutter clipboard PNG must be at most 32MiB; reduce output scale')
-    return (('data:image/png;base64,' if data_uri else '') + base64.b64encode(png).decode()).encode()
+        raise ValueError('PNG must be at most 32MiB; reduce output scale')
+    return png
+
 
 
 class StudioHandler(BaseHTTPRequestHandler):

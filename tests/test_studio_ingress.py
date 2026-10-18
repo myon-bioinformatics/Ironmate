@@ -22,7 +22,7 @@ class PortableIngressTests(unittest.TestCase):
 
     def test_padding(self):
         with self.assertRaises(ValueError):
-            decode(base64.b64encode(PNG).decode().rstrip("="))
+            decode(base64.b64encode(PNG + b"x").decode().rstrip("="))
 
 
 if __name__ == "__main__":

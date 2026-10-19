@@ -51,3 +51,19 @@ def compare_rgba(width, height, reference, candidate, *, radius=2, threshold=0):
         "Alignment_dy": best[2],
         "Alignment_L1_Pixels": abs(best[1]) + abs(best[2]),
     }
+
+
+def foreground_mask(pixels):
+    # Composite onto white before measuring RGB distance. Fixed threshold, never fitted.
+    return {i for i,p in enumerate(pixels)
+            if max((255-c)*p[3]/255 for c in p[:3]) > 32}
+
+
+def reference_energy(pixels, width, height):
+    # Nonnegative integer local RGB edge energy, frozen from reference for all variants.
+    def rgb(p):
+        return tuple((c*p[3]+255*(255-p[3]))//255 for c in p[:3])
+    values = [rgb(p) for p in pixels]
+    return [sum(abs(a-b) for j in (i+1 if i%width+1<width else i,
+                                 i+width if i//width+1<height else i)
+                for a,b in zip(values[i],values[j])) for i in range(width*height)]

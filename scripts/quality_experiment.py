@@ -9,7 +9,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from photo_grid import decode_png
 from studio_alignment import invert_translation, translate_rgba
-from studio_image_quality import compare_rgba
+from studio_image_quality import compare_rgba, foreground_mask as _mask, reference_energy as _energy
 from studio_shape_metrics import metrics
 
 
@@ -25,22 +25,6 @@ def _png(width, height, pixels):
     raw = b''.join(b'\0'+bytes(c for p in pixels[y*width:(y+1)*width] for c in p) for y in range(height))
     return (b'\x89PNG\r\n\x1a\n'+chunk(b'IHDR',struct.pack('>IIBBBBB',width,height,8,6,0,0,0))
             +chunk(b'IDAT',zlib.compress(raw,9))+chunk(b'IEND',b''))
-
-
-def _mask(pixels):
-    # Composite onto white before measuring RGB distance. Fixed threshold, never fitted.
-    return {i for i,p in enumerate(pixels)
-            if max((255-c)*p[3]/255 for c in p[:3]) > 32}
-
-
-def _energy(pixels, width, height):
-    # Nonnegative integer local RGB edge energy, frozen from reference for all variants.
-    def rgb(p):
-        return tuple((c*p[3]+255*(255-p[3]))//255 for c in p[:3])
-    values = [rgb(p) for p in pixels]
-    return [sum(abs(a-b) for j in (i+1 if i%width+1<width else i,
-                                 i+width if i//width+1<height else i)
-                for a,b in zip(values[i],values[j])) for i in range(width*height)]
 
 
 def _measure(fn, repeats):

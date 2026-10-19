@@ -213,3 +213,8 @@ __marimo__/
 docs/consumer-v1/
 docs/.consumer-v1-stash-*/
 .vendor-sync-tools/
+
+# --- common ignores (shared) ---
+.DS_Store
+Thumbs.db
+# --- end common ignores ---

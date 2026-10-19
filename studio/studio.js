@@ -684,7 +684,7 @@ function sniffImageMime(bytes) {
       &&[87,69,66,80].every((v,i)=>bytes[i+8]===v)) return "image/webp";
   return null;
 }
-function imageBase64(text) {
+function imageBase64(text, maxBytes = 32 * 1024 * 1024) {
   let value = text.replace(/^\uFEFF/, "").trim();
   const header = /^data:([a-z0-9.+-]+\/[a-z0-9.+-]+)?(?:;[a-z0-9.+-]+=[a-z0-9.+-]+)*;base64,/i.exec(value);
   let mime = null;
@@ -693,15 +693,22 @@ function imageBase64(text) {
     if (mime === "image/jpg") mime = "image/jpeg";
     value = value.slice(header[0].length);
   } else if (/^data:/i.test(value)) throw new Error("data URIが不正です");
+  if (mime && !["image/png", "image/jpeg", "image/webp"].includes(mime))
+    throw new Error("対応していない画像MIMEです");
   const compact = value.replace(/\s+/g, "");
-  if (!compact || compact.length > 4 * Math.ceil(32 * 1024 * 1024 / 3)
+  if (!compact || compact.length > 4 * Math.ceil(maxBytes / 3)
       || compact.length % 4 || !/^[A-Za-z0-9+/]*={0,2}$/.test(compact))
     throw new Error("Base64形式または容量が不正です");
+  const size = compact.length / 4 * 3 - (compact.endsWith("==") ? 2 : compact.endsWith("=") ? 1 : 0);
+  if (size > maxBytes) throw new Error("画像は残り容量以下にしてください");
   const binary = atob(compact);
   const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
-  if (bytes.length > 32 * 1024 * 1024 || btoa(binary) !== compact)
+  if (btoa(binary) !== compact)
     throw new Error("Base64のパディングまたは容量が不正です");
-  return { bytes, mime };
+  const actual = sniffImageMime(bytes);
+  if (!actual || (mime && mime !== actual))
+    throw new Error("画像形式またはMIME宣言が実データと一致しません");
+  return { bytes, mime: actual };
 }
 async function importPickedFile(input) {
   const file = input.files?.[0];
@@ -932,6 +939,77 @@ window.addEventListener("beforeunload", (e) => {
 });
 // --- Clipboard Shelf ---
 const shelfItems = [];
+const SHELF_MAX_BYTES = 32 * 1024 * 1024;
+let shelfReservedBytes = 0, shelfReservedCount = 0, shelfGeneration = 0;
+function shelfRemaining() {
+  return SHELF_MAX_BYTES - shelfReservedBytes - shelfItems.reduce((sum, item) => sum + item.size, 0);
+}
+function checkShelfCapacity(size) {
+  if (shelfItems.length + shelfReservedCount >= 20)
+    throw new Error("シェルフの項目は最大20件までです");
+  if (size > shelfRemaining()) throw new Error("シェルフ全体は32MiB以下にしてください");
+}
+function shelfTextSize(text) {
+  const remaining = shelfRemaining();
+  if (text.length > remaining) throw new Error("シェルフ全体は32MiB以下にしてください");
+  let size = 0;
+  for (const char of text) {
+    const code = char.codePointAt(0);
+    size += code <= 0x7f ? 1 : code <= 0x7ff ? 2 : code <= 0xffff ? 3 : 4;
+    if (size > remaining) throw new Error("シェルフ全体は32MiB以下にしてください");
+  }
+  return size;
+}
+function isImageText(text) {
+  if (/^data:/i.test(text)) return true;
+  let prefix = "";
+  for (const char of text) {
+    if (!/\s/.test(char)) prefix += char;
+    if (prefix.length === 16) break;
+  }
+  if (prefix.startsWith("iVBORw0KGg") || prefix.startsWith("/9j/")) return true;
+  try { return !!sniffImageMime(Uint8Array.from(atob(prefix), c => c.charCodeAt(0))); }
+  catch { return false; }
+}
+function addShelfText(text, label) {
+  const value = text.replace(/^\uFEFF/, "").trim();
+  if (!value) throw new Error("テキストを入力してください");
+  checkShelfCapacity(0);
+  if (isImageText(value)) {
+    const { bytes, mime } = imageBase64(value, shelfRemaining());
+    addShelfItem(bytes, mime, null, label);
+  } else addShelfItem(null, null, value, label);
+}
+function checkShelfGeneration(generation) {
+  if (generation !== shelfGeneration) throw new Error("シェルフはクリアされました");
+}
+async function addShelfBlob(blob, mime, generation) {
+  checkShelfGeneration(generation);
+  if (blob.type && blob.type.toLowerCase() !== mime)
+    throw new Error("画像MIMEが一致しません");
+  if (!blob.size) throw new Error("画像が空です");
+  checkShelfCapacity(blob.size); // Must precede arrayBuffer(), including in-flight additions.
+  shelfReservedBytes += blob.size;
+  shelfReservedCount++;
+  let bytes;
+  try { bytes = new Uint8Array(await blob.arrayBuffer()); }
+  finally { shelfReservedBytes -= blob.size; shelfReservedCount--; }
+  checkShelfGeneration(generation);
+  addShelfItem(bytes, mime, null, "クリップボード画像");
+}
+async function shelfCopyText(item) {
+  if (!item.bytes) return item.rawText;
+  // FileReader produces a portable data URI, never the preview's transient blob URL.
+  return await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(new Blob([item.bytes], { type: item.mime }));
+  });
+}
+function releaseShelfItem(item) {
+  if (item.dataUrl) URL.revokeObjectURL(item.dataUrl);
+}
 function updateShelfBadge() {
   if ($("shelf-button")) $("shelf-button").textContent = `クリップボード・シェルフ (${shelfItems.length})`;
 }
@@ -987,7 +1065,7 @@ function renderShelf() {
     const btnCopy = document.createElement("button");
     btnCopy.textContent = "コピー";
     btnCopy.onclick = guarded(async () => {
-      await navigator.clipboard.writeText(item.rawText || item.dataUrl || "");
+      await navigator.clipboard.writeText(await shelfCopyText(item));
       if ($("shelf-status")) $("shelf-status").textContent = `「${item.label}」をクリップボードにコピーしました`;
     });
     actions.append(btnCopy);
@@ -995,7 +1073,8 @@ function renderShelf() {
     const btnDel = document.createElement("button");
     btnDel.textContent = "削除";
     btnDel.onclick = () => {
-      shelfItems.splice(index, 1);
+      const current = shelfItems.indexOf(item);
+      if (current !== -1) releaseShelfItem(shelfItems.splice(current, 1)[0]);
       renderShelf();
     };
     actions.append(btnDel);
@@ -1005,7 +1084,18 @@ function renderShelf() {
   });
 }
 function addShelfItem(bytes, mime, rawText, label = "シェルフ項目") {
-  if (shelfItems.length >= 20) throw new Error("シェルフの項目は最大20件までです");
+  // This is also the final gate for binary callers and rechecks after async reads.
+  const size = bytes ? bytes.length : shelfTextSize(rawText || "");
+  checkShelfCapacity(size);
+  if (bytes) {
+    const actual = bytes instanceof Uint8Array && sniffImageMime(bytes);
+    if (!actual || (mime && mime.toLowerCase() !== actual))
+      throw new Error("画像形式またはMIME宣言が実データと一致しません");
+    mime = actual;
+    rawText = null; // Avoid retaining another full Base64 copy of an image.
+  } else if (mime || isImageText((rawText || "").trim())) {
+    throw new Error("画像入力には検証済みデータが必要です");
+  }
   let dataUrl = null;
   if (bytes && mime) {
     const blob = new Blob([bytes], { type: mime });
@@ -1020,6 +1110,7 @@ function addShelfItem(bytes, mime, rawText, label = "シェルフ項目") {
     dataUrl,
     label,
     sizeText,
+    size,
   });
   renderShelf();
 }
@@ -1031,6 +1122,8 @@ if ($("shelf-button")) {
 }
 if ($("shelf-clear")) {
   $("shelf-clear").onclick = () => {
+    shelfGeneration++;
+    shelfItems.forEach(releaseShelfItem);
     shelfItems.length = 0;
     renderShelf();
     if ($("shelf-status")) $("shelf-status").textContent = "シェルフをクリアしました";
@@ -1039,34 +1132,38 @@ if ($("shelf-clear")) {
 if ($("shelf-paste-clip")) {
   $("shelf-paste-clip").onclick = guarded(async () => {
     if (!navigator.clipboard) throw new Error("Clipboard APIが使用できません");
+    const generation = shelfGeneration;
+    checkShelfCapacity(0);
+    let text = "";
     if (navigator.clipboard.readText) {
-      const text = await navigator.clipboard.readText();
-      if (text.trim()) {
-        try {
-          const { bytes, mime } = imageBase64(text);
-          addShelfItem(bytes, mime, text, "クリップボードBase64");
-          if ($("shelf-status")) $("shelf-status").textContent = "クリップボードのBase64画像を追加しました";
-          return;
-        } catch {
-          // Fall through if text is plain text or binary clipboard read is needed
-        }
+      // A denied text permission may still allow a binary clipboard image.
+      try { text = await navigator.clipboard.readText(); } catch { /* try binary API */ }
+      checkShelfGeneration(generation);
+      if (text.trim() && isImageText(text.trim())) {
+        addShelfText(text, "クリップボードBase64");
+        if ($("shelf-status")) $("shelf-status").textContent = "クリップボードのBase64画像を追加しました";
+        return;
       }
     }
     if (navigator.clipboard.read) {
-      for (const item of await navigator.clipboard.read()) {
+      let items = [];
+      try { items = await navigator.clipboard.read(); }
+      catch (e) { if (!text.trim()) throw e; }
+      checkShelfGeneration(generation);
+      for (const item of items) {
         const type = item.types.find(t => ["image/png", "image/jpeg", "image/webp"].includes(t));
         if (type) {
           const blob = await item.getType(type);
-          const bytes = new Uint8Array(await blob.arrayBuffer());
-          addShelfItem(bytes, type, null, "クリップボード画像");
+          await addShelfBlob(blob, type, generation);
           if ($("shelf-status")) $("shelf-status").textContent = "クリップボードの画像を追加しました";
           return;
         }
+        if (item.types.some(t => t.startsWith("image/")))
+          throw new Error("対応していない画像MIMEです");
       }
     }
-    const raw = await navigator.clipboard.readText();
-    if (raw.trim()) {
-      addShelfItem(null, null, raw, "クリップボードテキスト");
+    if (text.trim()) {
+      addShelfText(text, "クリップボードテキスト");
       if ($("shelf-status")) $("shelf-status").textContent = "テキスト項目を追加しました";
     } else {
       throw new Error("クリップボードに画像またはテキストがありません");
@@ -1077,14 +1174,8 @@ if ($("shelf-add-text")) {
   $("shelf-add-text").onclick = guarded(async () => {
     const val = ($("shelf-input-text").value || "").trim();
     if (!val) throw new Error("テキストを入力してください");
-    try {
-      const { bytes, mime } = imageBase64(val);
-      addShelfItem(bytes, mime, val, "入力Base64画像");
-      if ($("shelf-status")) $("shelf-status").textContent = "Base64画像項目を追加しました";
-    } catch {
-      addShelfItem(null, null, val, "入力テキスト");
-      if ($("shelf-status")) $("shelf-status").textContent = "テキスト項目を追加しました";
-    }
+    addShelfText(val, "入力項目");
+    if ($("shelf-status")) $("shelf-status").textContent = "項目を追加しました";
     $("shelf-input-text").value = "";
   });
 }
@@ -1098,7 +1189,7 @@ window.IronmateStudio = {
     return render();
   },
   pngBlob,
-  shelfItems,
+  get shelfItems() { return shelfItems.map(item => ({ ...item })); },
   addShelfItem,
 };
 scene = demo();

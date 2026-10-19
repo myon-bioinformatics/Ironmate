@@ -97,12 +97,13 @@ def build(shots, *, tile_w=160, tile_h=320, reference=None, expected_pages=(), e
     if not shots:
         raise ValueError('no screenshots found')
     pages = sorted({p for p, _ in shots} | set(expected_pages))
-    envs = sorted({e for _, e in shots} | set(expected_envs))
+    captured_envs = {e for _, e in shots}
+    envs = sorted(captured_envs | set(expected_envs))
     if any(not isinstance(n, str) or not _NAME.fullmatch(n) for n in pages + envs):
         raise ValueError('page and environment names must be plain path components')
     if reference is None:
-        reference = 'Linux-chromium-desktop' if 'Linux-chromium-desktop' in envs else envs[0]
-    elif reference not in envs:
+        reference = 'Linux-chromium-desktop' if 'Linux-chromium-desktop' in captured_envs else sorted(captured_envs)[0]
+    elif reference not in captured_envs:
         raise ValueError(f'reference environment {reference!r} has no screenshots')
     tiles, cells = {}, []
     for (page, env), path in sorted(shots.items()):

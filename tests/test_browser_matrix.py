@@ -65,9 +65,9 @@ def test_sheet_report_and_tiles_from_a_btk_tree(tmp_path):
 def test_reference_choice_and_input_errors(tmp_path):
     tree(tmp_path, {('p', 'macOS-webkit-desktop', 'width-384'): (24, 40, (0, 0, 0, 255))})
     shots = bm.find_shots(tmp_path)
-    assert bm.build(shots, tile_w=16, tile_h=16)[0]['reference'] == 'macOS-webkit-desktop'
+    assert bm.build(shots, tile_w=16, tile_h=16, expected_envs=['Linux-chromium-desktop'])[0]['reference'] == 'macOS-webkit-desktop'
     with pytest.raises(ValueError, match='reference environment'):
-        bm.build(shots, tile_w=16, tile_h=16, reference='Linux-chromium-desktop')
+        bm.build(shots, tile_w=16, tile_h=16, reference='Linux-chromium-desktop', expected_envs=['Linux-chromium-desktop'])
     for size in ((8, 16), (16, 2000), (16.0, 16), (20, 16), (16, 36)):
         with pytest.raises(ValueError, match='multiples of 8'):
             bm.build(shots, tile_w=size[0], tile_h=size[1])

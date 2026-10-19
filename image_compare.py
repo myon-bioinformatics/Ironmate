@@ -79,6 +79,20 @@ def balance_score(mae, rmse, mae_weight=0.5):
     return 100*(1-(mae_weight*mae+(1-mae_weight)*rmse)/255)
 
 
+def select_candidates(rows):
+    """Existing MAE/RMSE policy, reusable for any same-reference candidate pool."""
+    if not rows:
+        raise ValueError('candidate pool must not be empty')
+    mae = min(rows, key=lambda r: (r['rgb_mae'], r['rgb_rmse'], r['index']))
+    rmse = min(rows, key=lambda r: (r['rgb_rmse'], r['rgb_mae'], r['index']))
+    balanced = min(rows, key=lambda r: (-r['balance_score'], r['rgb_mae'], r['rgb_rmse'], r['index']))
+    pareto = [r['index'] for r in rows if not any(
+        s['rgb_mae'] <= r['rgb_mae'] and s['rgb_rmse'] <= r['rgb_rmse'] and
+        (s['rgb_mae'] < r['rgb_mae'] or s['rgb_rmse'] < r['rgb_rmse']) for s in rows)]
+    return {'roles': {'mae_priority': mae['index'], 'rmse_priority': rmse['index'],
+                      'balanced': balanced['index']}, 'pareto_indices': pareto}
+
+
 def analyze(reference, nearest, smooth, steps=10, mae_weight=0.5, background=(255, 255, 255)):
     if type(steps) is not int or not 2 <= steps <= 100 or steps % 2:
         raise ValueError('steps must be an even integer within 2..100')
@@ -93,20 +107,15 @@ def analyze(reference, nearest, smooth, steps=10, mae_weight=0.5, background=(25
         row = {'index': k, 'smooth_fraction': k/steps, **metrics(reference, image, background)}
         row['balance_score'] = balance_score(row['rgb_mae'], row['rgb_rmse'], mae_weight)
         rows.append(row)
-    mae = min(rows, key=lambda r: (r['rgb_mae'], r['rgb_rmse'], r['index']))
-    rmse = min(rows, key=lambda r: (r['rgb_rmse'], r['rgb_mae'], r['index']))
-    balanced = min(rows, key=lambda r: (-r['balance_score'], r['rgb_mae'], r['rgb_rmse'], r['index']))
-    pareto = [r['index'] for r in rows if not any(
-        s['rgb_mae'] <= r['rgb_mae'] and s['rgb_rmse'] <= r['rgb_rmse'] and
-        (s['rgb_mae'] < r['rgb_mae'] or s['rgb_rmse'] < r['rgb_rmse']) for s in rows)]
+    selection = select_candidates(rows)
     report = {'schema': 'ironmate-image-tradeoff/1', 'width': reference[0], 'height': reference[1],
               'background_rgb': list(background), 'mae_weight': mae_weight,
               'score_definition': '100*(1-(mae_weight*RGB_MAE+(1-mae_weight)*RGB_RMSE)/255)',
               'blend_definition': 'premultiplied 8-bit sRGB, integer rounding; 0=nearest, 1=smooth',
               'selection_scope': 'oracle on this reference only; not an unknown-image quality estimate',
-              'roles': {'mae_priority': mae['index'], 'rmse_priority': rmse['index'],
-                        'midpoint': steps//2, 'balanced': balanced['index']},
-              'pareto_indices': pareto, 'candidates': rows}
+              'roles': {'mae_priority': selection['roles']['mae_priority'], 'rmse_priority': selection['roles']['rmse_priority'],
+                        'midpoint': steps//2, 'balanced': selection['roles']['balanced']},
+              'pareto_indices': selection['pareto_indices'], 'candidates': rows}
     return report, images
 
 
@@ -134,11 +143,23 @@ def main(argv=None):
     p.add_argument('--out', required=True, type=Path)
     p.add_argument('--steps', type=int, default=10)
     p.add_argument('--mae-weight', type=float, default=0.5)
+    p.add_argument('--quality', action='store_true', help='add foreground, color and registration diagnostics')
+    p.add_argument('--select-by', choices=('rgb_mae', 'rgb_rmse', 'balance_score', 'iou', 'energy_dice', 'near_field', 'rgba_similarity'))
+    p.add_argument('--max-missing-foreground', type=int)
     args = p.parse_args(argv)
     try:
+        if args.select_by or args.max_missing_foreground is not None:
+            if not args.quality:
+                raise ValueError('--select-by and --max-missing-foreground require --quality')
         sources = {k: getattr(args, k).read_bytes() for k in ('reference', 'nearest', 'smooth')}
         report, images = analyze(*(read_png(sources[k]) for k in ('reference', 'nearest', 'smooth')),
                                  steps=args.steps, mae_weight=args.mae_weight)
+        if args.quality:
+            from studio_candidate_selection import enrich_sweep, select_quality
+            enrich_sweep(report, images, read_png(sources['reference']))
+            report['quality']['selection'] = select_quality(
+                report['quality']['candidates'], objective=args.select_by or 'balance_score',
+                max_missing_foreground=args.max_missing_foreground)
         report['input_sha256'] = {k: hashlib.sha256(v).hexdigest() for k, v in sources.items()}
         if args.out.is_symlink() or (args.out.exists() and (not args.out.is_dir() or any(args.out.iterdir()))):
             raise FileExistsError('output must be a new or empty directory')
@@ -148,8 +169,15 @@ def main(argv=None):
             write_output(str(args.out/row['file']), png(image))
         for role, index in report['roles'].items():
             write_output(str(args.out/(role+'.png')), (args.out/f'variant-{index:02d}.png').read_bytes())
+        if args.quality:
+            chosen = report['quality']['selection']['selected_index']
+            if chosen is not None:
+                write_output(str(args.out/'quality_selected.png'), (args.out/f'variant-{chosen:02d}.png').read_bytes())
         write_output(str(args.out/'report.json'), (json.dumps(report, indent=2, allow_nan=False)+'\n').encode())
-        print(json.dumps(report['roles']))
+        output = dict(report['roles'])
+        if args.quality:
+            output['quality_selected'] = report['quality']['selection']['selected_index']
+        print(json.dumps(output))
     except (OSError, ValueError) as e:
         print(f'error: {e}', file=sys.stderr)
         return 2

@@ -53,3 +53,46 @@ PNG寸法とSHA-256による完全一致を扱う。画素誤差・候補補間�
 web-uiの完全一致検査を緩めるものとして扱わない。
 
 [実験記録](evidence/studio-delivery/tradeoff-report.md) に、元の比較と別seedの成功・悪化を両方保存する。
+
+## 形状・色・欠損を併記して選ぶ（任意）
+
+```sh
+python -S image_compare.py --reference truth.png --nearest nearest.png --smooth smooth.png \
+  --quality --select-by energy_dice --max-missing-foreground 0 --out variants-quality
+```
+
+`--quality` は既存候補を変更せず、`report.json` の `quality` に同一基準画像での
+IoU、Dice、Energy Dice、Near Field、RGBA類似度、未補正の前景欠け・過剰画素数、
+位置合わせの移動量と切り落としを追加する。形状定義は110ケースの実験と同じ
+白背景への合成・白からの距離>32、基準固定の前方エッジ重み、探索半径2である。
+既定のMAE/RMSE用レポートと4役割のPNGは従来どおり。
+診断は候補合計1MPまで（従来の拡大候補生成は16MPまで）。追加依存は不要。
+
+`--select-by` は `rgb_mae` / `rgb_rmse` / `balance_score` / `iou` /
+`energy_dice` / `near_field` / `rgba_similarity` から選ぶ。省略時は従来のBalanced。
+選択した元候補を `quality_selected.png` に保存し、選択indexを標準出力にも返す。
+`--max-missing-foreground N` は未補正の前景欠け画素数の上限。
+前景マスクでの欠けであり、情報消失の正確な数や可逆性を保証するものではない。
+条件を満たさない場合は `selected_index: null` と除外理由を記録し、選択PNGを作らない。
+Energy Diceの未定義値も同様に除外し、別指標へ自動で切り替えない。
+これらのフラグは `--quality` を必要とする。
+
+`studio_candidate_selection.select_quality()` は共通API。
+同じ寸法と基準RGBAのSHA-256を持つ候補だけを受け付ける。
+`max_source_clipped_nonfill` で変換時の既知の切り落としも制約にできる。
+由来が不明な候補はこの制約から除外する。通常の入力PNGから変換履歴を推測せず、
+`source_clipped_nonfill` は `null`。位置合わせ操作の切り落としとは別に扱う。
+
+全指標について同点集合も残す。MAE/RMSE/Balancedの同点処理は既存の副誤差→index、
+他の指標はindex順。全同点時の先頭選択は画質優位を意味しない。
+`quality.summary.legacy` はMAE/RMSEの既存Pareto集合、`quality_pareto` は
+MAE・RMSE・IoU・Energy Dice・Near Fieldの明示した5軸。
+DiceはIoUと同順位であり、今回の不透明画像のRGBA類似度はMAEと同順位なので、
+既定の5軸には加えない。透明画像ではRGBAと表示RGB誤差が異なるため、必要なら
+`pareto_indices(rows, axes=...)` で軸を明示する。
+欠損を隠し得るAligned IoUや処理時間は既定の画質Paretoに含めない。
+未定義の軸がある候補はPareto計算から除外し、そのindexを明示する。
+
+[110ケースとの照合・拡大と縮小の再現実験](evidence/studio-quality-selection/report.md)
+には指標の重複、順位逆転、位置合わせ時の欠損、観測処理時間を分けて記録した。
+基準付きの探索的選択であり、人間による知覚評価や未知画像の普遍的な最高画質判定ではない。

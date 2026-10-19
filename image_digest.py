@@ -1,3 +1,5 @@
+# image_digest.py
+# __all__: 6
 """Many images with a status each -> one small, self-contained review page (and a Markdown summary).
 
 Generic: rows and columns are any labels (pages x environments, cases x devices, slides x
@@ -22,12 +24,16 @@ import argparse
 import base64
 import html
 import json
+import os
 from pathlib import Path
 import re
+import stat
 import sys
 
 from browser_matrix import encode_png, tile as thumbnail
 from photo_grid import decode_png
+
+__all__ = ['validate', 'page_html', 'summary_markdown', 'build', 'write', 'main']
 
 SCHEMA = 'ironmate-image-digest-input/1'
 OUT_SCHEMA = 'ironmate-image-digest/1'
@@ -79,18 +85,42 @@ def validate(spec):
     return {'title': title, 'rows': rows, 'cols': cols, 'cells': out, 'meta': meta}
 
 
-def _thumbs(data, base, tile):
-    out = {}
+def _thumbs(data, base, sizes):
+    # Keep encoded thumbnails, not every full-resolution image, across shrink passes.
+    root = Path(base).resolve(strict=True)
+    if not root.is_dir():
+        raise ValueError('base must be an input directory')
+    out, cache = {size: {} for size in sizes}, {}
     for cell in data['cells']:
         if not cell['image']:
             continue
-        path = Path(base) / cell['image']
-        raw = path.read_bytes()
-        if len(raw) > MAX_IMAGE_BYTES:
-            raise ValueError(f'{cell["image"]}: larger than 32MiB')
-        width, height, rows = decode_png(raw, max_pixels=4096 * 4096)
-        out[cell['row'], cell['col']] = encode_png(*thumbnail(width, height, rows, *tile))
+        path = (root / cell['image']).resolve(strict=True)
+        if not path.is_relative_to(root):
+            raise ValueError(f'{cell["image"]}: image must stay inside the input directory')
+        if path not in cache:
+            info = path.stat()
+            if not stat.S_ISREG(info.st_mode):
+                raise ValueError(f'{cell["image"]}: image must be a regular file')
+            if info.st_size > MAX_IMAGE_BYTES:
+                raise ValueError(f'{cell["image"]}: larger than 32MiB')
+            with path.open('rb') as stream:
+                if os.fstat(stream.fileno()).st_size > MAX_IMAGE_BYTES:
+                    raise ValueError(f'{cell["image"]}: larger than 32MiB')
+                raw = stream.read(MAX_IMAGE_BYTES + 1)
+            # A file may grow after the size check: the read is still bounded.
+            if len(raw) > MAX_IMAGE_BYTES:
+                raise ValueError(f'{cell["image"]}: larger than 32MiB')
+            width, height, rows = decode_png(raw, max_pixels=4096 * 4096)
+            cache[path] = {size: encode_png(*thumbnail(width, height, rows, *size)) for size in sizes}
+            del raw, rows
+        for size in sizes:
+            out[size][cell['row'], cell['col']] = cache[path][size]
     return out
+
+
+def _markdown_cell(value):
+    text = html.escape(' '.join(value.split()), quote=False)
+    return re.sub(r'([\\`*_\[\]])', r'\\\1', text).replace('|', '&#124;')
 
 
 def page_html(data, thumbs, tile):
@@ -142,7 +172,7 @@ def summary_markdown(data, *, marker='<!-- ironmate-image-digest -->'):
                 bad.append(f'{col} (not run)')
             elif cell['status'] != 'pass':
                 bad.append(f"{col} ({', '.join(cell['notes'][:2]) or cell['status']})")
-        lines.append(f"| {row} | {len(ok)}/{len(data['cols'])} | {'; '.join(bad) or '-'} |")
+        lines.append(f"| {_markdown_cell(row)} | {len(ok)}/{len(data['cols'])} | {_markdown_cell('; '.join(bad) or '-')} |")
     return '\n'.join(lines) + '\n'
 
 
@@ -151,14 +181,20 @@ def build(spec, base, *, max_bytes=1_000_000, tile=(64, 128)):
     data = validate(spec)
     if type(max_bytes) is not int or not 20_000 <= max_bytes <= 20_000_000:
         raise ValueError('max_bytes must be 20000..20000000')
-    if not all(type(v) is int for v in tile) or not (MIN_TILE[0] <= tile[0] <= 640 and MIN_TILE[1] <= tile[1] <= 1280):
+    if (not isinstance(tile, (tuple, list)) or len(tile) != 2 or not all(type(v) is int for v in tile)
+            or not (MIN_TILE[0] <= tile[0] <= 640 and MIN_TILE[1] <= tile[1] <= 1280)):
         raise ValueError('tile must be within 16..640 x 32..1280 pixels')
-    while True:
-        page = page_html(data, _thumbs(data, base, tile), tile)
+    tile = tuple(tile)
+    sizes = [tile]
+    while sizes[-1] != MIN_TILE:
+        w, h = sizes[-1]
+        sizes.append((max(MIN_TILE[0], w // 2), max(MIN_TILE[1], h // 2)))
+    thumbs = _thumbs(data, base, sizes)
+    for tile in sizes:
+        page = page_html(data, thumbs[tile], tile)
         size = len(page.encode('utf-8'))
         if size <= max_bytes or tile == MIN_TILE:
             break
-        tile = (max(MIN_TILE[0], tile[0] // 2), max(MIN_TILE[1], tile[1] // 2))  # a quarter of the pixels
     info = {'schema': OUT_SCHEMA, 'tile': list(tile), 'bytes': size, 'fits': size <= max_bytes,
             'rows': len(data['rows']), 'cols': len(data['cols']),
             'passed': sum(1 for c in data['cells'] if c['status'] == 'pass'),
@@ -169,7 +205,7 @@ def build(spec, base, *, max_bytes=1_000_000, tile=(64, 128)):
 
 def write(out, page, summary, info):
     out = Path(out)
-    if out.is_symlink() or (out.exists() and any(out.iterdir())):
+    if out.is_symlink() or (out.exists() and (not out.is_dir() or any(out.iterdir()))):
         raise ValueError(f'{out} must be a new or empty directory')
     out.mkdir(parents=True, exist_ok=True)
     (out / 'digest.html').write_text(page, encoding='utf-8')

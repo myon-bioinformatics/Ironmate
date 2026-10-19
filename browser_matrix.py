@@ -164,6 +164,8 @@ def _index(report):
 
 def write(out, report, sheet, tiles):
     out = Path(out)
+    if out.is_symlink():
+        raise ValueError(f'{out} must not be a symbolic link')
     if out.exists() and any(out.iterdir()):
         raise ValueError(f'{out} must be a new or empty directory')
     for (page, env), image in tiles.items():

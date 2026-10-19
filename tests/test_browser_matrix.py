@@ -55,6 +55,11 @@ def test_sheet_report_and_tiles_from_a_btk_tree(tmp_path):
     assert 'tiles/flutter-home/macOS-webkit-iphone.png' in page and 'no screenshot' in page and 'reference' in page
     with pytest.raises(ValueError, match='empty directory'):
         bm.write(out, report, sheet, tiles)
+    (tmp_path / 'empty').mkdir()
+    (tmp_path / 'link').symlink_to(tmp_path / 'empty', target_is_directory=True)
+    with pytest.raises(ValueError, match='symbolic link'):
+        bm.write(tmp_path / 'link', report, sheet, tiles)
+    assert not any((tmp_path / 'empty').iterdir())
 
 
 def test_reference_choice_and_input_errors(tmp_path):

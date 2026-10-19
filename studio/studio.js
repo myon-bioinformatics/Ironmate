@@ -930,6 +930,165 @@ window.addEventListener("beforeunload", (e) => {
     e.returnValue = "";
   }
 });
+// --- Clipboard Shelf ---
+const shelfItems = [];
+function updateShelfBadge() {
+  if ($("shelf-button")) $("shelf-button").textContent = `クリップボード・シェルフ (${shelfItems.length})`;
+}
+function renderShelf() {
+  updateShelfBadge();
+  const container = $("shelf-items-container");
+  if (!container) return;
+  container.replaceChildren();
+  if (!shelfItems.length) {
+    const empty = document.createElement("p");
+    empty.className = "hint";
+    empty.textContent = "シェルフは空です。「クリップボードから追加」またはテキスト入力からデータを追加できます。";
+    container.append(empty);
+    return;
+  }
+  shelfItems.forEach((item, index) => {
+    const card = document.createElement("div");
+    card.className = "shelf-card";
+
+    const info = document.createElement("div");
+    info.className = "shelf-card-info";
+
+    if (item.dataUrl) {
+      const img = document.createElement("img");
+      img.className = "shelf-thumb";
+      img.src = item.dataUrl;
+      img.alt = item.label;
+      info.append(img);
+    }
+
+    const details = document.createElement("div");
+    details.className = "shelf-details";
+    const title = document.createElement("strong");
+    title.textContent = `${index + 1}. ${item.label}`;
+    const sub = document.createElement("span");
+    sub.textContent = `${item.mime || "text"} ・ ${item.sizeText}`;
+    details.append(title, sub);
+    info.append(details);
+
+    const actions = document.createElement("div");
+    actions.className = "shelf-card-actions";
+
+    if (item.bytes) {
+      const btnImport = document.createElement("button");
+      btnImport.textContent = "取り込み";
+      btnImport.onclick = guarded(async () => {
+        await importImageBytes(item.bytes, item.mime, item.label);
+        $("shelf-dialog").close();
+      });
+      actions.append(btnImport);
+    }
+
+    const btnCopy = document.createElement("button");
+    btnCopy.textContent = "コピー";
+    btnCopy.onclick = guarded(async () => {
+      await navigator.clipboard.writeText(item.rawText || item.dataUrl || "");
+      if ($("shelf-status")) $("shelf-status").textContent = `「${item.label}」をクリップボードにコピーしました`;
+    });
+    actions.append(btnCopy);
+
+    const btnDel = document.createElement("button");
+    btnDel.textContent = "削除";
+    btnDel.onclick = () => {
+      shelfItems.splice(index, 1);
+      renderShelf();
+    };
+    actions.append(btnDel);
+
+    card.append(info, actions);
+    container.append(card);
+  });
+}
+function addShelfItem(bytes, mime, rawText, label = "シェルフ項目") {
+  if (shelfItems.length >= 20) throw new Error("シェルフの項目は最大20件までです");
+  let dataUrl = null;
+  if (bytes && mime) {
+    const blob = new Blob([bytes], { type: mime });
+    dataUrl = URL.createObjectURL(blob);
+  }
+  const sizeText = bytes ? `${bytes.length.toLocaleString()} bytes` : `${(rawText || "").length} chars`;
+  shelfItems.unshift({
+    id: uid(),
+    bytes,
+    mime,
+    rawText,
+    dataUrl,
+    label,
+    sizeText,
+  });
+  renderShelf();
+}
+if ($("shelf-button")) {
+  $("shelf-button").onclick = () => {
+    renderShelf();
+    $("shelf-dialog").showModal();
+  };
+}
+if ($("shelf-clear")) {
+  $("shelf-clear").onclick = () => {
+    shelfItems.length = 0;
+    renderShelf();
+    if ($("shelf-status")) $("shelf-status").textContent = "シェルフをクリアしました";
+  };
+}
+if ($("shelf-paste-clip")) {
+  $("shelf-paste-clip").onclick = guarded(async () => {
+    if (!navigator.clipboard) throw new Error("Clipboard APIが使用できません");
+    if (navigator.clipboard.readText) {
+      const text = await navigator.clipboard.readText();
+      if (text.trim()) {
+        try {
+          const { bytes, mime } = imageBase64(text);
+          addShelfItem(bytes, mime, text, "クリップボードBase64");
+          if ($("shelf-status")) $("shelf-status").textContent = "クリップボードのBase64画像を追加しました";
+          return;
+        } catch {
+          // Fall through if text is plain text or binary clipboard read is needed
+        }
+      }
+    }
+    if (navigator.clipboard.read) {
+      for (const item of await navigator.clipboard.read()) {
+        const type = item.types.find(t => ["image/png", "image/jpeg", "image/webp"].includes(t));
+        if (type) {
+          const blob = await item.getType(type);
+          const bytes = new Uint8Array(await blob.arrayBuffer());
+          addShelfItem(bytes, type, null, "クリップボード画像");
+          if ($("shelf-status")) $("shelf-status").textContent = "クリップボードの画像を追加しました";
+          return;
+        }
+      }
+    }
+    const raw = await navigator.clipboard.readText();
+    if (raw.trim()) {
+      addShelfItem(null, null, raw, "クリップボードテキスト");
+      if ($("shelf-status")) $("shelf-status").textContent = "テキスト項目を追加しました";
+    } else {
+      throw new Error("クリップボードに画像またはテキストがありません");
+    }
+  });
+}
+if ($("shelf-add-text")) {
+  $("shelf-add-text").onclick = guarded(async () => {
+    const val = ($("shelf-input-text").value || "").trim();
+    if (!val) throw new Error("テキストを入力してください");
+    try {
+      const { bytes, mime } = imageBase64(val);
+      addShelfItem(bytes, mime, val, "入力Base64画像");
+      if ($("shelf-status")) $("shelf-status").textContent = "Base64画像項目を追加しました";
+    } catch {
+      addShelfItem(null, null, val, "入力テキスト");
+      if ($("shelf-status")) $("shelf-status").textContent = "テキスト項目を追加しました";
+    }
+    $("shelf-input-text").value = "";
+  });
+}
+
 // Read-only snapshots and export entry point also make browser regression tests observable.
 window.IronmateStudio = {
   get scene() {
@@ -939,6 +1098,8 @@ window.IronmateStudio = {
     return render();
   },
   pngBlob,
+  shelfItems,
+  addShelfItem,
 };
 scene = demo();
 history = new C.History(scene);

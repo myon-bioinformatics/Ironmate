@@ -19,6 +19,7 @@
         <button id="undo">↶ 戻す</button>
         <button id="redo">↷ やり直す</button>
         <button id="save">JSON保存</button>
+        <button id="shelf-button">クリップボード・シェルフ</button>
         <button id="save-workspace">作業履歴を保存</button>
         <label class="button">作業履歴を開く<input id="open-workspace" type="file" accept=".json,application/json" /></label>
         <label class="button">開く<input id="open" type="file" accept=".json" /></label>
@@ -254,6 +255,21 @@
         </div>
       </aside>
     </main>
+    <dialog id="shelf-dialog">
+      <h2>クリップボード・シェルフ (Clipboard Shelf)</h2>
+      <p>クリップボードの画像・Base64・テキストデータを複数ストックし、選択して参照・コピー・キャンバス取り込みを行えます。</p>
+      <div class="shelf-actions">
+        <button id="shelf-paste-clip" class="primary">クリップボードから追加 ＋</button>
+        <button id="shelf-clear">シェルフをクリア</button>
+      </div>
+      <label>Base64 / data URI / テキストを入力して追加
+        <textarea id="shelf-input-text" rows="2" placeholder="data:image/png;base64,... または Raw Base64"></textarea>
+      </label>
+      <button id="shelf-add-text" class="wide">テキストを追加</button>
+      <p id="shelf-status" role="status"></p>
+      <div id="shelf-items-container" class="shelf-list"></div>
+      <form method="dialog"><button>閉じる</button></form>
+    </dialog>
     <dialog id="base64-dialog">
       <h2>Flutterなどへ画像を渡す</h2>
       <p>PNGの標準Base64です。画像や元のシーンをサーバーへ送信しません。</p>

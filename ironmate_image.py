@@ -14,8 +14,14 @@ from fractions import Fraction
 import grid_tools
 import photo_grid
 import size_estimate
+import studio_ingress
 
-__all__ = ['FitError', 'FitResult', 'fit_to_limit', 'load', 'to_base64', 'from_base64', 'to_png', 'resize']
+__all__ = ['FitError', 'FitResult', 'fit_to_limit', 'load', 'to_base64', 'from_base64', 'to_png', 'resize', 'parse_shelf']
+
+
+def parse_shelf(items):
+    """Parse clipboard shelf payload array into validated items."""
+    return studio_ingress.parse_shelf(items)
 
 
 class FitError(ValueError):

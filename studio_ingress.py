@@ -53,3 +53,55 @@ def decode(text: str, *, max_bytes: int = MAX_BYTES) -> tuple[str, bytes]:
     if not actual or (declared and declared != actual):
         raise ValueError("unsupported image or MIME mismatch")
     return actual, data
+
+
+def parse_shelf(items: list[dict | str], *, max_bytes: int = MAX_BYTES) -> list[dict]:
+    """Parse a list of shelf items (dicts or raw Base64/data URI strings).
+
+    Enforces total image data <= max_bytes and item count <= 20.
+    Returns list of dicts with keys: 'type', 'data' (bytes|None), 'mime', 'text'.
+    """
+    if not isinstance(items, list):
+        raise ValueError("shelf items must be a list")
+    if len(items) > 20:
+        raise ValueError("shelf item count exceeds limit (max 20)")
+    parsed = []
+    total_bytes = 0
+    for idx, item in enumerate(items):
+        if isinstance(item, str):
+            text = item.strip()
+            if not text:
+                continue
+            try:
+                mime, data = decode(text, max_bytes=max_bytes)
+                total_bytes += len(data)
+                parsed.append({"type": "image", "data": data, "mime": mime, "text": text, "label": f"Item {idx + 1}"})
+            except ValueError:
+                parsed.append({"type": "text", "data": None, "mime": None, "text": text, "label": f"Item {idx + 1}"})
+        elif isinstance(item, dict):
+            text = str(item.get("text") or item.get("data") or "").strip()
+            if not text:
+                continue
+            try:
+                mime, data = decode(text, max_bytes=max_bytes)
+                total_bytes += len(data)
+                parsed.append({
+                    "type": "image",
+                    "data": data,
+                    "mime": mime,
+                    "text": text,
+                    "label": str(item.get("label") or f"Item {idx + 1}")
+                })
+            except ValueError:
+                parsed.append({
+                    "type": "text",
+                    "data": None,
+                    "mime": None,
+                    "text": text,
+                    "label": str(item.get("label") or f"Item {idx + 1}")
+                })
+        else:
+            raise ValueError("shelf item must be string or dict")
+    if total_bytes > max_bytes:
+        raise ValueError("total shelf image bytes exceed limit")
+    return parsed

@@ -89,28 +89,34 @@ def _blank(width, height, color):
     return width, height, bytes(color) * (width * height)
 
 
-def build(shots, *, tile_w=160, tile_h=320, reference=None):
+def build(shots, *, tile_w=160, tile_h=320, reference=None, expected_pages=(), expected_envs=()):
     """(report, sheet image, {(page, env): tile image}) from ``find_shots`` output."""
     if (type(tile_w) is not int or type(tile_h) is not int or not (16 <= tile_w <= 640 and 16 <= tile_h <= 1280)
             or tile_w % 8 or tile_h % 8):
         raise ValueError('tile size must be multiples of 8 within 16..640 x 16..1280 pixels')
     if not shots:
         raise ValueError('no screenshots found')
-    pages = sorted({p for p, _ in shots})
-    envs = sorted({e for _, e in shots})
+    pages = sorted({p for p, _ in shots} | set(expected_pages))
+    envs = sorted({e for _, e in shots} | set(expected_envs))
+    if any(not isinstance(n, str) or not _NAME.fullmatch(n) for n in pages + envs):
+        raise ValueError('page and environment names must be plain path components')
     if reference is None:
         reference = 'Linux-chromium-desktop' if 'Linux-chromium-desktop' in envs else envs[0]
     elif reference not in envs:
         raise ValueError(f'reference environment {reference!r} has no screenshots')
     tiles, cells = {}, []
     for (page, env), path in sorted(shots.items()):
-        data = path.read_bytes()
+        with Path(path).open('rb') as stream:
+            data = stream.read(MAX_INPUT_BYTES + 1)
         if len(data) > MAX_INPUT_BYTES:
             raise ValueError(f'{path}: larger than 32MiB')
         width, height, rows = decode_png(data, max_pixels=4096 * 4096)
         tiles[page, env] = tile(width, height, rows, tile_w, tile_h)
         cells.append({'page': page, 'env': env, 'source': str(path), 'sha256': hashlib.sha256(data).hexdigest(),
-                      'width': width, 'height': height})
+                      'width': width, 'height': height,
+                      'fit': {'scaled_height': max(1, round(height * tile_w / width)),
+                              'cropped_rows': max(0, round(height * tile_w / width) - tile_h),
+                              'padded_rows': max(0, tile_h - max(1, round(height * tile_w / width)))}})
     for cell in cells:
         base = tiles.get((cell['page'], reference))
         cell['difference'] = None if base is None else {
@@ -166,8 +172,12 @@ def write(out, report, sheet, tiles):
     out = Path(out)
     if out.is_symlink():
         raise ValueError(f'{out} must not be a symbolic link')
-    if out.exists() and any(out.iterdir()):
+    if out.exists() and (not out.is_dir() or any(out.iterdir())):
         raise ValueError(f'{out} must be a new or empty directory')
+    for page, env in tiles:
+        if any(not isinstance(n, str) or not _NAME.fullmatch(n) for n in (page, env)):
+            raise ValueError('page and environment names must be plain path components')
+    out.mkdir(parents=True, exist_ok=True)
     for (page, env), image in tiles.items():
         target = out / 'tiles' / page / f'{env}.png'
         target.parent.mkdir(parents=True, exist_ok=True)

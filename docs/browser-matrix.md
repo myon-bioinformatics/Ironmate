@@ -27,3 +27,17 @@ python -S browser_matrix.py app-results --out matrix-initial --shot initial --re
 
 モバイル表示はエミュレーションで、実機の画面ではない。公開サイトは実行のたびに変わりうるので、
 どの build を見たかは browser-test-kit の記録（`target.provenance`）で確かめる。
+
+## CI integration and coverage
+
+The Python `build` API accepts `expected_pages` and `expected_envs`. They add empty
+rows/columns for planned captures that never produced a PNG; inferred axes alone
+cannot reveal an entirely absent environment. At least one real PNG is required.
+Each cell reports the scaled height and cropped/padded tile rows in `fit`. These
+rows and differing CSS viewport sizes can change MAE/RMSE without a UI defect.
+DPR normalization compares raster content, not CSS layout or click behavior.
+
+Output must be a new or empty directory. A regular file, a nonempty directory,
+or an output symlink (including a dangling link) is rejected before writing.
+As in `image_compare.py`, trusted parent directories may themselves resolve through
+symlinks; this is a CLI overwrite guard, not protection against concurrent filesystem changes.

@@ -559,7 +559,7 @@ python pptx_pipeline.py --text '# Example' --review build/review-inline
 
 `--review DIR` replaces `-o`; supplying both or neither is an error. It uses the
 existing installed Marp CLI (`--marp` can select its path), optional Playwright
-Chromium and `pypdf` from `tests/requirements-preview.txt`. No tools are downloaded by
+Chromium and `pypdf` from the locked preview dependencies. No tools are downloaded by
 the command. No Microsoft session, CDP endpoint, external viewer, LibreOffice or
 PDF desktop application is required. Browser binaries must match the installed
 Playwright version. This same optional dependency set is exercised by CI.

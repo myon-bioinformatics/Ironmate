@@ -35,6 +35,25 @@ def repository_python_sources():
     return [ROOT / line for line in result.stdout.splitlines() if line]
 
 
+DEPENDENCY_MANIFESTS = (
+    "pyproject.toml",
+    "requirements.txt",
+    "tests/requirements.txt",
+    "tests/requirements-preview.txt",
+)
+_DEPENDENCY_CAP = re.compile(r"(==|<=|~=|(?<!>)<(?!=))")
+
+
+def dependency_cap_failures(text):
+    """Flag exact pins and upper bounds on dependency lines."""
+    failures = []
+    for number, line in enumerate(text.splitlines(), 1):
+        code = line.split("#", 1)[0]
+        if _DEPENDENCY_CAP.search(code):
+            failures.append(number)
+    return failures
+
+
 def workflow_structure_escape_failures(text):
     """Find #42-style escaped newlines that splice YAML list entries."""
     failures = []
@@ -78,6 +97,31 @@ class RepositoryHygieneTest(unittest.TestCase):
         self.assertEqual(workflow_structure_escape_failures(broken), [1])
         self.assertEqual(workflow_structure_escape_failures(double_backslash), [])
         self.assertEqual(workflow_structure_escape_failures(legitimate), [])
+
+    def test_python_dependency_manifests_keep_lower_bounds_only(self):
+        failures = []
+        for relative in DEPENDENCY_MANIFESTS:
+            for number in dependency_cap_failures((ROOT / relative).read_text(encoding="utf-8")):
+                failures.append(f"{relative}:{number}: exact pin or upper bound")
+        for path in sorted((ROOT / ".github" / "workflows").glob("*.y*ml")):
+            if "pip install" in path.read_text(encoding="utf-8"):
+                failures.append(f"{path.relative_to(ROOT)}: pip install")
+        self.assertEqual(failures, [], "\n".join(failures))
+        for relative in (
+            ".github/workflows/mcp-tests.yml",
+            ".github/workflows/pptx-review.yml",
+        ):
+            text = (ROOT / relative).read_text(encoding="utf-8")
+            self.assertIn("astral-sh/setup-uv@v10.3.0", text)
+            self.assertIn("uv run --locked ", text)
+
+    def test_dependency_cap_detector_accepts_lower_bounds(self):
+        self.assertEqual(dependency_cap_failures('pillow>=10\npytest>=8\n'), [])
+        self.assertEqual(dependency_cap_failures("pillow>=10,<13"), [1])
+        self.assertEqual(dependency_cap_failures("playwright==1.63.0"), [1])
+        self.assertEqual(dependency_cap_failures("pypdf>=6,<7"), [1])
+        self.assertEqual(dependency_cap_failures("numpy~=1.26"), [1])
+        self.assertEqual(dependency_cap_failures("numpy<=2"), [1])
 
     def test_repository_python_sources_falls_back_without_git(self):
         with mock.patch("tests.test_repository_hygiene.subprocess.run", side_effect=FileNotFoundError):

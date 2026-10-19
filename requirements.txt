@@ -1,2 +1,2 @@
 # Retained adapters use the Python standard library.
-# Tests: python -m pip install -r tests/requirements.txt
+# Tests: uv run --locked python -m pytest

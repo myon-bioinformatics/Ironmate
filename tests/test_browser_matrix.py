@@ -21,10 +21,10 @@ def tree(root, shots):
 def test_sheet_report_and_tiles_from_a_btk_tree(tmp_path):
     red, blue = (255, 0, 0, 255), (0, 0, 255, 255)
     tree(tmp_path / 'in', {
-        ('flutter-home', 'Linux-chromium-desktop', 'width-390'): (390, 800, red),
-        ('flutter-home', 'macOS-webkit-iphone', 'width-390'): (1170, 1992, red),   # 3x DPR, shorter viewport
-        ('flutter-home', 'Windows-firefox-desktop', 'width-390'): (390, 800, blue),
-        ('flutter-hub', 'Linux-chromium-desktop', 'width-390'): (390, 800, blue),
+        ('flutter-home', 'Linux-chromium-desktop', 'width-384'): (384, 800, red),
+        ('flutter-home', 'macOS-webkit-iphone', 'width-384'): (1152, 1992, red),   # 3x DPR, shorter viewport
+        ('flutter-home', 'Windows-firefox-desktop', 'width-384'): (384, 800, blue),
+        ('flutter-hub', 'Linux-chromium-desktop', 'width-384'): (384, 800, blue),
         ('flutter-hub', 'Linux-chromium-desktop', 'initial'): (1280, 800, blue),
     })
     shots = bm.find_shots(tmp_path / 'in')
@@ -36,7 +36,7 @@ def test_sheet_report_and_tiles_from_a_btk_tree(tmp_path):
     assert report['missing'] == [{'page': 'flutter-hub', 'env': 'Windows-firefox-desktop'},
                                  {'page': 'flutter-hub', 'env': 'macOS-webkit-iphone'}]
     cells = {(c['page'], c['env']): c for c in report['cells']}
-    assert cells['flutter-home', 'macOS-webkit-iphone']['width'] == 1170
+    assert cells['flutter-home', 'macOS-webkit-iphone']['width'] == 1152
     assert cells['flutter-home', 'Linux-chromium-desktop']['difference']['rgb_mae'] == 0
     # Same color, but the iPhone viewport is shorter: the bottom is padded white.
     assert 0 < cells['flutter-home', 'macOS-webkit-iphone']['difference']['rgb_mae'] < 50
@@ -58,20 +58,20 @@ def test_sheet_report_and_tiles_from_a_btk_tree(tmp_path):
 
 
 def test_reference_choice_and_input_errors(tmp_path):
-    tree(tmp_path, {('p', 'macOS-webkit-desktop', 'width-390'): (20, 40, (0, 0, 0, 255))})
+    tree(tmp_path, {('p', 'macOS-webkit-desktop', 'width-384'): (24, 40, (0, 0, 0, 255))})
     shots = bm.find_shots(tmp_path)
     assert bm.build(shots, tile_w=16, tile_h=16)[0]['reference'] == 'macOS-webkit-desktop'
     with pytest.raises(ValueError, match='reference environment'):
         bm.build(shots, tile_w=16, tile_h=16, reference='Linux-chromium-desktop')
-    for size in ((8, 16), (16, 2000), (16.0, 16)):
-        with pytest.raises(ValueError, match='tile size'):
+    for size in ((8, 16), (16, 2000), (16.0, 16), (20, 16), (16, 36)):
+        with pytest.raises(ValueError, match='multiples of 8'):
             bm.build(shots, tile_w=size[0], tile_h=size[1])
     with pytest.raises(ValueError, match='no screenshots'):
         bm.build({})
     with pytest.raises(ValueError, match='plain file stem'):
         bm.find_shots(tmp_path, '../x')
     (tmp_path / 'again' / 'p' / 'macOS-webkit-desktop').mkdir(parents=True)
-    (tmp_path / 'again' / 'p' / 'macOS-webkit-desktop' / 'width-390.png').write_bytes(png(4, 4, (0, 0, 0, 255)))
+    (tmp_path / 'again' / 'p' / 'macOS-webkit-desktop' / 'width-384.png').write_bytes(png(4, 4, (0, 0, 0, 255)))
     with pytest.raises(ValueError, match='two screenshots'):
         bm.find_shots(tmp_path)
 
@@ -82,5 +82,5 @@ def test_cli(tmp_path, capsys):
     assert json.loads(capsys.readouterr().out) == {'pages': 1, 'envs': 1, 'cells': 1, 'missing': 0,
                                                    'reference': 'Linux-chromium-desktop', 'out': str(tmp_path / 'out')}
     assert bm.main([str(tmp_path / 'in'), '--out', str(tmp_path / 'o2'), '--tile', 'big']) == 2
-    assert bm.main([str(tmp_path / 'in'), '--out', str(tmp_path / 'o3')]) == 2  # no width-390 shots
+    assert bm.main([str(tmp_path / 'in'), '--out', str(tmp_path / 'o3')]) == 2  # no width-384 shots
     assert 'no screenshots' in capsys.readouterr().err

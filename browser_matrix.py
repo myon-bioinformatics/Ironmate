@@ -9,11 +9,12 @@ screenshot sits at ``.../<page>/<OS>-<browser>-<profile>/<shot>.png``, and write
   cell, plus the tile difference from the reference environment.
 
 Tiles are area-sampled to a common width and cropped or padded (white) to a common
-height, because device pixel ratios differ (iPhone 3x, Pixel 2.625x). The difference
+height, because device pixel ratios differ (iPhone 3x, Pixel 2.625x). Tile sizes and the
+gap are multiples of 8 px, matching the 8 px width grid browser-test-kit captures on. The difference
 is RGB MAE/RMSE between tiles, a screen-level hint for "this engine draws the page
 differently", not a pixel-exact regression gate. Standard library only.
 
-    python -S browser_matrix.py app-results --out matrix [--shot width-390] [--reference Linux-chromium-desktop]
+    python -S browser_matrix.py app-results --out matrix [--shot width-384] [--reference Linux-chromium-desktop]
 """
 from __future__ import annotations
 
@@ -33,13 +34,13 @@ from photo_grid import decode_png
 SCHEMA = 'ironmate-browser-matrix/1'
 MAX_INPUT_BYTES = 32 * 1024 * 1024
 _NAME = re.compile(r'[A-Za-z0-9][A-Za-z0-9._-]{0,80}')
-GAP, BACKGROUND, EMPTY = 4, (255, 255, 255, 255), (224, 224, 224, 255)
+GAP, BACKGROUND, EMPTY = 8, (255, 255, 255, 255), (224, 224, 224, 255)
 
 
-def find_shots(root, shot='width-390'):
+def find_shots(root, shot='width-384'):
     """{(page, env): path} for every ``<page>/<env>/<shot>.png`` under ``root``."""
     if not _NAME.fullmatch(shot):
-        raise ValueError('shot must be a plain file stem such as width-390')
+        raise ValueError('shot must be a plain file stem such as width-384')
     found = {}
     for path in sorted(Path(root).rglob(shot + '.png')):
         page, env = path.parent.parent.name, path.parent.name
@@ -90,8 +91,9 @@ def _blank(width, height, color):
 
 def build(shots, *, tile_w=160, tile_h=320, reference=None):
     """(report, sheet image, {(page, env): tile image}) from ``find_shots`` output."""
-    if type(tile_w) is not int or type(tile_h) is not int or not (16 <= tile_w <= 640 and 16 <= tile_h <= 1280):
-        raise ValueError('tile size must be 16..640 x 16..1280 pixels')
+    if (type(tile_w) is not int or type(tile_h) is not int or not (16 <= tile_w <= 640 and 16 <= tile_h <= 1280)
+            or tile_w % 8 or tile_h % 8):
+        raise ValueError('tile size must be multiples of 8 within 16..640 x 16..1280 pixels')
     if not shots:
         raise ValueError('no screenshots found')
     pages = sorted({p for p, _ in shots})
@@ -177,7 +179,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument('root', type=Path, help='browser-test-kit app-results tree')
     parser.add_argument('--out', type=Path, required=True)
-    parser.add_argument('--shot', default='width-390', help='screenshot stem (initial, width-320, width-390, ...)')
+    parser.add_argument('--shot', default='width-384', help='screenshot stem (initial, width-320, width-384, ...)')
     parser.add_argument('--reference', help='environment id to compare against (default Linux-chromium-desktop)')
     parser.add_argument('--tile', default='160x320', help='tile WIDTHxHEIGHT')
     args = parser.parse_args(argv)

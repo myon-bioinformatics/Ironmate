@@ -5,7 +5,7 @@
 Ironmate の PNG コーデックだけを使う。
 
 ```sh
-python -S browser_matrix.py app-results --out matrix                     # 既定: width-390 の画面
+python -S browser_matrix.py app-results --out matrix                     # 既定: width-384 の画面
 python -S browser_matrix.py app-results --out matrix-initial --shot initial --reference macOS-webkit-desktop
 ```
 
@@ -21,7 +21,7 @@ python -S browser_matrix.py app-results --out matrix-initial --shot initial --re
 ## 差の意味
 
 端末ごとに devicePixelRatio が違う（iPhone 3 倍、Pixel 2.625 倍）ため、各画像を共通の幅に面積サンプリングで縮め、
-共通の高さに切り詰めるか白で埋めてから比べる。差は、タイル同士の RGB の MAE / RMSE（0〜255）。
+共通の高さに切り詰めるか白で埋めてから比べる。タイルの寸法と間隔は 8 px の倍数に限る（browser-test-kit の撮影幅と同じ 8 px グリッド）。差は、タイル同士の RGB の MAE / RMSE（0〜255）。
 「このエンジンではページの描かれ方が違う」という画面単位の手がかりで、画素単位の回帰判定ではない。
 基準環境は既定で `Linux-chromium-desktop`（なければ環境名で最初のもの）。
 

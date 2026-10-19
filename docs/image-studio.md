@@ -243,3 +243,24 @@ HTTPの限定公開、既存ファイルの上書き拒否を回帰テストす�
 
 画素完全一致・RGBA残差が可逆性の主判定である。
 3-Way Surveyは構造の補助評価として継続し、この画面の画像品質を保証する指標には変更しない。
+
+### Clipboard Shelf
+
+シェルフはページ内のメモリだけに最大20件を保持し、サーバー送信・永続保存は行わない。
+画像の復号後バイト数と通常テキストのUTF-8バイト数の合計は32MiB以下。
+Base64は復号前の正確なサイズ、バイナリは`Blob.size`を`arrayBuffer()`前に確認する。
+並行した読み込み分も残量として予約し、クリア後に進行中の追加が復活しない。
+画像コピーは他のページやアプリでも再利用できるdata URIとなる。
+プレビューのObject URLは削除・全消去時に解放する。
+
+`studio_ingress.parse_shelf()`も同じ合計容量と20件上限を適用する（Python標準ライブラリのみ）。
+`data:` URI、既知の画像シグネチャで始まる生Base64、`type="image"`または`mime`を
+指定した辞書は画像として検証し、不正な形式・MIME不一致・容量超過をテキストへ降格しない。
+画像の意味を持たない文字列は通常テキストとして扱う。画像辞書の例:
+`{"type": "image", "mime": "image/png", "text": "data:image/png;base64,...", "label": "画像"}`。
+戻り値の各項目は`type`, `data`, `mime`, `text`, `label`を持つ。
+
+回帰検証は`tests/test_studio_ingress.py`と`tests/studio_shelf_browser.cjs`。
+後者は既存の`tests/image_studio_browser.cjs`から静的Pages相当の配信で実行される。
+クリップボード取得・権限エラーはモックし、実Chromium上で検証・コピー生成・URL解放・画像取込を確認する。
+OS固有のクリップボード権限UIを直接操作する試験ではない。

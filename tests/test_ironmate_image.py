@@ -111,3 +111,9 @@ def test_python_c_one_liners(art_png):
     code = "import ironmate_image as im;s=im.to_base64(%r);print(im.from_base64(s)['width'])" % str(art_png)
     out = subprocess.run([sys.executable, '-c', code], cwd=ROOT, capture_output=True, timeout=60)
     assert out.returncode == 0 and out.stdout.strip() == b'24'
+
+
+def test_parse_shelf_facade(art_png):
+    b64 = im.to_base64(art_png)
+    items = im.parse_shelf([b64, 'plain text note'])
+    assert len(items) == 2 and items[0]['type'] == 'image' and items[1]['type'] == 'text'

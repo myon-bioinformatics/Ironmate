@@ -236,6 +236,11 @@ xprobeと親のvendorツールはテスト用の別checkoutです。実行時依
 PPTXの新規パッケージには Node.js 22 と `npm ci`（固定の `pptxgenjs@4.0.1`）が必要です。Ironmate は依存関係を自動インストールしません。スライド図形の正本は [JSON ↔ OOXML 対応](docs/pptx-ooxml-mapping.md) です。Marp変換時のみ別途インストール済みのMarp CLIが必要です。
 CSVをxlsxにする場合は [Excelワークブック](docs/xlsx-exceljs.md) を使います。文字コードの判定はUTF-8 / BOM / Shift_JIS / CP932です。openpyxlとpandasは使いません。同じ `npm ci` が `exceljs@4.4.0` と SheetJS `xlsx@0.20.3` も入れます。
 
+## ブラウザ別スクリーンショットの比較
+
+browser-test-kit が Linux・macOS・Windows × Chromium・Firefox・WebKit で撮った同じページのスクリーンショットを、
+`browser_matrix.py` で「ページ × 環境」の比較シート（PNG・表・JSON）にまとめます。詳細は [比較シート](docs/browser-matrix.md)。
+
 ## Common JSON flow diagrams
 
 [web-ui flow export](docs/flow-export.md) connects a single bounded JSON input to Mermaid Markdown, SVG, PNG, standard Base64 and PNG data URI, through Python/Node APIs and CLIs. It reuses the upstream contract and Image Studio raster output.

@@ -9,8 +9,9 @@ screenshot sits at ``.../<page>/<OS>-<browser>-<profile>/<shot>.png``, and write
   cell, plus the tile difference from the reference environment.
 
 Tiles are area-sampled to a common width and cropped or padded (white) to a common
-height, because device pixel ratios differ (iPhone 3x, Pixel 2.625x). Tile sizes and the
-gap are multiples of 8 px, matching the 8 px width grid browser-test-kit captures on. The difference
+height, because device pixel ratios differ (iPhone 3x, Pixel 2.625x). Tile size and gap
+default to 8 px multiples, like browser-test-kit's default width grid; any size in
+range works when another value fits the question better (``--tile``, ``--gap``). The difference
 is RGB MAE/RMSE between tiles, a screen-level hint for "this engine draws the page
 differently", not a pixel-exact regression gate. Standard library only.
 
@@ -89,11 +90,16 @@ def _blank(width, height, color):
     return width, height, bytes(color) * (width * height)
 
 
-def build(shots, *, tile_w=160, tile_h=320, reference=None, expected_pages=(), expected_envs=()):
-    """(report, sheet image, {(page, env): tile image}) from ``find_shots`` output."""
-    if (type(tile_w) is not int or type(tile_h) is not int or not (16 <= tile_w <= 640 and 16 <= tile_h <= 1280)
-            or tile_w % 8 or tile_h % 8):
-        raise ValueError('tile size must be multiples of 8 within 16..640 x 16..1280 pixels')
+def build(shots, *, tile_w=160, tile_h=320, reference=None, expected_pages=(), expected_envs=(), gap=GAP):
+    """(report, sheet image, {(page, env): tile image}) from ``find_shots`` output.
+
+    Tile size and gap default to 8 px multiples (160x320, 8) but take any value in range,
+    e.g. a device's own width when tiles should match it.
+    """
+    if type(tile_w) is not int or type(tile_h) is not int or not (16 <= tile_w <= 640 and 16 <= tile_h <= 1280):
+        raise ValueError('tile size must be within 16..640 x 16..1280 pixels')
+    if type(gap) is not int or not 0 <= gap <= 64:
+        raise ValueError('gap must be an integer from 0 to 64 pixels')
     if not shots:
         raise ValueError('no screenshots found')
     pages = sorted({p for p, _ in shots} | set(expected_pages))
@@ -123,19 +129,19 @@ def build(shots, *, tile_w=160, tile_h=320, reference=None, expected_pages=(), e
         cell['difference'] = None if base is None else {
             k: round(v, 3) if isinstance(v, float) else v
             for k, v in metrics(base, tiles[cell['page'], cell['env']]).items()}
-    sheet_w = len(envs) * tile_w + (len(envs) + 1) * GAP
-    sheet_h = len(pages) * tile_h + (len(pages) + 1) * GAP
+    sheet_w = len(envs) * tile_w + (len(envs) + 1) * gap
+    sheet_h = len(pages) * tile_h + (len(pages) + 1) * gap
     sheet = bytearray(bytes(BACKGROUND) * (sheet_w * sheet_h))
     empty = _blank(tile_w, tile_h, EMPTY)
     for r, page in enumerate(pages):
         for c, env in enumerate(envs):
             _, _, rgba = tiles.get((page, env), empty)
-            left, top = GAP + c * (tile_w + GAP), GAP + r * (tile_h + GAP)
+            left, top = gap + c * (tile_w + gap), gap + r * (tile_h + gap)
             for y in range(tile_h):
                 o = ((top + y) * sheet_w + left) * 4
                 sheet[o:o + tile_w * 4] = rgba[y * tile_w * 4:(y + 1) * tile_w * 4]
     report = {'schema': SCHEMA, 'pages': pages, 'envs': envs, 'reference': reference,
-              'tile': {'width': tile_w, 'height': tile_h, 'gap': GAP, 'fit': 'width, then crop or pad white'},
+              'tile': {'width': tile_w, 'height': tile_h, 'gap': gap, 'fit': 'width, then crop or pad white'},
               'difference_definition': 'RGB MAE/RMSE (0-255) between tiles of the same page against the '
                                        'reference environment; a screen-level hint, not a pixel-exact gate',
               'missing': [{'page': p, 'env': e} for p in pages for e in envs if (p, e) not in tiles],
@@ -194,14 +200,15 @@ def main(argv=None):
     parser.add_argument('--out', type=Path, required=True)
     parser.add_argument('--shot', default='width-384', help='screenshot stem (initial, width-320, width-384, ...)')
     parser.add_argument('--reference', help='environment id to compare against (default Linux-chromium-desktop)')
-    parser.add_argument('--tile', default='160x320', help='tile WIDTHxHEIGHT')
+    parser.add_argument('--tile', default='160x320', help='tile WIDTHxHEIGHT (default on the 8 px grid; any size works)')
+    parser.add_argument('--gap', type=int, default=GAP, help='pixels between tiles (default 8)')
     args = parser.parse_args(argv)
     try:
         match = re.fullmatch(r'(\d+)x(\d+)', args.tile)
         if not match:
             raise ValueError('--tile must look like 160x320')
         report, sheet, tiles = build(find_shots(args.root, args.shot), tile_w=int(match[1]), tile_h=int(match[2]),
-                                     reference=args.reference)
+                                     reference=args.reference, gap=args.gap)
         write(args.out, report, sheet, tiles)
     except (OSError, ValueError) as error:
         print(f'error: {error}', file=sys.stderr)

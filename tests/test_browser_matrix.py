@@ -65,9 +65,9 @@ def test_sheet_report_and_tiles_from_a_btk_tree(tmp_path):
 def test_reference_choice_and_input_errors(tmp_path):
     tree(tmp_path, {('p', 'macOS-webkit-desktop', 'width-384'): (24, 40, (0, 0, 0, 255))})
     shots = bm.find_shots(tmp_path)
-    assert bm.build(shots, tile_w=16, tile_h=16)[0]['reference'] == 'macOS-webkit-desktop'
+    assert bm.build(shots, tile_w=16, tile_h=16, expected_envs=['Linux-chromium-desktop'])[0]['reference'] == 'macOS-webkit-desktop'
     with pytest.raises(ValueError, match='reference environment'):
-        bm.build(shots, tile_w=16, tile_h=16, reference='Linux-chromium-desktop')
+        bm.build(shots, tile_w=16, tile_h=16, reference='Linux-chromium-desktop', expected_envs=['Linux-chromium-desktop'])
     for size in ((8, 16), (16, 2000), (16.0, 16), (20, 16), (16, 36)):
         with pytest.raises(ValueError, match='multiples of 8'):
             bm.build(shots, tile_w=size[0], tile_h=size[1])
@@ -89,3 +89,58 @@ def test_cli(tmp_path, capsys):
     assert bm.main([str(tmp_path / 'in'), '--out', str(tmp_path / 'o2'), '--tile', 'big']) == 2
     assert bm.main([str(tmp_path / 'in'), '--out', str(tmp_path / 'o3')]) == 2  # no width-384 shots
     assert 'no screenshots' in capsys.readouterr().err
+
+
+def test_patterned_dpr_images_and_completely_missing_environment(tmp_path):
+    # Replicate each source pixel into a 3x3 block: equal CSS content at DPR 1/3.
+    w, h = 32, 64
+    source = bytes(c for y in range(h) for x in range(w)
+                   for c in ((255, 0, 0, 255) if (x // 4 + y // 4) % 2 else (0, 0, 255, 255)))
+    large = b''.join(source[y*w*4+x*4:y*w*4+x*4+4] * 3
+                     for y in range(h) for _ in range(3) for x in range(w))
+    shots = {}
+    for env, image in [('Linux-chromium-desktop', (w, h, source)),
+                       ('macOS-webkit-iphone', (w*3, h*3, large))]:
+        path = tmp_path / (env + '.png')
+        path.write_bytes(bm.encode_png(*image))
+        shots['p', env] = path
+    report, sheet, tiles = bm.build(shots, tile_w=16, tile_h=32,
+                                   expected_pages=['p', 'never-captured'],
+                                   expected_envs=['Windows-firefox-desktop'])
+    assert all(c['difference']['rgb_mae'] == c['difference']['rgb_rmse'] == 0 for c in report['cells'])
+    assert all(c['fit']['cropped_rows'] == c['fit']['padded_rows'] == 0 for c in report['cells'])
+    assert len(report['missing']) == 4  # includes an entirely absent page and environment
+    out = tmp_path / 'empty'
+    out.mkdir()
+    bm.write(out, report, sheet, tiles)
+    assert 'no screenshot' in (out / 'index.html').read_text()
+
+
+@pytest.mark.parametrize('kind', ['file', 'dangling', 'nonempty', 'child-link'])
+def test_output_protection_preserves_existing_targets(tmp_path, kind):
+    out, target = tmp_path / 'out', tmp_path / 'target'
+    target.mkdir()
+    marker = target / 'keep'
+    marker.write_bytes(b'unchanged')
+    if kind == 'file':
+        out.write_bytes(b'unchanged')
+    elif kind == 'dangling':
+        out.symlink_to(tmp_path / 'absent', target_is_directory=True)
+    else:
+        out.mkdir()
+        if kind == 'nonempty':
+            (out / 'keep').write_bytes(b'unchanged')
+        else:
+            (out / 'tiles').symlink_to(target, target_is_directory=True)
+    with pytest.raises(ValueError):
+        bm.write(out, {}, (16, 16, bytes(16*16*4)), {})
+    assert marker.read_bytes() == b'unchanged'
+    assert list(target.iterdir()) == [marker]
+    if kind == 'dangling':
+        assert not (tmp_path / 'absent').exists()
+
+
+def test_bad_library_cell_names_fail_before_any_output(tmp_path):
+    with pytest.raises(ValueError, match='plain path'):
+        bm.write(tmp_path / 'out', {}, (16, 16, bytes(16*16*4)), {('../escape', 'env'): None})
+    assert not (tmp_path / 'out').exists()

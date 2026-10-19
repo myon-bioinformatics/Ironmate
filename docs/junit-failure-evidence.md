@@ -33,14 +33,14 @@ Collector success does not change a failed test job's conclusion.
 
 ## Local reproduction
 
-Install `tests/requirements.txt`, then from the checkout:
+Install the locked test tools, then from the checkout:
 
 ```sh
 git clone https://github.com/myon-bioinformatics/xprobe.git build/xprobe-source
 git -C build/xprobe-source show 7e7015b2df69ad446b968f6fa49711b5b1dbdd3f:xprobe.py > build/xprobe.py
 mkdir -p build/shared
 cp build/xprobe.py build/shared/xprobe.py
-python -m pytest -q tests/test_junit_failure_identity.py
+uv run --locked python -m pytest -q tests/test_junit_failure_identity.py
 ```
 
 For artifact reproduction set `IRONMATE_FAILURE_EVIDENCE=build/controlled-failure`

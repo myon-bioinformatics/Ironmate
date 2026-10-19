@@ -1,4 +1,4 @@
-# Optional HTML/PDF preview lane; aligned with browser-test-kit Playwright.
-playwright==1.63.0
+# Optional HTML/PDF preview lane. CI installs the locked set with `uv run --locked`.
+playwright>=1.63.0
 pytest>=8
-pypdf>=6,<7
+pypdf>=6

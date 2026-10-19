@@ -106,8 +106,9 @@ def test_workflow_keeps_suite_failure_and_exact_reports(tmp_path):
     compile_index = next(i for i, s in enumerate(steps) if s.get('id') == 'compile')
     unittest_index = next(i for i, s in enumerate(steps) if 'python -m unittest ' in s.get('run', ''))
     assert compile_index < unittest_index < steps.index(suite)
+    assert suite['run'].startswith('uv run --locked ')
     # Run the actual workflow command; reject wrappers that hide pytest's rc=1.
-    executable = tmp_path / 'python'
+    executable = tmp_path / 'uv'
     for rc in (0, 1):
         executable.write_text(f'#!/bin/sh\nexit {rc}\n', encoding='utf-8')
         executable.chmod(0o755)

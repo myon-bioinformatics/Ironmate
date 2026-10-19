@@ -245,6 +245,12 @@ browser-test-kit が Linux・macOS・Windows × Chromium・Firefox・WebKit で�
 `image_digest.py`（Node からは `image_digest.cjs`）は、行 × 列の画像と合否から、サムネイル入りの軽い 1 枚の HTML と
 Markdown の要約を作ります。容量に収まるまでサムネイルを 1/4 ずつ縮めます。詳細は [画像の要約ページ](docs/image-digest.md)。
 
+## Node の型宣言
+
+トップレベルの Node モジュール（`flow_export.cjs`・`flow_workspace.cjs`・`image_digest.cjs`）には同名の `.d.cts` があり、
+ビルドなしで TypeScript・エディタから型を確認できます。宣言名と実行時 export の一致は `tests/test_types.py` が、
+呼び出し例のコンパイルは CI の固定版 TypeScript が確認します。`vendor/` の写しは上流のファイルだけを持ちます。
+
 ## Common JSON flow diagrams
 
 [web-ui flow export](docs/flow-export.md) connects a single bounded JSON input to Mermaid Markdown, SVG, PNG, standard Base64 and PNG data URI, through Python/Node APIs and CLIs. It reuses the upstream contract and Image Studio raster output.

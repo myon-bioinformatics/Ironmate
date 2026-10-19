@@ -21,7 +21,7 @@ python -S browser_matrix.py app-results --out matrix-initial --shot initial --re
 ## 差の意味
 
 端末ごとに devicePixelRatio が違う（iPhone 3 倍、Pixel 2.625 倍）ため、各画像を共通の幅に面積サンプリングで縮め、
-共通の高さに切り詰めるか白で埋めてから比べる。タイルの寸法と間隔は 8 px の倍数に限る（browser-test-kit の撮影幅と同じ 8 px グリッド）。差は、タイル同士の RGB の MAE / RMSE（0〜255）。
+共通の高さに切り詰めるか白で埋めてから比べる。タイルの寸法（既定 160x320）と間隔（既定 8 px）は、browser-test-kit の既定の幅グリッドに合わせて 8 px の倍数にしている。決まりではなく既定値なので、実機の幅に合わせたいときなどは `--tile 195x422 --gap 4` のように任意の値に切り替えられる。差は、タイル同士の RGB の MAE / RMSE（0〜255）。
 「このエンジンではページの描かれ方が違う」という画面単位の手がかりで、画素単位の回帰判定ではない。
 基準環境は既定で `Linux-chromium-desktop`（なければ環境名で最初のもの）。
 

@@ -68,9 +68,17 @@ def test_reference_choice_and_input_errors(tmp_path):
     assert bm.build(shots, tile_w=16, tile_h=16, expected_envs=['Linux-chromium-desktop'])[0]['reference'] == 'macOS-webkit-desktop'
     with pytest.raises(ValueError, match='reference environment'):
         bm.build(shots, tile_w=16, tile_h=16, reference='Linux-chromium-desktop', expected_envs=['Linux-chromium-desktop'])
-    for size in ((8, 16), (16, 2000), (16.0, 16), (20, 16), (16, 36)):
-        with pytest.raises(ValueError, match='multiples of 8'):
+    for size in ((8, 16), (16, 2000), (16.0, 16)):
+        with pytest.raises(ValueError, match='tile size'):
             bm.build(shots, tile_w=size[0], tile_h=size[1])
+    # 8 px multiples are the default, not a rule: a device-sized tile and another gap work too.
+    report, sheet, _ = bm.build(shots, tile_w=195, tile_h=422, gap=5)
+    assert report['tile'] == {'width': 195, 'height': 422, 'gap': 5, 'fit': 'width, then crop or pad white'}
+    assert sheet[:2] == (195 + 2 * 5, 422 + 2 * 5)
+    assert bm.build(shots, tile_w=16, tile_h=16, gap=0)[1][:2] == (16, 16)
+    for gap in (-1, 65, 8.0):
+        with pytest.raises(ValueError, match='gap'):
+            bm.build(shots, tile_w=16, tile_h=16, gap=gap)
     with pytest.raises(ValueError, match='no screenshots'):
         bm.build({})
     with pytest.raises(ValueError, match='plain file stem'):

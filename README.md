@@ -240,6 +240,11 @@ CSVをxlsxにする場合は [Excelワークブック](docs/xlsx-exceljs.md) を
 browser-test-kit が Linux・macOS・Windows × Chromium・Firefox・WebKit で撮った同じページのスクリーンショットを、
 `browser_matrix.py` で「ページ × 環境」の比較シート（PNG・表・JSON）にまとめます。詳細は [比較シート](docs/browser-matrix.md)。
 
+## 画像の要約ページ
+
+`image_digest.py`（Node からは `image_digest.cjs`）は、行 × 列の画像と合否から、サムネイル入りの軽い 1 枚の HTML と
+Markdown の要約を作ります。容量に収まるまでサムネイルを 1/4 ずつ縮めます。詳細は [画像の要約ページ](docs/image-digest.md)。
+
 ## Common JSON flow diagrams
 
 [web-ui flow export](docs/flow-export.md) connects a single bounded JSON input to Mermaid Markdown, SVG, PNG, standard Base64 and PNG data URI, through Python/Node APIs and CLIs. It reuses the upstream contract and Image Studio raster output.

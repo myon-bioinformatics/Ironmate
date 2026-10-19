@@ -10,6 +10,9 @@ python -S image_digest.py input.json --out digest/            # 画像パスは 
 node image_digest.cjs input.json digest/                       # Node から（処理は Python が持つ）
 ```
 
+Node の API（`buildDigest`）の型は `image_digest.d.cts` にある。ほかの Node API（`flow_export.cjs`、
+`flow_workspace.cjs`、`studio/ingress.cjs`）も同じ名前の `.d.cts` を持ち、本体は JavaScript のまま。
+
 入力は `ironmate-image-digest-input/1`:
 
 ```json

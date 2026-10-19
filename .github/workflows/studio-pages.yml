@@ -28,7 +28,7 @@ jobs:
           python-version: "3.12"
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "26"
       - name: Check the dependency-free client and build only public assets
         run: |
           node --check studio/core.js

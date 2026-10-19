@@ -6,7 +6,7 @@ Synthetic row/column profiles; patch-support IoU, not pixel restoration or natur
 
 Config: {'deadzone_shift': 3, 'ub_threshold': 64, 'min_links': 2, 'max_diff': 4}; strides: [1, 2, 4] (no tuning).
 Seeds: [20261020, 20261021]; trials/seed/pair: 3; grid: 32x32; cases: 120.
-Engine SHA-256: 236bcab6006a564ebdf342bb06c843b4b22d6d0d9aff018cd4018ebf4df29203
+Engine SHA-256: b39984a0fa3bcce7216adaabc1381997a22efe622726b61269b1892aadfde6c7
 Harness SHA-256: ce694f1e80deaf5b8b97600f5c8bc62d892e1644bd6a2857db4bb8fa92c91334
 Records SHA-256: 7acf010a5d5a37fc0deddc1d4c3a6bce3cbba8b96d8282c0dc70378aef6cd520
 

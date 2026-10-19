@@ -36,13 +36,32 @@ def test_ternary_bit_kernel_against_scalar_distance_exhaustive():
 def test_integer_kernel_has_no_multiply_or_float_nodes():
     tree = ast.parse(Path(s.__file__).read_text())
     names = {"fwht8_add_only", "rotate_8bit", "fairyfuse_ternary_diff", "LittleBitTernaryPatch",
-             "interaction", "row_offsets", "reconstruct_blind", "ThreeWaySurveyEngine"}
+             "interaction", "row_offsets", "reconstruct_blind", "run_5way_anisotropic_fixed_point",
+             "ThreeWaySurveyEngine"}
     for node in tree.body:
         if getattr(node, "name", None) in names:
             assert not any(isinstance(n, ast.BinOp) and isinstance(n.op, (ast.Mult, ast.Div, ast.Pow))
                            for n in ast.walk(node)), node.name
             assert not any(isinstance(n, ast.Constant) and isinstance(n.value, float)
                            for n in ast.walk(node)), node.name
+
+
+def test_5way_anisotropic_fixed_point_boundary_checks_and_convergence():
+    w, h = 32, 32
+    # Node 32 is (x=0, y=1), Node 31 is (x=31, y=0)
+    history = {32: {"topo": s.BIT_L}, 31: {"topo": s.BIT_R}}
+    active, shifted, steps = s.run_5way_anisotropic_fixed_point(w, h, history, max_iterations=2)
+    assert 32 not in active
+
+    cluster_history = {
+        0: s.BIT_R | s.BIT_D,
+        1: s.BIT_L | s.BIT_D,
+        4: s.BIT_R | s.BIT_U,
+        5: s.BIT_L | s.BIT_U,
+    }
+    active, shifted, steps = s.run_5way_anisotropic_fixed_point(4, 4, cluster_history, max_iterations=3)
+    assert active == {0, 1, 4, 5}
+    assert steps == 1
 
 
 def test_reconstruction_requires_reciprocal_edge_and_grid_bounds():

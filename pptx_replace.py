@@ -27,6 +27,8 @@ def transform(source, rules, *, dry_run=False, destination=None):
         src, dst = Path(source), Path(destination)
         if src.resolve() == dst.resolve() or os.path.lexists(dst):
             raise ValueError("destination must be a new file distinct from source")
+    # Both modes apply every rule to this private in-memory presentation.
+    # Dry-run skips publication only, so later rules see all earlier edits.
     presentation = Presentation(str(source))
     changes = []
     for index, rule in enumerate(rules):
@@ -67,8 +69,7 @@ def transform(source, rules, *, dry_run=False, destination=None):
                     raise ValueError("only explicit solid RGB slide backgrounds are supported")
                 if fill.fore_color.rgb != color:
                     changes.append({"rule": index, "slide": number, "operation": operation})
-                    if not dry_run:
-                        fill.fore_color.rgb = color
+                    fill.fore_color.rgb = color
                 continue
             for shape_index, shape in enumerate(slide.shapes, 1):
                 if not shape.has_text_frame:
@@ -79,31 +80,26 @@ def transform(source, rules, *, dry_run=False, destination=None):
                             count = run.text.count(old)
                             if count:
                                 changes.append({"rule": index, "slide": number, "shape": shape_index, "paragraph": paragraph_index, "run": run_index, "count": count})
-                                if not dry_run:
-                                    run.text = run.text.replace(old, new)
+                                run.text = run.text.replace(old, new)
                         elif operation == "font_family":
                             if run.font.name != family:
                                 changes.append({"rule": index, "slide": number, "shape": shape_index, "paragraph": paragraph_index, "run": run_index, "count": 1})
-                                if not dry_run:
-                                    run.font.name = family
+                                run.font.name = family
                         elif operation == "font_size":
                             if run.font.size != Pt(size):
                                 changes.append({"rule": index, "slide": number, "shape": shape_index, "paragraph": paragraph_index, "run": run_index, "count": 1})
-                                if not dry_run:
-                                    run.font.size = Pt(size)
+                                run.font.size = Pt(size)
                         elif operation == "bold":
                             if run.font.bold is not rule["value"]:
                                 changes.append({"rule": index, "slide": number, "shape": shape_index, "paragraph": paragraph_index, "run": run_index, "count": 1})
-                                if not dry_run:
-                                    run.font.bold = rule["value"]
+                                run.font.bold = rule["value"]
                         elif operation == "text_color":
                             from pptx.dml.color import MSO_COLOR_TYPE
                             if run.font.color.type != MSO_COLOR_TYPE.RGB:
                                 raise ValueError("text_color requires explicit RGB run colors")
                             if run.font.color.rgb != color:
                                 changes.append({"rule": index, "slide": number, "shape": shape_index, "paragraph": paragraph_index, "run": run_index, "count": 1})
-                                if not dry_run:
-                                    run.font.color.rgb = color
+                                run.font.color.rgb = color
     if not dry_run:
         if destination is None:
             raise ValueError("destination is required unless dry-run")

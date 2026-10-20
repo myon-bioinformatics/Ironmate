@@ -230,7 +230,7 @@ function textLayer(text, x, y) {
     fill: $("fill").value,
     fontSize: size,
     font: $("font-family").value,
-    mono: true,
+    mono: document.body.dataset.mode !== "slides",
   };
 }
 function place(x, y) {
@@ -972,7 +972,7 @@ $("stamp-demo").onclick = () => {
   message("時計も顔文字も、保持した図形・文字を拡大して再描画します。");
 };
 window.addEventListener("beforeunload", (e) => {
-  if (dirty) {
+  if (dirty && document.body.dataset.mode !== "slides") {
     e.preventDefault();
     e.returnValue = "";
   }
@@ -1229,6 +1229,18 @@ window.IronmateStudio = {
     return render();
   },
   pngBlob,
+  get selectedId() { return selected; },
+  async replaceScene(value) {
+    const next = C.validate(value);
+    await prepare(next);
+    scene = next; history = new C.History(next); selected = null; dirty = true;
+    await render();
+  },
+  async imageSource(value) { return prepare(C.validate(value)); },
+  patchSelected(properties) {
+    if (!selectedLayer()) throw new Error("先にレイヤーを選択してください");
+    change(doc => Object.assign(doc.layers.find(l => l.id === selected), properties));
+  },
   get shelfItems() { return shelfItems.map(item => ({ ...item })); },
   addShelfItem,
 };

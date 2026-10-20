@@ -50,7 +50,8 @@ def test_static_allowlist_excludes_private_scenes_and_generation_inputs(tmp_path
     target = image_studio.build_site(tmp_path / 'Ironmate')
     assert {p.relative_to(target).as_posix() for p in target.rglob('*') if p.is_file()} == {
         'index.html', 'style.css', 'core.js', 'studio.js', '.nojekyll',
-        'tools/index.html', 'tools/tools.css', 'tools/tools-core.js', 'tools/tools.js', 'tools/catalog.js'}
+        'tools/index.html', 'tools/tools.css', 'tools/tools-core.js', 'tools/tools.js', 'tools/catalog.js',
+        'slides/index.html', 'slides/package.js', 'slides/pptx.js', 'slides/slides.js', 'slides/slides.css'}
     assert not list(target.rglob('*.py')) and not list(target.rglob('*.json'))
     assert 'href="tools/"' in (target / 'index.html').read_text()
     assert 'connect-src \'none\'' in (target / 'tools/index.html').read_text()

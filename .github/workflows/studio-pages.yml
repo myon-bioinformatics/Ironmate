@@ -10,9 +10,12 @@ on:
         "pixel_grid.py",
         "grid_output.py",
         "scripts/pages_catalog.py",
+        "scripts/build_slide_shell.py",
         "Dockerfile.pages",
         "tests/pages_browser.cjs",
         "tests/test_pages_tools.py",
+        "tests/slides_browser.cjs",
+        "tests/test_browser_slides.py",
         ".github/workflows/studio-pages.yml",
       ]
   pull_request:
@@ -23,9 +26,12 @@ on:
         "pixel_grid.py",
         "grid_output.py",
         "scripts/pages_catalog.py",
+        "scripts/build_slide_shell.py",
         "Dockerfile.pages",
         "tests/pages_browser.cjs",
         "tests/test_pages_tools.py",
+        "tests/slides_browser.cjs",
+        "tests/test_browser_slides.py",
         ".github/workflows/studio-pages.yml",
       ]
   workflow_dispatch:
@@ -57,6 +63,8 @@ jobs:
           node --check studio/studio.js
           node --check studio/tools/tools-core.js
           node --check studio/tools/tools.js
+          node --check studio/slides/pptx.js
+          node --check studio/slides/slides.js
           docker build --target artifact --output type=local,dest=build/studio-site -f Dockerfile.pages .
       - name: Start the same static site in Docker
         run: |
@@ -68,6 +76,7 @@ jobs:
           npm install --prefix build/pages-test --no-save --ignore-scripts --package-lock=false --no-audit --no-fund playwright@1.64.1
           node build/pages-test/node_modules/playwright/cli.js install --with-deps chromium
           IRONMATE_PLAYWRIGHT_MODULE="$PWD/build/pages-test/node_modules/playwright" IRONMATE_PAGES_URL=http://127.0.0.1:8080/Ironmate/ node tests/pages_browser.cjs
+          IRONMATE_PLAYWRIGHT_MODULE="$PWD/build/pages-test/node_modules/playwright" IRONMATE_PAGES_URL=http://127.0.0.1:8080/Ironmate/ node tests/slides_browser.cjs
       - name: Preserve browser evidence
         if: always()
         uses: actions/upload-artifact@v7
@@ -114,4 +123,10 @@ jobs:
           text = Path('/tmp/tools.html').read_text()
           assert 'PIXEL GRID' in text and 'tools-core.js' in text and 'catalog.js' in text
           print('Published browser tools HTML verified')
+          PY
+          curl --fail --location --retry 6 --retry-delay 3 --retry-all-errors "${SITE_URL}slides/" --output /tmp/slides.html
+          python -S - <<'PY'
+          from pathlib import Path
+          assert 'deck-pptx' in Path('/tmp/slides.html').read_text()
+          print('Published Slide Studio verified')
           PY

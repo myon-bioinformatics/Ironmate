@@ -128,10 +128,23 @@ def mosaic(artifact, cell=8, levels=256):
 def public_assets():
     """Explicit publication allowlist; no user scenes, globbing, or local images."""
     names = ('index.html', 'core.js', 'studio.js', 'style.css',
-             'tools/index.html', 'tools/tools.css', 'tools/tools-core.js', 'tools/tools.js')
+             'tools/index.html', 'tools/tools.css', 'tools/tools-core.js', 'tools/tools.js',
+             'slides/package.js', 'slides/pptx.js', 'slides/slides.js', 'slides/slides.css')
     assets = {name: (ROOT / 'studio' / name).read_bytes() for name in names}
     from scripts.pages_catalog import catalog_script
     assets['tools/catalog.js'] = catalog_script()
+    page = assets['index.html'].decode('utf-8')
+    for name in ('style.css', 'core.js', 'studio.js'):
+        page = page.replace('"' + name + '"', '"../' + name + '"')
+    page = page.replace('href="tools/"', 'href="../tools/"')
+    page = page.replace('<a href="slides/">スライド・PPTX作成 ↗</a>', '<a href="../">Image Studio ↗</a>')
+    page = page.replace('<body>', '<body data-mode="slides">')
+    page = page.replace('IMAGE STUDIO / 01', 'SLIDE STUDIO / 03').replace('Ironmate — Image Studio', 'Ironmate — Slide Studio')
+    extra = '<link rel="stylesheet" href="slides.css">' + ''.join(
+        f'<script defer src="{name}"></script>' for name in ('package.js', 'pptx.js', 'slides.js'))
+    page = page.replace('</head>', extra + '</head>')
+    page = page.replace('</header>', '</header>' + (ROOT / 'studio/slides/panel.html').read_text())
+    assets['slides/index.html'] = page.encode('utf-8')
     return assets
 
 
@@ -264,7 +277,7 @@ class StudioHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         assets = cached_public_assets()
         route = self.path.split('?', 1)[0]
-        filename = {'/': 'index.html', '/tools/': 'tools/index.html'}.get(route, route.lstrip('/'))
+        filename = {'/': 'index.html', '/tools/': 'tools/index.html', '/slides/': 'slides/index.html'}.get(route, route.lstrip('/'))
         if filename not in assets:
             self.send_error(404)
             return

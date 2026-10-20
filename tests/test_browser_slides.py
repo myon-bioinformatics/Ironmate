@@ -78,3 +78,8 @@ def test_generated_shell_matches_the_existing_locked_js_writer():
         pytest.skip('npm ci is needed to regenerate the shell')
     from scripts.build_slide_shell import shell_script
     assert shell_script()==(ROOT/'studio/slides/package.js').read_text()
+
+
+def test_rejects_fonts_outside_office_xml_range():
+    result=node("""(async()=>{const results=[];for(const [w,h,fontSize] of [[4096,1024,4],[64,64,512]]){const scene=D.template(w,h);scene.layers[0].fontSize=fontSize;try{await D.exportPptx({schema:D.SCHEMA,slides:[scene]});results.push(false)}catch{results.push(true)}}console.log(JSON.stringify(results));})();""")
+    assert json.loads(result.stdout)==[True,True]

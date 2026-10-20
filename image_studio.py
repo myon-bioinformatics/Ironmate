@@ -138,7 +138,7 @@ def public_assets():
         page = page.replace('"' + name + '"', '"../' + name + '"')
     page = page.replace('href="tools/"', 'href="../tools/"')
     page = page.replace('<a href="slides/">スライド・PPTX作成 ↗</a>', '<a href="../">Image Studio ↗</a>')
-    page = page.replace('<body>', '<body data-mode="slides">')
+    page = page.replace('<body>', '<body data-mode="slides">').replace('画像にする。', 'スライドにする。')
     page = page.replace('IMAGE STUDIO / 01', 'SLIDE STUDIO / 03').replace('Ironmate — Image Studio', 'Ironmate — Slide Studio')
     extra = '<link rel="stylesheet" href="slides.css">' + ''.join(
         f'<script defer src="{name}"></script>' for name in ('package.js', 'pptx.js', 'slides.js'))

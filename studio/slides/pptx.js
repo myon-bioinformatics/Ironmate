@@ -65,7 +65,7 @@
       opacity: 1,
       text: value,
       fill: "#000000",
-      fontSize: size,
+      fontSize: Math.max(4, size),
       font: "sans",
       mono: false,
       bold,
@@ -224,6 +224,10 @@
         if (l.kind === "text" && !l.mono) {
           const size = Math.round((l.fontSize * unit) / 127),
             font = l.font === "mono" ? "MS Gothic" : "Meiryo";
+          if (size < 100 || size > 400000)
+            throw Error(
+              "PPTXの文字サイズが1〜4000ptの範囲を超えています。キャンバスまたは文字サイズを調整してください。",
+            );
           const paragraphs = l.text
             .split("\n")
             .map(

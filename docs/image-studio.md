@@ -81,7 +81,7 @@ Ironmateの4MPは既存のモザイク処理・描画負荷を制限する意図
 再現（テスト専用Playwright 1.58.2、ランタイム依存の追加なし）：
 
 ```sh
-npm install --prefix build/clipboard-tools --no-save --ignore-scripts --package-lock=false playwright@1.58.2
+npm install --prefix build/clipboard-tools --no-save --ignore-scripts --package-lock=false playwright@1.64.1
 node build/clipboard-tools/node_modules/playwright/cli.js install --with-deps chromium firefox webkit
 IRONMATE_PLAYWRIGHT_MODULE="$PWD/build/clipboard-tools/node_modules/playwright" node tests/studio_clipboard.cjs
 ```

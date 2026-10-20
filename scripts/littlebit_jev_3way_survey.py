@@ -24,6 +24,10 @@ DIRS = ((-1, 0), (1, 0), (0, -1), (0, 1))
 SCENARIOS = ("Dense_Object", "Thin_Skeleton", "Hollow_Ring", "Smooth_Gradient",
              "High_Noise_Dark", "Multi_Scale_Clusters")
 
+BIT_L, BIT_R, BIT_U, BIT_D = 1, 2, 4, 8
+MASK_X_AXIS = BIT_L | BIT_R  # 0b0011 (horizontal / x-axis mask)
+MASK_Y_AXIS = BIT_U | BIT_D  # 0b1100 (vertical / y-axis mask)
+
 
 def fwht8_add_only(values):
     """H8(x) // 2; integer rounding means this is NOT an orthonormal rotation."""
@@ -127,6 +131,89 @@ def reconstruct_blind(history, width, height):
                 if neighbor is not None and neighbor["topo"] & (1 << reverse):
                     result.add(idx)
     return result
+
+
+def run_5way_anisotropic_fixed_point(
+    w: int,
+    h: int,
+    blind_history: dict[int, int] | dict[int, dict],
+    anisotropy_x_shift: int = 1,
+    max_iterations: int = 3
+) -> tuple[set[int], set[int], int]:
+    """[Way 3 -> Way 5: Blind anisotropic reconstruction & fixed-point convergence]
+
+    Zero multiplication integer bitwise operations for fixed-point core extraction.
+    Explicit grid boundary checking (0 <= nx < w, 0 <= ny < h) is enforced to prevent
+    spurious row-wrap artifacts.
+    Accepts history mapping where value is integer topology or dict containing 'topo'.
+    """
+    history_topo = {idx: (val["topo"] if isinstance(val, dict) else val)
+                    for idx, val in blind_history.items()}
+    offsets = row_offsets(w, h)
+    active_nodes: set[int] = set(history_topo.keys())
+    strides = (0, 1, 2, 3)
+    dirs = ((-1, 0), (1, 0), (0, -1), (0, 1))
+
+    converged_step = 0
+    for step in range(max_iterations):
+        next_nodes: set[int] = set()
+
+        for idx in active_nodes:
+            x, y = idx % w, idx // w
+            topo = history_topo[idx]
+            anisotropic_score = 0
+            diagonal_bridges = 0
+
+            for s_shift in strides:
+                layer_bits = (topo >> (s_shift << 2)) & 0x0F
+                if layer_bits == 0:
+                    continue
+
+                active_dir_flags = 0
+                for d_idx, (dx, dy) in enumerate(dirs):
+                    if layer_bits & (1 << d_idx):
+                        nx = x + (dx << s_shift)
+                        ny = y + (dy << s_shift)
+                        if 0 <= nx < w and 0 <= ny < h:
+                            n_flat = offsets[ny] + nx
+                            if n_flat in active_nodes:
+                                active_dir_flags |= (1 << d_idx)
+                                if d_idx < 2:
+                                    anisotropic_score += (1 << anisotropy_x_shift)
+                                else:
+                                    anisotropic_score += 1
+
+                has_x = (active_dir_flags & MASK_X_AXIS) != 0
+                has_y = (active_dir_flags & MASK_Y_AXIS) != 0
+                if has_x and has_y:
+                    diagonal_bridges += 2
+
+            req_score = 2 + (step if step < 2 else 2)
+            if (anisotropic_score + diagonal_bridges) >= req_score:
+                next_nodes.add(idx)
+
+        if next_nodes == active_nodes:
+            converged_step = step + 1
+            break
+        active_nodes = next_nodes
+        converged_step = step + 1
+
+    shifted_nodes: set[int] = set()
+    for idx in active_nodes:
+        x, y = idx % w, idx // w
+        sx, sy = (x + 2) % w, (y + 2) % h
+        s_flat = offsets[sy] + sx
+        topo = history_topo[idx]
+        s_links = 0
+        for d_idx, (dx, dy) in enumerate(dirs):
+            if (topo & 0x0F) & (1 << d_idx):
+                sn_flat = offsets[(sy + dy) % h] + ((sx + dx) % w)
+                if sn_flat in active_nodes:
+                    s_links += 1
+        if s_links >= 2:
+            shifted_nodes.add(s_flat)
+
+    return active_nodes, shifted_nodes, converged_step
 
 
 def supplied_reconstruction(history, width, height):

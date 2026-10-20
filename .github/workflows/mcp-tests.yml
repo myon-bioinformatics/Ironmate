@@ -152,10 +152,12 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "26"
+      # Pin Mermaid's Puppeteer peer too: a floating peer can select a newly
+      # published puppeteer before its exact puppeteer-core release is available.
       - name: Install pinned Node packages and pinned Marp CLI
         run: |
           npm ci
-          npm install --no-save --ignore-scripts @marp-team/marp-cli@4.5.1 @mermaid-js/mermaid-cli@12.0.0 playwright@1.58.2
+          npm install --no-save --ignore-scripts @marp-team/marp-cli@4.5.1 @mermaid-js/mermaid-cli@12.0.0 puppeteer@25.15.0 playwright@1.58.2
       - name: Install Japanese fonts for diagram evidence
         run: |
           sudo apt-get update

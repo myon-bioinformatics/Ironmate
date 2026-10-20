@@ -104,9 +104,14 @@ def test_workflow_keeps_suite_failure_and_exact_reports(tmp_path):
     assert all('continue-on-error' not in s for s in steps)
     assert suite['if'] == "${{ !cancelled() && steps.compile.outcome == 'success' }}"
     compile_index = next(i for i, s in enumerate(steps) if s.get('id') == 'compile')
-    unittest_index = next(i for i, s in enumerate(steps) if 'python -m unittest ' in s.get('run', ''))
-    assert compile_index < unittest_index < steps.index(suite)
-    assert suite['run'].startswith('uv run --locked ')
+    assert compile_index < steps.index(suite)
+    # pytest already collects the vendor and repository-hygiene TestCase
+    # classes. A separate unittest command would execute those cases twice.
+    assert all('python -m unittest ' not in s.get('run', '') for s in steps)
+    assert suite['run'] == (
+        'uv run --locked python -m pytest -q -m "not heavy" '
+        '--junitxml=build/test-results/pytest-3.12.xml'
+    )
     # Run the actual workflow command; reject wrappers that hide pytest's rc=1.
     executable = tmp_path / 'uv'
     for rc in (0, 1):
@@ -129,6 +134,9 @@ def test_workflow_keeps_suite_failure_and_exact_reports(tmp_path):
     assert collector['if'] == 'always()'
     assert collector['uses'].endswith('@a9df23dec720f125772a24b77b413552d60060ba')
     marp_steps = jobs['marp-integration']['steps']
+    install = next(s for s in marp_steps if s.get('name') == 'Install pinned Node packages and pinned Marp CLI')
+    assert '--ignore-scripts' in install['run']
+    assert 'puppeteer@25.15.0' in install['run']  # Do not resolve Mermaid's peer to a floating latest release.
     marp_upload = next(s for s in marp_steps if s.get('name') == 'Preserve Marp JUnit')
     assert marp_upload['if'] == 'always()'
     assert marp_upload['with']['if-no-files-found'] == 'error'

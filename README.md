@@ -14,6 +14,10 @@ Markdown→PPTX変換と既存PPTXの属性編集CLIは試作実装済みです�
 
 [操作方法と検証範囲](docs/image-studio.md) ／ [実ブラウザの画面と検証証跡](docs/evidence/image-studio/report.md)。
 
+## ブラウザでスライドを作成
+
+[Slide Studioを開く](https://myon-bioinformatics.github.io/Ironmate/slides/)。Image Studioと同じ操作でタイトル・本文・矢印を配置し、複数スライドをPPTXに保存できます。文字と通常図形はPowerPointでも編集可能な形式で出力します。[操作・対応範囲](docs/slide-studio.md)。
+
 ## PPTX変換・編集
 
 MarkdownからPPTXを生成する入口は **`pptx_pipeline.py`** に統一しています。旧`marp_pptx.py`は削除済みで、互換CLIは提供しません。引数の構築には固定vendorの`vendor/cli_args.py`を使用します。

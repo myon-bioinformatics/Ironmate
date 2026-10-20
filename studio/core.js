@@ -152,6 +152,7 @@
         fail("単色設定が不正です");
       if (l.mono && !color(l.fill)) fail("単色の色が不正です");
       if (l.kind === "text") {
+        if (l.bold !== undefined && typeof l.bold !== "boolean") fail("太字の指定が不正です");
         if (l.font !== undefined && !["sans", "mono"].includes(l.font))
           fail("フォント設定が不正です");
         if (
@@ -328,7 +329,7 @@
         body = `<polygon points="${l.w / 2},0 ${l.w},${l.h} 0,${l.h}" ${attrs}/>`;
     } else if (l.kind === "text") {
       body =
-        `<text fill="${l.fill}" font-family="${l.font === "mono" ? "ui-monospace, 'Noto Sans Mono', monospace" : "Meiryo, 'Noto Sans', 'Noto Color Emoji', sans-serif"}" font-size="${l.fontSize}" dominant-baseline="text-before-edge">` +
+        `<text fill="${l.fill}" font-family="${l.font === "mono" ? "ui-monospace, 'Noto Sans Mono', monospace" : "Meiryo, 'Noto Sans', 'Noto Color Emoji', sans-serif"}" font-size="${l.fontSize}" font-weight="${l.bold ? "700" : "400"}" dominant-baseline="text-before-edge">` +
         l.text
           .split("\n")
           .map(

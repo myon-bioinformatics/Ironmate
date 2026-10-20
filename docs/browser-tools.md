@@ -1,5 +1,6 @@
 # GitHub Pages版のブラウザツール
 
+- Slide Studio: https://myon-bioinformatics.github.io/Ironmate/slides/
 - Image Studio: https://myon-bioinformatics.github.io/Ironmate/
 - ドット絵・画像一覧・Base64容量: https://myon-bioinformatics.github.io/Ironmate/tools/
 - ポートフォリオ: https://myon-bioinformatics.github.io/#ironmate
@@ -11,7 +12,7 @@
 ```sh
 docker build -f Dockerfile.pages --target runtime -t ironmate-pages .
 docker run --rm -p 127.0.0.1:8080:8080 ironmate-pages
-# http://localhost:8080/Ironmate/ または http://localhost:8080/Ironmate/tools/
+# http://localhost:8080/Ironmate/ または http://localhost:8080/Ironmate/tools/ または http://localhost:8080/Ironmate/slides/
 ```
 
 GitHub Pages用の公開ファイルだけを取り出す場合：
@@ -38,7 +39,8 @@ python -S image_studio.py --build-site build/studio-site
 | ドット絵出力 | PNG/SVG/JSON/Base64。1/2/8/16倍 | PNGはRGBAを直接deflateし、透明画素の隠れたRGBと色表を保持。Python版との圧縮byte一致は保証しない。PNGにはCompressionStream対応ブラウザが必要 |
 | 画像一覧 | PNG/JPEG/WebP最大20枚、列数変更、一覧PNG、画像埋込HTML | 1枚8MiB・合計32MiB・1画像4MP。デコード後に画素数を検査し、長辺512px以下のサムネイルを保持。元画像byte・メタデータ保持、合否・MAE/RMSE算出は対象外 |
 | Base64容量 | File.sizeから`4*ceil(bytes/3)`を計算。PNG data URIなら22文字加算 | 圧縮率や縮小率の推定ではない。ファイルを読み込まずサイズだけ使う |
-| PPTX/PDF・外部API | 実行環境を必要とする範囲を画面に明記 | pptx_pipeline.py / pptx_replace.py / pptx_preview.py等を手元で実行。#145のpypdf取得はブラウザ用の実装ではない |
+| スライド・PPTX作成 | [Slide Studio](slide-studio.md)で文字・図形・矢印・画像を配置し、複数枚のPPTX出力 | 任意PPTXの読込・既存PPTX編集・PDF描画はCLI |
+| 既存PPTX/PDF・外部API | 実行環境を必要とする範囲を画面に明記 | pptx_pipeline.py / pptx_replace.py / pptx_preview.py等を手元で実行。#145のpypdf取得はブラウザ用の実装ではない |
 
 画像一覧のデコードはブラウザ実装に依存します。アニメーション、EXIF・色管理の完全保持、OS間のフォント一致は対象外です。ファイル選択をキャンセルした場合や不正なJSONを選択した場合は、現在の作業を保持します。ページを閉じると作業は失われるので明示的に保存してください。
 
@@ -52,4 +54,4 @@ IRONMATE_PLAYWRIGHT_MODULE="$PWD/build/pages-test/node_modules/playwright" node 
 
 全100プリセットの色番号を既存Python実装と照合します。最近傍拡縮は奇数・非正方形を含めてPythonと比較します。ブラウザ検証は既存Studioからの導線、PNG/SVG/JSON/Base64出力、PNG→Pythonでの完全復元、サイズ変更・undo、不正JSONの拒否、画像一覧、ファイル名のHTMLエスケープ、Base64容量、390px幅の画面を確認します。
 
-公開allowlistに入力画像・作業JSON・リポジトリの証跡・Pythonソースを含めません。生成物は約300KBのHTML/JS/CSSとプリセットです。
+公開allowlistに入力画像・作業JSON・リポジトリの証跡・Pythonソースを含めません。生成物は約400KBのHTML/JS/CSSとプリセットです。

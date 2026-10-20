@@ -504,3 +504,10 @@ dialog textarea {
   font-size: 12px;
   line-height: 1.8;
 }
+
+.top-actions > a {
+  color: #c7f58a;
+  align-self: center;
+  padding: 7px 3px;
+  text-underline-offset: 3px;
+}

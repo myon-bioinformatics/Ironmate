@@ -235,3 +235,36 @@ def test_cli_stdlib_probe_png_round_trip_and_invalid_resize():
     for args in (['--resize-method', 'probes'], ['--resize', '7', '--resize-method', 'probes'], ['--resize', '0']):
         bad = subprocess.run(cli + args, cwd=ROOT, capture_output=True)
         assert bad.returncode == 2 and b'Traceback' not in bad.stderr
+
+
+@pytest.mark.parametrize('colors', [
+    ['#FF0000FF'],
+    ['#FF000080', '#12345600', '#00000000', '#FF000080'],
+    ['#FF0000FF', '#00000000', '#00FF00FF'],
+])
+def test_rectangular_exports_preserve_palette_and_visible_rgba(colors):
+    # Opaque index zero, partial alpha, multiple transparent/duplicate/unused colors.
+    art = artifact([[0] * 6 for _ in range(4)], colors)
+    art.update(mask='custom', palette='custom', effect='normal',
+               source={'format': 'png', 'width': 6, 'height': 4},
+               custom_metadata={'nested': ['owned', 1]})
+    before = deepcopy(art)
+    grid = g.sparse(art).grid
+    grid.swap_pixels_reversible(0, 23)
+    grid.rollback_all()
+    assert grid.to_artifact() == art == before
+    small = g.downscale_2x(art)
+    assert (small['width'], small['height']) == (3, 2)
+    assert small['colors'][:len(colors)] == colors
+    assert small['custom_metadata'] == art['custom_metadata']
+    assert g.restore(g.encode(small, 'json')) == small
+    from grid_png import header_info
+    for fmt in ('png', 'base64'):
+        restored = g.restore(g.encode(small, fmt, scale=2, data_uri=True), backend='stdlib')
+        # Existing PNG header whitelist and first-index rule for duplicate RGBA.
+        assert header_info(restored) == header_info(small)
+        assert g.cells(restored) == g.cells(small)
+    rgba = lambda a: [[c if c[-2:] != '00' else '#00000000' for c in row] for row in g.cells(a)]
+    assert rgba(g.restore(g.encode(small, 'svg'), backend='stdlib')) == rgba(small)
+    small['custom_metadata']['nested'].append('changed')
+    assert art == before

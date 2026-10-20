@@ -51,6 +51,13 @@ def test_cells_colors_transparency_and_runs():
     assert (0, 0) not in cells and (1, 2) not in cells
 
 
+@pytest.mark.parametrize('merge', [True, False])
+def test_opaque_zero_and_nonzero_transparency_follow_alpha(merge):
+    art = _art([[0, 0, 1, 2], [3, 2, 0, 1]],
+               ('#FF0000FF', '#12345600', '#0000FF80', '#00000000'))
+    assert _cover(s.to_svg(art, merge=merge))[1] == _expected(art)
+
+
 def test_merge_equivalence_on_real_grids():
     for mask in pixel_grid.MASKS:
         art = pixel_grid.render(mask, 'C03', 'outline', 32)

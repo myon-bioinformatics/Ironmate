@@ -87,8 +87,12 @@ assert g.restore(g.encode(small), backend='stdlib') == small
 ## 復元できる範囲
 
 スワップ→rollbackは元の画素・占有マスク・artifactを完全復元できる。
-縮小後のartifact→PNG/Base64→artifactは既存仕様で往復できる
-（重複RGBAの色番号は従来どおり最初の番号に寄る）。SVGでは見えるRGBAを比較する。
+縮小後のartifact→PNG/Base64→artifactは既存仕様で往復できる。
+PNGのmetadataは既存の `grid_png.header_info()` の許可フィールドのみを保持し、
+任意の追加metadataはJSONまたはgrid adapterで保持する。
+重複RGBAの色番号は従来どおり最初の番号に寄る。
+SVGでは色番号0もalphaが非ゼロなら描画し、見えるRGBAを比較する
+（透明色のRGB、palette順、metadataの完全復元はSVGの保証対象外）。
 
 **縮小自体は不可逆**。出力だけから元の細部を復元できない。
 既存の最近傍拡大はそのまま利用できるが、失われた細部を再構成するものではない。

@@ -1,6 +1,6 @@
 """Write an ``ironmate-pixel-grid/1`` artifact as SVG (stdlib only, no I/O on import).
 
-Horizontal runs of the same color become one ``<rect>``; index 0 (or alpha 0) is omitted.
+Horizontal runs of the same color become one ``<rect>``; only alpha 0 is omitted.
 Coordinates are grid units in ``viewBox``; ``scale`` only sets width/height.
 """
 from __future__ import annotations
@@ -39,8 +39,7 @@ def to_svg(artifact, scale=8, merge=True):
     colors = artifact['colors']
     if len(pixels) != height or any(len(row) != width for row in pixels):
         raise ValueError('pixels do not match width/height')
-    fills = [None] + [_fill(value) for value in colors[1:]]
-    _fill(colors[0])
+    fills = [_fill(value) for value in colors]
     title = ' '.join(f'{key}={artifact[key]}' for key in ('schema', 'mask', 'palette', 'effect', 'fit', 'quantize')
                      if artifact.get(key) is not None)
     lines = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{width * scale}" height="{height * scale}" '

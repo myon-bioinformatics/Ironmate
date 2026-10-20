@@ -11,7 +11,8 @@ import argparse, json, math, os, re, struct, sys, zlib
 import photo_grid
 import pixel_grid
 
-__all__ = ['FORMATS', 'make', 'photo', 'encode', 'restore', 'resize', 'recolor', 'cells', 'canonical', 'main']
+__all__ = ['FORMATS', 'make', 'photo', 'encode', 'restore', 'resize', 'sparse', 'downscale_2x',
+           'recolor', 'cells', 'canonical', 'main']
 FORMATS = ('json', 'svg', 'png', 'base64')
 _CLEAR = '#00000000'
 _HEX = re.compile(r'#[0-9A-Fa-f]{8}')
@@ -208,16 +209,35 @@ def restore(source, size=None, backend='auto'):
     return art
 
 
-def resize(artifact, width, height=None, backend='auto'):
+def sparse(artifact, quota_per_frame=1):
+    """Owned reversible grid + scanner. Export via scanner.grid.to_artifact()."""
+    from pixel_arcade_engine import InvaderSparseScanner, ReversiblePixelGrid
+    return InvaderSparseScanner(ReversiblePixelGrid.from_artifact(artifact), quota_per_frame)
+
+
+def downscale_2x(artifact):
+    """Opt-in lossy Pacman probe filter; even source dimensions only, stdlib backend."""
+    from pixel_arcade_engine import PacmanGhostProbes, ReversiblePixelGrid
+    return PacmanGhostProbes().adaptive_downscale_2x(ReversiblePixelGrid.from_artifact(artifact)).to_artifact()
+
+
+def resize(artifact, width, height=None, backend='auto', *, method='nearest'):
     """Nearest-neighbour resize by cell centers: source = (2*i + 1) * old // (2 * new).
 
     ``height`` defaults to keeping the aspect ratio. Integer upscale is exact and reversible.
+    ``method='probes'`` opts into lossy, even-dimension 2x downsampling (stdlib only).
     """
     w0, h0 = artifact['width'], artifact['height']
     if height is None:
         height = max(1, round(h0 * width / w0))
     if any(type(v) is not int or not 1 <= v <= 4096 for v in (width, height)):
         raise ValueError('width/height must be integers from 1 to 4096')
+    if method == 'probes':
+        if w0 != (width << 1) or h0 != (height << 1):
+            raise ValueError('probes requires an exact 2x downscale of both dimensions')
+        return downscale_2x(artifact)
+    if method != 'nearest':
+        raise ValueError('method must be nearest or probes')
     xs = [(2 * i + 1) * w0 // (2 * width) for i in range(width)]
     ys = [(2 * j + 1) * h0 // (2 * height) for j in range(height)]
     if _backend(backend, 'numpy') == 'numpy':
@@ -290,7 +310,9 @@ def main(argv=None):
         cmd.add_argument('--scale', type=int, default=1, help='output pixels per cell (svg default 8)')
         cmd.add_argument('--data-uri', action='store_true')
         cmd.add_argument('--no-meta', action='store_true', help='omit the ironmate PNG header')
-        cmd.add_argument('--resize', type=int, help='nearest-neighbour resize to this width')
+        cmd.add_argument('--resize', type=int, help='resize to this width (nearest-neighbour by default)')
+        cmd.add_argument('--resize-method', choices=('nearest', 'probes'), default='nearest',
+                         help='probes: experimental lossy 2x downscale; requires --resize')
         cmd.add_argument('--recolor', help='swap palette to this color ID')
         cmd.add_argument('-o', '--output')
         cmd.add_argument('--force', action='store_true', help='replace an existing -o file')
@@ -336,8 +358,10 @@ def main(argv=None):
             art = photo(_read(args.input), args.size, args.fit, args.colors, args.palette)
         else:
             art = restore(_read(args.input), args.size)
-        if args.resize:
-            art = resize(art, args.resize)
+        if args.resize is not None:
+            art = resize(art, args.resize, method=args.resize_method)
+        elif args.resize_method != 'nearest':
+            raise ValueError('--resize-method probes requires --resize')
         if args.recolor:
             art = recolor(art, args.recolor)
         result = encode(art, args.to, args.scale, args.data_uri, not args.no_meta)

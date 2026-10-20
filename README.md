@@ -121,6 +121,12 @@ python -m grid_tools load c.png --to svg -o c.svg                               
 python -m grid_tools photo photo.jpg --size 32 --colors 8 --to base64 --data-uri    # JPEG/WebPはPillow
 ```
 
+`g.sparse(artifact)` で有効ドットだけを走査・隣接スワップし、
+`scanner.grid.rollback_all()` で画素と占有マスクを完全復元できます。
+`--resize-method probes`（例：`--resize 16` と32セル入力）は4種プローブによる
+試験的な2倍縮小です。縮小は不可逆で、既定は従来の最近傍のままです。
+[フレーム操作・可逆性の範囲・プローブの仕様](docs/pixel-arcade-engine.md)。
+
 `encode`はPNGに`ironmate`のtEXtチャンク（色表と寸法）を既定で入れ、`load`/`restore`はそれがあれば
 元のJSONをそのまま返します（`--no-meta`で付けない。既定のPNG bytes自体は`grid_png.py`と同じ）。
 

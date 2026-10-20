@@ -62,7 +62,7 @@ jobs:
         run: |
           docker build --target runtime -t ironmate-pages:test -f Dockerfile.pages .
           docker run --detach --rm --name ironmate-pages --publish 127.0.0.1:8080:8080 ironmate-pages:test
-          curl --fail --retry 10 --retry-delay 1 --retry-connrefused http://127.0.0.1:8080/Ironmate/tools/ --output /tmp/tools.html
+          curl --fail --retry 10 --retry-delay 1 --retry-all-errors http://127.0.0.1:8080/Ironmate/tools/ --output /tmp/tools.html
       - name: Verify browser operations and Python grid round-trip
         run: |
           npm install --prefix build/pages-test --no-save --ignore-scripts --package-lock=false --no-audit --no-fund playwright@1.64.1

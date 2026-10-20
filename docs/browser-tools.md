@@ -52,4 +52,4 @@ IRONMATE_PLAYWRIGHT_MODULE="$PWD/build/pages-test/node_modules/playwright" node 
 
 全100プリセットの色番号を既存Python実装と照合します。最近傍拡縮は奇数・非正方形を含めてPythonと比較します。ブラウザ検証は既存Studioからの導線、PNG/SVG/JSON/Base64出力、PNG→Pythonでの完全復元、サイズ変更・undo、不正JSONの拒否、画像一覧、ファイル名のHTMLエスケープ、Base64容量、390px幅の画面を確認します。
 
-公開allowlistに入力画像・作業JSON・リポジトリの証跡・Pythonソースを含めません。生成物は約200KBのHTML/JS/CSSとプリセットです。
+公開allowlistに入力画像・作業JSON・リポジトリの証跡・Pythonソースを含めません。生成物は約300KBのHTML/JS/CSSとプリセットです。

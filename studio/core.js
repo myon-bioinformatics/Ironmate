@@ -1,4 +1,4 @@
-/* Independent composition model. No DOM, network, framework or Dart dependency. */
+/* Composition model. Optional browser canvas metrics; no network/framework dependency. */
 (function (root) {
   "use strict";
   const SCHEMA = "ironmate-image-studio/1";
@@ -152,6 +152,7 @@
         fail("単色設定が不正です");
       if (l.mono && !color(l.fill)) fail("単色の色が不正です");
       if (l.kind === "text") {
+        if (l.wrap !== undefined && typeof l.wrap !== "boolean") fail("折り返しの指定が不正です");
         if (l.bold !== undefined && typeof l.bold !== "boolean") fail("太字の指定が不正です");
         if (l.font !== undefined && !["sans", "mono"].includes(l.font))
           fail("フォント設定が不正です");
@@ -317,6 +318,51 @@
       bytes: a.length,
     };
   }
+  function textFont(l) {
+    return l.font === "mono"
+      ? `${l.wrap ? "'MS Gothic', " : ""}ui-monospace, 'Noto Sans Mono', monospace`
+      : "Meiryo, 'Noto Sans', 'Noto Color Emoji', sans-serif";
+  }
+  let textContext;
+  function measureText(text, l) {
+    // Node exports use conservative em estimates. Browser SVG and PPTX share
+    // the actual installed font's metrics, including bold and kerning.
+    if (textContext === undefined) {
+      const canvas = root.document?.createElement("canvas");
+      textContext = canvas?.getContext("2d") || null;
+    }
+    if (textContext) {
+      textContext.font = `${l.bold ? 700 : 400} ${l.fontSize}px ${textFont(l)}`;
+      return textContext.measureText(text).width;
+    }
+    return Array.from(text).reduce((n, c) => n + (/^[\x20-\x7e]$/.test(c) ? 0.65 : 1), 0) * l.fontSize;
+  }
+  const words = new Intl.Segmenter("ja", { granularity: "word" }),
+    graphemes = new Intl.Segmenter("ja", { granularity: "grapheme" });
+  function textLayout(l, measure = (text) => measureText(text, l)) {
+    const paragraphs = l.text.replace(/\r\n?/g, "\n").split("\n");
+    return paragraphs.map((paragraph) => {
+      if (!l.wrap || !paragraph) return [paragraph];
+      const lines = [];
+      let line = "";
+      const flush = () => { lines.push(line.replace(/[ \t]+$/, "")); line = ""; };
+      for (const { segment: token } of words.segment(paragraph)) {
+        if (!line && lines.length && /^[ \t]+$/.test(token)) continue;
+        if (measure(line + token) <= l.w) { line += token; continue; }
+        // Keep ordinary words intact; split a long word/URL at grapheme
+        // boundaries. A single glyph wider than the box is never compressed.
+        if (line) flush();
+        if (lines.length && /^[ \t]+$/.test(token)) continue;
+        if (measure(token) <= l.w) { line = token; continue; }
+        for (const { segment: glyph } of graphemes.segment(token)) {
+          if (line && measure(line + glyph) > l.w) flush();
+          line += glyph;
+        }
+      }
+      if (line || !lines.length) lines.push(line);
+      return lines;
+    });
+  }
   function layerSVG(l, imageSource = (x) => x.src) {
     let body = "";
     if (["rect", "ellipse", "triangle"].includes(l.kind)) {
@@ -329,9 +375,8 @@
         body = `<polygon points="${l.w / 2},0 ${l.w},${l.h} 0,${l.h}" ${attrs}/>`;
     } else if (l.kind === "text") {
       body =
-        `<text fill="${l.fill}" font-family="${l.font === "mono" ? "ui-monospace, 'Noto Sans Mono', monospace" : "Meiryo, 'Noto Sans', 'Noto Color Emoji', sans-serif"}" font-size="${l.fontSize}" font-weight="${l.bold ? "700" : "400"}" dominant-baseline="text-before-edge">` +
-        l.text
-          .split("\n")
+        `<text xml:space="preserve" fill="${l.fill}" font-family="${textFont(l)}" font-size="${l.fontSize}" font-weight="${l.bold ? "700" : "400"}" dominant-baseline="text-before-edge">` +
+        textLayout(l).flat()
           .map(
             (line, i) =>
               `<tspan x="0" y="${i * l.fontSize * 1.3}">${escape(line)}</tspan>`,
@@ -496,6 +541,9 @@
     arrowGeometry,
     outputSize,
     pngPayload,
+    textFont,
+    measureText,
+    textLayout,
     layerSVG,
     svg,
     History,

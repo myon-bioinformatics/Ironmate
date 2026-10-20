@@ -2,7 +2,13 @@
 "use strict";
 const C = window.StudioCore,
   $ = (id) => document.getElementById(id),
-  copy = C.clone;
+  copy = (value) => {
+    const doc = C.clone(value);
+    if (document.body.dataset.mode === "slides")
+      for (const l of doc.layers || [])
+        if (l.kind === "text" && !l.mono && l.wrap === undefined) l.wrap = true;
+    return doc;
+  };
 let serial = 0,
   tool = "select",
   selected = null,
@@ -231,6 +237,7 @@ function textLayer(text, x, y) {
     fontSize: size,
     font: $("font-family").value,
     mono: document.body.dataset.mode !== "slides",
+    wrap: document.body.dataset.mode === "slides",
   };
 }
 function place(x, y) {

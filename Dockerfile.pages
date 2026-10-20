@@ -1,0 +1,18 @@
+# The published payload contains only the explicit browser asset allowlist.
+FROM python:3.12-slim AS build
+WORKDIR /src
+COPY image_studio.py grid_output.py pixel_grid.py ./
+COPY scripts/pages_catalog.py ./scripts/pages_catalog.py
+COPY studio/index.html studio/core.js studio/studio.js studio/style.css ./studio/
+COPY studio/tools/ ./studio/tools/
+RUN python -S image_studio.py --build-site /site/Ironmate
+
+# docker build --target artifact --output type=local,dest=build/pages -f Dockerfile.pages .
+FROM scratch AS artifact
+COPY --from=build /site/Ironmate/ /
+
+FROM python:3.12-slim AS runtime
+COPY --from=build /site /site
+USER 65534:65534
+EXPOSE 8080
+CMD ["python", "-m", "http.server", "8080", "--bind", "0.0.0.0", "--directory", "/site"]

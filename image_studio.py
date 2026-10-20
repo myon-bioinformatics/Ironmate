@@ -5,7 +5,7 @@
     python -S image_studio.py --render scene.json --format svg --scale 4 -o image.svg
     python -S image_studio.py --build-site build/site
 
-The server serves only four fixed UI assets on loopback; it never accepts uploads
+The server serves only fixed public UI assets on loopback; it never accepts uploads
 or writes files. Browser exports are explicit downloads. Existing grid tools own
 PNG encoding; numeric source data is kept separate from its display colors.
 The web editor runs without Python. Scene CLI rendering uses Node.js; PNG/Base64
@@ -23,6 +23,7 @@ import sys
 import tempfile
 import json
 import math
+from functools import lru_cache
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -124,16 +125,26 @@ def mosaic(artifact, cell=8, levels=256):
     return {'schema': 'ironmate-pixel-grid/1', 'width': width, 'height': height, 'colors': palette, 'pixels': pixels}
 
 
+def public_assets():
+    """Explicit publication allowlist; no user scenes, globbing, or local images."""
+    names = ('index.html', 'core.js', 'studio.js', 'style.css',
+             'tools/index.html', 'tools/tools.css', 'tools/tools-core.js', 'tools/tools.js')
+    assets = {name: (ROOT / 'studio' / name).read_bytes() for name in names}
+    from scripts.pages_catalog import catalog_script
+    assets['tools/catalog.js'] = catalog_script()
+    return assets
+
+
 def build_site(directory):
-    """Publish only the four standalone UI assets, never scenes or local images."""
+    """Publish the allowlisted browser assets and generated procedural presets."""
     directory = Path(directory)
-    names = ('index.html', 'core.js', 'studio.js', 'style.css')
-    payloads = {name: (ROOT / 'studio' / name).read_bytes() for name in names}
+    payloads = public_assets()
     if directory.is_symlink() or (directory.exists() and (not directory.is_dir() or any(directory.iterdir()))):
         raise FileExistsError('site output must be a new or empty directory')
     directory.mkdir(parents=True, exist_ok=True)
     from grid_output import write_output
     for name, payload in payloads.items():
+        (directory / name).parent.mkdir(parents=True, exist_ok=True)
         write_output(str(directory / name), payload)
     write_output(str(directory / '.nojekyll'), b'')
     return directory
@@ -244,16 +255,21 @@ def raster_svg(svg, *, chrome=None):
 
 
 
+@lru_cache(maxsize=1)
+def cached_public_assets():
+    return public_assets()
+
+
 class StudioHandler(BaseHTTPRequestHandler):
     def do_GET(self):
-        assets = {'/': ('index.html', 'text/html'), '/core.js': ('core.js', 'text/javascript'),
-                  '/studio.js': ('studio.js', 'text/javascript'), '/style.css': ('style.css', 'text/css')}
-        resource = assets.get(self.path.split('?', 1)[0])
-        if resource is None:
+        assets = cached_public_assets()
+        route = self.path.split('?', 1)[0]
+        filename = {'/': 'index.html', '/tools/': 'tools/index.html'}.get(route, route.lstrip('/'))
+        if filename not in assets:
             self.send_error(404)
             return
-        filename, mime = resource
-        payload = (ROOT / 'studio' / filename).read_bytes()
+        mime = {'.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css'}[Path(filename).suffix]
+        payload = assets[filename]
         self.send_response(200)
         self.send_header('Content-Type', mime + '; charset=utf-8')
         self.send_header('Content-Length', str(len(payload)))

@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def test_build_site_contains_only_public_client_assets_and_relative_paths(tmp_path):
     target=s.build_site(tmp_path/'Ironmate')
-    assert {p.name for p in target.iterdir()}=={'index.html','core.js','studio.js','style.css','.nojekyll'}
+    assert {p.name for p in target.iterdir()}=={'index.html','core.js','studio.js','style.css','.nojekyll','tools'}
     text=(target/'index.html').read_text()
     assert "Content-Security-Policy" in text and 'Base64 / 渡す' in text
     for name in ('core.js','studio.js','style.css'):

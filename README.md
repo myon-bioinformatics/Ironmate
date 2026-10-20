@@ -10,6 +10,8 @@ Markdown→PPTX変換と既存PPTXの属性編集CLIは試作実装済みです�
 
 `python -S image_studio.py` でローカル編集画面を開けます。図形・画像・カスタムスタンプを重ね、ヒートマップの色段階やモザイク粒度を変えて、PNG・SVG・Base64・再編集用JSONを出力します。時計・矢印・顔文字・単色スタンプ、CLI描画にも対応します。
 
+[ブラウザでImage Studioを開く](https://myon-bioinformatics.github.io/Ironmate/) ／ [ドット絵・画像一覧を開く](https://myon-bioinformatics.github.io/Ironmate/tools/) ／ [Docker起動・Pages版の対応範囲](docs/browser-tools.md)
+
 [操作方法と検証範囲](docs/image-studio.md) ／ [実ブラウザの画面と検証証跡](docs/evidence/image-studio/report.md)。
 
 ## PPTX変換・編集

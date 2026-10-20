@@ -1,11 +1,33 @@
-name: Image Studio Pages
+name: Ironmate Tools Pages
 
 on:
   push:
     branches: [main]
-    paths: ["studio/**", "image_studio.py", ".github/workflows/studio-pages.yml"]
+    paths:
+      [
+        "studio/**",
+        "image_studio.py",
+        "pixel_grid.py",
+        "grid_output.py",
+        "scripts/pages_catalog.py",
+        "Dockerfile.pages",
+        "tests/pages_browser.cjs",
+        "tests/test_pages_tools.py",
+        ".github/workflows/studio-pages.yml",
+      ]
   pull_request:
-    paths: ["studio/**", "image_studio.py", ".github/workflows/studio-pages.yml"]
+    paths:
+      [
+        "studio/**",
+        "image_studio.py",
+        "pixel_grid.py",
+        "grid_output.py",
+        "scripts/pages_catalog.py",
+        "Dockerfile.pages",
+        "tests/pages_browser.cjs",
+        "tests/test_pages_tools.py",
+        ".github/workflows/studio-pages.yml",
+      ]
   workflow_dispatch:
 
 permissions:
@@ -18,7 +40,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v7
         with:
@@ -33,7 +55,29 @@ jobs:
         run: |
           node --check studio/core.js
           node --check studio/studio.js
-          python -S image_studio.py --build-site build/studio-site
+          node --check studio/tools/tools-core.js
+          node --check studio/tools/tools.js
+          docker build --target artifact --output type=local,dest=build/studio-site -f Dockerfile.pages .
+      - name: Start the same static site in Docker
+        run: |
+          docker build --target runtime -t ironmate-pages:test -f Dockerfile.pages .
+          docker run --detach --rm --name ironmate-pages --publish 127.0.0.1:8080:8080 ironmate-pages:test
+          curl --fail --retry 10 --retry-delay 1 --retry-connrefused http://127.0.0.1:8080/Ironmate/tools/ --output /tmp/tools.html
+      - name: Verify browser operations and Python grid round-trip
+        run: |
+          npm install --prefix build/pages-test --no-save --ignore-scripts --package-lock=false --no-audit --no-fund playwright@1.64.1
+          node build/pages-test/node_modules/playwright/cli.js install --with-deps chromium
+          IRONMATE_PLAYWRIGHT_MODULE="$PWD/build/pages-test/node_modules/playwright" IRONMATE_PAGES_URL=http://127.0.0.1:8080/Ironmate/ node tests/pages_browser.cjs
+      - name: Preserve browser evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: pages-browser-evidence
+          path: build/pages-evidence
+          if-no-files-found: warn
+      - name: Stop the preview container
+        if: always()
+        run: docker stop ironmate-pages || true
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: build/studio-site
@@ -63,4 +107,11 @@ jobs:
           text = Path('/tmp/studio-index.html').read_text()
           assert 'Base64 / 渡す' in text and 'core.js' in text
           print('Published Image Studio HTML verified')
+          PY
+          curl --fail --location --retry 6 --retry-delay 3 --retry-all-errors "${SITE_URL}tools/" --output /tmp/tools.html
+          python -S - <<'PY'
+          from pathlib import Path
+          text = Path('/tmp/tools.html').read_text()
+          assert 'PIXEL GRID' in text and 'tools-core.js' in text and 'catalog.js' in text
+          print('Published browser tools HTML verified')
           PY

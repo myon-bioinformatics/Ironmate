@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; img-src data: blob:; connect-src 'none'; object-src 'none'; base-uri 'none'"
+    />
+    <title>Ironmate — ブラウザツール</title>
+    <link rel="stylesheet" href="tools.css" />
+    <script defer src="catalog.js"></script>
+    <script defer src="tools-core.js"></script>
+    <script defer src="tools.js"></script>
+  </head>
+  <body>
+    <header>
+      <a class="brand" href="../">◈ IRONMATE</a>
+      <nav aria-label="サイト">
+        <a href="../">Image Studio ↗</a
+        ><a href="https://myon-bioinformatics.github.io/#ironmate"
+          >ポートフォリオ ↗</a
+        ><a href="https://github.com/myon-bioinformatics/Ironmate">ソース ↗</a>
+      </nav>
+    </header>
+    <main>
+      <p class="eyebrow">BROWSER WORKBENCH / 02</p>
+      <h1>素材をつくる。<br />並べて、持ち出す。</h1>
+      <p class="lead">
+        インストール不要。画像もJSONも、このブラウザの中で処理します。
+      </p>
+      <div class="jump">
+        <a href="#pixels">01 ドット絵</a><a href="#digest">02 画像一覧</a
+        ><a href="#capacity">03 Base64容量</a><a href="#features">できること</a>
+      </div>
+      <p id="message" role="status" aria-live="polite">準備しています…</p>
+      <section id="pixels">
+        <div class="section-heading">
+          <span>01 / PIXEL GRID</span>
+          <h2>色番号から、ドット絵へ。</h2>
+        </div>
+        <div class="workspace">
+          <div class="controls">
+            <label>形<select id="mask"></select></label>
+            <div class="pair">
+              <label>元サイズ<select id="size"></select></label
+              ><label>加工<select id="effect"></select></label>
+            </div>
+            <label>配色ID<select id="palette"></select></label
+            ><button id="generate" class="primary">プリセットから生成</button>
+            <p class="hint">
+              Python版でビルドした5形・4加工・10配色。元サイズは16 / 23 / 31 /
+              32 / 64。配色IDは色そのものとは独立した識別子です。
+            </p>
+            <label class="file"
+              >グリッドJSONを開く<input
+                id="grid-file"
+                type="file"
+                accept=".json,application/json"
+            /></label>
+            <div class="pair">
+              <label
+                >幅<input
+                  id="width"
+                  type="number"
+                  min="1"
+                  max="256"
+                  value="32" /></label
+              ><label
+                >高さ<input
+                  id="height"
+                  type="number"
+                  min="1"
+                  max="256"
+                  value="32"
+              /></label>
+            </div>
+            <button id="resize">最近傍でサイズ変更</button>
+            <p class="hint">
+              縮小では細部が失われます。配色変更は5役割のグリッドのみ。
+            </p>
+            <button id="recolor">選択した配色IDを適用</button>
+            <div class="pair">
+              <label>描く色番号<select id="ink"></select></label
+              ><label
+                >出力倍率<select id="scale">
+                  <option>1</option>
+                  <option>2</option>
+                  <option selected>8</option>
+                  <option>16</option>
+                </select></label
+              >
+            </div>
+            <button id="undo-grid">ひとつ戻す</button>
+          </div>
+          <div class="preview">
+            <canvas
+              id="grid"
+              width="32"
+              height="32"
+              aria-label="ドット絵。クリックすると選択した色番号で描画"
+              tabindex="0"
+            ></canvas>
+            <p id="grid-info"></p>
+            <div class="exports">
+              <button id="grid-json">JSON保存</button
+              ><button id="grid-svg">SVG</button
+              ><button id="grid-png">PNG</button
+              ><button id="grid-base64">Base64</button>
+            </div>
+            <label
+              >PNG data URI<textarea
+                id="base64-output"
+                rows="3"
+                readonly
+              ></textarea>
+            </label>
+            <p class="hint">
+              PNGは色表・寸法のironmateメタデータ付き。JSONは色番号を保持します。SVG・PNGは同じセルを描画しますが、Python版との圧縮byte一致は対象外です。
+            </p>
+          </div>
+        </div>
+      </section>
+      <section id="digest">
+        <div class="section-heading">
+          <span>02 / IMAGE DIGEST</span>
+          <h2>比較のための、一枚。</h2>
+        </div>
+        <p>
+          最大20枚のPNG / JPEG /
+          WebPを選び、並べたPNGと、画像を埋め込んだHTMLを保存できます。
+        </p>
+        <div class="digest-options">
+          <label class="file"
+            >画像を選ぶ<input
+              id="images"
+              type="file"
+              multiple
+              accept="image/png,image/jpeg,image/webp" /></label
+          ><label
+            >列数<select id="columns">
+              <option>2</option>
+              <option selected>3</option>
+              <option>4</option>
+              <option>5</option>
+            </select></label
+          ><button id="digest-png" disabled>一覧PNG</button
+          ><button id="digest-html" disabled>一覧HTML</button>
+        </div>
+        <p class="hint">
+          1枚8MiB、合計32MiB、1画像4MPまで。表示用に長辺512px以下へ縮小します。ファイル名だけをラベルとして使い、合否・MAE等は計算しません。
+        </p>
+        <div id="image-list" class="image-list"></div>
+      </section>
+      <section id="capacity">
+        <div class="section-heading">
+          <span>03 / BASE64</span>
+          <h2>送る前に、容量を確認。</h2>
+        </div>
+        <label
+          >任意のファイルを選ぶ<input id="capacity-file" type="file"
+        /></label>
+        <p id="capacity-result">
+          ファイル本体は読み込まず、サイズから標準Base64文字数を計算します。
+        </p>
+      </section>
+      <section id="features">
+        <div class="section-heading">
+          <span>CAPABILITIES</span>
+          <h2>用途に合わせた入口。</h2>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>機能</th>
+                <th>ブラウザで利用</th>
+                <th>ローカルCLIで利用</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>図形・文字・画像・時計・矢印・ヒートマップ・モザイク</td>
+                <td><a href="../">Image Studio</a></td>
+                <td>image_studio.py</td>
+              </tr>
+              <tr>
+                <td>レイヤー・履歴・クリップボード・PNG/SVG/JSON/Base64</td>
+                <td><a href="../">Image Studio</a></td>
+                <td>image_studio.py / studio_ingress.py</td>
+              </tr>
+              <tr>
+                <td>ドット絵・配色・最近傍拡縮</td>
+                <td><a href="#pixels">この画面</a>（プリセットサイズ）</td>
+                <td>pixel_grid.py / grid_tools.py（任意の対応サイズ）</td>
+              </tr>
+              <tr>
+                <td>画像一覧</td>
+                <td><a href="#digest">この画面</a>（画像・名前・一覧）</td>
+                <td>
+                  image_digest.py / browser_matrix.py（行列・測定レポート）
+                </td>
+              </tr>
+              <tr>
+                <td>Base64容量</td>
+                <td><a href="#capacity">正確な文字数</a></td>
+                <td>size_estimate.py（縮小候補の検証も可）</td>
+              </tr>
+              <tr>
+                <td>PPTX生成・属性置換・PDFプレビュー</td>
+                <td>Studioで作成したPNGを素材として利用</td>
+                <td>pptx_pipeline.py / pptx_replace.py / pptx_preview.py</td>
+              </tr>
+              <tr>
+                <td>GitHub・MCP・外部API</td>
+                <td>
+                  <a href="https://myon-bioinformatics.github.io/"
+                    >ポートフォリオの関連プロジェクト</a
+                  >
+                </td>
+                <td>認証やサーバーが必要な処理はCLIで実行</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="hint">
+          GitHub
+          Pagesは静的配信です。Docker・Python・Nodeの処理はビルド時または手元の環境で実行します。入力画像や作業JSONは公開ビルドに入りません。
+        </p>
+      </section>
+    </main>
+    <footer>
+      IRONMATE /
+      ブラウザ内の作業は自動保存されません。持ち出すときはダウンロードしてください。
+    </footer>
+  </body>
+</html>

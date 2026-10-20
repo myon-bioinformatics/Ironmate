@@ -24,7 +24,11 @@
     const slides = deck.slides.map((scene) => {
       bytes += encoder.encode(JSON.stringify(scene)).length;
       if (bytes > LIMIT) throw Error("全スライドは32MiB以下にしてください。");
-      return C.validate(scene);
+      const checked = C.validate(scene);
+      for (const layer of checked.layers)
+        if (layer.kind === "text" && !layer.mono && layer.wrap === undefined)
+          layer.wrap = true;
+      return checked;
     });
     if (
       slides.some(
@@ -69,6 +73,7 @@
       font: "sans",
       mono: false,
       bold,
+      wrap: true,
     });
     return C.validate({
       schema: C.SCHEMA,
@@ -228,15 +233,17 @@
             throw Error(
               "PPTXの文字サイズが1〜4000ptの範囲を超えています。キャンバスまたは文字サイズを調整してください。",
             );
-          const paragraphs = l.text
-            .split("\n")
+          const properties = `<a:rPr lang="ja-JP" sz="${size}" b="${l.bold ? 1 : 0}">${fill(l.fill, l.opacity)}<a:latin typeface="${font}"/><a:ea typeface="${font}"/></a:rPr>`;
+          // Explicit input newlines remain paragraphs; measured soft wraps are
+          // editable line breaks. Preserve the source text only in deck JSON.
+          const paragraphs = C.textLayout(l)
             .map(
-              (t) =>
-                `<a:p><a:pPr><a:lnSpc><a:spcPct val="130000"/></a:lnSpc><a:spcAft><a:spcPts val="0"/></a:spcAft></a:pPr><a:r><a:rPr lang="ja-JP" sz="${size}" b="${l.bold ? 1 : 0}">${fill(l.fill, l.opacity)}<a:latin typeface="${font}"/><a:ea typeface="${font}"/></a:rPr><a:t xml:space="preserve">${xml(t)}</a:t></a:r><a:endParaRPr lang="ja-JP" sz="${size}"/></a:p>`,
+              (lines) =>
+                `<a:p><a:pPr><a:lnSpc><a:spcPts val="${Math.round(size * 1.3)}"/></a:lnSpc><a:spcBef><a:spcPts val="0"/></a:spcBef><a:spcAft><a:spcPts val="0"/></a:spcAft></a:pPr>${lines.map(t => `<a:r>${properties}<a:t xml:space="preserve">${xml(t)}</a:t></a:r>`).join(`<a:br>${properties}</a:br>`)}<a:endParaRPr lang="ja-JP" sz="${size}"/></a:p>`,
             )
             .join("");
           parts.push(
-            `<p:sp>${nv(nextId++, name, true)}<p:spPr>${transform(l)}<a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></p:spPr><p:txBody><a:bodyPr wrap="none" lIns="0" tIns="0" rIns="0" bIns="0" anchor="t"><a:noAutofit/></a:bodyPr><a:lstStyle/>${paragraphs}</p:txBody></p:sp>`,
+            `<p:sp>${nv(nextId++, name, true)}<p:spPr>${transform(l)}<a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></p:spPr><p:txBody><a:bodyPr wrap="${l.wrap ? "square" : "none"}" lIns="0" tIns="0" rIns="0" bIns="0" anchor="t" vertOverflow="overflow"><a:noAutofit/></a:bodyPr><a:lstStyle/>${paragraphs}</p:txBody></p:sp>`,
           );
           totalNative++;
         } else if (["rect", "ellipse", "triangle"].includes(l.kind)) {

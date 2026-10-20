@@ -83,3 +83,62 @@ def test_generated_shell_matches_the_existing_locked_js_writer():
 def test_rejects_fonts_outside_office_xml_range():
     result=node("""(async()=>{const results=[];for(const [w,h,fontSize] of [[4096,1024,4],[64,64,512]]){const scene=D.template(w,h);scene.layers[0].fontSize=fontSize;try{await D.exportPptx({schema:D.SCHEMA,slides:[scene]});results.push(false)}catch{results.push(true)}}console.log(JSON.stringify(results));})();""")
     assert json.loads(result.stdout)==[True,True]
+
+
+def test_wrapping_words_graphemes_explicit_breaks_and_legacy_behavior():
+    result = node(r"""const C=require('./studio/core.js');
+    const layout=(text,w,wrap=true)=>C.textLayout({text,w,wrap},s=>[...new Intl.Segmenter('ja',{granularity:'grapheme'}).segment(s)].length);
+    const samples={exact:layout('hello world',5),words:layout('one two three',7),
+      jp:layout('日本語の長い文章を折り返します。',6),
+      emoji:layout('👨‍👩‍👧‍👦e\u0301🇯🇵XYZ',1),
+      explicit:layout('first\r\n\r\nlast\n',20),legacy:layout('hello world',5,false),
+      long:layout('abcdefghij',3)};
+    console.log(JSON.stringify(samples));""")
+    data = json.loads(result.stdout)
+    assert data['exact'] == [['hello', 'world']]
+    assert data['words'] == [['one two', 'three']]
+    assert ''.join(data['jp'][0]) == '日本語の長い文章を折り返します。'
+    assert all(len(line) <= 6 for line in data['jp'][0])
+    assert data['emoji'] == [['👨‍👩‍👧‍👦', 'é', '🇯🇵', 'X', 'Y', 'Z']]
+    assert data['explicit'] == [['first'], [''], ['last'], ['']]
+    assert data['legacy'] == [['hello world']]
+    assert data['long'] == [['abc', 'def', 'ghi', 'j']]
+
+
+def test_wrapping_pptx_uses_shared_layout_and_preserves_native_properties(tmp_path):
+    output = tmp_path / 'wrapped.pptx'
+    result = node(r"""const C=require('./studio/core.js');
+    (async()=>{const scene=D.template();
+    Object.assign(scene.layers[0],{text:'日本語の長い文章と English words repeat here.\n\nLast line\n',w:200,h:60,fontSize:32,bold:true,rotation:23});
+    Object.assign(scene.layers[1],{text:'https://example.test/'+ 'longurl'.repeat(8),w:250,font:'mono',fontSize:24});
+    const source=JSON.stringify(scene), data=await D.exportPptx({schema:D.SCHEMA,slides:[scene,D.template()]});
+    require('fs').writeFileSync(process.argv[1],data.data);
+    console.log(JSON.stringify({layouts:scene.layers.map(l=>C.textLayout(l)),unchanged:source===JSON.stringify(scene)}));})();""", output)
+    expected = json.loads(result.stdout)
+    assert expected['unchanged']
+    slides = verify_package(output, 2)
+    shapes = slides[0].findall('.//p:sp', NS)
+    for shape, paragraphs in zip(shapes, expected['layouts']):
+        actual = []
+        for paragraph in shape.findall('p:txBody/a:p', NS):
+            actual.append([t.text or '' for t in paragraph.findall('a:r/a:t', NS)])
+            assert len(paragraph.findall('a:br', NS)) == len(actual[-1]) - 1
+        assert actual == paragraphs
+        assert shape.find('p:txBody/a:bodyPr', NS).get('wrap') == 'square'
+        assert shape.find('p:txBody/a:bodyPr/a:noAutofit', NS) is not None
+        assert shape.find('p:txBody/a:p/a:pPr/a:lnSpc/a:spcPts', NS) is not None
+    assert shapes[0].find('p:spPr/a:xfrm', NS).get('rot') == str(23 * 60000)
+    assert shapes[0].find('.//a:rPr', NS).get('b') == '1'
+    assert shapes[1].find('.//a:latin', NS).get('typeface') == 'MS Gothic'
+    assert not slides[0].findall('.//p:pic', NS)
+
+
+def test_legacy_decks_default_to_wrap_without_mutation_and_false_is_preserved():
+    result = node("""const C=require('./studio/core.js'),scene=D.template();
+    delete scene.layers[0].wrap;scene.layers[1].wrap=false;
+    const source=JSON.stringify(scene),deck=D.parse(D.deckText({schema:D.SCHEMA,slides:[scene]}));
+    let invalid=false;try{scene.layers[0].wrap='yes';C.validate(scene)}catch{invalid=true}
+    console.log(JSON.stringify({wrapped:deck.slides[0].layers.map(l=>l.wrap),invalid,
+      originalMissing:!Object.hasOwn(JSON.parse(source).layers[0],'wrap')}));""")
+    assert json.loads(result.stdout) == {'wrapped': [True, False], 'invalid': True,
+                                        'originalMissing': True}

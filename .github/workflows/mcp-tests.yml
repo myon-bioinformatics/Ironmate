@@ -94,7 +94,8 @@ jobs:
         id: compile
         run: |
           git ls-files '*.py' -z | xargs -0 python -m py_compile
-      - run: python -m unittest tests/test_vendor_modules.py tests/test_repository_hygiene.py
+      # The default pytest suite also collects the unittest-based vendor and
+      # repository hygiene cases; do not run them twice on Python 3.12.
       - name: Run default pytest suite (exclude heavy tests)
         if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
         env:
@@ -151,10 +152,12 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "26"
+      # Pin Mermaid's Puppeteer peer too: a floating peer can select a newly
+      # published puppeteer before its exact puppeteer-core release is available.
       - name: Install pinned Node packages and pinned Marp CLI
         run: |
           npm ci
-          npm install --no-save --ignore-scripts @marp-team/marp-cli@4.5.1 @mermaid-js/mermaid-cli@12.0.0 playwright@1.58.2
+          npm install --no-save --ignore-scripts @marp-team/marp-cli@4.5.1 @mermaid-js/mermaid-cli@12.0.0 puppeteer@25.15.0 playwright@1.58.2
       - name: Install Japanese fonts for diagram evidence
         run: |
           sudo apt-get update

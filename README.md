@@ -232,7 +232,7 @@ uv run --locked python -m pytest -q -m 'not heavy'
 ```
 
 xprobeと親のvendorツールはテスト用の別checkoutです。実行時依存として自動取得しません。
-PPTXの新規パッケージには Node.js 22 と `npm ci`（固定の `pptxgenjs@4.0.1`）が必要です。Ironmate は依存関係を自動インストールしません。スライド図形の正本は [JSON ↔ OOXML 対応](docs/pptx-ooxml-mapping.md) です。Marp変換時のみ別途インストール済みのMarp CLIが必要です。
+PPTXの新規パッケージには Node.js 22 以上（CI は 26）と `npm ci`（固定の `pptxgenjs@4.0.1`）が必要です。Ironmate は依存関係を自動インストールしません。スライド図形の正本は [JSON ↔ OOXML 対応](docs/pptx-ooxml-mapping.md) です。Marp変換時のみ別途インストール済みのMarp CLIが必要です。
 CSVをxlsxにする場合は [Excelワークブック](docs/xlsx-exceljs.md) を使います。文字コードの判定はUTF-8 / BOM / Shift_JIS / CP932です。openpyxlとpandasは使いません。同じ `npm ci` が `exceljs@4.4.0` と SheetJS `xlsx@0.20.3` も入れます。
 
 ## ブラウザ別スクリーンショットの比較

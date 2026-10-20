@@ -90,7 +90,7 @@ def test_wrapping_words_graphemes_explicit_breaks_and_legacy_behavior():
     const layout=(text,w,wrap=true)=>C.textLayout({text,w,wrap},s=>[...new Intl.Segmenter('ja',{granularity:'grapheme'}).segment(s)].length);
     const samples={exact:layout('hello world',5),words:layout('one two three',7),
       jp:layout('日本語の長い文章を折り返します。',6),
-      emoji:layout('👨‍👩‍👧‍👦e\u0301🇯🇵XYZ'.replace('\\u0301','\u0301'),1),
+      emoji:layout('👨‍👩‍👧‍👦e\u0301🇯🇵XYZ',1),
       explicit:layout('first\r\n\r\nlast\n',20),legacy:layout('hello world',5,false),
       long:layout('abcdefghij',3)};
     console.log(JSON.stringify(samples));""")

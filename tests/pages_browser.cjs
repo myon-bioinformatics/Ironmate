@@ -68,6 +68,11 @@ const out = path.resolve("build/pages-evidence");
       (await page.evaluate(() => IronmateWorkbench.grid)).height,
       17,
     );
+    const bounds = await page.locator("#grid").boundingBox();
+    assert(
+      Math.abs(bounds.width / bounds.height - 31 / 17) < 0.03,
+      "non-square preview keeps its cell aspect ratio",
+    );
     await page.click("#undo-grid");
     assert.deepEqual(await page.evaluate(() => IronmateWorkbench.grid), g);
     await page.setInputFiles("#grid-file", {
@@ -103,6 +108,21 @@ const out = path.resolve("build/pages-evidence");
       buffer: Buffer.alloc(7),
     });
     assert.match(await page.textContent("#capacity-result"), /Base64 12文字/);
+    const alphaGrid = {
+      schema: "ironmate-pixel-grid/1",
+      width: 2,
+      height: 1,
+      colors: ["#12345600", "#ABCDEF80"],
+      pixels: [[0, 1]],
+    };
+    await page.setInputFiles("#grid-file", {
+      name: "alpha.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(alphaGrid)),
+    });
+    await page.waitForFunction(() => IronmateWorkbench.grid.width === 2);
+    await download("grid-png", "alpha.png");
+    fs.writeFileSync(path.join(out, "alpha.json"), JSON.stringify(alphaGrid));
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(url + "tools/");
     await page.waitForFunction(() => !!window.IronmateWorkbench);
@@ -128,7 +148,7 @@ const out = path.resolve("build/pages-evidence");
       [
         "-S",
         "-c",
-        `import json\nfrom pathlib import Path\nimport grid_tools,pixel_grid\np=Path('build/pages-evidence')\ng=json.loads((p/'grid.json').read_text())\nassert g==pixel_grid.render('cloud','C02','shadow',23)\nassert grid_tools.restore((p/'grid.png').read_bytes(),backend='stdlib')==g\nprint('Browser PNG -> Python grid restore: exact match')`,
+        `import json\nfrom pathlib import Path\nimport grid_tools,pixel_grid\np=Path('build/pages-evidence')\ng=json.loads((p/'grid.json').read_text())\nassert g==pixel_grid.render('cloud','C02','shadow',23)\nassert grid_tools.restore((p/'grid.png').read_bytes(),backend='stdlib')==g\nassert grid_tools.restore((p/'alpha.png').read_bytes(),backend='stdlib')==json.loads((p/'alpha.json').read_text())\nprint('Browser PNG -> Python grid restore: exact match')`,
       ],
       { encoding: "utf8" },
     );

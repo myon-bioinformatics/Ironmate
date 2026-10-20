@@ -133,17 +133,17 @@ def test_empty_grid_and_invalid_inputs():
             scanner.grid.swap_pixels_reversible(0, index)
 
 
-def test_exact_probe_targets_and_orange_distance_boundary():
+def test_exact_probe_targets_and_guzuta_distance_boundary():
     probes = PacmanGhostProbes(corner_pos=(-2, -3))
     targets = probes.compute_targets(10, 20, -1, 1, (2, 4), (13, 24))
-    assert targets.red == (2, 4)
-    assert targets.pink == (6, 24)
-    assert targets.blue == (14, 40)
-    assert targets.orange == (-2, -3)  # Manhattan 7: retreat
-    assert probes.compute_targets(10, 20, -1, 1, (2, 4), (14, 24)).orange == (14, 24)  # 8
+    assert targets.akabei == (2, 4)
+    assert targets.pinky == (6, 24)
+    assert targets.aosuke == (14, 40)
+    assert targets.guzuta == (-2, -3)  # Manhattan 7: retreat
+    assert probes.compute_targets(10, 20, -1, 1, (2, 4), (14, 24)).guzuta == (14, 24)  # 8
 
 
-def test_orange_thins_dense_blocks_but_keeps_isolated_feature():
+def test_guzuta_thins_dense_blocks_but_keeps_isolated_feature():
     dense = artifact([[1] * 4 for _ in range(2)])
     naive = g.resize(dense, 2, 1, backend='stdlib')
     adaptive = g.downscale_2x(dense)

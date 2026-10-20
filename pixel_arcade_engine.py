@@ -194,10 +194,10 @@ class InvaderSparseScanner:
 
 @dataclass(frozen=True)
 class ProbeTargets:
-    red: tuple[int, int]
-    pink: tuple[int, int]
-    blue: tuple[int, int]
-    orange: tuple[int, int]
+    akabei: tuple[int, int]
+    pinky: tuple[int, int]
+    aosuke: tuple[int, int]
+    guzuta: tuple[int, int]
 
 
 class PacmanGhostProbes:
@@ -206,14 +206,14 @@ class PacmanGhostProbes:
     def __init__(self, corner_pos=(0, 0)):
         self.corner_pos = corner_pos
 
-    def compute_targets(self, x, y, dx, dy, red_ref, nearest_feature):
-        rx, ry = red_ref
+    def compute_targets(self, x, y, dx, dy, akabei_ref, nearest_feature):
+        akabei_x, akabei_y = akabei_ref
         pivot_x, pivot_y = x + (dx << 1), y + (dy << 1)
         fx, fy = nearest_feature
         distance = abs(x - fx) + abs(y - fy)
-        return ProbeTargets(red=red_ref, pink=(x + (dx << 2), y + (dy << 2)),
-                            blue=((pivot_x << 1) - rx, (pivot_y << 1) - ry),
-                            orange=nearest_feature if (distance >> 3) > 0 else self.corner_pos)
+        return ProbeTargets(akabei=akabei_ref, pinky=(x + (dx << 2), y + (dy << 2)),
+                            aosuke=((pivot_x << 1) - akabei_x, (pivot_y << 1) - akabei_y),
+                            guzuta=nearest_feature if (distance >> 3) > 0 else self.corner_pos)
 
     @staticmethod
     def estimate_local_direction(grid, x, y):
@@ -241,15 +241,15 @@ class PacmanGhostProbes:
                     continue
                 dx, dy = self.estimate_local_direction(src, sx, sy)
                 targets = self.compute_targets(sx, sy, dx, dy, (sx - dx, sy - dy), last_kept)
-                red, pink, blue = (src.get(*pos) for pos in (targets.red, targets.pink, targets.blue))
+                akabei, pinky, aosuke = (src.get(*pos) for pos in (targets.akabei, targets.pinky, targets.aosuke))
                 # Keep the explicit distance test: a tracked feature can itself be at corner_pos.
                 retreat = (abs(sx - last_kept[0]) + abs(sy - last_kept[1])) >> 3 == 0
-                if (len(active) >= 3 and retreat and targets.orange == self.corner_pos and
-                        not src.is_active(pink) and not src.is_active(blue) and (x + y) & 1):
+                if (len(active) >= 3 and retreat and targets.guzuta == self.corner_pos and
+                        not src.is_active(pinky) and not src.is_active(aosuke) and (x + y) & 1):
                     continue
                 votes = Counter(active)
                 # Shared evaluation rule for the three sampled colors; ties follow local scan order.
-                for value in (red, pink, blue):
+                for value in (akabei, pinky, aosuke):
                     if value in votes:
                         votes[value] += 1
                 pixels[y * w + x] = max(votes, key=votes.get)

@@ -1,0 +1,39 @@
+name: CDN pypdf pages
+
+# One job, pypdf not installed: fetch the pure wheel, verify sha256, count
+# PdfReader.pages, install that same wheel, count again, and compare.
+# Playwright is not installed or launched.
+on:
+  pull_request:
+    paths:
+      - scripts/fetch_module.py
+      - scripts/cdn_pypdf_pages.py
+      - tests/test_fetch_module.py
+      - tests/test_cdn_pypdf_pages.py
+      - .github/workflows/cdn-pypdf.yml
+  push:
+    branches: [main]
+    paths:
+      - scripts/fetch_module.py
+      - scripts/cdn_pypdf_pages.py
+      - tests/test_fetch_module.py
+      - tests/test_cdn_pypdf_pages.py
+      - .github/workflows/cdn-pypdf.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  wheel-vs-installed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Compare PdfReader.pages from the wheel and the installed package
+        run: python scripts/cdn_pypdf_pages.py compare --cache build/cdn-cache

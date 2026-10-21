@@ -20,6 +20,7 @@ differently", not a pixel-exact regression gate. Standard library only.
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import hashlib
 import html
 import json
@@ -38,14 +39,29 @@ _NAME = re.compile(r'[A-Za-z0-9][A-Za-z0-9._-]{0,80}')
 GAP, BACKGROUND, EMPTY = 8, (255, 255, 255, 255), (224, 224, 224, 255)
 
 
-def find_shots(root, shot='width-384'):
-    """{(page, env): path} for every ``<page>/<env>/<shot>.png`` under ``root``."""
+def find_shots(root, shot='width-384', *, pages=('*',), environments=('*',)):
+    """Selected ``{(page, env): path}``; page/env globs are case-sensitive ORs.
+
+    The page and environment groups intersect. Filtering precedes duplicate
+    detection; excluded screenshots do not affect the selected comparison.
+    """
     if not _NAME.fullmatch(shot):
         raise ValueError('shot must be a plain file stem such as width-384')
+    if isinstance(pages, str) or isinstance(environments, str):
+        raise TypeError('pages and environments must be sequences')
+    pages, environments = tuple(pages), tuple(environments)
+    if any(not isinstance(rule, str) or not rule for rule in pages + environments):
+        raise ValueError('page/environment patterns must be non-empty strings')
+    if not Path(root).is_dir():
+        raise ValueError('screenshot root must be a directory')
     found = {}
     for path in sorted(Path(root).rglob(shot + '.png')):
         page, env = path.parent.parent.name, path.parent.name
-        if not (_NAME.fullmatch(page) and _NAME.fullmatch(env)) or path.is_symlink():
+        if not (_NAME.fullmatch(page) and _NAME.fullmatch(env)) or path.is_symlink() or not path.is_file():
+            continue
+        if not any(fnmatch.fnmatchcase(page, rule) for rule in pages):
+            continue
+        if not any(fnmatch.fnmatchcase(env, rule) for rule in environments):
             continue
         if (page, env) in found:
             raise ValueError(f'two screenshots for {page} / {env}: {found[page, env]} and {path}')
@@ -197,17 +213,29 @@ def write(out, report, sheet, tiles):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument('root', type=Path, help='browser-test-kit app-results tree')
-    parser.add_argument('--out', type=Path, required=True)
+    parser.add_argument('--out', type=Path)
+    parser.add_argument('--page', action='append', help='page-name glob; repeat for OR')
+    parser.add_argument('--env', action='append', help='environment-name glob; repeat for OR')
+    parser.add_argument('--list', action='store_true', help='list selected paths as JSON without decoding or writing images')
     parser.add_argument('--shot', default='width-384', help='screenshot stem (initial, width-320, width-384, ...)')
     parser.add_argument('--reference', help='environment id to compare against (default Linux-chromium-desktop)')
     parser.add_argument('--tile', default='160x320', help='tile WIDTHxHEIGHT (default on the 8 px grid; any size works)')
     parser.add_argument('--gap', type=int, default=GAP, help='pixels between tiles (default 8)')
     args = parser.parse_args(argv)
+    if not args.list and args.out is None:
+        parser.error('--out is required unless --list is used')
+    if args.list and args.out is not None:
+        parser.error('--list cannot be combined with --out')
     try:
+        shots = find_shots(args.root, args.shot, pages=args.page or ('*',), environments=args.env or ('*',))
+        if args.list:
+            print(json.dumps({'shots': [{'page': page, 'env': env, 'path': str(path)}
+                                       for (page, env), path in shots.items()]}, ensure_ascii=True))
+            return 0
         match = re.fullmatch(r'(\d+)x(\d+)', args.tile)
         if not match:
             raise ValueError('--tile must look like 160x320')
-        report, sheet, tiles = build(find_shots(args.root, args.shot), tile_w=int(match[1]), tile_h=int(match[2]),
+        report, sheet, tiles = build(shots, tile_w=int(match[1]), tile_h=int(match[2]),
                                      reference=args.reference, gap=args.gap)
         write(args.out, report, sheet, tiles)
     except (OSError, ValueError) as error:

@@ -266,3 +266,11 @@ Markdown の要約を作ります。容量に収まるまでサムネイルを 1
 [web-ui flow export](docs/flow-export.md) connects a single bounded JSON input to Mermaid Markdown, SVG, PNG, standard Base64 and PNG data URI, through Python/Node APIs and CLIs. It reuses the upstream contract and Image Studio raster output.
 
 Retain, edit and regenerate flow JSON with the [flow workspace CLI and Python/Node APIs](docs/flow-export.md#retained-json-workspace-import--patch--regenerate), while preserving the original UTF-8 source.
+
+## Discover production entry points
+
+```sh
+python -S browser_matrix.py app-results --page 'flutter-*' --env '*-chromium-*' --out matrix
+```
+
+Select page/environment families in the existing screenshot comparison pipeline; use `--list` for paths only. [Discovery usage and optional source inspection](docs/convention-discovery.md).

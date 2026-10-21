@@ -265,4 +265,8 @@ Retain, edit and regenerate flow JSON with the [flow workspace CLI and Python/No
 
 ## Discover production entry points
 
-[Convention-driven file and symbol discovery](docs/convention-discovery.md) gives verified one-liners for this repository. Supply filename/name rules to inspect production code, configuration and workflows with the shared stdlib-only xprobe tool.
+```sh
+python -S browser_matrix.py app-results --page 'flutter-*' --env '*-chromium-*' --out matrix
+```
+
+Select page/environment families in the existing screenshot comparison pipeline; use `--list` for paths only. [Discovery usage and optional source inspection](docs/convention-discovery.md).

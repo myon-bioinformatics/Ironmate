@@ -1,5 +1,34 @@
 # Discover files and production entry points by convention
 
+## Built-in screenshot selection and comparison
+
+```sh
+python -S browser_matrix.py app-results --page 'flutter-*' --env 'Linux-*' --env 'macOS-*' --list
+python -S browser_matrix.py app-results --page 'flutter-*' --env '*-chromium-*' --out matrix
+```
+
+`find_shots(..., pages=('flutter-*',), environments=('Linux-*', 'macOS-*'))`
+now accepts the same name conventions as the CLI. Repeated page rules are ORed,
+as are environment rules; the two groups intersect. Matching is case-sensitive
+and happens before duplicate detection, so excluded pages/environments do not
+block a selected comparison. `--shot` retains its literal stem contract.
+
+`--list` returns JSON `shots` with page/env/path without decoding PNGs or
+creating output. Without `--list`, the same selected mapping feeds the existing
+sheet/tile/HTML/JSON pipeline and requires `--out`; `--list --out` is rejected.
+An empty selection lists an empty array; building an empty selection or using
+an invalid root returns 2. Explicit reference selection still must refer to an
+included environment. These commands use the repository alone.
+
+Validation: **59 pytest tests** passed across browser_matrix, photo_grid and
+image_compare. A standalone `python -S` smoke copied the existing
+`docs/pixel-grid-preview.png` into two environment paths, selected Linux only,
+and produced one cell plus sheet PNG, tile PNG, HTML and JSON. Selection/list
+parity, excluded duplicates, case sensitivity, invalid rules and CLI mode errors
+are covered. No browser launch or sibling checkout was needed for this pipeline.
+
+## Optional source-symbol inspection
+
 Find transformation, export and rendering entry points across the image/PPTX tools before changing an output path.
 
 Use a sibling xprobe checkout with the convention-discovery API from

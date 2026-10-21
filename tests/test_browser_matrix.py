@@ -99,6 +99,64 @@ def test_cli(tmp_path, capsys):
     assert 'no screenshots' in capsys.readouterr().err
 
 
+def test_name_conventions_select_before_duplicate_detection(tmp_path):
+    tree(tmp_path, {
+        ('home', 'Linux-chromium-desktop', 'width-384'): (16, 16, (1, 2, 3, 255)),
+        ('home', 'Windows-firefox-desktop', 'width-384'): (16, 16, (4, 5, 6, 255)),
+        ('detail', 'Linux-chromium-desktop', 'width-384'): (16, 16, (1, 2, 3, 255)),
+    })
+    duplicate = tmp_path / 'duplicate' / 'home' / 'Windows-firefox-desktop' / 'width-384.png'
+    duplicate.parent.mkdir(parents=True)
+    duplicate.write_bytes(b'bad png, must not decode')
+    result = bm.find_shots(tmp_path, pages=('home', 'detail'), environments=('Linux-*', '*-webkit-*'))
+    assert list(result) == [('detail', 'Linux-chromium-desktop'), ('home', 'Linux-chromium-desktop')]
+    assert bm.find_shots(tmp_path, pages=('HOME',)) == {}
+    with pytest.raises(ValueError, match='two screenshots'):
+        bm.find_shots(tmp_path)
+
+
+def test_native_list_is_read_only_and_filtered_build_uses_same_selection(tmp_path, capsys):
+    source, output = tmp_path / 'input', tmp_path / 'output'
+    tree(source, {
+        ('home', 'Linux-chromium-desktop', 'initial'): (16, 16, (1, 2, 3, 255)),
+        ('home', 'macOS-webkit-iphone', 'initial'): (16, 16, (4, 5, 6, 255)),
+    })
+    args = [str(source), '--shot', 'initial', '--page', 'home', '--env', 'Linux-*']
+    assert bm.main(args + ['--list']) == 0
+    listing = json.loads(capsys.readouterr().out)['shots']
+    assert [(r['page'], r['env']) for r in listing] == [('home', 'Linux-chromium-desktop')]
+    assert not output.exists()
+    assert bm.main(args + ['--out', str(output), '--tile', '16x16']) == 0
+    report = json.loads((output / 'report.json').read_text(encoding='utf-8'))
+    assert report['pages'] == ['home'] and report['envs'] == ['Linux-chromium-desktop']
+    assert len(report['cells']) == len(listing)
+
+
+def test_list_does_not_decode_candidate_pngs(tmp_path, capsys):
+    path = tmp_path / 'home' / 'Linux-chromium-desktop' / 'width-384.png'
+    path.parent.mkdir(parents=True)
+    path.write_bytes(b'not png')
+    assert bm.main([str(tmp_path), '--list']) == 0
+    assert json.loads(capsys.readouterr().out)['shots'][0]['path'] == str(path)
+    assert bm.main([str(tmp_path / 'missing'), '--list']) == 2
+    assert 'directory' in capsys.readouterr().err
+
+
+@pytest.mark.parametrize('options,error', [
+    ({'pages': 'home'}, TypeError), ({'environments': ['']}, ValueError), ({'pages': [1]}, ValueError),
+])
+def test_bad_selection_rules(tmp_path, options, error):
+    with pytest.raises(error):
+        bm.find_shots(tmp_path, **options)
+
+
+@pytest.mark.parametrize('options', [[], ['--list', '--out', 'unused']])
+def test_list_and_output_cli_contract(tmp_path, options):
+    with pytest.raises(SystemExit) as error:
+        bm.main([str(tmp_path), *options])
+    assert error.value.code == 2
+
+
 def test_patterned_dpr_images_and_completely_missing_environment(tmp_path):
     # Replicate each source pixel into a 3x3 block: equal CSS content at DPR 1/3.
     w, h = 32, 64

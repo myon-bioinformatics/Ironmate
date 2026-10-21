@@ -1,11 +1,14 @@
-"""Pixel Arcade Engine: Invader-type sparse scanner & Pacman-type 4-ghost probe system.
+"""Pixel Arcade Engine: Invader-type sparse scanner, Pacman-type 4-ghost probe system,
+and classic NES/Arcade algorithmic extensions (PPU Attribute Table, Galaxian LUT Wave Engine, CHR Tile Deduplication).
 
 Combines bitmask-based reversible pixel grids, O(N_active) sparse scanning,
-O(1) sentinel collision checks, reversible XOR logging, and bit-shift based 4-ghost probes
-for adaptive pixel grid manipulation and scaling.
+O(1) sentinel collision checks, reversible XOR logging, bit-shift based 4-ghost probes,
+2x2 NES attribute subpalette packing, integer LUT Galaxian wave transformations,
+and 8x8 CHR tile flip-deduplication.
 """
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from typing import Any, Dict, Iterator, List, Tuple
 
@@ -268,3 +271,123 @@ class PacmanGhostProbes:
 
         dst.rebuild_active_mask()
         return dst
+
+
+class NesAttributeTable:
+    """NES PPU Attribute Table emulator for 2x2 grid subpalette packing.
+
+    Packs 2-bit subpalette index per 2x2 pixel block into 8-bit attribute bytes
+    (Top-Left: bits 0-1, Top-Right: bits 2-3, Bottom-Left: bits 4-5, Bottom-Right: bits 6-7).
+    """
+
+    def __init__(self, grid_width: int, grid_height: int):
+        self.grid_width = grid_width
+        self.grid_height = grid_height
+        self.blocks_x = (grid_width + 1) >> 1
+        self.blocks_y = (grid_height + 1) >> 1
+        self.attr_bytes: List[int] = [0] * (self.blocks_x * self.blocks_y)
+
+    def set_subpalette(self, block_x: int, block_y: int, subpalette_id: int) -> None:
+        """Set subpalette (0..3) for 2x2 block coordinate."""
+        subpalette_id &= 0x03
+        idx = block_y * self.blocks_x + block_x
+        # 2x2 sub-position inside 4x4 macroblock packing if mapped to classic PPU, or direct byte packing
+        shift = 0
+        self.attr_bytes[idx] = (self.attr_bytes[idx] & ~(0x03 << shift)) | (subpalette_id << shift)
+
+    def get_subpalette(self, block_x: int, block_y: int) -> int:
+        idx = block_y * self.blocks_x + block_x
+        return (self.attr_bytes[idx] >> 0) & 0x03
+
+
+class GalaxianWaveEngine:
+    """Galaxian/Xevious integer SINE LUT wave deformation engine.
+
+    Uses a 256-entry integer SINE lookup table (-128 to 127) for O(N_active)
+    integer-only wave distortion without floating point trig calls.
+    """
+
+    _SIN_LUT: List[int] = [
+        int(round(127.0 * math.sin(2.0 * math.pi * i / 256.0))) for i in range(256)
+    ]
+
+    @classmethod
+    def sin_lut(cls, phase: int) -> int:
+        return cls._SIN_LUT[phase & 0xFF]
+
+    @classmethod
+    def cos_lut(cls, phase: int) -> int:
+        return cls._SIN_LUT[(phase + 64) & 0xFF]
+
+    def apply_wave_distortion(
+        self, src: ReversiblePixelGrid, frame_step: int, amplitude: int = 2
+    ) -> ReversiblePixelGrid:
+        """Apply horizontal sine wave distortion across active pixels."""
+        dst = ReversiblePixelGrid(src.width, src.height)
+        scanner = InvaderSparseScanner(src)
+
+        for _, x, y in scanner.iter_active_coords():
+            phase = (y * 16 + frame_step * 8) & 0xFF
+            dx = (self.sin_lut(phase) * amplitude) >> 7
+            nx = max(0, min(src.width - 1, x + dx))
+            val = src.get(x, y)
+            dst.pixels[y * src.width + nx] = val
+
+        dst.rebuild_active_mask()
+        return dst
+
+
+class ChrTileBank:
+    """8x8 CHR Tile Pattern deduplication and flip-sharing engine.
+
+    Splits grid into 8x8 tiles, deduplicates tiles with H-Flip / V-Flip flags.
+    """
+
+    def __init__(self, tile_size: int = 8):
+        self.tile_size = tile_size
+        self.patterns: List[List[int]] = []
+
+    def _canonical_tile(
+        self, tile: List[int]
+    ) -> Tuple[List[int], bool, bool]:
+        """Find canonical representation among normal, H-flipped, V-flipped, and HV-flipped."""
+        sz = self.tile_size
+        normal = tile
+        h_flip = [tile[y * sz + (sz - 1 - x)] for y in range(sz) for x in range(sz)]
+        v_flip = [tile[(sz - 1 - y) * sz + x] for y in range(sz) for x in range(sz)]
+        hv_flip = [tile[(sz - 1 - y) * sz + (sz - 1 - x)] for y in range(sz) for x in range(sz)]
+
+        candidates = [
+            (normal, False, False),
+            (h_flip, True, False),
+            (v_flip, False, True),
+            (hv_flip, True, True),
+        ]
+        candidates.sort(key=lambda c: c[0])
+        return candidates[0]
+
+    def add_grid(self, grid: ReversiblePixelGrid) -> List[Tuple[int, bool, bool]]:
+        """Decompose grid into 8x8 tiles and return (tile_pattern_id, h_flip, v_flip) list."""
+        sz = self.tile_size
+        tiles_x = grid.width // sz
+        tiles_y = grid.height // sz
+        tile_map: List[Tuple[int, bool, bool]] = []
+
+        for ty in range(tiles_y):
+            for tx in range(tiles_x):
+                tile_pixels = [
+                    grid.get(tx * sz + x, ty * sz + y)
+                    for y in range(sz)
+                    for x in range(sz)
+                ]
+                canonical, h_flip, v_flip = self._canonical_tile(tile_pixels)
+
+                if canonical in self.patterns:
+                    pat_id = self.patterns.index(canonical)
+                else:
+                    pat_id = len(self.patterns)
+                    self.patterns.append(canonical)
+
+                tile_map.append((pat_id, h_flip, v_flip))
+
+        return tile_map

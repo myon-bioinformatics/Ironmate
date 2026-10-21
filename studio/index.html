@@ -5,16 +5,22 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'none'; script-src 'self'; style-src 'self'; img-src data: blob:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'"
+      content="default-src 'none'; manifest-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'"
     />
+    <link rel="manifest" href="brand/manifest.webmanifest" />
+    <link rel="apple-touch-icon" sizes="180x180" href="brand/apple-touch-icon.png" />
+    <meta name="theme-color" content="#003D32" />
+    <meta name="apple-mobile-web-app-title" content="Ironmate" />
     <title>Ironmate — Image Studio</title>
+    <link rel="icon" href="brand/favicon.ico" sizes="16x16 32x32 48x48" />
+    <link rel="icon" type="image/svg+xml" href="brand/icon.svg" sizes="any" />
     <link rel="stylesheet" href="style.css" />
     <script defer src="core.js"></script>
     <script defer src="studio.js"></script>
   </head>
   <body>
     <header>
-      <div class="brand">◈ IRONMATE <span>IMAGE STUDIO / 01</span></div>
+      <div class="brand"><img src="brand/heatmap.svg" width="48" height="48" alt="I’m — 🔰がアポストロフィのIronmateロゴ" /><div>IRONMATE <span>IMAGE STUDIO / 01</span></div></div>
       <div class="top-actions">
         <a href="slides/">スライド・PPTX作成 ↗</a>
         <a href="tools/">ドット絵・画像一覧 ↗</a>

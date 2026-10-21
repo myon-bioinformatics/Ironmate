@@ -24,6 +24,9 @@ header {
   gap: 20px;
 }
 .brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   font-weight: 800;
   letter-spacing: 2px;
   font-size: 19px;
@@ -34,7 +37,7 @@ header {
   font-size: 10px;
   display: block;
   letter-spacing: 3px;
-  margin: 5px 0 0 26px;
+  margin: 5px 0 0;
   color: #99c5bc;
 }
 .top-actions {
@@ -510,4 +513,9 @@ dialog textarea {
   align-self: center;
   padding: 7px 3px;
   text-underline-offset: 3px;
+}
+
+.brand img {
+  flex: none;
+  image-rendering: pixelated;
 }

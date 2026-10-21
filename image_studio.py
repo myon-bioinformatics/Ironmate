@@ -129,12 +129,19 @@ def public_assets():
     """Explicit publication allowlist; no user scenes, globbing, or local images."""
     names = ('index.html', 'core.js', 'studio.js', 'style.css',
              'tools/index.html', 'tools/tools.css', 'tools/tools-core.js', 'tools/tools.js',
+             'brand/index.html', 'brand/gallery.css', 'brand/mono.svg', 'brand/dark-green.svg',
+             'brand/famicom.svg', 'brand/gameboy.svg', 'brand/pixel-3d.svg',
+             'brand/manifest.webmanifest', 'brand/apple-touch-icon.png', 'brand/app-192.png',
+             'brand/app-512.png', 'brand/app-maskable-512.png',
+             'brand/icon.svg', 'brand/heatmap.svg', 'brand/hero.svg', 'brand/favicon.ico', 'brand/favicon-16.png',
+             'brand/favicon-32.png', 'brand/favicon-48.png', 'brand/icon-192.png',
              'slides/package.js', 'slides/pptx.js', 'slides/slides.js', 'slides/slides.css')
     assets = {name: (ROOT / 'studio' / name).read_bytes() for name in names}
     from scripts.pages_catalog import catalog_script
     assets['tools/catalog.js'] = catalog_script()
     page = assets['index.html'].decode('utf-8')
-    for name in ('style.css', 'core.js', 'studio.js'):
+    for name in ('style.css', 'core.js', 'studio.js', 'brand/icon.svg', 'brand/heatmap.svg', 'brand/favicon.ico',
+                 'brand/manifest.webmanifest', 'brand/apple-touch-icon.png'):
         page = page.replace('"' + name + '"', '"../' + name + '"')
     page = page.replace('href="tools/"', 'href="../tools/"')
     page = page.replace('<a href="slides/">スライド・PPTX作成 ↗</a>', '<a href="../">Image Studio ↗</a>')
@@ -277,18 +284,19 @@ class StudioHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         assets = cached_public_assets()
         route = self.path.split('?', 1)[0]
-        filename = {'/': 'index.html', '/tools/': 'tools/index.html', '/slides/': 'slides/index.html'}.get(route, route.lstrip('/'))
+        filename = {'/': 'index.html', '/tools/': 'tools/index.html', '/slides/': 'slides/index.html', '/brand/': 'brand/index.html'}.get(route, route.lstrip('/'))
         if filename not in assets:
             self.send_error(404)
             return
-        mime = {'.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css'}[Path(filename).suffix]
+        mime = {'.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css',
+                '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json'}[Path(filename).suffix]
         payload = assets[filename]
         self.send_response(200)
-        self.send_header('Content-Type', mime + '; charset=utf-8')
+        self.send_header('Content-Type', mime + ('; charset=utf-8' if Path(filename).suffix in ('.html', '.js', '.css', '.svg') else ''))
         self.send_header('Content-Length', str(len(payload)))
         self.send_header('Cache-Control', 'no-store')
         self.send_header('X-Content-Type-Options', 'nosniff')
-        self.send_header('Content-Security-Policy', "default-src 'none'; script-src 'self'; style-src 'self'; img-src data: blob:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'")
+        self.send_header('Content-Security-Policy', "default-src 'none'; manifest-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'")
         self.end_headers()
         self.wfile.write(payload)
 

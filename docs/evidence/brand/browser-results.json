@@ -1,0 +1,117 @@
+{
+  "results": [
+    {
+      "width": 1440,
+      "route": "",
+      "images": [
+        {
+          "complete": true,
+          "width": 256,
+          "src": "http://127.0.0.1:8771/Ironmate/brand/heatmap.svg"
+        }
+      ],
+      "brandFits": true,
+      "manifestParsed": true,
+      "appIcons": true
+    },
+    {
+      "width": 1440,
+      "route": "tools/",
+      "images": [
+        {
+          "complete": true,
+          "width": 256,
+          "src": "http://127.0.0.1:8771/Ironmate/brand/heatmap.svg"
+        }
+      ],
+      "brandFits": true,
+      "manifestParsed": true,
+      "appIcons": true
+    },
+    {
+      "width": 1440,
+      "route": "slides/",
+      "images": [
+        {
+          "complete": true,
+          "width": 256,
+          "src": "http://127.0.0.1:8771/Ironmate/brand/heatmap.svg"
+        }
+      ],
+      "brandFits": true,
+      "manifestParsed": true,
+      "appIcons": true
+    },
+    {
+      "width": 1440,
+      "route": "brand/",
+      "images": [
+        {
+          "complete": true,
+          "width": 320,
+          "src": "http://127.0.0.1:8771/Ironmate/brand/gameboy.svg"
+        }
+      ],
+      "brandFits": true,
+      "manifestParsed": true,
+      "appIcons": true
+    },
+    {
+      "width": 390,
+      "route": "",
+      "images": [
+        {
+          "complete": true,
+          "width": 256,
+          "src": "http://127.0.0.1:8771/Ironmate/brand/heatmap.svg"
+        }
+      ],
+      "brandFits": true,
+      "manifestParsed": true,
+      "appIcons": true
+    },
+    {
+      "width": 390,
+      "route": "tools/",
+      "images": [
+        {
+          "complete": true,
+          "width": 256,
+          "src": "http://127.0.0.1:8771/Ironmate/brand/heatmap.svg"
+        }
+      ],
+      "brandFits": true,
+      "manifestParsed": true,
+      "appIcons": true
+    },
+    {
+      "width": 390,
+      "route": "slides/",
+      "images": [
+        {
+          "complete": true,
+          "width": 256,
+          "src": "http://127.0.0.1:8771/Ironmate/brand/heatmap.svg"
+        }
+      ],
+      "brandFits": true,
+      "manifestParsed": true,
+      "appIcons": true
+    },
+    {
+      "width": 390,
+      "route": "brand/",
+      "images": [
+        {
+          "complete": true,
+          "width": 320,
+          "src": "http://127.0.0.1:8771/Ironmate/brand/gameboy.svg"
+        }
+      ],
+      "brandFits": true,
+      "manifestParsed": true,
+      "appIcons": true
+    }
+  ],
+  "errors": []
+}

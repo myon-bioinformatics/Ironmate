@@ -1,5 +1,9 @@
 # Ironmate
 
+![Ironmate — I’mのアポストロフィを🔰にしたピクセルロゴ](studio/brand/readme.svg)
+
+ロゴは **I’m＋🔰のアポストロフィ**。6案を用途別に使い分け、現時点ではfaviconにダークグリーン、READMEにファミコン風、Web画面にヒートマップ配色、ホーム画面アイコンにPixel 3Dを暫定配置しています。正式版は未決定です。[6案ギャラリー](https://myon-bioinformatics.github.io/Ironmate/brand/)から各案を保存できます。[デザインと再生成](docs/brand.md)。
+
 Pythonを中心に、文書・画像などの**内容や属性の変換・置換**を検証するプロジェクトです。
 PPTXの文字・色・矢印属性の置換を今後の対象とし、画素／パレットに基づくドット表現を試作しています。
 要件は [Issue #80](https://github.com/myon-bioinformatics/Ironmate/issues/80)、

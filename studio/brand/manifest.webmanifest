@@ -1,0 +1,45 @@
+{
+  "id": "../",
+  "name": "Ironmate",
+  "short_name": "Ironmate",
+  "lang": "ja",
+  "start_url": "../",
+  "scope": "../",
+  "display": "standalone",
+  "theme_color": "#003D32",
+  "background_color": "#EDF0EC",
+  "icons": [
+    {
+      "src": "app-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "app-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "app-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "画像を作る",
+      "url": "../"
+    },
+    {
+      "name": "スライドを作る",
+      "url": "../slides/"
+    },
+    {
+      "name": "ドット絵・画像一覧",
+      "url": "../tools/"
+    }
+  ]
+}

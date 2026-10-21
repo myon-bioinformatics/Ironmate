@@ -25,6 +25,9 @@ header {
   flex-wrap: wrap;
 }
 .brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   font-weight: 900;
   letter-spacing: 0.1em;
   text-decoration: none;
@@ -269,4 +272,16 @@ footer {
   .exports {
     gap: 8px;
   }
+}
+
+.brand img {
+  flex: none;
+  image-rendering: pixelated;
+}
+
+.brand-hero {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  image-rendering: pixelated;
 }

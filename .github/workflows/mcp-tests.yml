@@ -59,7 +59,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: myon-bioinformatics/myon-bioinformatics
-          ref: 990f5165da97214e8213ea0a99ae1b03569efe0c
+          ref: 2192ff22acafdd09e80ac722df91ee937aaedd5e
           path: .vendor-sync-tools
           persist-credentials: false
       - name: Verify checked-in vendor copies
@@ -259,7 +259,7 @@ jobs:
     permissions:
       contents: read
       actions: read
-    uses: myon-bioinformatics/myon-bioinformatics/.github/workflows/reusable-junit-identity.yml@a9df23dec720f125772a24b77b413552d60060ba
+    uses: myon-bioinformatics/myon-bioinformatics/.github/workflows/reusable-junit-identity.yml@2192ff22acafdd09e80ac722df91ee937aaedd5e
     with:
       commit-sha: ${{ github.event.pull_request.head.sha || github.sha }}
       expected-reports: '["junit-py3.12/pytest-3.12.xml","junit-controlled-py3.12/junit.xml","junit-marp/marp.xml"]'

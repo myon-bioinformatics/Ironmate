@@ -4,6 +4,7 @@ WORKDIR /src
 COPY image_studio.py grid_output.py pixel_grid.py ./
 COPY scripts/pages_catalog.py ./scripts/pages_catalog.py
 COPY studio/index.html studio/core.js studio/studio.js studio/style.css ./studio/
+COPY studio/brand/ ./studio/brand/
 COPY studio/tools/ ./studio/tools/
 COPY studio/slides/ ./studio/slides/
 RUN python -S image_studio.py --build-site /site/Ironmate

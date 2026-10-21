@@ -133,6 +133,13 @@ def test_loopback_server_exposes_only_fixed_assets_no_project_files_or_posts():
             assert "connect-src 'none'" in r.headers['Content-Security-Policy']
         with get(base+'/core.js') as r:
             assert r.headers['Content-Type'].startswith('text/javascript')
+        for path, mime in (('/brand/icon.svg', 'image/svg+xml'),
+                           ('/brand/favicon-16.png', 'image/png'),
+                           ('/brand/favicon.ico', 'image/x-icon'),
+                           ('/brand/manifest.webmanifest', 'application/manifest+json')):
+            with get(base + path) as r:
+                assert r.headers['Content-Type'].startswith(mime)
+                assert r.read() == studio.public_assets()[path.lstrip('/')]
         for path in ('/../AGENTS.md', '/vendor.lock.json', '/studio.js/../../README.md'):
             with pytest.raises(urllib.error.HTTPError) as err:
                 get(base+path)

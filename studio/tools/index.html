@@ -5,9 +5,15 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'none'; script-src 'self'; style-src 'self'; img-src data: blob:; connect-src 'none'; object-src 'none'; base-uri 'none'"
+      content="default-src 'none'; manifest-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'none'; object-src 'none'; base-uri 'none'"
     />
+    <link rel="manifest" href="../brand/manifest.webmanifest" />
+    <link rel="apple-touch-icon" sizes="180x180" href="../brand/apple-touch-icon.png" />
+    <meta name="theme-color" content="#003D32" />
+    <meta name="apple-mobile-web-app-title" content="Ironmate" />
     <title>Ironmate — ブラウザツール</title>
+    <link rel="icon" href="../brand/favicon.ico" sizes="16x16 32x32 48x48" />
+    <link rel="icon" type="image/svg+xml" href="../brand/icon.svg" sizes="any" />
     <link rel="stylesheet" href="tools.css" />
     <script defer src="catalog.js"></script>
     <script defer src="tools-core.js"></script>
@@ -15,9 +21,9 @@
   </head>
   <body>
     <header>
-      <a class="brand" href="../">◈ IRONMATE</a>
+      <a class="brand" href="../"><img src="../brand/heatmap.svg" width="48" height="48" alt="I’m — 🔰がアポストロフィのIronmateロゴ" /> IRONMATE</a>
       <nav aria-label="サイト">
-        <a href="../">Image Studio ↗</a
+        <a href="../brand/">ロゴ6案 ↗</a><a href="../">Image Studio ↗</a
         ><a href="https://myon-bioinformatics.github.io/#ironmate"
           >ポートフォリオ ↗</a
         ><a href="https://github.com/myon-bioinformatics/Ironmate">ソース ↗</a>
@@ -29,6 +35,7 @@
       <p class="lead">
         インストール不要。画像もJSONも、このブラウザの中で処理します。
       </p>
+      <img class="brand-hero" src="../brand/hero.svg" width="560" height="160" alt="Ironmate — I’mとヒートマップのセルを組み合わせたロゴ" />
       <div class="jump">
         <a href="#pixels">01 ドット絵</a><a href="#digest">02 画像一覧</a
         ><a href="#capacity">03 Base64容量</a><a href="#features">できること</a>

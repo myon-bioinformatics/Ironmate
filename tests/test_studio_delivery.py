@@ -21,7 +21,21 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def test_build_site_contains_only_public_client_assets_and_relative_paths(tmp_path):
     target=s.build_site(tmp_path/'Ironmate')
-    assert {p.name for p in target.iterdir()}=={'index.html','core.js','studio.js','style.css','.nojekyll','tools','slides'}
+    assert {p.name for p in target.iterdir()}=={'index.html','core.js','studio.js','style.css','.nojekyll','tools','slides','brand'}
+    brand_files = {
+        'index.html', 'gallery.css', 'mono.svg', 'dark-green.svg', 'famicom.svg',
+        'gameboy.svg', 'pixel-3d.svg', 'manifest.webmanifest', 'apple-touch-icon.png',
+        'app-192.png', 'app-512.png', 'app-maskable-512.png', 'icon.svg',
+        'heatmap.svg', 'hero.svg', 'favicon.ico', 'favicon-16.png', 'favicon-32.png',
+        'favicon-48.png', 'icon-192.png',
+    }
+    assert {p.relative_to(target/'brand').as_posix() for p in (target/'brand').rglob('*')} == brand_files
+    for name in brand_files:
+        assert (target/'brand'/name).is_file()
+        assert (target/'brand'/name).read_bytes() == (ROOT/'studio/brand'/name).read_bytes()
+    for page in ('index.html', 'tools/index.html', 'slides/index.html', 'brand/index.html'):
+        html = (target/page).read_text()
+        assert 'src="/' not in html and 'href="/' not in html
     text=(target/'index.html').read_text()
     assert "Content-Security-Policy" in text and 'Base64 / 渡す' in text
     for name in ('core.js','studio.js','style.css'):

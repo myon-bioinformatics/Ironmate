@@ -262,3 +262,7 @@ Markdown の要約を作ります。容量に収まるまでサムネイルを 1
 [web-ui flow export](docs/flow-export.md) connects a single bounded JSON input to Mermaid Markdown, SVG, PNG, standard Base64 and PNG data URI, through Python/Node APIs and CLIs. It reuses the upstream contract and Image Studio raster output.
 
 Retain, edit and regenerate flow JSON with the [flow workspace CLI and Python/Node APIs](docs/flow-export.md#retained-json-workspace-import--patch--regenerate), while preserving the original UTF-8 source.
+
+## Discover production entry points
+
+[Convention-driven file and symbol discovery](docs/convention-discovery.md) gives verified one-liners for this repository. Supply filename/name rules to inspect production code, configuration and workflows with the shared stdlib-only xprobe tool.

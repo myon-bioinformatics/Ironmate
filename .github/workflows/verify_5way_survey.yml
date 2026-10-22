@@ -23,7 +23,7 @@ jobs:
 
       - name: Run 5-Way Fixed-Point & Topological Benchmark
         run: |
-          echo "## 🔬 LittleBit-FairyFuse-Jev 5-Way Survey & Topological Mining Report" >> $GITHUB_STEP_SUMMARY
-          echo '```text' >> $GITHUB_STEP_SUMMARY
-          python3 scripts/littlebit_jev_5way_survey.py | tee -a $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "## 🔬 LittleBit-FairyFuse-Jev 5-Way Survey & Topological Mining Report" >> "$GITHUB_STEP_SUMMARY"
+          echo '```text' >> "$GITHUB_STEP_SUMMARY"
+          python3 scripts/littlebit_jev_5way_survey.py | tee -a "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"

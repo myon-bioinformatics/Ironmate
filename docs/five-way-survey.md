@@ -229,3 +229,55 @@ and [trial summary](evidence/five-way-survey/summary.json) preserve the actual
 measurements, including empty detections and wrong predicted topology. They
 supersede no original holdout evidence. Seeds reuse the supplied date and shapes
 are synthetic, so this run is not an independent real-image validation.
+
+## Consolidating the overlapping proposals
+
+[PR #157](https://github.com/myon-bioinformatics/Ironmate/pull/157) is the
+integration candidate for the overlapping
+[PR #156](https://github.com/myon-bioinformatics/Ironmate/pull/156). The comparison
+used #156 at `aff11622991b6fa3f75c8b9a9876fccb97edac8f` and #157's implementation
+at `a9c6f783694194ac91be43216925be7268683393`. This is a consolidation decision,
+not a claim that either proposal has already merged.
+
+The following useful #156 concepts are retained in this implementation:
+
+- The shift/add FWHT, ternary masks and logarithmic DC/AC calibration.
+- Strides 1/2/4/8, DC slope rescue, perturbation histories, anisotropy and
+  the corner-direction bonus.
+- Fixed-point reconstruction and 2x2 cycle preservation, with reciprocal edges,
+  all four cycle edges and actual convergence required.
+- Bitboard topology and component counts, with the corrected isolated-diagonal
+  rule and explicit foreground-8/background-4 convention.
+- Eight synthetic scenario families, IoU and energy-weighted Dice, spatial
+  sensitivity controls, three-condition Venn counts and temporal XOR diagnostics.
+- A dependency-free CLI and daily benchmark artifact, using the existing
+  `.github/workflows/verify_3way_survey.yml` schedule at 23:00 UTC (08:00 JST).
+  Do not also add #156's `verify_5way_survey.yml`: that would duplicate the run.
+
+The original unsafe rough-support temporal gate, three-pass stopping rule,
+three-edge cycle lock and false-hole diagonal rule are not carried forward.
+Neither are the O(1) topology claim, approximate inclusion described as a
+sufficient cause, or the old asymmetric Flux score presented as a validated
+accuracy measure. The reasons and replacements are documented above; the
+[original proposal source](https://github.com/myon-bioinformatics/Ironmate/blob/aff11622991b6fa3f75c8b9a9876fccb97edac8f/scripts/littlebit_jev_5way_survey.py)
+remains an immutable comparison reference rather than a second active engine.
+The standalone experimental API is not a drop-in compatibility layer for #156's
+return-field names; runtime evidence retains full support coordinates instead of
+only a final integer center-of-mass and last-trial topology.
+
+The benchmark protocols are not identical. #156 used a single shared RNG stream
+and a 12x12 `High_Noise_Dark` truth square (coordinates 10..21 inclusive). This
+implementation uses independently derived per-trial seeds and a 13x13 truth
+square (10..22). Therefore the two outputs must not be presented as a paired
+before/after accuracy or speed improvement. The resonance rule also uses an
+actual collapse-distance delta rather than #156's half-active-spin proxy;
+calibration removes the 16-bucket cap and rounds the 75% rank differently on
+grids not divisible by four. This is a revised experiment, not output-equivalent
+code. No fixture or threshold was retuned during consolidation, and the
+checked-in evidence remains unchanged.
+
+An independent 200-trial rerun reproduced the checked-in detector records,
+all 400 truth/prediction coordinate hashes, and the complete detector,
+counterfactual and rotation-pipeline digests. It still yielded 25/200 predicted
+topology matches and scenario mean IoU of 0–38.08%. These are research baselines,
+not 95% detection accuracy, a GPU substitute or a 0.3ms incremental-search result.

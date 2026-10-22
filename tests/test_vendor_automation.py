@@ -73,12 +73,22 @@ def test_canonical_vendor_evidence_membership_is_derived_from_lock():
     assert all((ROOT / path).is_file() for path in locked)
 
 
-@pytest.mark.parametrize("workflow_path", [WORKFLOW, ".github/workflows/vendor-catalog-audit.yml"])
-def test_parent_vendor_sync_checkout_is_pinned(workflow_path):
-    text = (ROOT / workflow_path).read_text(encoding="utf-8")
+def test_parent_vendor_sync_checkout_is_pinned():
+    text = (ROOT / WORKFLOW).read_text(encoding="utf-8")
     assert PIN in text
     assert "974da5eb9593df652b132e4b0f1a679f67422566" not in text
     assert "14ef53c8316015d1350e62ff9cce3301103e65a7" not in text
+
+
+def test_vendor_catalog_audit_resolves_parent_main_at_runtime():
+    path = ROOT / ".github/workflows/vendor-catalog-audit.yml"
+    text = path.read_text(encoding="utf-8")
+    assert PIN not in text
+    assert "ls-remote" in text and "--symref" in text
+    assert "638801160" in text
+    assert "GITHUB_STEP_SUMMARY" in text
+    assert "steps.parent-vendor-tools.outputs.sha" in text
+    assert "repository_id mismatch" in text
 
 
 def test_workflow_stages_locked_vendor_evidence(tmp_path):

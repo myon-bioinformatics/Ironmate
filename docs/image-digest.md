@@ -13,6 +13,12 @@ node image_digest.cjs input.json digest/                       # Node から（�
 Node の API（`buildDigest`）の型は `image_digest.d.cts` にある。ほかの Node API（`flow_export.cjs`、
 `flow_workspace.cjs`、`studio/ingress.cjs`）も同じ名前の `.d.cts` を持ち、本体は JavaScript のまま。
 
+Node ラッパーは親由来の `vendor/py_launch.cjs` で Python を起動する。API の `python` を省略したときは
+各呼び出しで 3.9 以上の短いバージョン確認のあと、順に `IRONMATE_PYTHON` → `PYTHON` → `python3` →
+`python`（Windows では `py -3`）を試す。API の `python` または設定済み `IRONMATE_PYTHON` はフォールバックしない。
+起動失敗は `image digest Python process failed: …`（ライブラリ）または CLI 終了コード `2`。
+詳細は [flow export の Node 起動](flow-export.md) と同じ。
+
 入力は `ironmate-image-digest-input/1`:
 
 ```json

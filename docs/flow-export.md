@@ -66,8 +66,18 @@ require('node:fs').writeFileSync('flow.png', png);
 ```
 
 The Node API is a synchronous, bounded Buffer-returning **Python wrapper**, not a
-second implementation. It requires Python and defaults to `python3`; set
-`IRONMATE_PYTHON` (often `python` on Windows) or the API's `python` option.
+second implementation. It delegates process launch to the vendored parent
+`vendor/py_launch.cjs` (shared with `flow_workspace.cjs` and `image_digest.cjs`).
+
+**Interpreter resolution (Node wrappers):** each call runs a short Python 3.9+
+version probe before spawning the tool. Order when the API `python` option is
+unset: `IRONMATE_PYTHON`, then `PYTHON`, then `python3`, `python`, and on
+Windows `py -3`. An explicit API `python` path or a set `IRONMATE_PYTHON` does
+not fall back to later candidates. Windows `.cmd`/`.bat` shims are rejected.
+Launch failures surface as `flow Python process failed: …` (library API) or exit
+code `2` (CLI). Override the interpreter with `IRONMATE_PYTHON` or the API
+`python` option.
+
 All text formats are also Buffers; use `.toString('utf8')` to read them.
 PNG/Base64/data URI can be imported through the existing Studio file/Base64 input.
 Rendering uses CPU browser drawing, with fonts supplied by the host; identical

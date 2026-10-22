@@ -94,6 +94,9 @@ jobs:
         id: compile
         run: |
           git ls-files '*.py' -z | xargs -0 python -m py_compile
+      - name: Verify pillow_min.py runs standalone under python -S
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
+        run: python -S pillow_min.py
       # The default pytest suite also collects the unittest-based vendor and
       # repository hygiene cases; do not run them twice on Python 3.12.
       - name: Run default pytest suite (exclude heavy tests)

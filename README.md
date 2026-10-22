@@ -18,6 +18,15 @@ Markdown→PPTX変換と既存PPTXの属性編集CLIは試作実装済みです�
 全形式の相互変換や、すべてを操作できる一つの統合UIを示すものではありません。
 実装済みの範囲と制限は以下の各節・リンク先を参照してください。[切り出し情報](docs/assets/repository-concept.json)。
 
+### 課題・役割分担・得られるもの
+
+<a href="docs/assets/repository-concept-v2.png"><img src="docs/assets/repository-concept-v2.png" alt="Ironmateの課題・役割分担・得られるもの：MarkdownやPPTX・画像の編集を、変換・作成・検証に分けて、スライドや画像の成果物につなげる概念図。" width="499"></a>
+
+こちらは上の処理フローを補足する追加の概念図です。既存の図や機能の制限はそのまま残しています。
+「HTMLにも変換可能」は、Markdownソースから作るMarpのHTMLプレビューなどの個別経路を指し、
+編集後のPPTXをHTMLで忠実に再現する保証ではありません。
+[プレビューとPPTX検証の区別](docs/pptx-cli-prototype.md) ／ [追加図の切り出し情報](docs/assets/repository-concept-v2.json)。
+
 ## Image Studio：図形・文字・絵文字を押して画像にする
 
 `python -S image_studio.py` でローカル編集画面を開けます。図形・画像・カスタムスタンプを重ね、ヒートマップの色段階やモザイク粒度を変えて、PNG・SVG・Base64・再編集用JSONを出力します。時計・矢印・顔文字・単色スタンプ、CLI描画にも対応します。

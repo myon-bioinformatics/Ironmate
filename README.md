@@ -1,121 +1,113 @@
 # Ironmate
 
-![Ironmate — I’mのアポストロフィを🔰にしたピクセルロゴ](studio/brand/readme.svg)
+![Ironmate logo: the apostrophe in I’m replaced by a 🔰 pixel mark](studio/brand/readme.svg)
 
-ロゴは **I’m＋🔰のアポストロフィ**。6案を用途別に使い分け、現時点ではfaviconにダークグリーン、READMEにファミコン風、Web画面にヒートマップ配色、ホーム画面アイコンにPixel 3Dを暫定配置しています。正式版は未決定です。[6案ギャラリー](https://myon-bioinformatics.github.io/Ironmate/brand/)から各案を保存できます。[デザインと再生成](docs/brand.md)。
+Ironmate is a Python project for transforming and checking the **content and attributes of documents and images**. It contains several independent prototypes and helpers:
 
-Pythonを中心に、文書・画像などの**内容や属性の変換・置換**を検証するプロジェクトです。
-PPTXの文字・色・矢印属性の置換を今後の対象とし、画素／パレットに基づくドット表現を試作しています。
-要件は [Issue #80](https://github.com/myon-bioinformatics/Ironmate/issues/80)、
-ドット表現の試作は [PR #79](https://github.com/myon-bioinformatics/Ironmate/pull/79) としてマージ済みです。
-Markdown→PPTX変換と既存PPTXの属性編集CLIは試作実装済みです。写真変換は第1段階（Base64→色番号グリッド）のみ試作済みで、キャラクター部品合成は未実装です。実装済みのドット表現の範囲は次節を参照してください。
+- **Markdown → PPTX** conversion through `pptx_pipeline.py`, plus attribute editing of existing PPTX files (text, colors, arrows).
+- **Image Studio** and **Slide Studio**: browser-based editors that run locally or as static GitHub Pages.
+- **Pixel-grid art**: deterministic color-ID grids from procedural shapes, and a first step from Base64 or image files (photo → grid).
+- **Verification helpers**: byte-level PNG/SVG checks, round-trip tests, and screenshot comparison sheets.
 
-## 変換・編集の概念図
+Status: these are prototypes, not one integrated UI. Requirements are tracked in [Issue #80](https://github.com/myon-bioinformatics/Ironmate/issues/80). The dot-art prototype was merged in [PR #79](https://github.com/myon-bioinformatics/Ironmate/pull/79). Markdown → PPTX and PPTX attribute editing are prototypes. Photo conversion is limited to the first stage (Base64 → color-ID grid). Character-part composition is not implemented.
 
-<a href="docs/assets/repository-concept.png"><img src="docs/assets/repository-concept.png" alt="Ironmateの概念図：Markdown・PPTX・画像から、変換・スライド作成・Image Studioを経て、PPTXや画像を出力し、テストと画面比較で確認する流れ。" width="501"></a>
+**Logo.** The logo is the apostrophe of “I’m” replaced with 🔰. Six candidates are kept for different uses. For now, a dark green favicon, a Famicom-style README mark, a heat-map color scheme for the web UI, and a Pixel 3D home-screen icon are provisional. The final version is undecided. Browse the [six-candidate gallery](https://myon-bioinformatics.github.io/Ironmate/brand/) and see [design and regeneration notes](docs/brand.md).
 
-提供された概念図を元の文字・図のまま切り出しています。各機能は独立した試作・補助ツールで、
-全形式の相互変換や、すべてを操作できる一つの統合UIを示すものではありません。
-実装済みの範囲と制限は以下の各節・リンク先を参照してください。[切り出し情報](docs/assets/repository-concept.json)。
+## Concept diagrams
 
-### 課題・役割分担・得られるもの
+<a href="docs/assets/repository-concept.png"><img src="docs/assets/repository-concept.png" alt="Ironmate concept diagram: Markdown, PPTX and images go through conversion, slide creation and Image Studio to produce PPTX files or images, which are checked by tests and visual comparison." width="501"></a>
 
-<a href="docs/assets/repository-concept-v2.png"><img src="docs/assets/repository-concept-v2.png" alt="Ironmateの課題・役割分担・得られるもの：MarkdownやPPTX・画像の編集を、変換・作成・検証に分けて、スライドや画像の成果物につなげる概念図。" width="499"></a>
+These diagrams were supplied as-is and cropped from the original sheet. Each feature is an independent prototype or helper. The diagrams do not show every format converting into every other format, or one unified UI that exposes everything. See [crop metadata](docs/assets/repository-concept.json) and the sections below for what is implemented and what is not.
 
-こちらは上の処理フローを補足する追加の概念図です。既存の図や機能の制限はそのまま残しています。
-「HTMLにも変換可能」は、Markdownソースから作るMarpのHTMLプレビューなどの個別経路を指し、
-編集後のPPTXをHTMLで忠実に再現する保証ではありません。
-[プレビューとPPTX検証の区別](docs/pptx-cli-prototype.md) ／ [追加図の切り出し情報](docs/assets/repository-concept-v2.json)。
+### Challenges, roles and outcomes
 
-## Image Studio：図形・文字・絵文字を押して画像にする
+<a href="docs/assets/repository-concept-v2.png"><img src="docs/assets/repository-concept-v2.png" alt="Ironmate challenges, roles and outcomes: editing Markdown, PPTX and images is split into conversion, creation and verification, leading to slide and image deliverables." width="499"></a>
 
-`python -S image_studio.py` でローカル編集画面を開けます。図形・画像・カスタムスタンプを重ね、ヒートマップの色段階やモザイク粒度を変えて、PNG・SVG・Base64・再編集用JSONを出力します。時計・矢印・顔文字・単色スタンプ、CLI描画にも対応します。
+This second diagram supplements the processing flow above. Existing diagrams and feature limits are unchanged. “Can also convert to HTML” refers to specific paths, such as the Marp HTML preview generated from Markdown source. It does not guarantee that an edited PPTX is reproduced faithfully in HTML. See [preview versus PPTX verification](docs/pptx-cli-prototype.md) and [crop metadata for the second diagram](docs/assets/repository-concept-v2.json).
 
-[ブラウザでImage Studioを開く](https://myon-bioinformatics.github.io/Ironmate/) ／ [ドット絵・画像一覧を開く](https://myon-bioinformatics.github.io/Ironmate/tools/) ／ [Docker起動・Pages版の対応範囲](docs/browser-tools.md)
+## Image Studio: place shapes, text and emoji, then export an image
 
-[操作方法と検証範囲](docs/image-studio.md) ／ [実ブラウザの画面と検証証跡](docs/evidence/image-studio/report.md)。
+Run `python -S image_studio.py` to open a local editor. Overlay shapes, images and custom stamps. Change the heat-map color steps or mosaic size, then export PNG, SVG, Base64 or re-editable JSON. Clocks, arrows, emoticons, monochrome stamps and CLI drawing are supported.
 
-## ブラウザでスライドを作成
+- [Open Image Studio in the browser](https://myon-bioinformatics.github.io/Ironmate/)
+- [Open the dot-art and image gallery](https://myon-bioinformatics.github.io/Ironmate/tools/)
+- [Docker startup and Pages scope](docs/browser-tools.md)
+- [Usage and verification scope](docs/image-studio.md) and [real-browser screenshots and evidence](docs/evidence/image-studio/report.md)
 
-[Slide Studioを開く](https://myon-bioinformatics.github.io/Ironmate/slides/)。Image Studioと同じ操作でタイトル・本文・矢印を配置し、複数スライドをPPTXに保存できます。文字と通常図形はPowerPointでも編集可能な形式で出力します。[操作・対応範囲](docs/slide-studio.md)。
+## Slide Studio: create slides in the browser
 
-## PPTX変換・編集
+Open [Slide Studio](https://myon-bioinformatics.github.io/Ironmate/slides/). Place titles, body text and arrows with the same controls as Image Studio, then save several slides as PPTX. Text and plain shapes are exported in a format PowerPoint can edit. See [usage and scope](docs/slide-studio.md).
 
-MarkdownからPPTXを生成する入口は **`pptx_pipeline.py`** に統一しています。旧`marp_pptx.py`は削除済みで、互換CLIは提供しません。引数の構築には固定vendorの`vendor/cli_args.py`を使用します。
+## PPTX conversion and editing
+
+Markdown is converted to PPTX through a single entry point, **`pptx_pipeline.py`**. The old `marp_pptx.py` has been removed, and no compatibility CLI is provided. Argument construction uses the pinned `vendor/cli_args.py`.
 
 ```sh
 python pptx_pipeline.py slides.md -o slides.pptx
-python pptx_pipeline.py --text '# タイトル' -o slides.pptx
-printf '# タイトル\n' | python pptx_pipeline.py - -o slides.pptx
-# MermaidのSVG事前変換を行う場合のみ追加:
+python pptx_pipeline.py --text '# Title' -o slides.pptx
+printf '# Title\n' | python pptx_pipeline.py - -o slides.pptx
+# Only when pre-rendering Mermaid diagrams to SVG:
 python pptx_pipeline.py diagrams.md --mmdc node_modules/.bin/mmdc -o diagrams.pptx
 ```
 
-Marp CLIは事前インストールが必要で、コマンドが勝手にNode/npmを導入することはありません。標準の変換はローカルファイル参照を許可せず、`--mmdc`を使う場合のみ、信頼できる入力を対象にローカル参照を有効化します。出力JSONには変換とPPTX検査の結果が入ります。
+- Marp CLI must be installed beforehand. The commands never install Node or npm for you.
+- By default, the standard conversion does not allow local file references. With `--mmdc`, local references are allowed for trusted input only.
+- The output JSON includes the conversion and PPTX inspection results.
+- To change text, colors or attributes in an existing PPTX, use the separate `pptx_replace.py`. See the [prototype contract and verification status](docs/pptx-cli-prototype.md).
 
-既存PPTXの文字・色・属性を変更する場合は、独立した`pptx_replace.py`を使用します。詳細は[試作契約・検証状況](docs/pptx-cli-prototype.md)を参照してください。
+## Dot-art prototype: pixel grids
 
-## ドット絵の試作候補
+`pixel_grid.py` produces a reproducible color-ID grid from 5 shapes (procedurally generated), 10 palettes (color IDs `C01`–`C10`) and 4 effects. Any size within each shape's range is accepted, including odd sizes. Sizes that cannot be drawn cleanly raise an error instead of producing output.
 
-`pixel_grid.py`で、5種類の形（手続き生成）・10配色（色ID `C01`〜`C10`）・4加工を、
-形ごとの範囲内の任意サイズ（奇数も可）で再現可能な色番号グリッドにします。
-きれいに描けないサイズは生成せずエラーにします。
-
-| 形 | 最小〜最大サイズ |
+| Shape | Size range |
 | --- | --- |
-| triangle | 5〜256 |
-| diamond | 9〜256 |
-| cloud | 16〜256 |
-| circle | 6〜256 |
-| rock | 7〜256 |
+| triangle | 5–256 |
+| diamond | 9–256 |
+| cloud | 16–256 |
+| circle | 6–256 |
+| rock | 7–256 |
 
 ```bash
 python -S pixel_grid.py --mask cloud --palette C01 --effect shadow --size 23
 python -S pixel_grid.py --mask circle --palette C02 --size 31 --format png --scale 8 > circle.png
 ```
 
-[第1弾の契約・検証・今後の設計](docs/pixel-grid-prototype.md)。
+See the [first-release contract, verification and design notes](docs/pixel-grid-prototype.md).
 
-![生成例：5形×10色ID（加工shadow）、4加工、奇数サイズ](docs/pixel-grid-preview.png)
+![Sample output: 5 shapes × 10 color IDs (shadow effect), 4 effects, and odd sizes](docs/pixel-grid-preview.png)
 
-生成例（上から5形×色ID `C01`〜`C10`、加工shadow／cloud・rockで4加工／奇数サイズ5・9・7・13・17・31）。
-`python -S grid_preview.py -o docs/pixel-grid-preview.png --force`で再生成でき、
-テスト（`tests/test_grid_preview.py`）がコミット済みのPNGとbyte一致することを確認するため、実装と画像がずれません。
+The sample above shows the five shapes across color IDs `C01`–`C10` (shadow effect), four effects on cloud and rock, and odd sizes 5, 9, 7, 13, 17 and 31. Regenerate it with `python -S grid_preview.py -o docs/pixel-grid-preview.png --force`. The test `tests/test_grid_preview.py` checks that the committed PNG is byte-identical to the regenerated image, so the implementation and the image stay in sync.
 
-`photo_grid.py`は、Base64（生の文字列または`data:image/...;base64,`）または画像ファイルを
-読み、同じ`ironmate-pixel-grid/1`形式（固定RGBA＋色番号グリッド）にします。
+### Photo input (`photo_grid.py`)
 
-判定は拡張子ではなく先頭bytes（magic bytes）で行います。ファイルはそのまま、Base64は生の文字列または
-`data:<type>;base64,`で渡せます（data URIのtypeは省略か `image/png`・`image/jpeg`・`image/jpg`・`image/webp` のみ）。
+`photo_grid.py` reads a Base64 string (raw, or `data:image/...;base64,`) or an image file and writes the same `ironmate-pixel-grid/1` format: a fixed RGBA palette plus a color-ID grid. Formats are detected from magic bytes, not from the file extension.
 
-| 入力 | 判定 | 必要な依存 | 理由・挙動 |
+| Input | Support | Dependency | Notes |
 | --- | --- | --- | --- |
-| `.png`（8bit gray / gray+alpha / RGB / RGBA、非interlace） | 対応 | なし（標準ライブラリ） | PNGの圧縮はzlib（deflate）なので、標準の`zlib`＋`struct`で展開・filter復元できる。gray・RGBの`tRNS`（透明色）はalpha 0に反映（RGB値は保持、Pillowと画素一致）。zlib streamは終端・checksumまで必須で、切断・後続データはエラー。APNGはエラーにせず既定画像（IDAT）だけを読む（既定画像がアニメーションに含まれない場合も同じ。Pillow経由も一致） |
-| `.png`（palette・16bit・interlace） | 条件付き | Pillow | 標準decoderは対象外の形式として明示エラー。Pillowがあれば自動でPillowで読む（無ければ「unsupported PNG …」「interlaced PNG …」のエラー）。palette＋`tRNS`の透明度もPillowでRGBAに反映（期待値と画素一致をテスト） |
-| Base64のPNG（生の文字列） | 対応 | なし | 標準の`base64`で元のbytesに戻してから上と同じ処理。標準アルファベット＋`=`padding必須（URL-safe・padding省略はエラー）。空白・改行（CRLF）・BOMは無視 |
-| data URI（`data:image/png;base64,`） | 対応 | なし | 上と同じ。typeと中身が違う場合（例：`image/jpeg`なのにPNG）や、上記以外のtype（gif・svg+xml等）は「unsupported data URI type」等のエラー |
-| `.jpg` / `.jpeg`（ファイル・Base64・`image/jpeg`） | 条件付き | Pillow | JPEGはDCT＋ハフマン符号の展開が必要で、標準ライブラリにdecoderがない。Pillowが無い場合は「needs the optional Pillow package」エラー。EXIFの向きは補正 |
-| `.webp`（同上、`image/webp`） | 条件付き | Pillow | WebPはVP8/VP8Lの展開が必要で、標準ライブラリにdecoderがない。Pillowが無い場合は同じエラー。アニメーションは先頭フレームのみ |
-| `.svg` | `photo_grid.py`では非対応／`grid_tools.py load`で条件付き | なし（numpyがあれば高速化） | 写真入力（`photo_grid.py`）は従来どおり「SVG input is not supported」。ドット絵の読み戻し（`grid_tools.py`、`svg_raster.py`）は安全な部分集合のみ描画：`rect`（塗りのみ・面積で正確）、`circle`/`ellipse`/`polygon`（4×4 supersampling）、`g`（translateのみ）、`#rgb`/`#rrggbb`、`fill-opacity`/`opacity`。DOCTYPE・ENTITY、`path`・`line`・グラデーション・`style`/`class`・`script`・`image`・`text`・回転等の変形は理由付き`SvgError`。SVG経由の可逆性は保証しない（透明セルの色は`#00000000`になる） |
-| `.gif` | 非対応 | — | LZW展開は自作が必要で、アニメーションのフレーム選択も未定義。Pillowは読めるが対象外として拒否（「GIF input is not supported」） |
-| `.bmp` | 非対応 | — | 未採用（需要が出たら検討）。Pillowの有無に関係なく「BMP input is not supported」 |
-| `.tif` / `.tiff` | 非対応 | — | 圧縮方式・複数ページ・色空間が多様で未採用。「TIFF input is not supported」 |
-| `.ico` | 非対応 | — | 複数サイズの画像を含むため選択規則が未定義。「ICO input is not supported」 |
-| `.heic` / `.avif` | 非対応 | — | HEVC/AV1の展開が必要。Pillowのビルドによっては読めるが対象外として拒否（「HEIC/HEIF/AVIF input is not supported」） |
-| 判別できないbytes | 非対応 | — | 「unrecognized image format」エラー |
+| `.png` (8-bit gray, gray+alpha, RGB, RGBA; non-interlaced) | Supported | None (stdlib) | Decoded with `zlib`, `struct` and filter reconstruction. `tRNS` transparency is applied to alpha (RGB values are kept; pixel-identical to Pillow). The zlib stream must be complete, with its checksum; truncation or trailing data is an error. For APNG, only the default image (IDAT) is read. |
+| `.png` (palette, 16-bit, interlaced) | Conditional | Pillow | The stdlib decoder reports these explicitly as unsupported. With Pillow installed, they are read through Pillow, including palette `tRNS` transparency. |
+| Base64 PNG (raw string) | Supported | None | Decoded with the standard alphabet and `=` padding. URL-safe alphabets and missing padding are errors. Whitespace, CRLF line breaks and BOM are ignored. |
+| data URI (`data:image/png;base64,`) | Supported | None | Same as above. A mismatch between the declared type and the content, or an unsupported type (GIF, SVG+XML, etc.), is an error. |
+| `.jpg` / `.jpeg` (file, Base64, `image/jpeg`) | Conditional | Pillow | Requires a DCT/Huffman decoder, which the stdlib does not have. Without Pillow: “needs the optional Pillow package”. EXIF orientation is applied. |
+| `.webp` (same as above, `image/webp`) | Conditional | Pillow | Requires a VP8/VP8L decoder. Animated files use the first frame only. |
+| `.svg` | Not supported in `photo_grid.py`; limited in `grid_tools.py load` | None (numpy speeds it up if present) | `photo_grid.py` rejects SVG. `grid_tools.py load` renders a safe subset only: `rect` (fill only), `circle`/`ellipse`/`polygon` (4×4 supersampling), `g` (translate only), `#rgb`/`#rrggbb`, and `fill-opacity`/`opacity`. Anything else raises `SvgError` with a reason. SVG round-trips are not guaranteed. |
+| `.gif` | Not supported | — | Rejected: LZW decoding and frame selection are not defined here. |
+| `.bmp` | Not supported | — | Not adopted; rejected regardless of Pillow. |
+| `.tif` / `.tiff` | Not supported | — | Compression, multi-page and color-space variety; not adopted. |
+| `.ico` | Not supported | — | Multiple sizes make the selection rule undefined. |
+| `.heic` / `.avif` | Not supported | — | Requires HEVC/AV1 decoding. Rejected even when some Pillow builds can read them. |
+| Unrecognized bytes | Not supported | — | “unrecognized image format”. |
 
-| 出力（`--format`） | 判定 | 必要な依存 | 理由・挙動 |
+| Output (`--format`) | Support | Dependency | Notes |
 | --- | --- | --- | --- |
-| JSON（既定） | 対応 | なし | `ironmate-pixel-grid/1`（固定RGBA＋色番号）。正規データ |
-| SVG | 対応 | なし | 文字列として直接書ける（`grid_svg.py`、横方向の同色をまとめた`<rect>`） |
-| PNG | 対応 | なし | `zlib`＋`struct`で8bit RGBAを書く（`grid_png.py`、整数倍の最近傍拡大、同じ入力は同じbytes） |
-| Base64 | 対応 | なし | PNG出力と同じbytesを`base64`で文字列化。`--data-uri`で`data:image/png;base64,...`。photo_grid.pyの入力に戻せる |
-| WebP出力 | 非対応 | — | VP8/VP8Lのencoderが標準ライブラリにない。要件外 |
-| PPTXネイティブ図形 | 非対応 | — | ユーザー判断で対象外（画像出力のみ） |
+| JSON (default) | Supported | None | `ironmate-pixel-grid/1` (fixed RGBA palette plus color IDs). This is the canonical data. |
+| SVG | Supported | None | Written as text by `grid_svg.py`; horizontal runs of the same color become one `<rect>`. |
+| PNG | Supported | None | 8-bit RGBA written with `zlib` and `struct` by `grid_png.py`. Integer scales use nearest-neighbor. The same input always produces the same bytes. |
+| Base64 | Supported | None | The same bytes as PNG, encoded with `base64`. `--data-uri` adds the `data:image/png;base64,` prefix. Can be fed back to `photo_grid.py`. |
+| WebP | Not supported | — | No stdlib VP8/VP8L encoder; out of scope. |
+| Native PPTX shapes | Not supported | — | Out of scope by decision; image output only. |
 
-エラーはいずれも`ValueError`（`ImageDecodeError`を含む）で、CLIは理由を表示してexit 2で終了します。
-`-o`は既存ファイル・symlinkを上書きせずexit 2（「refusing to overwrite」）。置き換えるときは`--force`（一時ファイル＋`os.replace`で、symlinkの先ではなくsymlink自体を置き換える）。全CLI共通（`grid_output.py`）。
-Pillowは必須依存ではありません。
+All errors are `ValueError` (including `ImageDecodeError`). The CLI prints the reason and exits with status 2. `-o` refuses to overwrite an existing file or symlink (exit 2, “refusing to overwrite”). Use `--force` to replace it. That writes a temporary file and calls `os.replace`, so the symlink itself is replaced, not its target. This behavior is shared by all CLIs (`grid_output.py`). Pillow is not a required dependency.
 
 ```bash
 base64 -w0 photo.png > photo.b64
@@ -123,137 +115,128 @@ python -S photo_grid.py photo.b64 --size 32 --colors 8
 python photo_grid.py photo.b64 --size 16 --palette C01 --fit contain
 python -S photo_grid.py photo.b64 --size 32 --format svg --scale 8 -o photo.svg
 python -S pixel_grid.py --mask cloud --format svg > cloud.svg
-python -S grid_svg.py grid.json -o grid.svg   # 既存のgrid JSONからSVG
+python -S grid_svg.py grid.json -o grid.svg   # SVG from an existing grid JSON
 python -S photo_grid.py photo.png --size 32 --format png --scale 4 -o dots.png
 python -S pixel_grid.py --mask cloud --format png --scale 8 > cloud.png
 python -S grid_png.py grid.json --scale 8 -o grid.png
 python -S pixel_grid.py --mask cloud --format base64 --data-uri -o cloud.b64
-python -S photo_grid.py cloud.b64 --size 16 --palette C01   # 元のgridに戻る
+python -S photo_grid.py cloud.b64 --size 16 --palette C01   # back to the original grid
 ```
 
-[写真入力の契約と制限](docs/pixel-grid-prototype.md#写真入力の最初の到達点base64からドットグリッドへ)。
+See the [photo-input contract and limits](docs/pixel-grid-prototype.md#写真入力の最初の到達点base64からドットグリッドへ).
 
-### 1行で往復する（`grid_tools.py`）
+### Round trips in one line (`grid_tools.py`)
 
-AIエージェントが小さなBase64画像を本文に埋め込む用途向けに、生成・読み戻し・拡大縮小・色ID置換を
-1関数／1コマンドにまとめました。標準ライブラリのみで動き、Pillow・numpyは任意（あれば同じ結果をより速く出す）。
+For AI agents that embed small Base64 images in a message, `grid_tools.py` combines generation, reading back, scaling and color-ID replacement into one function or one command. It runs on the standard library alone. Pillow and numpy are optional and only make it faster, with the same results.
 
 ```bash
 python -c "import grid_tools as g;print(g.encode(g.make('cloud','C01','shadow',16),data_uri=True))"
-python -m grid_tools make circle --palette C02 --size 32 --scale 4 > c.b64          # Base64（既定）
-python -m grid_tools load c.b64 --to json                                          # 128px→32セルに自動復元
-python -m grid_tools load dots64.png --to json                                      # 64×64（32の2倍）→32×32
+python -m grid_tools make circle --palette C02 --size 32 --scale 4 > c.b64          # Base64 (default)
+python -m grid_tools load c.b64 --to json                                          # 128 px auto-restored to 32 cells
+python -m grid_tools load dots64.png --to json                                      # 64×64 (2× of 32) → 32×32
 python -m grid_tools load c.b64 --resize 64 --recolor C05 --to png --scale 4 -o c.png
-python -m grid_tools load c.png --to svg -o c.svg                                   # PPTX用SVG
-python -m grid_tools photo photo.jpg --size 32 --colors 8 --to base64 --data-uri    # JPEG/WebPはPillow
+python -m grid_tools load c.png --to svg -o c.svg                                   # SVG for PPTX
+python -m grid_tools photo photo.jpg --size 32 --colors 8 --to base64 --data-uri    # JPEG/WebP need Pillow
 ```
 
-`g.sparse(artifact)` で有効ドットだけを走査・隣接スワップし、
-`scanner.grid.rollback_all()` で画素と占有マスクを完全復元できます。
-`--resize-method probes`（例：`--resize 16` と32セル入力）は4種プローブによる
-試験的な2倍縮小です。縮小は不可逆で、既定は従来の最近傍のままです。
-[フレーム操作・可逆性の範囲・プローブの仕様](docs/pixel-arcade-engine.md)。
+- `g.sparse(artifact)` walks only the active dots and swaps neighbors. `scanner.grid.rollback_all()` restores the pixels and occupancy mask exactly.
+- `--resize-method probes` (for example `--resize 16` on a 32-cell input) is an experimental 2× reduction using four probes. Reduction is lossy; the default stays nearest-neighbor.
+- See the [frame operations, reversibility scope and probe specification](docs/pixel-arcade-engine.md).
 
-`encode`はPNGに`ironmate`のtEXtチャンク（色表と寸法）を既定で入れ、`load`/`restore`はそれがあれば
-元のJSONをそのまま返します（`--no-meta`で付けない。既定のPNG bytes自体は`grid_png.py`と同じ）。
+`encode` embeds an `ironmate` tEXt chunk (palette and dimensions) in PNG by default. `load` and `restore` return the original JSON directly when that chunk is present. Use `--no-meta` to omit it. The default PNG bytes are the same as `grid_png.py`’s.
 
-| 経路 | 可逆か | 条件（テストで固定） |
+| Path | Reversible? | Conditions (fixed by tests) |
 | --- | --- | --- |
-| grid → PNG/Base64（meta付き、任意の`--scale`）→ load | JSONまで完全一致 | 色表に同じRGBAが重複する場合のみ、最初の番号に寄る（セルのRGBAは一致） |
-| grid → PNG/Base64（metaなし）→ load | セルのRGBAが完全一致 | 倍率は`--size`指定、または全ての同色連続長の最大公約数で自動判定。判定は「説明できる最大倍率」なので、2×2模様だけの絵は小さく復元される（`--size`で解決）。色表は正規順（透明＋RGBA昇順）になり、元の色表が正規順ならJSONも一致 |
-| 半透明（alpha 1〜254）・色数（1〜300色を検証） | 完全一致 | PNGはRGBA 8bitなので劣化なし |
-| 拡大（整数・非整数とも）→ 元サイズへ縮小 | 完全一致 | セル中心での最近傍。拡大で全セルが残る |
-| 縮小 → 拡大 | 一般に不可逆 | 各ブロックが単色のときだけ一致 |
-| 色ID置換 A→B→A | 完全一致 | 色番号は不変。番号が5役割（0〜4）を超えるgridはエラー |
-| grid → SVG → load | 見えるセルのRGBAが一致 | alpha 0のセルは`#00000000`。SVG自体の可逆は要件外 |
-| JPEG/WebP → grid | 不可逆（縮小・減色・alpha二値化） | grid以降（PNG/Base64/SVG）は上の表のとおり |
-| PNGの破損・改ざん | エラー | CRC不一致、IEND後の余分なbytes、zlib後の余分なbytes、meta headerの寸法・色表の不整合はすべてエラー（Pillow経由はIEND後の余分を無視する） |
-| 縮小や補間で崩れたPNG | エラー | 「block … is not one color」「does not divide」。推測で直さない |
+| grid → PNG/Base64 (with meta, any `--scale`) → load | Exact JSON match | If the palette contains duplicate RGBA entries, the first index is kept (cell RGBA still matches). |
+| grid → PNG/Base64 (no meta) → load | Cell RGBA exact | The scale comes from `--size`, or is inferred as the GCD of same-color run lengths. The inferred scale is the largest that explains the image, so a 2×2 pattern restores smaller; pass `--size` to resolve it. The palette is rebuilt in canonical order (transparent first, then RGBA ascending). JSON matches when the original palette was already canonical. |
+| Semi-transparent (alpha 1–254), 1–300 colors (checked) | Exact | PNG is 8-bit RGBA, so there is no loss. |
+| Enlarge (integer or non-integer) → shrink back | Exact | Nearest-neighbor at cell centers; every cell survives enlargement. |
+| Shrink → enlarge | Generally lossy | Matches only when every block is a single color. |
+| Color-ID swap A→B→A | Exact | Color IDs are preserved. Grids using more than the 5 roles (0–4) raise an error. |
+| grid → SVG → load | Visible cells match | Cells with alpha 0 become `#00000000`. SVG round-trips are out of scope. |
+| JPEG/WebP → grid | Lossy (resampling, color reduction, alpha binarization) | After the grid, PNG/Base64/SVG follow the table above. |
+| Corrupted or altered PNG | Error | CRC mismatch, extra bytes after IEND or after the zlib stream, and inconsistencies in the meta header dimensions or palette all raise errors. (Pillow ignores extra bytes after IEND.) |
+| PNG broken by scaling or interpolation | Error | “block … is not one color” or “does not divide”. Errors are never guessed away. |
 
-標準ライブラリ実装を基準（oracle）とし、テストでPillow（PNG展開・NEAREST拡大）とnumpy（倍率判定・拡大縮小・SVG描画）
-の結果がbyte単位で一致することを確認しています。512×512 PNG→128セル復元の目安：標準約250ms、Pillow約190ms、numpy約180ms（手元計測）。
+The standard-library implementation is the reference (oracle). Tests check that its output is byte-identical to Pillow (PNG decoding, NEAREST enlargement) and numpy (scale detection, scaling, SVG rendering). Rough timing for a 512×512 PNG → 128-cell restore on the author’s machine: about 250 ms stdlib, 190 ms Pillow, 180 ms numpy.
 
-#### 縮小率と出力サイズの見積もり（`estimate`）
+#### Size estimation (`estimate`)
 
-Base64の文字数上限（例：エージェントのメッセージ上限）に収めるための縮小率を出します。
+Estimates the reduction factor needed to fit a Base64 length limit, such as an agent message cap.
 
-読み込めるBase64は復号後32 MiB（33,554,432 bytes）までです（`photo_grid.MAX_BYTES`。flutter_navigation_basic の `maxInputBytes` と同じ値・同じ判定）。
-出力はgrid_toolsと同じ8bit RGBA PNG（filter 0、zlib 9）として見積もります。
-対象は**既定のgrid_tools出力**です。つまり`ironmate`メタデータ（tEXt）付きで、`load INPUT --size W --resize w2 --to base64 [--data-uri]`が実際に出す長さを測ります。メタデータを付けない出力を測るときは`--no-meta`（Python では`meta=False`）を指定します。
+Base64 input is limited to 32 MiB (33,554,432 bytes) after decoding (`photo_grid.MAX_BYTES`, the same value and check as `maxInputBytes` in flutter_navigation_basic). Output is estimated as the 8-bit RGBA PNG that grid_tools writes (filter 0, zlib level 9). The measurement targets the **default grid_tools output**, meaning it includes the `ironmate` tEXt metadata. The command `load INPUT --size W --resize w2 --to base64 [--data-uri]` shows the length actually produced. Use `--no-meta` (`meta=False` in Python) to measure output without metadata.
 
 ```bash
 python -m grid_tools estimate --width 1024 --height 768 --bytes 900000 --limit-chars 200000 --data-uri
-python -m grid_tools estimate photo.jpg --limit-chars 100000 --data-uri --verify   # 実際に符号化して確認
+python -m grid_tools estimate photo.jpg --limit-chars 100000 --data-uri --verify   # encode for real to confirm
 python -c "import size_estimate as s;print(s.estimate(width=64,height=64,nbytes=3000,limit_chars=2000)['recommended'])"
 ```
 
-| 項目 | 内容 |
+| Item | Description |
 | --- | --- |
-| Base64文字数 | `4*ceil(bytes/3)`（`=`padding込み、`--data-uri`なら`data:image/png;base64,`の22文字を加算）。厳密 |
-| 推奨 | `recommended`（2/3・1/2など簡単な分数）、`integer_option`（1/k）、`lossless_option`（最近傍で無劣化） |
-| 無劣化の判定 | 同色連続長の最大公約数（cell scale）をkが割り切る1/kのみ無劣化 |
-| メタデータ | 既定で`est_bytes`・`upper_bytes`・`actual_bytes`にtEXt分を含む。resizeはパレットを全部残すので、色数の多い写真はヘッダーだけで大きくなる（その場合は`--no-meta`を案内） |
-| 上限 | `upper_bytes`は無圧縮deflateとメタデータ込みの厳密な上限。`typical_low_bytes`は目安 |
-| 使った信号 | `signals_used`：PNGのIHDR・PLTE・tRNS・IDAT圧縮率・meta、JPEGのSOF・量子化表からの品質推定・subsampling・EXIF、WebPのVP8/VP8L/VP8X、色数・alpha・エントロピー・連続長・cell scale |
-| 信頼度 | `confidence`：low（寸法とbytesのみ）／medium（画素を再符号化して測定）／verified（`--verify`で各候補を`grid_tools.encode`で実符号化。各候補に同じ出力を出す`command`を併記） |
+| Base64 length | `4*ceil(bytes/3)`, including `=` padding. With `--data-uri`, the 22-character `data:image/png;base64,` prefix is added. This is exact. |
+| Recommendation | `recommended` (simple fractions such as 2/3 or 1/2), `integer_option` (1/k), `lossless_option` (nearest-neighbor, lossless). |
+| Lossless condition | Only 1/k where k divides the cell scale (the GCD of same-color run lengths) is lossless. |
+| Metadata | By default, `est_bytes`, `upper_bytes` and `actual_bytes` include the tEXt chunk. Resizing keeps the full palette, so photos with many colors grow mostly from the header. In that case, the tool suggests `--no-meta`. |
+| Upper bound | `upper_bytes` is a strict upper bound with uncompressed deflate and metadata included. `typical_low_bytes` is an estimate only. |
+| Signals used | `signals_used`: PNG IHDR, PLTE, tRNS, IDAT compression ratio and metadata; JPEG SOF, quality estimated from quantization tables, subsampling and EXIF; WebP VP8/VP8L/VP8X; color count, alpha, entropy, run lengths and cell scale. |
+| Confidence | `confidence`: `low` (dimensions and bytes only), `medium` (measured by re-encoding pixels), `verified` (`--verify` encodes each candidate with `grid_tools.encode`; each candidate lists a `command` that produces the same output). |
 
-測定（写真のJPEG/WebP/PNG、ドット絵）では見積もりは実測の0.75〜1.6倍に収まりました。PNGの圧縮率は内容で変わるため、上限に近いときは`--verify`を使ってください。
+In measurements on photos (JPEG/WebP/PNG) and dot art, estimates fell between 0.75× and 1.6× the actual size. PNG compression depends on content, so use `--verify` near the limit.
 
-#### かんたんAPI（`ironmate_image`）
+#### Simple API (`ironmate_image`)
 
-縮小率・メタデータの有無・形式判定を気にせず呼べる窓口です（標準モジュールのみ。JPEG/WebP入力はPillowがあれば可）。
-入力はパス・PNG/JPEG/WebPのbytes・Base64・data URI・ironmate JSONのどれでも構いません。
+A single entry point that does not require you to choose a scale, metadata option or format. It uses the standard library only. JPEG and WebP inputs need Pillow. Inputs can be a path, PNG/JPEG/WebP bytes, Base64, a data URI or ironmate JSON.
 
 ```bash
-# 上限2万文字のBase64に収める（無劣化の縮小率を優先、入らなければメタデータを外して再挑戦）
+# Fit under a 20,000-character Base64 limit: prefer a lossless scale, then drop metadata if needed
 python -c "import ironmate_image as im;r=im.fit_to_limit('a.png',max_chars=20000,data_uri=True);print(r.ratio,r.chars,r.meta_used,r.warnings)"
-python -m grid_tools fit a.png --limit-chars 20000 --data-uri -o a.b64    # 結果の要約はstderrにJSON
-# 行ったり来たり
+python -m grid_tools fit a.png --limit-chars 20000 --data-uri -o a.b64    # JSON summary goes to stderr
+# Round trip
 python -c "import ironmate_image as im;s=im.to_base64('a.png');print(im.from_base64(s)['width'])"
 python -c "import ironmate_image as im,grid_tools as g;print(g.encode(im.resize('a.png',64)))"
 ```
 
-| 関数 | 内容 |
+| Function | Description |
 | --- | --- |
-| `fit_to_limit(src, max_bytes=None, max_chars=None, data_uri=False, prefer='lossless')` | 実際に符号化して上限内に収まった最大の結果（`FitResult`：`data`・`text`・`ratio`・`width`・`height`・`bytes`・`chars`・`meta_used`・`lossless`・`command`・`warnings`）。画素を優先し（無劣化→大きい比率）、同じ比率ならメタデータ付きを選ぶ。どうしても入らなければ`FitError` |
-| `to_base64(src, data_uri=False, meta=True)` / `to_png(src)` | 既定のgrid_tools出力 |
-| `from_base64(s)` / `load(src)` | グリッド（dict）へ。メタデータ付きなら完全に元通り |
-| `resize(src, width, height=None)` | 最近傍で拡大縮小（高さは縦横比を維持） |
+| `fit_to_limit(src, max_bytes=None, max_chars=None, data_uri=False, prefer='lossless')` | Returns the largest result that actually fits after encoding (`FitResult`: `data`, `text`, `ratio`, `width`, `height`, `bytes`, `chars`, `meta_used`, `lossless`, `command`, `warnings`). Pixel fidelity comes first (lossless, then larger ratio). With equal ratios, the result with metadata is preferred. If nothing fits, it raises `FitError`. |
+| `to_base64(src, data_uri=False, meta=True)` / `to_png(src)` | Default grid_tools output. |
+| `from_base64(s)` / `load(src)` | Returns the grid as a dict. With metadata, the original is restored exactly. |
+| `resize(src, width, height=None)` | Nearest-neighbor scaling (height follows the aspect ratio when omitted). |
 
-`FitResult.command`は同じバイト列を出すgrid_toolsのCLIです（テストで一致を確認）。
+`FitResult.command` is the grid_tools CLI invocation that produces the same bytes (checked by tests).
 
-#### プライバシー（元画像のメタデータは必ず捨てる）
+#### Privacy: source metadata is always discarded
 
-出力（PNG・Base64・data URI・SVG・JSON）には、元画像のEXIF（GPS位置情報・撮影日時・機種・作者を含む）、XMP、ICCプロファイル、PNGの`tEXt`/`zTXt`/`iTXt`（作者・コメント等）、`eXIf`、`tIME`などは**一切含まれません**。画素だけを読み、出力はゼロから書き直すためです。`ironmate_image`・`grid_tools`（`photo`/`load`/`fit`）・`photo_grid`のすべての経路で、元の文字列が出力に残らないことをテスト（`tests/test_privacy.py`）で確認しています。
+Outputs (PNG, Base64, data URI, SVG, JSON) **never** contain a source image’s EXIF (including GPS location, capture time, device model and author), XMP, ICC profile, PNG `tEXt`/`zTXt`/`iTXt` (author, comments and so on), `eXIf` or `tIME`. Only pixels are read, and the output is written from scratch. Tests (`tests/test_privacy.py`) confirm that no original metadata string survives in `ironmate_image`, `grid_tools` (`photo`, `load`, `fit`) or `photo_grid`.
 
-PNG出力に入るのは`IHDR`・`IDAT`・`IEND`と、既定ではironmateの`tEXt`1つだけです。その中身は次の項目に限ります（`--no-meta`なら付きません）。
+A PNG output contains only `IHDR`, `IDAT`, `IEND` and, by default, one ironmate `tEXt` chunk. That chunk is limited to the following fields. Use `--no-meta` to omit it.
 
-| 項目 | 内容 |
+| Field | Description |
 | --- | --- |
-| `schema`・`width`・`height` | 形式名とグリッドの大きさ |
-| `colors`・`palette` | パレット（`#RRGGBBAA`の並び）と色ID |
-| `mask`・`effect`・`fit`・`quantize`・`resampling` | 生成・変換の設定 |
-| `source`・`restored` | 元画像の幅・高さ・形式名・倍率（数値と短い識別子のみ） |
+| `schema`, `width`, `height` | Format name and grid size. |
+| `colors`, `palette` | Palette (in `#RRGGBBAA` order) and color IDs. |
+| `mask`, `effect`, `fit`, `quantize`, `resampling` | Generation and conversion settings. |
+| `source`, `restored` | Source width, height, format name and scale (numbers and short identifiers only). |
 
-これ以外のキーや自由な文字列は、書き出すときも、ironmateヘッダー付きPNGを読み込むときも捨てます（他のツールが作ったヘッダーに個人情報が入っていても引き継ぎません）。
+Any other keys or free-form strings are dropped on export and on import from an ironmate PNG. Headers written by other tools are not carried over.
 
-#### クリップボード／Base64入力の事例集
+#### Clipboard and Base64 input cases
 
-`tests/fixtures/base64_bridge_cases.json`に、Base64画像の貼り付けで起きやすい入力（data URIのtypeと中身の不一致、ラベルなしGIF、大文字の`DATA:`、BOM、`;charset=`等のparameter、76桁CRLF改行、URL-safe、`%3D`padding等）と期待結果をまとめています。Ironmateでの扱い：
-`;key=value`形式のparameterは受け付けて無視、引用符付きの値や`;base64`なしはエラー、上限はbyte数が正（文字数は`4*ceil(bytes/3)`から導出、空白は数えない）。他の実装（Flutter等）のテストでも同じJSONを読めます。
+`tests/fixtures/base64_bridge_cases.json` lists input patterns that often go wrong when pasting Base64 images, with expected results. Examples include a data-URI type that does not match its content, an unlabeled GIF, uppercase `DATA:`, a BOM, parameters such as `;charset=`, 76-column CRLF line breaks, URL-safe alphabets and `%3D` padding. Ironmate’s behavior: `;key=value` parameters are accepted and ignored; quoted values or a missing `;base64` are errors; the limit must be a positive byte count (the character count is derived as `4*ceil(bytes/3)`, and whitespace is not counted). Other implementations, such as the Flutter tests, read the same JSON.
 
-## 責務
+## Responsibilities
 
-- 共通GitHub操作・vendor管理は [親リポジトリ](https://github.com/myon-bioinformatics/myon-bioinformatics) と [gh_identity](https://github.com/myon-bioinformatics/gh_identity) を参照します。
-- 旧GitHubカタログ、MCPサーバー、repository metadata／diagnostics、成果物provenance生成の試作は廃止しました。すべての旧APIが移管先に互換実装されているという意味ではありません。
-- source／niconico実装とテストの移管先は [mcp-toolcall-lab PR #108](https://github.com/myon-bioinformatics/mcp-toolcall-lab/pull/108) で、マージ済みです。このリポジトリの `vendor/niconico_search_api_template.py` は現時点でも残っています。API／MCPの差分吸収の設計は同repo #107（クローズ済み）で扱いました。
-- `vendor/` と `vendor.lock.json` はconsumerの固定コピーです。共有ツール58ファイル（24リポジトリ由来、LICENSEを含む）を親の管理方式で登録し、固定ハッシュ検証を行います。`vendor.lock.json` が唯一のprovenanceです。
+- Shared GitHub operations and vendor management are handled by the [parent repository](https://github.com/myon-bioinformatics/myon-bioinformatics) and [gh_identity](https://github.com/myon-bioinformatics/gh_identity).
+- The old GitHub catalog, MCP server, repository metadata/diagnostics, and artifact provenance prototypes have been removed. This does not mean every old API has a compatible replacement in its new home.
+- The source and niconico implementation and tests moved to [mcp-toolcall-lab PR #108](https://github.com/myon-bioinformatics/mcp-toolcall-lab/pull/108), which is merged. `vendor/niconico_search_api_template.py` still remains in this repository. The design for absorbing API/MCP differences was handled in issue #107 of the same repository (closed).
+- `vendor/` and `vendor.lock.json` are a pinned copy for this consumer. 58 shared-tool files (from 24 repositories, including LICENSE files) are registered using the parent’s method and verified by pinned hashes. `vendor.lock.json` is the only provenance record.
 
-紹介・メタデータは [ポートフォリオ](https://myon-bioinformatics.github.io/#ironmate) に集約します。Ironmate専用のmetadata stub Pagesは廃止しました。実動デモとして [Image Studio](https://myon-bioinformatics.github.io/Ironmate/) を静的公開し、画像・シーンはブラウザ内だけで扱います。
+Introductions and metadata are consolidated in the [portfolio](https://myon-bioinformatics.github.io/#ironmate). The dedicated metadata-stub Pages for Ironmate has been retired. [Image Studio](https://myon-bioinformatics.github.io/Ironmate/) is published statically as a working demo; images and scenes are handled only inside the browser.
 
-詳しくは [整理とvendor調査](docs/cleanup-stage-two.md)、[vendor CI](docs/vendor-automation.md) を参照してください。
+For details, see [cleanup and vendor review](docs/cleanup-stage-two.md) and [vendor CI](docs/vendor-automation.md).
 
-## ローカルテスト
+## Local tests
 
 ```sh
 git clone https://github.com/myon-bioinformatics/xprobe.git build/shared
@@ -264,25 +247,21 @@ python -S .vendor-sync-tools/vendor_sync.py check --manifest vendor.lock.json
 uv run --locked python -m pytest -q -m 'not heavy'
 ```
 
-xprobeと親のvendorツールはテスト用の別checkoutです。実行時依存として自動取得しません。
-PPTXの新規パッケージには Node.js 22 以上（CI は 26）と `npm ci`（固定の `pptxgenjs@4.0.1`）が必要です。Ironmate は依存関係を自動インストールしません。スライド図形の正本は [JSON ↔ OOXML 対応](docs/pptx-ooxml-mapping.md) です。Marp変換時のみ別途インストール済みのMarp CLIが必要です。
-CSVをxlsxにする場合は [Excelワークブック](docs/xlsx-exceljs.md) を使います。文字コードの判定はUTF-8 / BOM / Shift_JIS / CP932です。openpyxlとpandasは使いません。同じ `npm ci` が `exceljs@4.4.0` と SheetJS `xlsx@0.20.3` も入れます。
+`xprobe` and the parent vendor tools are separate checkouts for testing. They are not fetched automatically at runtime. New PPTX packages require Node.js 22 or newer (CI uses 26) and `npm ci` (pinned `pptxgenjs@4.0.1`). Ironmate does not install dependencies automatically. The canonical slide-shape mapping is [JSON ↔ OOXML](docs/pptx-ooxml-mapping.md). The Marp CLI must be installed separately only when Marp conversion is used. CSV-to-xlsx conversion uses the [Excel workbook notes](docs/xlsx-exceljs.md). Encoding detection covers UTF-8, BOM, Shift_JIS and CP932. openpyxl and pandas are not used. The same `npm ci` installs `exceljs@4.4.0` and SheetJS `xlsx@0.20.3`.
 
-## ブラウザ別スクリーンショットの比較
+## Browser screenshot comparison
 
-browser-test-kit が Linux・macOS・Windows × Chromium・Firefox・WebKit で撮った同じページのスクリーンショットを、
-`browser_matrix.py` で「ページ × 環境」の比較シート（PNG・表・JSON）にまとめます。詳細は [比較シート](docs/browser-matrix.md)。
+`browser_matrix.py` assembles screenshots that browser-test-kit captured for the same page on Linux, macOS and Windows across Chromium, Firefox and WebKit into a comparison sheet (PNG, table and JSON) of page × environment. See the [comparison sheet notes](docs/browser-matrix.md).
 
-## 画像の要約ページ
+## Image digest pages
 
-`image_digest.py`（Node からは `image_digest.cjs`）は、行 × 列の画像と合否から、サムネイル入りの軽い 1 枚の HTML と
-Markdown の要約を作ります。容量に収まるまでサムネイルを 1/4 ずつ縮めます。詳細は [画像の要約ページ](docs/image-digest.md)。
+`image_digest.py` (or `image_digest.cjs` from Node) builds one lightweight HTML page and a Markdown summary from a grid of images and their pass/fail results, with thumbnails. Thumbnails are shrunk by a quarter at a time until the output fits the size limit. See [image digest notes](docs/image-digest.md).
 
 ## Common JSON flow diagrams
 
-[web-ui flow export](docs/flow-export.md) connects a single bounded JSON input to Mermaid Markdown, SVG, PNG, standard Base64 and PNG data URI, through Python/Node APIs and CLIs. It reuses the upstream contract and Image Studio raster output.
+[web-ui flow export](docs/flow-export.md) turns a single bounded JSON input into Mermaid Markdown, SVG, PNG, standard Base64 and a PNG data URI, through Python/Node APIs and CLIs. It reuses the upstream contract and Image Studio raster output.
 
-Retain, edit and regenerate flow JSON with the [flow workspace CLI and Python/Node APIs](docs/flow-export.md#retained-json-workspace-import--patch--regenerate), while preserving the original UTF-8 source.
+Retain, edit and regenerate flow JSON with the [flow workspace CLI and Python/Node APIs](docs/flow-export.md#retained-json-workspace-import--patch--regenerate), while keeping the original UTF-8 source.
 
 ## Discover production entry points
 
@@ -290,4 +269,22 @@ Retain, edit and regenerate flow JSON with the [flow workspace CLI and Python/No
 python -S browser_matrix.py app-results --page 'flutter-*' --env '*-chromium-*' --out matrix
 ```
 
-Select page/environment families in the existing screenshot comparison pipeline; use `--list` for paths only. [Discovery usage and optional source inspection](docs/convention-discovery.md).
+Select page and environment families in the existing screenshot comparison pipeline; use `--list` to print paths only. [Discovery usage and optional source inspection](docs/convention-discovery.md).
+
+---
+
+<details>
+<summary>🇯🇵 日本語の概要（クリックで展開）</summary>
+
+Ironmate は、文書や画像の**内容・属性の変換と検証**を行う Python プロジェクトです。以下の独立した試作・補助ツールを含みます。
+
+- Markdown → PPTX 変換（`pptx_pipeline.py`）と、既存 PPTX の文字・色・矢印属性の編集
+- ブラウザで使う Image Studio / Slide Studio（ローカル実行、または GitHub Pages で静的公開）
+- ドット絵（色番号グリッド）の生成と、Base64・画像ファイルからの写真変換（第1段階まで）
+- PNG・SVG のバイト単位の検証、往復変換テスト、スクリーンショット比較シート
+
+各機能は独立した試作で、すべての形式を相互変換する統合 UI ではありません。要件は [Issue #80](https://github.com/myon-bioinformatics/Ironmate/issues/80)、ドット表現の試作は [PR #79](https://github.com/myon-bioinformatics/Ironmate/pull/79) でマージ済みです。写真変換は Base64 から色番号グリッドへの第1段階のみで、キャラクター部品の合成は未実装です。
+
+詳細な仕様（画像形式の対応表、往復変換の条件、サイズ見積もり、プライバシー方針など）は、上の英語の各節と、リンク先のドキュメントを参照してください。
+
+</details>

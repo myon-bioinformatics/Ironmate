@@ -56,18 +56,6 @@ jobs:
                       and entry["source"] in {"git_inspector.py", "vendor_sync.py"}
                   )
               ]
-              if not any(
-                  entry.get("source") == "py_launch.cjs"
-                  and entry.get("destination") == "vendor/py_launch.cjs"
-                  for entry in consumer["entries"]
-              ):
-                  consumer["entries"].append(
-                      {
-                          "repository": "myon-bioinformatics/myon-bioinformatics",
-                          "source": "py_launch.cjs",
-                          "destination": "vendor/py_launch.cjs",
-                      }
-                  )
           path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
           PY
       - name: Compare parent consumer topology against committed Ironmate lock

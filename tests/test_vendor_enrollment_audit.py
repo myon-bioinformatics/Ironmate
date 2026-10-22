@@ -84,11 +84,6 @@ def test_workflow_compares_adopted_lock_before_candidate_enrollment(tmp_path):
     target['entries'] = [x for x in target['entries'] if not (
         x['repository'] == 'myon-bioinformatics/myon-bioinformatics' and
         x['source'] in {'git_inspector.py', 'vendor_sync.py'})]
-    if not any(x.get('source') == 'py_launch.cjs' for x in target['entries']):
-        target['entries'].append(dict(
-            repository='myon-bioinformatics/myon-bioinformatics',
-            source='py_launch.cjs',
-            destination='vendor/py_launch.cjs'))
     reg = tmp_path / 'registry.json'
     reg.write_text(json.dumps(registry))
     command = [sys.executable, '-S', str(tools / 'vendor_consumers.py'), 'compare',

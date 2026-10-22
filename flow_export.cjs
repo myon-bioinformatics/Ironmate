@@ -2,23 +2,11 @@
 /** Thin Node API. Python owns rendering, locked web-ui owns the JSON contract. */
 const path = require("node:path");
 const {run, main} = require("./vendor/py_launch.cjs");
+const {mapLaunchError, PY_LAUNCH} = require("./ironmate_py_launch.cjs");
 const PY_SCRIPT = path.join(__dirname, "flow_export.py");
-const PY_LAUNCH = {envVar: "IRONMATE_PYTHON", noSite: true};
 const MAX_BYTES = 256 * 1024;
 const formats = ["mermaid", "svg", "png", "base64", "data-uri"];
-
-function mapLaunchError(err, spawnPrefix, failureFallback) {
-  const msg = String(err.message || err);
-  if (msg.startsWith("py_launch: Python process failed: ")) {
-    throw Error(spawnPrefix + msg.slice("py_launch: Python process failed: ".length));
-  }
-  const spawn = msg.match(/^py_launch: ([^:]+): (spawnSync .+)$/);
-  if (spawn) throw Error(spawnPrefix + spawn[2]);
-  if (Object.hasOwn(err, "status") && err.status !== 0) {
-    throw Error((err.stderr && err.stderr.toString("utf8").trim()) || failureFallback);
-  }
-  throw err;
-}
+const ERR_PREFIX = "flow Python process failed: ";
 
 function renderFlow(spec, options = {}) {
   const {format = "svg", scale = 1, background, mmdc, chrome, puppeteerConfig, python} = options;
@@ -34,7 +22,7 @@ function renderFlow(spec, options = {}) {
   try {
     return run(PY_SCRIPT, args, {...PY_LAUNCH, python, input, maxBuffer: 48 * 1024 * 1024, timeout: 180000}).stdout;
   } catch (err) {
-    mapLaunchError(err, "flow Python process failed: ", "flow export failed");
+    mapLaunchError(err, ERR_PREFIX, "flow export failed");
   }
 }
 

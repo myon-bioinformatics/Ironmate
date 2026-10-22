@@ -2,26 +2,11 @@
 /** Workspace persistence uses Python; patch semantics belong to locked web-ui. */
 const {spawnSync} = require("node:child_process");
 const path = require("node:path");
-const {main, resolvePython, rejectCmdBatInterpreter} = require("./vendor/py_launch.cjs");
+const {main, resolvePython} = require("./vendor/py_launch.cjs");
+const {mapLaunchError, PY_LAUNCH} = require("./ironmate_py_launch.cjs");
 const root = __dirname;
 const PY_SCRIPT = path.join(root, "flow_workspace.py");
-const PY_LAUNCH = {envVar: "IRONMATE_PYTHON", noSite: true};
-
-function mapLaunchError(err, spawnPrefix, failureFallback) {
-  const msg = String(err.message || err);
-  if (msg.startsWith("py_launch: Python process failed: ")) {
-    throw Error(spawnPrefix + msg.slice("py_launch: Python process failed: ".length));
-  }
-  const spawn = msg.match(/^py_launch: ([^:]+): (spawnSync .+)$/);
-  if (spawn) throw Error(spawnPrefix + spawn[2]);
-  if (msg.startsWith("py_launch: ")) {
-    throw Error(spawnPrefix + msg.slice("py_launch: ".length));
-  }
-  if (Object.hasOwn(err, "status") && err.status !== 0) {
-    throw Error((err.stderr && err.stderr.toString("utf8").trim()) || failureFallback);
-  }
-  throw err;
-}
+const ERR_PREFIX = "flow workspace Python process failed: ";
 
 function call(name, values, options = {}) {
   const input = Buffer.from(JSON.stringify(values), "utf8");
@@ -33,13 +18,12 @@ function call(name, values, options = {}) {
   let resolved;
   try {
     resolved = resolvePython({...PY_LAUNCH, python: options.python});
-    rejectCmdBatInterpreter(resolved.cmd, resolved.label);
   } catch (err) {
-    mapLaunchError(err, "flow workspace process failed: ", "flow workspace failed");
+    mapLaunchError(err, ERR_PREFIX, "flow workspace failed");
   }
   const result = spawnSync(resolved.cmd, [...resolved.prefix, "-I", "-S", "-c", code, root, name],
     {input, timeout: 20000, maxBuffer: 4 * 1024 * 1024});
-  if (result.error) throw Error("flow workspace process failed: " + result.error.message);
+  if (result.error) throw Error(ERR_PREFIX + result.error.message);
   if (result.status !== 0) throw Error(result.stderr.toString("utf8").trim() || "flow workspace failed");
   return JSON.parse(result.stdout.toString("utf8"));
 }

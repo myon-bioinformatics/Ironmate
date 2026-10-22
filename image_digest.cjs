@@ -2,23 +2,10 @@
 /** Thin Node API for image_digest.py: Python owns decoding, thumbnails and HTML. */
 const path = require("node:path");
 const {run} = require("./vendor/py_launch.cjs");
+const {mapLaunchError, PY_LAUNCH} = require("./ironmate_py_launch.cjs");
 const PY_SCRIPT = path.join(__dirname, "image_digest.py");
-const PY_LAUNCH = {envVar: "IRONMATE_PYTHON", noSite: true};
 const MAX_INPUT = 8 * 1024 * 1024;
-
-function mapLaunchError(err, spawnPrefix, failureFallback) {
-  const msg = String(err.message || err);
-  if (msg.startsWith("py_launch: Python process failed: ")) {
-    throw Error(spawnPrefix + msg.slice("py_launch: Python process failed: ".length));
-  }
-  const spawn = msg.match(/^py_launch: ([^:]+): (spawnSync .+)$/);
-  if (spawn) throw Error(spawnPrefix + spawn[2]);
-  if (Object.hasOwn(err, "status") && err.status !== 0) {
-    const detail = (err.stderr && err.stderr.toString("utf8").trim()) || failureFallback;
-    throw Error(detail || failureFallback);
-  }
-  throw err;
-}
+const ERR_PREFIX = "image digest Python process failed: ";
 
 function buildDigest(spec, options = {}) {
   const {base, out, maxBytes = 1000000, tile = "64x128", python} = options;
@@ -33,7 +20,7 @@ function buildDigest(spec, options = {}) {
     const result = run(PY_SCRIPT, args, {...PY_LAUNCH, python, input, maxBuffer: 4 * 1024 * 1024, timeout: 600000});
     return JSON.parse(String(result.stdout));
   } catch (err) {
-    mapLaunchError(err, "image digest Python process failed: ", "image digest failed");
+    mapLaunchError(err, ERR_PREFIX, "image digest failed");
   }
 }
 

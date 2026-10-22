@@ -1,23 +1,40 @@
 "use strict";
 /** Thin Node API for image_digest.py: Python owns decoding, thumbnails and HTML. */
-const {spawnSync} = require("node:child_process");
 const path = require("node:path");
+const {run} = require("./vendor/py_launch.cjs");
+const PY_SCRIPT = path.join(__dirname, "image_digest.py");
+const PY_LAUNCH = {envVar: "IRONMATE_PYTHON", noSite: true};
 const MAX_INPUT = 8 * 1024 * 1024;
 
+function mapLaunchError(err, spawnPrefix, failureFallback) {
+  const msg = String(err.message || err);
+  if (msg.startsWith("py_launch: Python process failed: ")) {
+    throw Error(spawnPrefix + msg.slice("py_launch: Python process failed: ".length));
+  }
+  const spawn = msg.match(/^py_launch: ([^:]+): (spawnSync .+)$/);
+  if (spawn) throw Error(spawnPrefix + spawn[2]);
+  if (Object.hasOwn(err, "status") && err.status !== 0) {
+    const detail = (err.stderr && err.stderr.toString("utf8").trim()) || failureFallback;
+    throw Error(detail || failureFallback);
+  }
+  throw err;
+}
+
 function buildDigest(spec, options = {}) {
-  const {base, out, maxBytes = 1000000, tile = "64x128",
-    python = process.env.IRONMATE_PYTHON || "python3"} = options;
+  const {base, out, maxBytes = 1000000, tile = "64x128", python} = options;
   if (typeof base !== "string" || !base) throw Error("base directory is required");
   if (typeof out !== "string" || !out) throw Error("out directory is required");
   if (!Number.isInteger(maxBytes)) throw Error("maxBytes must be an integer");
   if (!/^\d+x\d+$/.test(tile)) throw Error("tile must look like 64x128");
   const input = Buffer.from(JSON.stringify(spec), "utf8");
   if (input.length > MAX_INPUT) throw Error("digest input exceeds 8MiB");
-  const result = spawnSync(python, ["-S", path.join(__dirname, "image_digest.py"), "-", "--base", base,
-    "--out", out, "--max-bytes", String(maxBytes), "--tile", tile], {input, maxBuffer: 4 * 1024 * 1024, timeout: 600000});
-  if (result.error) throw Error("image digest Python process failed: " + result.error.message);
-  if (result.status !== 0) throw Error(String(result.stderr).trim() || "image digest failed");
-  return JSON.parse(String(result.stdout));
+  const args = ["-", "--base", base, "--out", out, "--max-bytes", String(maxBytes), "--tile", tile];
+  try {
+    const result = run(PY_SCRIPT, args, {...PY_LAUNCH, python, input, maxBuffer: 4 * 1024 * 1024, timeout: 600000});
+    return JSON.parse(String(result.stdout));
+  } catch (err) {
+    mapLaunchError(err, "image digest Python process failed: ", "image digest failed");
+  }
 }
 
 module.exports = {buildDigest};

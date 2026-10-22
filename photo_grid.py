@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse, base64, binascii, json, re, struct, sys, zlib
 
 from pixel_grid import PALETTES, SIZES
+from pillow_min import paeth as _paeth, unfilter_scanlines as _unfilter
 
 __all__ = ['FITS', 'MAX_BYTES', 'MAX_PIXELS', 'max_base64_chars', 'ImageDecodeError', 'decode_base64',
            'decode_png', 'decode_pillow', 'decode_image', 'convert', 'main']
@@ -30,44 +31,6 @@ _UNSUPPORTED = {'gif': 'GIF', 'bmp': 'BMP', 'tiff': 'TIFF', 'ico': 'ICO', 'heif'
 
 class ImageDecodeError(ValueError):
     """Input bytes could not be decoded into RGBA pixels."""
-
-
-def _paeth(a, b, c):
-    p = a + b - c
-    pa, pb, pc = abs(p - a), abs(p - b), abs(p - c)
-    if pa <= pb and pa <= pc:
-        return a
-    return b if pb <= pc else c
-
-
-def _unfilter(raw, width, height, bpp):
-    stride = width * bpp
-    if len(raw) != height * (stride + 1):
-        raise ImageDecodeError('PNG image data has unexpected length')
-    rows, prev = [], bytearray(stride)
-    for y in range(height):
-        start = y * (stride + 1)
-        kind, line = raw[start], bytearray(raw[start + 1:start + 1 + stride])
-        if kind == 1:
-            for i in range(bpp, stride):
-                line[i] = (line[i] + line[i - bpp]) & 255
-        elif kind == 2:
-            for i in range(stride):
-                line[i] = (line[i] + prev[i]) & 255
-        elif kind == 3:
-            for i in range(stride):
-                left = line[i - bpp] if i >= bpp else 0
-                line[i] = (line[i] + ((left + prev[i]) >> 1)) & 255
-        elif kind == 4:
-            for i in range(stride):
-                left = line[i - bpp] if i >= bpp else 0
-                up_left = prev[i - bpp] if i >= bpp else 0
-                line[i] = (line[i] + _paeth(left, prev[i], up_left)) & 255
-        elif kind != 0:
-            raise ImageDecodeError(f'unknown PNG filter type {kind}')
-        rows.append(line)
-        prev = line
-    return rows
 
 
 def _to_rgba(line, channels, key=None):

@@ -7,8 +7,25 @@
 Pythonを中心に、文書・画像などの**内容や属性の変換・置換**を検証するプロジェクトです。
 PPTXの文字・色・矢印属性の置換を今後の対象とし、画素／パレットに基づくドット表現を試作しています。
 要件は [Issue #80](https://github.com/myon-bioinformatics/Ironmate/issues/80)、
-ドット表現の試作は [PR #79](https://github.com/myon-bioinformatics/Ironmate/pull/79) で追跡します。
+ドット表現の試作は [PR #79](https://github.com/myon-bioinformatics/Ironmate/pull/79) としてマージ済みです。
 Markdown→PPTX変換と既存PPTXの属性編集CLIは試作実装済みです。写真変換は第1段階（Base64→色番号グリッド）のみ試作済みで、キャラクター部品合成は未実装です。実装済みのドット表現の範囲は次節を参照してください。
+
+## 変換・編集の概念図
+
+<a href="docs/assets/repository-concept.png"><img src="docs/assets/repository-concept.png" alt="Ironmateの概念図：Markdown・PPTX・画像から、変換・スライド作成・Image Studioを経て、PPTXや画像を出力し、テストと画面比較で確認する流れ。" width="501"></a>
+
+提供された概念図を元の文字・図のまま切り出しています。各機能は独立した試作・補助ツールで、
+全形式の相互変換や、すべてを操作できる一つの統合UIを示すものではありません。
+実装済みの範囲と制限は以下の各節・リンク先を参照してください。[切り出し情報](docs/assets/repository-concept.json)。
+
+### 課題・役割分担・得られるもの
+
+<a href="docs/assets/repository-concept-v2.png"><img src="docs/assets/repository-concept-v2.png" alt="Ironmateの課題・役割分担・得られるもの：MarkdownやPPTX・画像の編集を、変換・作成・検証に分けて、スライドや画像の成果物につなげる概念図。" width="499"></a>
+
+こちらは上の処理フローを補足する追加の概念図です。既存の図や機能の制限はそのまま残しています。
+「HTMLにも変換可能」は、Markdownソースから作るMarpのHTMLプレビューなどの個別経路を指し、
+編集後のPPTXをHTMLで忠実に再現する保証ではありません。
+[プレビューとPPTX検証の区別](docs/pptx-cli-prototype.md) ／ [追加図の切り出し情報](docs/assets/repository-concept-v2.json)。
 
 ## Image Studio：図形・文字・絵文字を押して画像にする
 
@@ -229,8 +246,8 @@ PNG出力に入るのは`IHDR`・`IDAT`・`IEND`と、既定ではironmateの`tE
 
 - 共通GitHub操作・vendor管理は [親リポジトリ](https://github.com/myon-bioinformatics/myon-bioinformatics) と [gh_identity](https://github.com/myon-bioinformatics/gh_identity) を参照します。
 - 旧GitHubカタログ、MCPサーバー、repository metadata／diagnostics、成果物provenance生成の試作は廃止しました。すべての旧APIが移管先に互換実装されているという意味ではありません。
-- source／niconico実装とテストの移管先は [mcp-toolcall-lab PR #108](https://github.com/myon-bioinformatics/mcp-toolcall-lab/pull/108) です。先に移管先をマージしてから、この削除をマージします。API／MCPの差分吸収の設計は同repo #107で扱います。
-- `vendor/` と `vendor.lock.json` はconsumerの固定コピーです。共有ツール51ファイル（LICENSEを含む）を親の管理方式で登録し、固定ハッシュ検証を行います。`vendor.lock.json` が唯一のprovenanceです。
+- source／niconico実装とテストの移管先は [mcp-toolcall-lab PR #108](https://github.com/myon-bioinformatics/mcp-toolcall-lab/pull/108) で、マージ済みです。このリポジトリの `vendor/niconico_search_api_template.py` は現時点でも残っています。API／MCPの差分吸収の設計は同repo #107（クローズ済み）で扱いました。
+- `vendor/` と `vendor.lock.json` はconsumerの固定コピーです。共有ツール58ファイル（24リポジトリ由来、LICENSEを含む）を親の管理方式で登録し、固定ハッシュ検証を行います。`vendor.lock.json` が唯一のprovenanceです。
 
 紹介・メタデータは [ポートフォリオ](https://myon-bioinformatics.github.io/#ironmate) に集約します。Ironmate専用のmetadata stub Pagesは廃止しました。実動デモとして [Image Studio](https://myon-bioinformatics.github.io/Ironmate/) を静的公開し、画像・シーンはブラウザ内だけで扱います。
 

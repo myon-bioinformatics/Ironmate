@@ -1,0 +1,26 @@
+{
+  "source": {
+    "description": "Project owner-supplied challenges, role breakdown, and outcomes concept sheet",
+    "sha256": "9624fda66ede60f64d14e552c0722219bfd10090ce9ebcc3b11583d80af3aeb2",
+    "size": [
+      1536,
+      1024
+    ]
+  },
+  "operation": "Exact RGB rectangular crop from decoded JPEG, saved as lossless PNG. No resizing, redrawing, recoloring, or text changes. Complete panel title, content, tags, and border retained; common sheet header/footer excluded.",
+  "relationship": "Additional perspective; the earlier repository-concept.png and its README caption remain unchanged.",
+  "coordinate_convention": "left, top, right, bottom; right and bottom exclusive",
+  "repository": "Ironmate",
+  "crop_box": [
+    519,
+    408,
+    1018,
+    699
+  ],
+  "path": "docs/assets/repository-concept-v2.png",
+  "size": [
+    499,
+    291
+  ],
+  "sha256": "b1f02d9b236d4d4f4857933c8b75592ada33d898ab9b09a57baa7277443a0cae"
+}

@@ -1,0 +1,29 @@
+name: LittleBit-Jev 5-Way Survey & Topology Benchmark
+
+on:
+  push:
+    paths:
+      - "scripts/littlebit_jev_5way_survey.py"
+      - ".github/workflows/verify_5way_survey.yml"
+  workflow_dispatch:
+  schedule:
+    - cron: "0 23 * * *" # 毎日 8:00 AM JST (23:00 UTC)
+
+jobs:
+  verify-5way-survey:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run 5-Way Fixed-Point & Topological Benchmark
+        run: |
+          echo "## 🔬 LittleBit-FairyFuse-Jev 5-Way Survey & Topological Mining Report" >> $GITHUB_STEP_SUMMARY
+          echo '```text' >> $GITHUB_STEP_SUMMARY
+          python3 scripts/littlebit_jev_5way_survey.py | tee -a $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,25 @@
+{
+  "source": {
+    "description": "Project owner-supplied nine-repository concept sheet",
+    "sha256": "f21f074b08f28b059a82b449a2b3c80405fe1d50b423dcdb903d29d3bc020502",
+    "size": [
+      1536,
+      1024
+    ]
+  },
+  "operation": "Exact rectangular crop of decoded RGB JPEG, saved as lossless PNG. No resizing, redrawing, recoloring, or text changes. Panel title, footnotes, and border retained; common sheet header/footer excluded.",
+  "coordinate_convention": "left, top, right, bottom; right and bottom exclusive",
+  "repository": "Ironmate",
+  "crop_box": [
+    517,
+    411,
+    1018,
+    694
+  ],
+  "path": "docs/assets/repository-concept.png",
+  "size": [
+    501,
+    283
+  ],
+  "sha256": "18f2d64e447c79ba8066d47d436bdb2047df82c56acebeb069dba0e1400282ba"
+}

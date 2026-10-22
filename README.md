@@ -10,6 +10,14 @@ PPTXの文字・色・矢印属性の置換を今後の対象とし、画素／�
 ドット表現の試作は [PR #79](https://github.com/myon-bioinformatics/Ironmate/pull/79) としてマージ済みです。
 Markdown→PPTX変換と既存PPTXの属性編集CLIは試作実装済みです。写真変換は第1段階（Base64→色番号グリッド）のみ試作済みで、キャラクター部品合成は未実装です。実装済みのドット表現の範囲は次節を参照してください。
 
+## 変換・編集の概念図
+
+<a href="docs/assets/repository-concept.png"><img src="docs/assets/repository-concept.png" alt="Ironmateの概念図：Markdown・PPTX・画像から、変換・スライド作成・Image Studioを経て、PPTXや画像を出力し、テストと画面比較で確認する流れ。" width="501"></a>
+
+提供された概念図を元の文字・図のまま切り出しています。各機能は独立した試作・補助ツールで、
+全形式の相互変換や、すべてを操作できる一つの統合UIを示すものではありません。
+実装済みの範囲と制限は以下の各節・リンク先を参照してください。[切り出し情報](docs/assets/repository-concept.json)。
+
 ## Image Studio：図形・文字・絵文字を押して画像にする
 
 `python -S image_studio.py` でローカル編集画面を開けます。図形・画像・カスタムスタンプを重ね、ヒートマップの色段階やモザイク粒度を変えて、PNG・SVG・Base64・再編集用JSONを出力します。時計・矢印・顔文字・単色スタンプ、CLI描画にも対応します。

@@ -1,16 +1,20 @@
-name: LittleBit-Jev 3-Way Survey Verification
+name: LittleBit-Jev 3-Way and 5-Way Survey Verification
 
 on:
   pull_request:
     paths:
       - "scripts/littlebit_jev_3way_survey.py"
       - "tests/test_three_way_survey.py"
+      - "scripts/littlebit_jev_5way_survey.py"
+      - "tests/test_five_way_survey.py"
       - ".github/workflows/verify_3way_survey.yml"
   push:
     branches: [main]
     paths:
       - "scripts/littlebit_jev_3way_survey.py"
       - "tests/test_three_way_survey.py"
+      - "scripts/littlebit_jev_5way_survey.py"
+      - "tests/test_five_way_survey.py"
       - ".github/workflows/verify_3way_survey.yml"
   workflow_dispatch:
   schedule:
@@ -33,13 +37,19 @@ jobs:
       # Regression tests/JUnit remain in the existing Python test workflow.
       - name: Run paired held-out CPU benchmark
         run: python -S scripts/littlebit_jev_3way_survey.py --trials 40 --train-trials 4 --large-raster
+      - name: Run topology and phase-ring experiment
+        run: python -S scripts/littlebit_jev_5way_survey.py --trials 25
       - name: Write readable summary
-        run: cat build/three-way-survey/report.md >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          cat build/three-way-survey/report.md >> "$GITHUB_STEP_SUMMARY"
+          cat build/five-way-survey/report.md >> "$GITHUB_STEP_SUMMARY"
       - name: Preserve raw measurements and colored comparisons
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: three-way-survey
-          path: build/three-way-survey/
+          path: |
+            build/three-way-survey/
+            build/five-way-survey/
           if-no-files-found: error
           retention-days: 14

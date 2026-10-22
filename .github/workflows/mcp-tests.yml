@@ -103,7 +103,7 @@ jobs:
         if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
         env:
           IRONMATE_FAILURE_EVIDENCE: build/controlled-failure
-        run: uv run --locked python -m pytest -q -m "not heavy" --junitxml=build/test-results/pytest-3.12.xml
+        run: uv run --locked python -m pytest -q -m "not heavy and not network" --junitxml=build/test-results/pytest-3.12.xml
       - name: Preserve raw suite JUnit
         if: always()
         uses: actions/upload-artifact@v7

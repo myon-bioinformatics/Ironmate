@@ -6,6 +6,7 @@ on:
       - vendor-catalog.json
       - vendor.lock.json
       - scripts/vendor_enrollment_audit.py
+      - scripts/parent_vendor_tools_resolve.py
       - .github/workflows/vendor-catalog-audit.yml
   workflow_dispatch:
 
@@ -23,10 +24,22 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: "0.13.1"
+          python-version: "3.12"
+          enable-cache: false
+      - name: Resolve parent main for shared catalog audit tools
+        id: parent-vendor-tools
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -S scripts/parent_vendor_tools_resolve.py --emit-github-actions
       - uses: actions/checkout@v7
         with:
           repository: myon-bioinformatics/myon-bioinformatics
-          ref: 2192ff22acafdd09e80ac722df91ee937aaedd5e
+          ref: ${{ steps.parent-vendor-tools.outputs.sha }}
           path: .vendor-audit-tools
           persist-credentials: false
           sparse-checkout: |
@@ -35,6 +48,10 @@ jobs:
             vendor_consumers.py
             vendor-consumers.json
           sparse-checkout-cone-mode: false
+      - name: Network enrollment audit regressions
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: uv run --locked python -m pytest -q -m network tests/test_vendor_enrollment_audit.py
       - name: Audit all recommended source and license identities
         env:
           PYTHONPATH: .vendor-audit-tools
@@ -56,18 +73,6 @@ jobs:
                       and entry["source"] in {"git_inspector.py", "vendor_sync.py"}
                   )
               ]
-              if not any(
-                  entry.get("source") == "py_launch.cjs"
-                  and entry.get("destination") == "vendor/py_launch.cjs"
-                  for entry in consumer["entries"]
-              ):
-                  consumer["entries"].append(
-                      {
-                          "repository": "myon-bioinformatics/myon-bioinformatics",
-                          "source": "py_launch.cjs",
-                          "destination": "vendor/py_launch.cjs",
-                      }
-                  )
           path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
           PY
       - name: Compare parent consumer topology against committed Ironmate lock

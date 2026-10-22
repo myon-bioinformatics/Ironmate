@@ -11,7 +11,8 @@ The default output directory is `build/five-way-survey/`. `results.json` retains
 all 200 trials, seeds, truth/prediction coordinates, TP/FP/FN, thresholds,
 convergence counts, topology, temporal deltas, and separate encoding/survey
 timings. `report.md` includes the eight-scenario table, phase-ring comparisons,
-Venn counts and eight support maps. Each scenario/trial derives its own RNG seed
+Venn counts, eight support maps, Boolean probe traces, sufficient-support layers,
+and coordinate verification of ring-suggested rotations. Each scenario/trial derives its own RNG seed
 from SHA-256, independent of iteration order. Source digest and runtime environment
 are recorded. Exceptions fail the command; low observed accuracy does not.
 
@@ -54,14 +55,19 @@ reported. No single-clock or smartphone throughput claim is made.
 `phase_ring_signature` projects support around the exact rational centroid into
 8 or 16 angular slots and two relative Chebyshev-radius shells. Integer
 `n*x - sum(x)` displacements avoid rounding the centroid; shift/add integer
-scaling replaces the `*` operator. Integer slope comparisons approximate angular
-sectors; they are not uniform atan2 bins. The center is recorded separately.
+scaling replaces the `*` operator. The 16-slot path compares slopes against Q16
+rational approximations of tan(tau/32) and tan(3*tau/32), with exact quadrant
+reflections and explicit axis slots. These approximate nearest uniform sectors;
+finite rational boundaries are not exact irrational-angle comparisons. The
+8-slot path retains its original coarser comparisons. The center is recorded
+separately. The supplied quadrant formula mapped cardinal directions incorrectly
+for a uniform cyclic shift; it is not used.
 
 `match_phase_rings` tries all 8/16 cyclic shifts with popcount Dice ranking. It
 returns the integer numerator/denominator and **all** best offsets; symmetric
 shapes have ambiguous angles. Empty signatures have no inferred orientation.
 Translations within the domain and quarter-turn rotations have exact signature
-behavior, covered by seeded random-shape tests. The 30/60-degree experiment
+behavior, covered by seeded random-shape tests. The 22.5/30/45/60/67.5-degree experiment
 rotates raster coordinates using floating point only in the fixture generator;
 rasterization and angular quantization can change support and lower the match.
 There is no guarantee for arbitrary angles. Angles are screen coordinates: +y
@@ -109,6 +115,95 @@ counterexamples), equality, empty antecedents and disjointness are separated.
 This is empirical support inclusion, not causal inference or a sufficient
 condition outside the observed sample. No general minimal-counterfactual or
 logarithmic black-box query guarantee is claimed.
+
+## Bit splitting: two objectives, bounded queries, explicit guarantees
+
+```python
+# blackbox is a caller-provided deterministic function: int -> bool
+support = probe_bit_core(board, blackbox, objective="preserve")
+deletions = probe_bit_core(board, blackbox, objective="flip")
+exact = exact_deletion_counterfactual(small_board, blackbox, max_bits=12)
+layers = core_shell_decomposition(board, blackbox, max_layers=8)
+```
+
+`preserve` returns a retained support that gives the same Boolean output as the
+full input. `flip` returns **deleted** bits D and tests `oracle(board ^ D)` for
+a changed output. Removing a sufficient support does not necessarily flip a
+redundant model: in OR(A,B), either singleton is sufficient, but deleting both
+is required to make the full input false. False-baseline inputs are also handled;
+these APIs are not limited to True -> False.
+
+The complement-splitting reducer accepts a reduction only after testing the
+**current** full candidate. It eventually tests single-bit reductions and
+certifies **1-minimality**: deleting any one witness bit loses the target
+predicate. On arbitrary nonmonotone functions this need not be subset-minimal,
+and even with monotonicity it need not be a globally smallest-cardinality
+witness. The source implements its own complement-only reducer; the terminology
+follows [Zeller's delta debugging account](https://www.debuggingbook.org/html/DeltaDebugger.html).
+No source code from that implementation is copied.
+
+The supplied recursive probe uses both original opposite halves as backgrounds.
+For `f(B) = contains({0,3}) or contains({1,2})`, it picks bit 0 using the old
+{2,3} background and bit 2 using the old {0,1} background. The combined {0,2}
+is false, despite the full input being true. This concrete failure is retained
+in the JSON simulation and regression test.
+
+The deletion strategy starts from the all-deleted endpoint. If that endpoint
+does not flip, status is `no_full_deletion_flip`, **not** "no counterfactual".
+Even parity illustrates why: deleting every one of two bits preserves True,
+while deleting either single bit makes False. The separate exact small-support
+search enumerates deletion masks by increasing cardinality and proves the
+minimum when complete. Its worst-case work is exponential, with a default
+12-bit limit and a hard configurable query budget.
+
+A per-run memoized Boolean oracle counts **actual callback calls**, including
+baseline, endpoints and certification; cache hits and phases are separate.
+Every input/output is retained in runtime `results.json`, while the checked-in
+summary retains trace hashes, counts and witnesses. The oracle must be pure,
+deterministic and return a real bool; scores, stochastic outputs and interactions
+with unrepresented background features have no guarantee here. Oracle errors
+propagate. Budget exhaustion returns an explicitly uncertified partial witness
+or no witness, never a minimum claim.
+
+In the fixed 64-bit simulation, a high-index single decisive bit takes six split
+calls plus two baseline/endpoint calls, **eight total**; the low-index counterpart
+takes 14 total because branch order differs. All 64 features being required to
+preserve True takes **128 calls**. With 64 redundant alternatives, flipping the
+OR output requires all 64 deletions and likewise takes 128 calls. Therefore the
+universal six-call/O(log N) claim does not hold. Full three-bit truth tables
+(256 deterministic functions) are checked against exhaustive oracles, separately
+from the larger hand-defined controls. This simulation does not explain a
+trained image model or demonstrate that a high-energy decoy is causally irrelevant.
+
+## Sufficient-support layers and local instance rings
+
+Core-shell decomposition repeatedly extracts a True-producing sufficient
+support from the residual domain and removes it. Complete layers are disjoint
+and each is certified 1-minimal. Ordering depends on deterministic bit order;
+it is not a calibrated importance rank or a graph k-core decomposition. A false
+residual is `residual_unclassified`: its features may still matter jointly with
+a removed layer. No residual is automatically labeled a decoy. Constant-True
+oracles, layer limits and query budgets have explicit termination statuses.
+
+`component_phase_rings` returns a descriptor per 8-connected component. A control
+rotates three separated components independently by 1/16, 5/16 and 12/16 turns
+and retains all-to-all candidate comparisons. It does not infer tracking IDs,
+resolve symmetric shapes or prove instance correspondence without further data.
+
+Ring alignment now also suggests an actual coordinate transform for separate
+verification. `rotate_support_slots` uses a fixed Q14 sine/cosine coefficient
+**lookup table**, shift/add scaling, exact-centroid rational arithmetic and
+integer raster rounding; its runtime kernel calls no trigonometric functions
+and uses no `*` operator. It reports crops and merged points. These are still
+approximate real rotations, even though the lookup is exact as integer code.
+
+Eight support-only controls report initial IoU/Flux and the range of actual
+coordinate Flux scores for **all tied ring shifts**. No ground truth selects a
+favorable tied candidate. A ring descriptor score is never renamed a corrected
+Flux score. L-shape quarter-turn correction reaches 100% in the fixed control;
+symmetry, arbitrary rotations, scale changes and decoys can leave ambiguity or
+worse geometry scores. The high energy of a feature and its Boolean relevance
+are independent in these separate synthetic controls.
 
 ## Temporal XOR and observed limits
 

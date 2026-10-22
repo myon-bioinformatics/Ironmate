@@ -95,6 +95,8 @@ def test_all_integer_kernel_definitions_have_no_mult_float_div_power():
         for child in ast.walk(node):
             assert not (isinstance(child, ast.BinOp) and isinstance(child.op, (ast.Mult, ast.Div, ast.Pow))), node.name
             assert not (isinstance(child, ast.Constant) and isinstance(child.value, float)), node.name
+            assert not (isinstance(child, ast.Call) and isinstance(child.func, ast.Attribute)
+                        and child.func.attr in {'sin','cos','tan','atan2','sqrt'}), node.name
 
 
 def test_fixed_point_cycle_lock_and_reciprocity():
@@ -231,3 +233,202 @@ def test_standalone_cli_stdlib_and_reports(tmp_path):
     assert (tmp_path/'report.md').read_text() == result.stdout
     bad = subprocess.run([sys.executable, '-S', str(script), '--trials', '0'],capture_output=True)
     assert bad.returncode != 0
+
+
+def test_probes_exhaustive_all_three_bit_boolean_functions_and_actual_queries():
+    # All 256 deterministic truth tables; includes parity and interactions.
+    for table in range(256):
+        oracle = lambda b: bool(table & (1 << b))
+        for objective in ('preserve', 'flip'):
+            seen = []
+            def counted(b):
+                seen.append(b)
+                return oracle(b)
+            result = s.probe_bit_core(7, counted, objective=objective)
+            assert result['queries_used'] == len(seen) == len(set(seen))
+            assert result['queries_used'] == sum(result['queries_by_phase'].values())
+            if result['complete']:
+                witness = result['witness']
+                check = (lambda m: oracle(m) == oracle(7)) if objective == 'preserve' else (lambda m: oracle(7 ^ m) != oracle(7))
+                assert check(witness)
+                assert all(not check(witness ^ (1 << i)) for i in range(3) if witness & (1 << i))
+                assert result['guarantee'] == '1-minimal'
+                assert not result['globally_minimum']
+            else:
+                assert objective == 'flip'
+                assert result['status'] == 'no_full_deletion_flip'
+                assert oracle(0) == oracle(7)
+        exact = s.exact_deletion_counterfactual(7, oracle)
+        candidates = [removed for removed in range(1,8) if oracle(7 ^ removed) != oracle(7)]
+        if candidates:
+            assert exact['complete'] and exact['globally_minimum']
+            assert exact['witness_size'] == min(b.bit_count() for b in candidates)
+            assert oracle(7 ^ exact['witness']) != oracle(7)
+        else:
+            assert exact['status'] == 'no_flip_exists'
+
+
+def test_sufficient_core_is_not_the_set_whose_deletion_flips_output():
+    oracle = lambda b: bool(b & 3)
+    support = s.probe_bit_core(3, oracle)
+    deletion = s.probe_bit_core(3, oracle, objective='flip')
+    assert support['witness_size'] == 1
+    assert oracle(3 ^ support['witness'])  # still True after removing one alternative
+    assert deletion['witness'] == 3
+    assert not oracle(3 ^ deletion['witness'])
+
+
+def test_split_reduction_uses_current_context_in_crossed_interactions():
+    # Supplied recursive left/right reduction picks bit 0 with old background
+    # {2,3}, and bit 2 with old background {0,1}; {0,2} is NOT sufficient.
+    oracle = lambda b: (b & 9 == 9) or (b & 6 == 6)
+    assert oracle(15) and not oracle(5)
+    result = s.probe_bit_core(15, oracle)
+    assert result['complete']
+    assert oracle(result['witness'])
+    assert result['witness'] in (6,9)
+
+
+def test_one_minimal_is_not_global_minimum_and_no_flip_endpoint_is_not_impossibility():
+    oracle = lambda b: (b & 12 == 12) or bool(b & 1)
+    result = s.probe_bit_core(15, oracle)
+    assert result['witness'] == 12 and result['witness_size'] == 2
+    assert oracle(1)  # a better cardinality-one support exists
+    even = lambda b: b.bit_count() % 2 == 0
+    approximate = s.probe_bit_core(3, even, objective='flip')
+    assert approximate['status'] == 'no_full_deletion_flip'
+    exact = s.exact_deletion_counterfactual(3, even)
+    assert exact['witness_size'] == 1 and exact['globally_minimum']
+
+
+def test_query_complexity_includes_endpoints_and_is_not_universally_logarithmic():
+    full = (1 << 64)-1
+    single = s.probe_bit_core(full, lambda b: bool(b & (1 << 63)))
+    assert single['queries_by_phase']['split'] == 6
+    assert single['queries_used'] == 8  # baseline and empty endpoint also counted
+    all_required = s.probe_bit_core(full, lambda b: b == full)
+    assert all_required['witness_size'] == 64
+    assert all_required['queries_used'] > 64
+    any_bit = s.probe_bit_core(full, lambda b: bool(b), objective='flip')
+    assert any_bit['witness_size'] == 64
+    assert any_bit['queries_used'] > 64
+
+
+def test_budget_caching_validation_and_oracle_errors():
+    result = s.probe_bit_core(15, lambda b: bool(b & 1), max_queries=1)
+    assert result['status'] == 'budget_exhausted' and not result['complete']
+    assert result['witness'] == 15 and result['guarantee'] == 'uncertified'
+    assert result['queries_used'] == 1
+    exact = s.exact_deletion_counterfactual(15, lambda b: b == 15, max_queries=1)
+    assert not exact['complete'] and not exact['globally_minimum']
+    for active in (-1, True):
+        with pytest.raises(ValueError):
+            s.probe_bit_core(active, bool)
+    with pytest.raises(TypeError):
+        s.probe_bit_core(3, lambda b: 1)
+    with pytest.raises(ValueError):
+        s.probe_bit_core(3, bool, objective='unknown')
+    with pytest.raises(ValueError):
+        s.probe_bit_core(3, bool, max_queries=0)
+    with pytest.raises(ValueError):
+        s.exact_deletion_counterfactual(31, bool, max_bits=4)
+    def broken(b):
+        raise RuntimeError('oracle failed')
+    with pytest.raises(RuntimeError, match='oracle failed'):
+        s.probe_bit_core(3, broken)
+    meter = s.BooleanProbe(3, bool, 1)
+    assert meter.ask(1,'test') is True
+    assert meter.ask(1,'test') is True
+    assert meter.accounting()['queries_used'] == 1
+    with pytest.raises(s.QueryBudgetExceeded):
+        meter.ask(2,'test')
+
+
+def test_shells_are_sufficient_disjoint_not_ranked_and_residual_is_unclassified():
+    oracle = lambda b: b & 3 == 3 or b & 12 == 12
+    result = s.core_shell_decomposition(31, oracle)
+    assert len(result['layers']) == 2
+    union = 0
+    for layer in result['layers']:
+        assert oracle(layer['board'])
+        assert not (union & layer['board'])
+        assert all(not oracle(layer['board'] ^ (1 << i)) for i in range(5) if layer['board'] & (1 << i))
+        union |= layer['board']
+    assert union == 15 and result['residual_unclassified'] == 16
+    assert result['status'] == 'residual_false_unclassified'
+    assert not result['graph_k_core']
+    partial = s.core_shell_decomposition(31, oracle, max_queries=1)
+    assert partial['status'] == 'budget_exhausted'
+    assert partial['queries_used'] == 1
+    assert s.core_shell_decomposition(31, lambda b: True)['status'] == 'true_on_empty'
+    # Residual bit 1 can be useful with bit 0, despite being False by itself.
+    interaction = s.core_shell_decomposition(7, lambda b: bool(b & 4) or b & 3 == 3)
+    assert all(layer['guarantee'] == '1-minimal' for layer in interaction['layers'])
+
+
+def test_integer_lookup_rotation_and_component_descriptors():
+    nodes = {2*15+4, 2*15+5, 3*15+4, 8*15+10, 9*15+10, 9*15+11}
+    board = s.pack_to_bitboard(nodes,15,15)
+    components = s.component_phase_rings(board,15,15)
+    assert len(components) == 2
+    assert sum(c['board'].bit_count() for c in components) == len(nodes)
+    assert components[0]['board'] & components[1]['board'] == 0
+    for comp in components:
+        rotated = s.rotate_support_slots(comp['board'],15,15,4)
+        # These centroids have thirds, so rasterization is measured, not assumed exact.
+        assert rotated['input_count'] == (rotated['output_count'] + rotated['cropped_points'] + rotated['merged_points'])
+        assert s.rotate_support_slots(comp['board'],15,15,0)['board'] == comp['board']
+    exact = s.pack_to_bitboard({5*15+4, 5*15+5, 5*15+6},15,15)
+    rotated = s.rotate_support_slots(exact,15,15,4)
+    assert s.unpack(rotated['board']) == {4*15+5, 5*15+5, 6*15+5}
+    assert s.rotate_support_slots(0,15,15,3)['board'] == 0
+
+
+def test_nearest_sector_axes_symmetry_and_uniform_angle_reference():
+    import math
+    for dx,dy,slot in ((1,0,0), (1,1,2), (0,1,4), (-1,0,8), (0,-1,12)):
+        assert s.direction_slot(dx,dy,16) == slot
+    rng = random.Random(89)
+    for _ in range(300):
+        # Exclude vectors extremely near an irrational quantization boundary.
+        angle = rng.random()*math.tau
+        dx,dy = round(10000*math.cos(angle)), round(10000*math.sin(angle))
+        ref = int(math.floor((math.atan2(dy,dx) % math.tau)*16/math.tau + 0.5)) % 16
+        assert s.direction_slot(dx,dy,16) == ref
+
+
+def test_probe_and_rotation_control_reports_preserve_failures_and_semantics():
+    report = s.counterfactual_experiment()
+    assert len(report['cases']) == 8
+    failed = report['supplied_counterexample']
+    assert failed['result'] == 5
+    assert not failed['result_output'] and failed['expected_output']
+    assert report['nonmonotone_exact']['witness_size'] == 1
+    rotations = s.rotation_pipeline_experiment()
+    assert len(rotations['cases']) == 8
+    assert rotations['local_components']['detected_components'] == 3
+    assert len(rotations['local_components']['all_to_all']) == 3
+    l_shape = rotations['cases'][1]
+    assert l_shape['ring']['shifts'] == [12]
+    assert l_shape['aligned_candidates'][0]['metrics']['Flux_Field'] == 1
+    ring = rotations['cases'][2]
+    assert ring['ring']['ambiguous']
+    scores = [a['metrics']['Flux_Field'] for a in ring['aligned_candidates']]
+    assert min(scores) < max(scores)
+
+
+def test_kernel_helpers_reject_infinite_negative_bit_loops_and_bad_reduction_start():
+    with pytest.raises(ValueError):
+        s.unpack(-1)
+    with pytest.raises(ValueError):
+        s.integer_scale(2,-1)
+    with pytest.raises(ValueError):
+        s.reduce_bit_subset(7, lambda mask,phase: False)
+    assert s.integer_scale(-12,31) == -372
+
+
+def test_ring_similarity_does_not_reward_shared_zero_background_slots():
+    a = dict(slots=16, rings=(1,0), center=0, count=1)
+    b = dict(slots=16, rings=(0,2), center=0, count=1)
+    match = s.match_phase_rings(a,b)
+    assert match['numerator'] == 0 and match['denominator'] == 2

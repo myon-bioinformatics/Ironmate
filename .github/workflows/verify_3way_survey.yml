@@ -37,7 +37,7 @@ jobs:
       # Regression tests/JUnit remain in the existing Python test workflow.
       - name: Run paired held-out CPU benchmark
         run: python -S scripts/littlebit_jev_3way_survey.py --trials 40 --train-trials 4 --large-raster
-      - name: Run topology and phase-ring experiment
+      - name: Run topology, phase-ring and Boolean probe experiments
         run: python -S scripts/littlebit_jev_5way_survey.py --trials 25
       - name: Write readable summary
         run: |

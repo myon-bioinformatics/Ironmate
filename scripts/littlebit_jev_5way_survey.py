@@ -57,6 +57,8 @@ def pack_to_bitboard(nodes, w, h):
 
 
 def unpack(board):
+    if type(board) is not int or board < 0:
+        raise ValueError('nonnegative integer board required')
     result = set()
     while board:
         bit = board & -board
@@ -123,6 +125,8 @@ def rotate_ring(bits, shift, slots=16):
 
 def integer_scale(value, count):
     """Exact integer scaling using shift/add; not a constant-time operation."""
+    if type(value) is not int or type(count) is not int or count < 0:
+        raise ValueError('integer value and nonnegative integer count required')
     result = 0
     while count:
         if count & 1:
@@ -133,7 +137,7 @@ def integer_scale(value, count):
 
 
 def direction_slot(dx, dy, slots):
-    """Integer octants, optionally split at slope 1/2 (approximate angles).
+    """Integer 8/16-sector nearest-direction approximations (no trig).
 
     Screen coordinates: +x right, +y down. Axis and diagonal ties are assigned
     symmetrically, so a quarter-turn always adds slots/4, without atan2.
@@ -145,16 +149,13 @@ def direction_slot(dx, dy, slots):
     if slots == 8:
         q = 0 if (ay << 1) < ax else (2 if (ax << 1) < ay else 1)
     elif slots == 16:
-        if ay == 0 or (ay << 2) < ax:
-            q = 0
-        elif ax == 0 or (ax << 2) < ay:
-            q = 4
-        elif (ay << 1) < ax:
-            q = 1
-        elif (ax << 1) < ay:
-            q = 3
-        else:
-            q = 2
+        # Q16 approximations to tan(tau/32) and tan(3*tau/32).
+        # Nearest-sector boundaries, reflected exactly across the diagonal.
+        lo, hi = min(ax, ay), max(ax, ay)
+        projected = lo << 16
+        sub = (0 if projected < integer_scale(hi, 13036)
+               else 1 if projected < integer_scale(hi, 43790) else 2)
+        q = sub if ax >= ay else 4 - sub
     else:
         raise ValueError('8 or 16 slots required')
     if dx >= 0 and dy >= 0:
@@ -441,6 +442,271 @@ class FiveWaySurveyEngine:
         return result
 
 
+def rotate_support_slots(board, w, h, shift):
+    """Q14 lookup rotation about exact centroid; no trig/* in this kernel.
+
+    Raster rounding merges points and may crop them. Angle step is tau/16;
+    a signature offset only suggests a geometric rotation to VERIFY separately.
+    """
+    _, _, universe = compute_row_masks(w, h)
+    validate_board(board, universe)
+    if type(shift) is not int:
+        raise ValueError('integer rotation offset required')
+    coefficients = ((16384, 0), (15137, 6270), (11585, 11585), (6270, 15137),
+                    (0, 16384), (-6270, 15137), (-11585, 11585), (-15137, 6270),
+                    (-16384, 0), (-15137, -6270), (-11585, -11585), (-6270, -15137),
+                    (0, -16384), (6270, -15137), (11585, -11585), (15137, -6270))
+    cosine, sine = coefficients[shift % 16]
+    def scaled(value, coefficient):
+        result = integer_scale(value, abs(coefficient))
+        return -result if coefficient < 0 else result
+    nodes = unpack(board)
+    n = len(nodes)
+    if not n:
+        return dict(board=0, input_count=0, output_count=0, cropped_points=0, merged_points=0)
+    offsets, _ = row_offsets(w, h)
+    sx, sy = sum(i % w for i in nodes), sum(i // w for i in nodes)
+    denominator = n << 14
+    transformed, cropped = set(), 0
+    for idx in nodes:
+        dx = integer_scale(idx % w, n) - sx
+        dy = integer_scale(idx // w, n) - sy
+        x = (scaled(dx, cosine) - scaled(dy, sine) + (sx << 14) + (denominator >> 1)) // denominator
+        y = (scaled(dx, sine) + scaled(dy, cosine) + (sy << 14) + (denominator >> 1)) // denominator
+        if 0 <= x < w and 0 <= y < h:
+            transformed.add(offsets[y] + x)
+        else:
+            cropped += 1
+    return dict(board=pack_to_bitboard(transformed, w, h), input_count=n,
+                output_count=len(transformed), cropped_points=cropped,
+                merged_points=n - cropped - len(transformed))
+
+
+class QueryBudgetExceeded(RuntimeError):
+    """No further oracle call is permitted; cached answers remain usable."""
+
+
+class BooleanProbe:
+    """Memoized queries to a deterministic pure Boolean oracle; trace actual calls.
+
+    The caller supplies the oracle (no model/service/network is created here).
+    Boolean-only output cannot establish unchanged scores or global irrelevance.
+    """
+    def __init__(self, active, oracle, max_queries=10000):
+        if type(active) is not int or active < 0:
+            raise ValueError('nonnegative integer support required')
+        if type(max_queries) is not int or max_queries <= 0:
+            raise ValueError('positive integer query budget required')
+        if not callable(oracle):
+            raise TypeError('callable oracle required')
+        self.active, self.oracle, self.max_queries = active, oracle, max_queries
+        self.cache, self.trace = {}, []
+        self.cache_hits = 0
+
+    def ask(self, board, phase):
+        validate_board(board, self.active)
+        if board in self.cache:
+            self.cache_hits += 1
+            return self.cache[board]
+        if len(self.trace) >= self.max_queries:
+            raise QueryBudgetExceeded('oracle query budget exhausted')
+        output = self.oracle(board)
+        if type(output) is not bool:
+            raise TypeError('oracle must return bool, not a score or integer')
+        self.cache[board] = output
+        self.trace.append(dict(board=board, output=output, phase=phase))
+        return output
+
+    def accounting(self):
+        phases = {}
+        for item in self.trace:
+            phase = item['phase']
+            phases[phase] = phases.get(phase, 0) + 1
+        return dict(queries_used=len(self.trace), cache_hits=self.cache_hits,
+                    queries_by_phase=phases, query_trace=list(self.trace))
+
+
+def reduce_bit_subset(start, goal):
+    """Complement-based delta reduction, preserving goal on every accepted set.
+
+    Returns a 1-minimal witness, NOT necessarily a cardinality minimum or a
+    subset-minimal witness for nonmonotone goals. Split granularity eventually
+    reaches single bits. Bounds are not universally logarithmic.
+    """
+    if type(start) is not int or start < 0 or not goal(start, 'endpoint'):
+        raise ValueError('initial support must satisfy the goal')
+    current = start
+    if goal(0, 'endpoint'):
+        return 0
+    granularity = 2
+    while current.bit_count() >= 2:
+        bits, remaining = [], current
+        while remaining:
+            bit = remaining & -remaining
+            bits.append(bit)
+            remaining ^= bit
+        size = (len(bits) + granularity - 1) // granularity
+        changed = False
+        for offset in range(0, len(bits), size):
+            chunk = 0
+            for bit in bits[offset:offset + size]:
+                chunk |= bit
+            candidate = current ^ chunk
+            if goal(candidate, 'split'):
+                current = candidate
+                granularity = max(2, granularity - 1)
+                changed = True
+                break
+        if changed:
+            continue
+        if granularity >= len(bits):
+            break
+        granularity = min(len(bits), granularity << 1)
+    remaining = current
+    while remaining:
+        bit = remaining & -remaining
+        if goal(current ^ bit, 'verification'):
+            raise AssertionError('delta reduction failed 1-minimal verification')
+        remaining ^= bit
+    return current
+
+
+def probe_bit_core(active, oracle, *, objective='preserve', max_queries=10000):
+    """Separate sufficient retained support from output-flipping DELETED bits.
+
+    preserve: smallest-found retained witness with the original Bool output.
+    flip: smallest-found deletion witness, tested through oracle(active ^ D).
+    flip needs the all-deleted endpoint to flip; otherwise exact small search
+    may still find a counterexample. Status never claims impossibility there.
+    """
+    if objective not in ('preserve', 'flip'):
+        raise ValueError('objective must be preserve or flip')
+    meter = BooleanProbe(active, oracle, max_queries)
+    baseline = None
+    best = None
+    complete, status = False, 'budget_exhausted'
+    try:
+        baseline = meter.ask(active, 'baseline')
+        def goal(mask, phase):
+            nonlocal best
+            board = mask if objective == 'preserve' else active ^ mask
+            output = meter.ask(board, phase)
+            success = output == baseline if objective == 'preserve' else output != baseline
+            if success and (best is None or mask.bit_count() < best.bit_count()):
+                best = mask
+            return success
+        if not goal(active, 'endpoint'):
+            status = 'no_full_deletion_flip'
+        else:
+            best = reduce_bit_subset(active, goal)
+            complete, status = True, 'found'
+    except QueryBudgetExceeded:
+        pass
+    tested_board = (best if objective == 'preserve' else active ^ best) if best is not None else None
+    return dict(objective=objective, baseline_output=baseline, witness=best,
+                tested_board=tested_board, witness_size=best.bit_count() if best is not None else None,
+                witness_output=meter.cache.get(tested_board), status=status, complete=complete,
+                guarantee='1-minimal' if complete else 'uncertified',
+                globally_minimum=False, **meter.accounting())
+
+
+def exact_deletion_counterfactual(active, oracle, *, max_bits=12, max_queries=10000):
+    """Enumerate deletion sets by cardinality, for small supports only.
+
+    General deterministic Boolean functions need not be monotone. This proves
+    minimum deletion cardinality if complete, at exponential worst-case cost.
+    """
+    if type(max_bits) is not int or not 0 <= max_bits <= 16:
+        raise ValueError('max_bits must be 0..16')
+    meter = BooleanProbe(active, oracle, max_queries)
+    bits, remaining = [], active
+    while remaining:
+        bit = remaining & -remaining
+        bits.append(bit)
+        remaining ^= bit
+    if len(bits) > max_bits:
+        raise ValueError('support exceeds exact-search bit limit')
+    baseline, witness = None, None
+    status, complete = 'budget_exhausted', False
+    try:
+        baseline = meter.ask(active, 'baseline')
+        # Explicit stack generates each k-subset without factorials or products.
+        for size in range(1, len(bits) + 1):
+            stack = [(0, size, 0)]
+            while stack:
+                offset, needed, removed = stack.pop()
+                if needed == 0:
+                    if meter.ask(active ^ removed, 'exact') != baseline:
+                        witness, status = removed, 'found'
+                        break
+                else:
+                    for i in range(offset, len(bits) - needed + 1):
+                        stack.append((i + 1, needed - 1, removed | bits[i]))
+            if witness is not None:
+                break
+        if witness is None:
+            status = 'no_flip_exists'
+        complete = True
+    except QueryBudgetExceeded:
+        pass
+    return dict(objective='flip', witness=witness,
+                witness_size=witness.bit_count() if witness is not None else None,
+                baseline_output=baseline, status=status, complete=complete,
+                globally_minimum=complete and witness is not None,
+                **meter.accounting())
+
+
+def core_shell_decomposition(active, oracle, *, max_layers=8, max_queries=10000):
+    """Ordered disjoint sufficient-support witnesses, not graph k-core ranks.
+
+    Each layer alone returns True. A false residual is UNCLASSIFIED: interacting
+    useful bits may remain. Deleting one sufficient layer need not flip output.
+    """
+    if type(max_layers) is not int or max_layers <= 0:
+        raise ValueError('positive layer limit required')
+    meter = BooleanProbe(active, oracle, max_queries)
+    layers, residual = [], active
+    status = 'layer_limit'
+    try:
+        for _ in range(max_layers):
+            if not meter.ask(residual, 'shell_baseline'):
+                status = 'residual_false_unclassified'
+                break
+            def goal(mask, phase):
+                return meter.ask(mask, 'shell_' + phase)
+            core = reduce_bit_subset(residual, goal)
+            layers.append(dict(board=core, size=core.bit_count(), guarantee='1-minimal'))
+            if core == 0:
+                status = 'true_on_empty'
+                break
+            residual ^= core
+            if not residual:
+                status = 'support_exhausted'
+                break
+    except QueryBudgetExceeded:
+        status = 'budget_exhausted'
+    return dict(layers=layers, residual_unclassified=residual, status=status,
+                ordering='deterministic_bit_order_not_importance_rank',
+                graph_k_core=False, **meter.accounting())
+
+
+def component_phase_rings(board, w, h, slots=16):
+    """Independent descriptors per 8-connected support; no tracking identity."""
+    right, left, universe = compute_row_masks(w, h)
+    validate_board(board, universe)
+    components, remaining = [], board
+    while remaining:
+        comp = remaining & -remaining
+        while True:
+            nxt = dilate(comp, w, right, left, universe) & remaining
+            if nxt == comp:
+                break
+            comp = nxt
+        components.append(dict(board=comp, signature=phase_ring_signature(comp, w, h, slots)))
+        remaining ^= comp
+    return components
+
+
 # Evaluation, synthetic fixtures and timings below are outside the integer kernel.
 def evaluation(truth, prediction, patches, w, h):
     def dice(a, b):
@@ -528,7 +794,7 @@ def rotation_experiment():
     source = board_of(points)
     signature = phase_ring_signature(source, 32, 32)
     rows = []
-    for degrees in (0, 30, 60, 90, 180, 270):
+    for degrees in (0, 22.5, 30, 45, 60, 67.5, 90, 180, 270):
         angle = math.radians(degrees)
         rotated = {(round(x * math.cos(angle) - y * math.sin(angle)),
                     round(x * math.sin(angle) + y * math.cos(angle))) for x, y in points}
@@ -544,6 +810,105 @@ def rotation_experiment():
     return dict(rotations=rows, distractor=collision,
                 distractor_topology=[compute_bitboard_topology_and_betti(b, 32, 32)
                                      for b in (square, perimeter)])
+
+
+def counterfactual_experiment():
+    full = (1 << 64) - 1
+    cases = (
+        ('Single_High_Bit', lambda b: bool(b & (1 << 63))),
+        ('Single_Low_Bit', lambda b: bool(b & 1)),
+        ('All_64_Required', lambda b: b == full),
+        ('Any_Of_64_Redundant', lambda b: bool(b)),
+        ('Crossed_Pairs_60_Decoys', lambda b: b & 9 == 9 or b & 6 == 6),
+        ('Threshold_32_Of_64', lambda b: b.bit_count() >= 32),
+        ('Even_Parity_Nonmonotone', lambda b: b.bit_count() % 2 == 0),
+        ('Constant_True', lambda b: True),
+    )
+    rows = []
+    for name, oracle in cases:
+        support = probe_bit_core(full, oracle)
+        deletion = probe_bit_core(full, oracle, objective='flip')
+        shells = core_shell_decomposition(full, oracle, max_layers=4)
+        rows.append(dict(scenario=name, support=support, deletion=deletion, shells=shells))
+    # Concrete failure of stale left/right contexts in the supplied recursion.
+    oracle = lambda b: b & 9 == 9 or b & 6 == 6
+    def supplied(candidates, background):
+        if len(candidates) <= 1:
+            return candidates
+        mid = len(candidates) >> 1
+        left, right = candidates[:mid], candidates[mid:]
+        lm, rm = sum(left), sum(right)
+        if oracle(background | lm):
+            return supplied(left, background)
+        if oracle(background | rm):
+            return supplied(right, background)
+        return supplied(left, background | rm) + supplied(right, background | lm)
+    proposed = sum(supplied([1, 2, 4, 8], 0))
+    exact = exact_deletion_counterfactual(3, lambda b: b.bit_count() % 2 == 0)
+    return dict(cases=rows, supplied_counterexample=dict(active=15, result=proposed,
+                result_output=oracle(proposed), expected_output=oracle(15)),
+                nonmonotone_exact=exact,
+                semantics='deterministic Boolean simulation; not model attribution')
+
+
+def rotation_pipeline_experiment():
+    """Measure coordinate score AFTER applying ring-suggested lookup rotations.
+
+    Candidate ties remain a score range; never pick the best using truth.
+    Synthetic oracles are separate controls, not explanations of these images.
+    """
+    rows = []
+    fixture_names = ('Thin_Skeleton', 'Dense_Object', 'Hollow_Ring', 'Multi_Scale_Clusters',
+                     'High_Noise_Dark', 'Multi_Scale_Clusters', 'Anisotropic_Matrix', 'Dense_Object')
+    names = ('Rotated_Skeleton', 'Rotated_L_Shape', 'Rotated_Hollow_Ring', 'Scale_Rotated_Cluster',
+             'Noise_And_Rotation', 'Cycle_Clusters', 'Anisotropic_Trend', 'Adversarial_Decoy')
+    steps = (2, 4, 3, 1, 2, 0, 0, 0)
+    weights = [CalibratedTernaryPatch([0]*8, [0]*8) for _ in range(1024)]
+    for index, (name, fixture, step) in enumerate(zip(names, fixture_names, steps)):
+        _, source = scenario_data(fixture, random.Random(900+index))
+        if name == 'Rotated_L_Shape':
+            source = {y*32+x for y in range(8,25) for x in range(8,25)
+                      if (x in (8,9) and y <= 24) or y in (23,24)}
+        source_board = pack_to_bitboard(source,32,32)
+        transformed = rotate_support_slots(source_board,32,32,step)
+        target = unpack(transformed['board'])
+        if name == 'Scale_Rotated_Cluster':
+            # Fixed nearest-neighbor enlargement by 5/4 around the grid center.
+            target = {ny*32+nx for i in target
+                      for nx,ny in [(16+round((i%32-16)*1.25),16+round((i//32-16)*1.25))]
+                      if 0 <= nx < 32 and 0 <= ny < 32}
+        if name in ('Noise_And_Rotation', 'Adversarial_Decoy'):
+            rng = random.Random(880+index)
+            target |= {rng.randrange(1024) for _ in range(16)}
+        target_board = pack_to_bitboard(target,32,32)
+        match = match_phase_rings(phase_ring_signature(source_board,32,32),
+                                  phase_ring_signature(target_board,32,32))
+        aligned = []
+        for shift in match['shifts']:
+            rotated = rotate_support_slots(target_board,32,32,shift)
+            aligned.append(dict(shift=shift, metrics=evaluation(source,unpack(rotated['board']),weights,32,32),
+                                cropped=rotated['cropped_points'], merged=rotated['merged_points']))
+        rows.append(dict(scenario=name, fixture_shift=step, before=evaluation(source,target,weights,32,32),
+                         ring=match, aligned_candidates=aligned,
+                         generation_rotation=transformed, source_count=len(source), target_count=len(target)))
+    # Separated components rotate independently; correspondence is known only
+    # for this control. Real all-to-all matching retains ambiguity.
+    boards = []
+    for cx,cy in ((15,15),(47,15),(31,47)):
+        boards.append(pack_to_bitboard({(cy+y)*64+cx+x for x,y in ((-3,-2),(-3,-1),(-3,0),
+                      (-3,1),(-3,2),(-2,2),(-1,2),(0,2),(1,2),(2,2))},64,64))
+    combined = 0
+    targets = []
+    for board,shift in zip(boards,(1,5,12)):
+        rotated = rotate_support_slots(board,64,64,shift)['board']
+        combined |= rotated
+        targets.append(rotated)
+    comparisons = [[match_phase_rings(phase_ring_signature(a,64,64),phase_ring_signature(b,64,64))
+                    for b in targets] for a in boards]
+    return dict(cases=rows, local_components=dict(input_components=3,
+                detected_components=len(component_phase_rings(combined,64,64)),
+                fixture_shifts=[1,5,12], all_to_all=comparisons),
+                mode='support_only_rotation_controls; not detector or XAI accuracy')
 
 
 def run_benchmark(trials=25, seed=20261022):
@@ -579,7 +944,14 @@ def run_benchmark(trials=25, seed=20261022):
             previous = result['bitboard']
         boards[name] = previous
     _, _, universe = compute_row_masks(32, 32)
-    return dict(records=records, rotation=rotation_experiment(),
+    experiments = {}
+    for key, function in (('rotation', rotation_experiment),
+                          ('counterfactual', counterfactual_experiment),
+                          ('rotation_pipeline', rotation_pipeline_experiment)):
+        started = time.perf_counter_ns()
+        experiments[key] = function()
+        measurements.append(dict(scenario=key, total_ns=time.perf_counter_ns()-started))
+    return dict(records=records, **experiments,
                 venn=analyze_venn_and_implication_bitboard(
                     boards['Hollow_Ring'], boards['Dense_Object'], boards['Smooth_Gradient'], universe),
                 measurements=measurements,
@@ -605,6 +977,26 @@ def render_report(report):
     for row in report['rotation']['rotations']:
         score = row['numerator'] / row['denominator'] if row['denominator'] else 0
         lines.append(f'| {row["degrees"]} | {100*score:.2f} | {row["shifts"]} | {row["ambiguous"]} |')
+    lines += ['', '## Bit-splitting Boolean probes', '',
+              'Retained sufficient support and deleted counterfactual bits are different objectives.', '',
+              '| Oracle | Support size | Support calls | Deletion size | Deletion calls | Deletion status |',
+              '|---|---:|---:|---:|---:|---|']
+    for row in report['counterfactual']['cases']:
+        a, b = row['support'], row['deletion']
+        lines.append(f'| {row["scenario"]} | {a["witness_size"]} | {a["queries_used"]} | '
+                     f'{b["witness_size"]} | {b["queries_used"]} | {b["status"]} |')
+    lines += ['', 'Calls include baseline/endpoints and final verification; cached answers are not charged again.',
+              'Split reduction certifies 1-minimality, not a global cardinality minimum. No universal log2 bound.',
+              'Shell layers are disjoint sufficient witnesses, not causal importance or graph k-core ranks.', '',
+              '## Coordinate verification of ring-suggested rotations', '',
+              'Support-only controls. Report all tied candidates as a score range; no truth-based tie selection.', '',
+              '| Scenario | Initial IoU % | Initial Flux % | Aligned Flux range % | Candidate shifts |',
+              '|---|---:|---:|---:|---|']
+    for row in report['rotation_pipeline']['cases']:
+        scores = [a['metrics']['Flux_Field']*100 for a in row['aligned_candidates']]
+        interval = f'{min(scores):.2f}–{max(scores):.2f}' if scores else 'undefined'
+        lines.append(f'| {row["scenario"]} | {100*row["before"]["IoU"]:.2f} | '
+                     f'{100*row["before"]["Flux_Field"]:.2f} | {interval} | {row["ring"]["shifts"]} |')
     lines += ['', 'Ring signatures are lossy; exact cyclic alignment is not arbitrary-angle shape equivalence.',
               '', '## Three-condition Venn', '', 'Bit keys are CBA (001 = A only). Inclusion is empirical, not causal.',
               '', '```json', json.dumps(report['venn'], indent=2), '```', '',

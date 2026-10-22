@@ -8406,40 +8406,69 @@
       {
         "degrees": 0,
         "count": 25,
-        "numerator": 30,
-        "denominator": 30,
+        "numerator": 34,
+        "denominator": 34,
         "shifts": [
           0
         ],
         "ambiguous": false
       },
       {
-        "degrees": 30,
-        "count": 22,
-        "numerator": 20,
-        "denominator": 28,
+        "degrees": 22.5,
+        "count": 25,
+        "numerator": 28,
+        "denominator": 33,
         "shifts": [
-          14,
           15
         ],
-        "ambiguous": true
+        "ambiguous": false
+      },
+      {
+        "degrees": 30,
+        "count": 22,
+        "numerator": 28,
+        "denominator": 32,
+        "shifts": [
+          15
+        ],
+        "ambiguous": false
+      },
+      {
+        "degrees": 45,
+        "count": 25,
+        "numerator": 24,
+        "denominator": 32,
+        "shifts": [
+          14
+        ],
+        "ambiguous": false
       },
       {
         "degrees": 60,
         "count": 23,
-        "numerator": 16,
-        "denominator": 28,
+        "numerator": 22,
+        "denominator": 32,
         "shifts": [
-          0,
-          4
+          13,
+          14
         ],
         "ambiguous": true
       },
       {
+        "degrees": 67.5,
+        "count": 25,
+        "numerator": 28,
+        "denominator": 34,
+        "shifts": [
+          13
+        ],
+        "ambiguous": false
+      },
+      {
         "degrees": 90,
         "count": 25,
-        "numerator": 30,
-        "denominator": 30,
+        "numerator": 34,
+        "denominator": 34,
         "shifts": [
           12
         ],
@@ -8448,8 +8477,8 @@
       {
         "degrees": 180,
         "count": 25,
-        "numerator": 30,
-        "denominator": 30,
+        "numerator": 34,
+        "denominator": 34,
         "shifts": [
           8
         ],
@@ -8458,8 +8487,8 @@
       {
         "degrees": 270,
         "count": 25,
-        "numerator": 30,
-        "denominator": 30,
+        "numerator": 34,
+        "denominator": 34,
         "shifts": [
           4
         ],
@@ -8510,6 +8539,1504 @@
       }
     ]
   },
+  "counterfactual": {
+    "cases": [
+      {
+        "scenario": "Single_High_Bit",
+        "support": {
+          "objective": "preserve",
+          "baseline_output": true,
+          "witness": 9223372036854775808,
+          "tested_board": 9223372036854775808,
+          "witness_size": 1,
+          "witness_output": true,
+          "status": "found",
+          "complete": true,
+          "guarantee": "1-minimal",
+          "globally_minimum": false,
+          "queries_used": 8,
+          "cache_hits": 3,
+          "queries_by_phase": {
+            "baseline": 1,
+            "endpoint": 1,
+            "split": 6
+          },
+          "query_trace_sha256": "c9f7ce3d69d5b0448df8a7db198c3cd45a5b18b523cf036e14c06632cd04d8d1"
+        },
+        "deletion": {
+          "objective": "flip",
+          "baseline_output": true,
+          "witness": 9223372036854775808,
+          "tested_board": 9223372036854775807,
+          "witness_size": 1,
+          "witness_output": false,
+          "status": "found",
+          "complete": true,
+          "guarantee": "1-minimal",
+          "globally_minimum": false,
+          "queries_used": 8,
+          "cache_hits": 3,
+          "queries_by_phase": {
+            "baseline": 1,
+            "endpoint": 1,
+            "split": 6
+          },
+          "query_trace_sha256": "ab5bb4443501eba0240b0b237a8711c61004d45ab3e0af093635d5e40c6a3131"
+        },
+        "shells": {
+          "layers": [
+            {
+              "board": 9223372036854775808,
+              "size": 1,
+              "guarantee": "1-minimal"
+            }
+          ],
+          "residual_unclassified": 9223372036854775807,
+          "status": "residual_false_unclassified",
+          "ordering": "deterministic_bit_order_not_importance_rank",
+          "graph_k_core": false,
+          "queries_used": 9,
+          "cache_hits": 2,
+          "queries_by_phase": {
+            "shell_baseline": 2,
+            "shell_endpoint": 1,
+            "shell_split": 6
+          },
+          "query_trace_sha256": "22ddc411e26476b6498fbe87c53af7faa9987976c7d4279c9f8301f5ed255839"
+        }
+      },
+      {
+        "scenario": "Single_Low_Bit",
+        "support": {
+          "objective": "preserve",
+          "baseline_output": true,
+          "witness": 1,
+          "tested_board": 1,
+          "witness_size": 1,
+          "witness_output": true,
+          "status": "found",
+          "complete": true,
+          "guarantee": "1-minimal",
+          "globally_minimum": false,
+          "queries_used": 14,
+          "cache_hits": 3,
+          "queries_by_phase": {
+            "baseline": 1,
+            "endpoint": 1,
+            "split": 12
+          },
+          "query_trace_sha256": "b7869224e471fad2332b2dd9c28a9bfe93a1621c8aaedac95fd8cb5bdf1c456b"
+        },
+        "deletion": {
+          "objective": "flip",
+          "baseline_output": true,
+          "witness": 1,
+          "tested_board": 18446744073709551614,
+          "witness_size": 1,
+          "witness_output": false,
+          "status": "found",
+          "complete": true,
+          "guarantee": "1-minimal",
+          "globally_minimum": false,
+          "queries_used": 14,
+          "cache_hits": 3,
+          "queries_by_phase": {
+            "baseline": 1,
+            "endpoint": 1,
+            "split": 12
+          },
+          "query_trace_sha256": "bd3b98f9bb64aba119a8ff026100992b4c43c3d59ef08205737f47426b72ef4a"
+        },
+        "shells": {
+          "layers": [
+            {
+              "board": 1,
+              "size": 1,
+              "guarantee": "1-minimal"
+            }
+          ],
+          "residual_unclassified": 18446744073709551614,
+          "status": "residual_false_unclassified",
+          "ordering": "deterministic_bit_order_not_importance_rank",
+          "graph_k_core": false,
+          "queries_used": 15,
+          "cache_hits": 2,
+          "queries_by_phase": {
+            "shell_baseline": 2,
+            "shell_endpoint": 1,
+            "shell_split": 12
+          },
+          "query_trace_sha256": "fe07a5cbfe01321ab79fc807c736838c478f7989fe533760d6b672ccf37904f9"
+        }
+      },
+      {
+        "scenario": "All_64_Required",
+        "support": {
+          "objective": "preserve",
+          "baseline_output": true,
+          "witness": 18446744073709551615,
+          "tested_board": 18446744073709551615,
+          "witness_size": 64,
+          "witness_output": true,
+          "status": "found",
+          "complete": true,
+          "guarantee": "1-minimal",
+          "globally_minimum": false,
+          "queries_used": 128,
+          "cache_hits": 66,
+          "queries_by_phase": {
+            "baseline": 1,
+            "endpoint": 1,
+            "split": 126
+          },
+          "query_trace_sha256": "c3bee2d54662de5f09b09c48797c85c8156471d12b45c4d99334ddd51bab85f7"
+        },
+        "deletion": {
+          "objective": "flip",
+          "baseline_output": true,
+          "witness": 9223372036854775808,
+          "tested_board": 9223372036854775807,
+          "witness_size": 1,
+          "witness_output": false,
+          "status": "found",
+          "complete": true,
+          "guarantee": "1-minimal",
+          "globally_minimum": false,
+          "queries_used": 8,
+          "cache_hits": 3,
+          "queries_by_phase": {
+            "baseline": 1,
+            "endpoint": 1,
+            "split": 6
+          },
+          "query_trace_sha256": "ab5bb4443501eba0240b0b237a8711c61004d45ab3e0af093635d5e40c6a3131"
+        },
+        "shells": {
+          "layers": [
+            {
+              "board": 18446744073709551615,
+              "size": 64,
+              "guarantee": "1-minimal"
+            }
+          ],
+          "residual_unclassified": 0,
+          "status": "support_exhausted",
+          "ordering": "deterministic_bit_order_not_importance_rank",
+          "graph_k_core": false,
+          "queries_used": 128,
+          "cache_hits": 65,
+          "queries_by_phase": {
+            "shell_baseline": 1,
+            "shell_endpoint": 1,
+            "shell_split": 126
+          },
+          "query_trace_sha256": "7ccd43dd199f2a37d2c9a835d54be44d60427e065e5e717d289cbacce83b3003"
+        }
+      },
+      {
+        "scenario": "Any_Of_64_Redundant",
+        "support": {
+          "objective": "preserve",
+          "baseline_output": true,
+          "witness": 9223372036854775808,
+          "tested_board": 9223372036854775808,
+          "witness_size": 1,
+          "witness_output": true,
+          "status": "found",
+          "complete": true,
+          "guarantee": "1-minimal",
+          "globally_minimum": false,
+          "queries_used": 8,
+          "cache_hits": 3,
+          "queries_by_phase": {
+            "baseline": 1,
+            "endpoint": 1,
+            "split": 6
+          },
+          "query_trace_sha256": "c9f7ce3d69d5b0448df8a7db198c3cd45a5b18b523cf036e14c06632cd04d8d1"
+        },
+        "deletion": {
+          "objective": "flip",
+          "baseline_output": true,
+          "witness": 18446744073709551615,
+          "tested_board": 0,
+          "witness_size": 64,
+          "witness_output": false,
+          "status": "found",
+          "complete": true,
+          "guarantee": "1-minimal",
+          "globally_minimum": false,
+          "queries_used": 128,
+          "cache_hits": 66,
+          "queries_by_phase": {
+            "baseline": 1,
+            "endpoint": 1,
+            "split": 126
+          },
+          "query_trace_sha256": "47f8b3f5b906dc5b434d707eaa4a7500fd3357cf27490d7c9050c9996572b928"
+        },
+        "shells": {
+          "layers": [
+            {
+              "board": 9223372036854775808,
+              "size": 1,
+              "guarantee": "1-minimal"
+            },
+            {
+              "board": 4611686018427387904,
+              "size": 1,
+              "guarantee": "1-minimal"
+            },
+            {
+              "board": 2305843009213693952,
+              "size": 1,
+              "guarantee": "1-minimal"
+            },
+            {
+              "board": 1152921504606846976,
+              "size": 1,
+              "guarantee": "1-minimal"
+            }
+          ],
+          "residual_unclassified": 1152921504606846975,
+          "status": "layer_limit",
+          "ordering": "deterministic_bit_order_not_importance_rank",
+          "graph_k_core": false,
+          "queries_used": 26,
+          "cache_hits": 11,
+          "queries_by_phase": {
+            "shell_baseline": 4,
+            "shell_endpoint": 1,
+            "shell_split": 21
+          },
+          "query_trace_sha256": "5dac7f02648d671726bace54905df7da0c7be9dd15567c98f4a72d617e682668"
+        }
+      },
+      {
+        "scenario": "Crossed_Pairs_60_Decoys",
+        "support": {
+          "objective": "preserve",
+          "baseline_output": true,
+          "witness": 6,
+          "tested_board": 6,
+          "witness_size": 2,
+          "witness_output": true,
+          "status": "found",
+          "complete": true,
+          "guarantee": "1-minimal",
+          "globally_minimum": false,
+          "queries_used": 17,
+          "cache_hits": 5,
+          "queries_by_phase": {
+            "baseline": 1,
+            "endpoint": 1,
+            "split": 15
+          },
+          "query_trace_sha256": "2789cb227b0b6e4fe1122feb9d033bacdbf936c8c47296d750b386c68b6e9be8"
+        },
+        "deletion": {
+          "objective": "flip",
+          "baseline_output": true,
+          "witness": 12,
+          "tested_board": 18446744073709551603,
+          "witness_size": 2,
+          "witness_output": false,
+          "status": "found",
+          "complete": true,
+          "guarantee": "1-minimal",
+          "globally_minimum": false,
+          "queries_used": 13,
+          "cache_hits": 4,
+          "queries_by_phase": {
+            "baseline": 1,
+            "endpoint": 1,
+            "split": 11
+          },
+          "query_trace_sha256": "14e1513ae14e744091e4986e7520122a102892beb5ac7868e14d100f24b32335"
+        },
+        "shells": {
+          "layers": [
+            {
+              "board": 6,
+              "size": 2,
+              "guarantee": "1-minimal"
+            },
+            {
+              "board": 9,
+              "size": 2,
+              "guarantee": "1-minimal"
+            }
+          ],
+          "residual_unclassified": 18446744073709551600,
+          "status": "residual_false_unclassified",
+          "ordering": "deterministic_bit_order_not_importance_rank",
+          "graph_k_core": false,
+          "queries_used": 31,
+          "cache_hits": 8,
+          "queries_by_phase": {
+            "shell_baseline": 3,
+            "shell_endpoint": 1,
+            "shell_split": 27
+          },
+          "query_trace_sha256": "fcfa9602e2a0afe1cd708c16b8a61624d781c079ae65891078740f4780e3c365"
+        }
+      },
+      {
+        "scenario": "Threshold_32_Of_64",
+        "support": {
+          "objective": "preserve",
+          "baseline_output": true,
+          "witness": 18446744069414584320,
+          "tested_board": 18446744069414584320,
+          "witness_size": 32,
+          "witness_output": true,
+          "status": "found",
+          "complete": true,
+          "guarantee": "1-minimal",
+          "globally_minimum": false,
+          "queries_used": 65,
+          "cache_hits": 34,
+          "queries_by_phase": {
+            "baseline": 1,
+            "endpoint": 1,
+            "split": 63
+          },
+          "query_trace_sha256": "5ac3d7618b50f3ed97b9e5b2ff4c5efa23522cba1c59ffdef74b26b9bb873e84"
+        },
+        "deletion": {
+          "objective": "flip",
+          "baseline_output": true,
+          "witness": 18446744071562067968,
+          "tested_board": 2147483647,
+          "witness_size": 33,
+          "witness_output": false,
+          "status": "found",
+          "complete": true,
+          "guarantee": "1-minimal",
+          "globally_minimum": false,
+          "queries_used": 71,
+          "cache_hits": 40,
+          "queries_by_phase": {
+            "baseline": 1,
+            "endpoint": 1,
+            "split": 69
+          },
+          "query_trace_sha256": "148a1e0276b5dedbe01cea5a92051682beb72060bf317f0c8fc156eee19b62e5"
+        },
+        "shells": {
+          "layers": [
+            {
+              "board": 18446744069414584320,
+              "size": 32,
+              "guarantee": "1-minimal"
+            },
+            {
+              "board": 4294967295,
+              "size": 32,
+              "guarantee": "1-minimal"
+            }
+          ],
+          "residual_unclassified": 0,
+          "status": "support_exhausted",
+          "ordering": "deterministic_bit_order_not_importance_rank",
+          "graph_k_core": false,
+          "queries_used": 128,
+          "cache_hits": 67,
+          "queries_by_phase": {
+            "shell_baseline": 2,
+            "shell_endpoint": 1,
+            "shell_split": 125
+          },
+          "query_trace_sha256": "cea8c4c68cd9bfe87c5e154127fdbfb2d28876429cba308912910ccc33c8b1c7"
+        }
+      },
+      {
+        "scenario": "Even_Parity_Nonmonotone",
+        "support": {
+          "objective": "preserve",
+          "baseline_output": true,
+          "witness": 0,
+          "tested_board": 0,
+          "witness_size": 0,
+          "witness_output": true,
+          "status": "found",
+          "complete": true,
+          "guarantee": "1-minimal",
+          "globally_minimum": false,
+          "queries_used": 2,
+          "cache_hits": 2,
+          "queries_by_phase": {
+            "baseline": 1,
+            "endpoint": 1
+          },
+          "query_trace_sha256": "60d87ebb810c7ed12f65a077e0caada208a0315469e934a75347cc1e11df1d05"
+        },
+        "deletion": {
+          "objective": "flip",
+          "baseline_output": true,
+          "witness": null,
+          "tested_board": null,
+          "witness_size": null,
+          "witness_output": null,
+          "status": "no_full_deletion_flip",
+          "complete": false,
+          "guarantee": "uncertified",
+          "globally_minimum": false,
+          "queries_used": 2,
+          "cache_hits": 0,
+          "queries_by_phase": {
+            "baseline": 1,
+            "endpoint": 1
+          },
+          "query_trace_sha256": "60d87ebb810c7ed12f65a077e0caada208a0315469e934a75347cc1e11df1d05"
+        },
+        "shells": {
+          "layers": [
+            {
+              "board": 0,
+              "size": 0,
+              "guarantee": "1-minimal"
+            }
+          ],
+          "residual_unclassified": 18446744073709551615,
+          "status": "true_on_empty",
+          "ordering": "deterministic_bit_order_not_importance_rank",
+          "graph_k_core": false,
+          "queries_used": 2,
+          "cache_hits": 1,
+          "queries_by_phase": {
+            "shell_baseline": 1,
+            "shell_endpoint": 1
+          },
+          "query_trace_sha256": "158ab41af33c6b005447f28878ae0f934ad1d0065ea4802c76e8fe39e4e7bf5d"
+        }
+      },
+      {
+        "scenario": "Constant_True",
+        "support": {
+          "objective": "preserve",
+          "baseline_output": true,
+          "witness": 0,
+          "tested_board": 0,
+          "witness_size": 0,
+          "witness_output": true,
+          "status": "found",
+          "complete": true,
+          "guarantee": "1-minimal",
+          "globally_minimum": false,
+          "queries_used": 2,
+          "cache_hits": 2,
+          "queries_by_phase": {
+            "baseline": 1,
+            "endpoint": 1
+          },
+          "query_trace_sha256": "60d87ebb810c7ed12f65a077e0caada208a0315469e934a75347cc1e11df1d05"
+        },
+        "deletion": {
+          "objective": "flip",
+          "baseline_output": true,
+          "witness": null,
+          "tested_board": null,
+          "witness_size": null,
+          "witness_output": null,
+          "status": "no_full_deletion_flip",
+          "complete": false,
+          "guarantee": "uncertified",
+          "globally_minimum": false,
+          "queries_used": 2,
+          "cache_hits": 0,
+          "queries_by_phase": {
+            "baseline": 1,
+            "endpoint": 1
+          },
+          "query_trace_sha256": "60d87ebb810c7ed12f65a077e0caada208a0315469e934a75347cc1e11df1d05"
+        },
+        "shells": {
+          "layers": [
+            {
+              "board": 0,
+              "size": 0,
+              "guarantee": "1-minimal"
+            }
+          ],
+          "residual_unclassified": 18446744073709551615,
+          "status": "true_on_empty",
+          "ordering": "deterministic_bit_order_not_importance_rank",
+          "graph_k_core": false,
+          "queries_used": 2,
+          "cache_hits": 1,
+          "queries_by_phase": {
+            "shell_baseline": 1,
+            "shell_endpoint": 1
+          },
+          "query_trace_sha256": "158ab41af33c6b005447f28878ae0f934ad1d0065ea4802c76e8fe39e4e7bf5d"
+        }
+      }
+    ],
+    "supplied_counterexample": {
+      "active": 15,
+      "result": 5,
+      "result_output": false,
+      "expected_output": true
+    },
+    "nonmonotone_exact": {
+      "objective": "flip",
+      "witness": 2,
+      "witness_size": 1,
+      "baseline_output": true,
+      "status": "found",
+      "complete": true,
+      "globally_minimum": true,
+      "queries_used": 2,
+      "cache_hits": 0,
+      "queries_by_phase": {
+        "baseline": 1,
+        "exact": 1
+      },
+      "query_trace_sha256": "0f08f0fd84af8fd1771c46ed62cd71b0658d9e7f82dcd44780e5c05ebb303715"
+    },
+    "semantics": "deterministic Boolean simulation; not model attribution"
+  },
+  "rotation_pipeline": {
+    "cases": [
+      {
+        "scenario": "Rotated_Skeleton",
+        "fixture_shift": 2,
+        "before": {
+          "IoU": 0.039285714285714285,
+          "Energy_Dice": 0.07560137457044673,
+          "Flux_Field": 0.0917837814202437
+        },
+        "ring": {
+          "numerator": 32,
+          "denominator": 35,
+          "shifts": [
+            2,
+            6,
+            10,
+            14
+          ],
+          "ambiguous": true
+        },
+        "aligned_candidates": [
+          {
+            "shift": 2,
+            "metrics": {
+              "IoU": 0.5815217391304348,
+              "Energy_Dice": 0.7353951890034365,
+              "Flux_Field": 0.7333990687942579
+            },
+            "cropped": 0,
+            "merged": 0
+          },
+          {
+            "shift": 6,
+            "metrics": {
+              "IoU": 0.5815217391304348,
+              "Energy_Dice": 0.7353951890034365,
+              "Flux_Field": 0.7412096004143133
+            },
+            "cropped": 0,
+            "merged": 0
+          },
+          {
+            "shift": 10,
+            "metrics": {
+              "IoU": 0.5815217391304348,
+              "Energy_Dice": 0.7353951890034365,
+              "Flux_Field": 0.7412096004143133
+            },
+            "cropped": 0,
+            "merged": 0
+          },
+          {
+            "shift": 14,
+            "metrics": {
+              "IoU": 0.5815217391304348,
+              "Energy_Dice": 0.7353951890034365,
+              "Flux_Field": 0.7333990687942579
+            },
+            "cropped": 0,
+            "merged": 0
+          }
+        ],
+        "generation_rotation": {
+          "board": 4114593052553269861167319388885177626694135377076120184877490722962045774597590123357845255819118686475488061906155175005980686603072350275876924179461369081361435129029374103751727747408670824927491869970524426934451390035545210317420789888415280522901923300055801692458505227959499726013498593684586496,
+          "input_count": 184,
+          "output_count": 107,
+          "cropped_points": 52,
+          "merged_points": 25
+        },
+        "source_count": 184,
+        "target_count": 107
+      },
+      {
+        "scenario": "Rotated_L_Shape",
+        "fixture_shift": 4,
+        "before": {
+          "IoU": 0.18518518518518517,
+          "Energy_Dice": 0.3125,
+          "Flux_Field": 0.32222352115969144
+        },
+        "ring": {
+          "numerator": 30,
+          "denominator": 30,
+          "shifts": [
+            12
+          ],
+          "ambiguous": false
+        },
+        "aligned_candidates": [
+          {
+            "shift": 12,
+            "metrics": {
+              "IoU": 1.0,
+              "Energy_Dice": 1.0,
+              "Flux_Field": 1.0
+            },
+            "cropped": 0,
+            "merged": 0
+          }
+        ],
+        "generation_rotation": {
+          "board": 32145258223072420790950548705539584217453425796754325410059799379482514783299354479932101691034876125691254526710250560518401000408426152189463653767929766938489584382548205355706145581978536679489787286231558862825774289195466368072323402654007496594401396095958979936080882530105389710924529105108992,
+          "input_count": 64,
+          "output_count": 64,
+          "cropped_points": 0,
+          "merged_points": 0
+        },
+        "source_count": 64,
+        "target_count": 64
+      },
+      {
+        "scenario": "Rotated_Hollow_Ring",
+        "fixture_shift": 3,
+        "before": {
+          "IoU": 0.5789473684210527,
+          "Energy_Dice": 0.7333333333333333,
+          "Flux_Field": 0.7536762534695564
+        },
+        "ring": {
+          "numerator": 32,
+          "denominator": 48,
+          "shifts": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15
+          ],
+          "ambiguous": true
+        },
+        "aligned_candidates": [
+          {
+            "shift": 0,
+            "metrics": {
+              "IoU": 0.5789473684210527,
+              "Energy_Dice": 0.7333333333333333,
+              "Flux_Field": 0.7536762534695564
+            },
+            "cropped": 0,
+            "merged": 0
+          },
+          {
+            "shift": 1,
+            "metrics": {
+              "IoU": 1.0,
+              "Energy_Dice": 1.0,
+              "Flux_Field": 1.0
+            },
+            "cropped": 0,
+            "merged": 0
+          },
+          {
+            "shift": 2,
+            "metrics": {
+              "IoU": 0.5068493150684932,
+              "Energy_Dice": 0.6727272727272727,
+              "Flux_Field": 0.6960846845462231
+            },
+            "cropped": 0,
+            "merged": 40
+          },
+          {
+            "shift": 3,
+            "metrics": {
+              "IoU": 0.5,
+              "Energy_Dice": 0.6666666666666666,
+              "Flux_Field": 0.6808917626456522
+            },
+            "cropped": 0,
+            "merged": 0
+          },
+          {
+            "shift": 4,
+            "metrics": {
+              "IoU": 0.5789473684210527,
+              "Energy_Dice": 0.7333333333333333,
+              "Flux_Field": 0.7536762534695564
+            },
+            "cropped": 0,
+            "merged": 0
+          },
+          {
+            "shift": 5,
+            "metrics": {
+              "IoU": 1.0,
+              "Energy_Dice": 1.0,
+              "Flux_Field": 1.0
+            },
+            "cropped": 0,
+            "merged": 0
+          },
+          {
+            "shift": 6,
+            "metrics": {
+              "IoU": 0.5068493150684932,
+              "Energy_Dice": 0.6727272727272727,
+              "Flux_Field": 0.6960846845462231
+            },
+            "cropped": 0,
+            "merged": 40
+          },
+          {
+            "shift": 7,
+            "metrics": {
+              "IoU": 0.5,
+              "Energy_Dice": 0.6666666666666666,
+              "Flux_Field": 0.6808917626456522
+            },
+            "cropped": 0,
+            "merged": 0
+          },
+          {
+            "shift": 8,
+            "metrics": {
+              "IoU": 0.5789473684210527,
+              "Energy_Dice": 0.7333333333333333,
+              "Flux_Field": 0.7536762534695564
+            },
+            "cropped": 0,
+            "merged": 0
+          },
+          {
+            "shift": 9,
+            "metrics": {
+              "IoU": 1.0,
+              "Energy_Dice": 1.0,
+              "Flux_Field": 1.0
+            },
+            "cropped": 0,
+            "merged": 0
+          },
+          {
+            "shift": 10,
+            "metrics": {
+              "IoU": 0.5068493150684932,
+              "Energy_Dice": 0.6727272727272727,
+              "Flux_Field": 0.6960846845462231
+            },
+            "cropped": 0,
+            "merged": 40
+          },
+          {
+            "shift": 11,
+            "metrics": {
+              "IoU": 0.5,
+              "Energy_Dice": 0.6666666666666666,
+              "Flux_Field": 0.6808917626456522
+            },
+            "cropped": 0,
+            "merged": 0
+          },
+          {
+            "shift": 12,
+            "metrics": {
+              "IoU": 0.5789473684210527,
+              "Energy_Dice": 0.7333333333333333,
+              "Flux_Field": 0.7536762534695564
+            },
+            "cropped": 0,
+            "merged": 0
+          },
+          {
+            "shift": 13,
+            "metrics": {
+              "IoU": 1.0,
+              "Energy_Dice": 1.0,
+              "Flux_Field": 1.0
+            },
+            "cropped": 0,
+            "merged": 0
+          },
+          {
+            "shift": 14,
+            "metrics": {
+              "IoU": 0.5068493150684932,
+              "Energy_Dice": 0.6727272727272727,
+              "Flux_Field": 0.6960846845462231
+            },
+            "cropped": 0,
+            "merged": 40
+          },
+          {
+            "shift": 15,
+            "metrics": {
+              "IoU": 0.5,
+              "Energy_Dice": 0.6666666666666666,
+              "Flux_Field": 0.6808917626456522
+            },
+            "cropped": 0,
+            "merged": 0
+          }
+        ],
+        "generation_rotation": {
+          "board": 1081947203544499372068768390488223219393784484244796502747425357965221010125575427772177611325692553065279426714556947338804596560580768715318443634105512132942742727360737394099477681949523885624428025371476103907918454742991234162927018682812883605539852089604195301195776,
+          "input_count": 240,
+          "output_count": 240,
+          "cropped_points": 0,
+          "merged_points": 0
+        },
+        "source_count": 240,
+        "target_count": 240
+      },
+      {
+        "scenario": "Scale_Rotated_Cluster",
+        "fixture_shift": 1,
+        "before": {
+          "IoU": 0.06923076923076923,
+          "Energy_Dice": 0.12949640287769784,
+          "Flux_Field": 0.1586507529933594
+        },
+        "ring": {
+          "numerator": 12,
+          "denominator": 15,
+          "shifts": [
+            15
+          ],
+          "ambiguous": false
+        },
+        "aligned_candidates": [
+          {
+            "shift": 15,
+            "metrics": {
+              "IoU": 0.23423423423423423,
+              "Energy_Dice": 0.3795620437956204,
+              "Flux_Field": 0.43426317248246005
+            },
+            "cropped": 0,
+            "merged": 2
+          }
+        ],
+        "generation_rotation": {
+          "board": 830935449597511948054280393571191183863273540986570989505341357055816461479754737245466540268457991676560931619702311789025019757033219881704932684783302663499854108879559669017244562326619559157516188497647683778545543248003895897758764966571551168154912650399821078405840896,
+          "input_count": 76,
+          "output_count": 71,
+          "cropped_points": 0,
+          "merged_points": 5
+        },
+        "source_count": 76,
+        "target_count": 63
+      },
+      {
+        "scenario": "Noise_And_Rotation",
+        "fixture_shift": 2,
+        "before": {
+          "IoU": 0.5893719806763285,
+          "Energy_Dice": 0.7416413373860182,
+          "Flux_Field": 0.7312190647833371
+        },
+        "ring": {
+          "numerator": 48,
+          "denominator": 57,
+          "shifts": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15
+          ],
+          "ambiguous": true
+        },
+        "aligned_candidates": [
+          {
+            "shift": 0,
+            "metrics": {
+              "IoU": 0.5893719806763285,
+              "Energy_Dice": 0.7416413373860182,
+              "Flux_Field": 0.7312190647833371
+            },
+            "cropped": 0,
+            "merged": 0
+          },
+          {
+            "shift": 1,
+            "metrics": {
+              "IoU": 0.5583756345177665,
+              "Energy_Dice": 0.7166123778501629,
+              "Flux_Field": 0.7312214788195408
+            },
+            "cropped": 6,
+            "merged": 16
+          },
+          {
+            "shift": 2,
+            "metrics": {
+              "IoU": 0.6413043478260869,
+              "Energy_Dice": 0.7814569536423841,
+              "Flux_Field": 0.7866542467568391
+            },
+            "cropped": 5,
+            "merged": 22
+          },
+          {
+            "shift": 3,
+            "metrics": {
+              "IoU": 0.5920398009950248,
+              "Energy_Dice": 0.74375,
+              "Flux_Field": 0.7467957972620674
+            },
+            "cropped": 2,
+            "merged": 7
+          },
+          {
+            "shift": 4,
+            "metrics": {
+              "IoU": 0.5592417061611374,
+              "Energy_Dice": 0.7173252279635258,
+              "Flux_Field": 0.7118671113193054
+            },
+            "cropped": 0,
+            "merged": 0
+          },
+          {
+            "shift": 5,
+            "metrics": {
+              "IoU": 0.5742574257425742,
+              "Energy_Dice": 0.7295597484276729,
+              "Flux_Field": 0.7368628368495376
+            },
+            "cropped": 4,
+            "merged": 7
+          },
+          {
+            "shift": 6,
+            "metrics": {
+              "IoU": 0.5925925925925926,
+              "Energy_Dice": 0.7441860465116279,
+              "Flux_Field": 0.7556229052633474
+            },
+            "cropped": 5,
+            "merged": 23
+          },
+          {
+            "shift": 7,
+            "metrics": {
+              "IoU": 0.5643564356435643,
+              "Energy_Dice": 0.7215189873417721,
+              "Flux_Field": 0.7250043018756538
+            },
+            "cropped": 2,
+            "merged": 11
+          },
+          {
+            "shift": 8,
+            "metrics": {
+              "IoU": 0.5327102803738317,
+              "Energy_Dice": 0.6951219512195121,
+              "Flux_Field": 0.6954288717248932
+            },
+            "cropped": 1,
+            "merged": 0
+          },
+          {
+            "shift": 9,
+            "metrics": {
+              "IoU": 0.572139303482587,
+              "Energy_Dice": 0.7278481012658228,
+              "Flux_Field": 0.7352598248716217
+            },
+            "cropped": 4,
+            "merged": 9
+          },
+          {
+            "shift": 10,
+            "metrics": {
+              "IoU": 0.6368421052631579,
+              "Energy_Dice": 0.7781350482315113,
+              "Flux_Field": 0.7837120251897908
+            },
+            "cropped": 5,
+            "merged": 13
+          },
+          {
+            "shift": 11,
+            "metrics": {
+              "IoU": 0.5792079207920792,
+              "Energy_Dice": 0.7335423197492164,
+              "Flux_Field": 0.7366994619675078
+            },
+            "cropped": 2,
+            "merged": 8
+          },
+          {
+            "shift": 12,
+            "metrics": {
+              "IoU": 0.5619047619047619,
+              "Energy_Dice": 0.7195121951219512,
+              "Flux_Field": 0.7145777335324374
+            },
+            "cropped": 1,
+            "merged": 0
+          },
+          {
+            "shift": 13,
+            "metrics": {
+              "IoU": 0.5778894472361809,
+              "Energy_Dice": 0.732484076433121,
+              "Flux_Field": 0.7429242533860224
+            },
+            "cropped": 5,
+            "merged": 10
+          },
+          {
+            "shift": 14,
+            "metrics": {
+              "IoU": 0.6243386243386243,
+              "Energy_Dice": 0.7687296416938111,
+              "Flux_Field": 0.783001445331359
+            },
+            "cropped": 6,
+            "merged": 16
+          },
+          {
+            "shift": 15,
+            "metrics": {
+              "IoU": 0.5517241379310345,
+              "Energy_Dice": 0.7111111111111111,
+              "Flux_Field": 0.7187904024956087
+            },
+            "cropped": 2,
+            "merged": 12
+          }
+        ],
+        "generation_rotation": {
+          "board": 356110390022480824097753279213880585613169255623479954609981027896022541817321643475011607580179922535611116734822288141652820665771972170430162829611726765166985339328199645015780845813692345961236682172229601792261643789785784649777152,
+          "input_count": 169,
+          "output_count": 145,
+          "cropped_points": 0,
+          "merged_points": 24
+        },
+        "source_count": 169,
+        "target_count": 160
+      },
+      {
+        "scenario": "Cycle_Clusters",
+        "fixture_shift": 0,
+        "before": {
+          "IoU": 1.0,
+          "Energy_Dice": 1.0,
+          "Flux_Field": 1.0
+        },
+        "ring": {
+          "numerator": 14,
+          "denominator": 14,
+          "shifts": [
+            0
+          ],
+          "ambiguous": false
+        },
+        "aligned_candidates": [
+          {
+            "shift": 0,
+            "metrics": {
+              "IoU": 1.0,
+              "Energy_Dice": 1.0,
+              "Flux_Field": 1.0
+            },
+            "cropped": 0,
+            "merged": 0
+          }
+        ],
+        "generation_rotation": {
+          "board": 440490953926759635070220421612857177542387646417334335311284192288826295635089517401742493677274243302333915182454597739956519686460409221279581416336428910167015372396613074690887208236341025352668238358849004504955262043947316267748111631001845760,
+          "input_count": 76,
+          "output_count": 76,
+          "cropped_points": 0,
+          "merged_points": 0
+        },
+        "source_count": 76,
+        "target_count": 76
+      },
+      {
+        "scenario": "Anisotropic_Trend",
+        "fixture_shift": 0,
+        "before": {
+          "IoU": 1.0,
+          "Energy_Dice": 1.0,
+          "Flux_Field": 1.0
+        },
+        "ring": {
+          "numerator": 48,
+          "denominator": 48,
+          "shifts": [
+            0,
+            8
+          ],
+          "ambiguous": true
+        },
+        "aligned_candidates": [
+          {
+            "shift": 0,
+            "metrics": {
+              "IoU": 1.0,
+              "Energy_Dice": 1.0,
+              "Flux_Field": 1.0
+            },
+            "cropped": 0,
+            "merged": 0
+          },
+          {
+            "shift": 8,
+            "metrics": {
+              "IoU": 1.0,
+              "Energy_Dice": 1.0,
+              "Flux_Field": 1.0
+            },
+            "cropped": 0,
+            "merged": 0
+          }
+        ],
+        "generation_rotation": {
+          "board": 285152521671363676173335531055971578977848949257899327549955394767033354187669968605598711692021078056919246672613560486253229022767624883825976877945239785479448530190964702874283907229941760,
+          "input_count": 96,
+          "output_count": 96,
+          "cropped_points": 0,
+          "merged_points": 0
+        },
+        "source_count": 96,
+        "target_count": 96
+      },
+      {
+        "scenario": "Adversarial_Decoy",
+        "fixture_shift": 0,
+        "before": {
+          "IoU": 0.9697986577181208,
+          "Energy_Dice": 0.9846678023850085,
+          "Flux_Field": 0.9757231340024078
+        },
+        "ring": {
+          "numerator": 64,
+          "denominator": 65,
+          "shifts": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15
+          ],
+          "ambiguous": true
+        },
+        "aligned_candidates": [
+          {
+            "shift": 0,
+            "metrics": {
+              "IoU": 0.9697986577181208,
+              "Energy_Dice": 0.9846678023850085,
+              "Flux_Field": 0.9757231340024078
+            },
+            "cropped": 0,
+            "merged": 0
+          },
+          {
+            "shift": 1,
+            "metrics": {
+              "IoU": 0.7198795180722891,
+              "Energy_Dice": 0.8371278458844134,
+              "Flux_Field": 0.8354019676113944
+            },
+            "cropped": 2,
+            "merged": 14
+          },
+          {
+            "shift": 2,
+            "metrics": {
+              "IoU": 0.5941176470588235,
+              "Energy_Dice": 0.7453874538745388,
+              "Flux_Field": 0.7512864631023353
+            },
+            "cropped": 4,
+            "merged": 41
+          },
+          {
+            "shift": 3,
+            "metrics": {
+              "IoU": 0.6987951807228916,
+              "Energy_Dice": 0.8226950354609929,
+              "Flux_Field": 0.8240311197877233
+            },
+            "cropped": 2,
+            "merged": 21
+          },
+          {
+            "shift": 4,
+            "metrics": {
+              "IoU": 0.9697986577181208,
+              "Energy_Dice": 0.9846678023850085,
+              "Flux_Field": 0.9742991620630315
+            },
+            "cropped": 0,
+            "merged": 0
+          },
+          {
+            "shift": 5,
+            "metrics": {
+              "IoU": 0.7009063444108762,
+              "Energy_Dice": 0.8241563055062167,
+              "Flux_Field": 0.8235440198125913
+            },
+            "cropped": 2,
+            "merged": 22
+          },
+          {
+            "shift": 6,
+            "metrics": {
+              "IoU": 0.5870206489675516,
+              "Energy_Dice": 0.7397769516728625,
+              "Flux_Field": 0.7439968728633435
+            },
+            "cropped": 3,
+            "merged": 46
+          },
+          {
+            "shift": 7,
+            "metrics": {
+              "IoU": 0.7069486404833837,
+              "Energy_Dice": 0.8283185840707965,
+              "Flux_Field": 0.8296843214043873
+            },
+            "cropped": 2,
+            "merged": 20
+          },
+          {
+            "shift": 8,
+            "metrics": {
+              "IoU": 0.9697986577181208,
+              "Energy_Dice": 0.9846678023850085,
+              "Flux_Field": 0.9742991620630315
+            },
+            "cropped": 0,
+            "merged": 0
+          },
+          {
+            "shift": 9,
+            "metrics": {
+              "IoU": 0.7039274924471299,
+              "Energy_Dice": 0.8262411347517731,
+              "Flux_Field": 0.8252066713059392
+            },
+            "cropped": 2,
+            "merged": 21
+          },
+          {
+            "shift": 10,
+            "metrics": {
+              "IoU": 0.5887573964497042,
+              "Energy_Dice": 0.7411545623836127,
+              "Flux_Field": 0.7448888612538237
+            },
+            "cropped": 2,
+            "merged": 48
+          },
+          {
+            "shift": 11,
+            "metrics": {
+              "IoU": 0.7039274924471299,
+              "Energy_Dice": 0.8262411347517731,
+              "Flux_Field": 0.826848918735538
+            },
+            "cropped": 1,
+            "merged": 22
+          },
+          {
+            "shift": 12,
+            "metrics": {
+              "IoU": 0.9697986577181208,
+              "Energy_Dice": 0.9846678023850085,
+              "Flux_Field": 0.9757231340024078
+            },
+            "cropped": 0,
+            "merged": 0
+          },
+          {
+            "shift": 13,
+            "metrics": {
+              "IoU": 0.7021276595744681,
+              "Energy_Dice": 0.825,
+              "Flux_Field": 0.8248388629873878
+            },
+            "cropped": 2,
+            "merged": 25
+          },
+          {
+            "shift": 14,
+            "metrics": {
+              "IoU": 0.5894428152492669,
+              "Energy_Dice": 0.7416974169741697,
+              "Flux_Field": 0.7458182130168151
+            },
+            "cropped": 3,
+            "merged": 42
+          },
+          {
+            "shift": 15,
+            "metrics": {
+              "IoU": 0.7207207207207207,
+              "Energy_Dice": 0.837696335078534,
+              "Flux_Field": 0.8374675394187756
+            },
+            "cropped": 1,
+            "merged": 13
+          }
+        ],
+        "generation_rotation": {
+          "board": 52093465324371187596395325995090319090955387175876669862691530543378765343610534391991155741760190997017461800187310481993244450801205065035254521753133368526096082015786128887069681263863488578706035355005686480024980403952161279895928832,
+          "input_count": 289,
+          "output_count": 289,
+          "cropped_points": 0,
+          "merged_points": 0
+        },
+        "source_count": 289,
+        "target_count": 298
+      }
+    ],
+    "local_components": {
+      "input_components": 3,
+      "detected_components": 3,
+      "fixture_shifts": [
+        1,
+        5,
+        12
+      ],
+      "all_to_all": [
+        [
+          {
+            "numerator": 10,
+            "denominator": 16,
+            "shifts": [
+              2
+            ],
+            "ambiguous": false
+          },
+          {
+            "numerator": 10,
+            "denominator": 18,
+            "shifts": [
+              10,
+              11
+            ],
+            "ambiguous": true
+          },
+          {
+            "numerator": 18,
+            "denominator": 18,
+            "shifts": [
+              4
+            ],
+            "ambiguous": false
+          }
+        ],
+        [
+          {
+            "numerator": 10,
+            "denominator": 16,
+            "shifts": [
+              2
+            ],
+            "ambiguous": false
+          },
+          {
+            "numerator": 10,
+            "denominator": 18,
+            "shifts": [
+              10,
+              11
+            ],
+            "ambiguous": true
+          },
+          {
+            "numerator": 18,
+            "denominator": 18,
+            "shifts": [
+              4
+            ],
+            "ambiguous": false
+          }
+        ],
+        [
+          {
+            "numerator": 10,
+            "denominator": 16,
+            "shifts": [
+              2
+            ],
+            "ambiguous": false
+          },
+          {
+            "numerator": 10,
+            "denominator": 18,
+            "shifts": [
+              10,
+              11
+            ],
+            "ambiguous": true
+          },
+          {
+            "numerator": 18,
+            "denominator": 18,
+            "shifts": [
+              4
+            ],
+            "ambiguous": false
+          }
+        ]
+      ]
+    },
+    "mode": "support_only_rotation_controls; not detector or XAI accuracy"
+  },
   "venn": {
     "venn_counts": {
       "000": 368,
@@ -8532,1409 +10059,1423 @@
     {
       "scenario": "Dense_Object",
       "trial": 0,
-      "encoding_ns": 16369827,
-      "survey_ns": 2925599,
-      "total_ns": 19295426
+      "encoding_ns": 20133239,
+      "survey_ns": 2222107,
+      "total_ns": 22355346
     },
     {
       "scenario": "Dense_Object",
       "trial": 1,
-      "encoding_ns": 18625611,
-      "survey_ns": 2955924,
-      "total_ns": 21581535
+      "encoding_ns": 22666818,
+      "survey_ns": 3273024,
+      "total_ns": 25939842
     },
     {
       "scenario": "Dense_Object",
       "trial": 2,
-      "encoding_ns": 16145811,
-      "survey_ns": 2883486,
-      "total_ns": 19029297
+      "encoding_ns": 20055824,
+      "survey_ns": 2157419,
+      "total_ns": 22213243
     },
     {
       "scenario": "Dense_Object",
       "trial": 3,
-      "encoding_ns": 16090518,
-      "survey_ns": 2903535,
-      "total_ns": 18994053
+      "encoding_ns": 15431340,
+      "survey_ns": 4894139,
+      "total_ns": 20325479
     },
     {
       "scenario": "Dense_Object",
       "trial": 4,
-      "encoding_ns": 16113392,
-      "survey_ns": 2918418,
-      "total_ns": 19031810
+      "encoding_ns": 16694647,
+      "survey_ns": 2357760,
+      "total_ns": 19052407
     },
     {
       "scenario": "Dense_Object",
       "trial": 5,
-      "encoding_ns": 16139812,
-      "survey_ns": 2991758,
-      "total_ns": 19131570
+      "encoding_ns": 15184509,
+      "survey_ns": 4084352,
+      "total_ns": 19268861
     },
     {
       "scenario": "Dense_Object",
       "trial": 6,
-      "encoding_ns": 16082656,
-      "survey_ns": 2980962,
-      "total_ns": 19063618
+      "encoding_ns": 15240543,
+      "survey_ns": 2621617,
+      "total_ns": 17862160
     },
     {
       "scenario": "Dense_Object",
       "trial": 7,
-      "encoding_ns": 16253092,
-      "survey_ns": 2989044,
-      "total_ns": 19242136
+      "encoding_ns": 16178287,
+      "survey_ns": 2015005,
+      "total_ns": 18193292
     },
     {
       "scenario": "Dense_Object",
       "trial": 8,
-      "encoding_ns": 16020343,
-      "survey_ns": 2947912,
-      "total_ns": 18968255
+      "encoding_ns": 16685807,
+      "survey_ns": 4124353,
+      "total_ns": 20810160
     },
     {
       "scenario": "Dense_Object",
       "trial": 9,
-      "encoding_ns": 16153613,
-      "survey_ns": 2944868,
-      "total_ns": 19098481
+      "encoding_ns": 15590909,
+      "survey_ns": 2410599,
+      "total_ns": 18001508
     },
     {
       "scenario": "Dense_Object",
       "trial": 10,
-      "encoding_ns": 16206592,
-      "survey_ns": 2965719,
-      "total_ns": 19172311
+      "encoding_ns": 14141744,
+      "survey_ns": 2422457,
+      "total_ns": 16564201
     },
     {
       "scenario": "Dense_Object",
       "trial": 11,
-      "encoding_ns": 16157509,
-      "survey_ns": 2969024,
-      "total_ns": 19126533
+      "encoding_ns": 13336825,
+      "survey_ns": 2632252,
+      "total_ns": 15969077
     },
     {
       "scenario": "Dense_Object",
       "trial": 12,
-      "encoding_ns": 16172982,
-      "survey_ns": 2939750,
-      "total_ns": 19112732
+      "encoding_ns": 16221877,
+      "survey_ns": 2846093,
+      "total_ns": 19067970
     },
     {
       "scenario": "Dense_Object",
       "trial": 13,
-      "encoding_ns": 16377799,
-      "survey_ns": 3007341,
-      "total_ns": 19385140
+      "encoding_ns": 13529503,
+      "survey_ns": 2492783,
+      "total_ns": 16022286
     },
     {
       "scenario": "Dense_Object",
       "trial": 14,
-      "encoding_ns": 16403638,
-      "survey_ns": 3024136,
-      "total_ns": 19427774
+      "encoding_ns": 17641208,
+      "survey_ns": 4052374,
+      "total_ns": 21693582
     },
     {
       "scenario": "Dense_Object",
       "trial": 15,
-      "encoding_ns": 16178209,
-      "survey_ns": 3055754,
-      "total_ns": 19233963
+      "encoding_ns": 18197894,
+      "survey_ns": 3602469,
+      "total_ns": 21800363
     },
     {
       "scenario": "Dense_Object",
       "trial": 16,
-      "encoding_ns": 16541885,
-      "survey_ns": 2992239,
-      "total_ns": 19534124
+      "encoding_ns": 16815257,
+      "survey_ns": 2591722,
+      "total_ns": 19406979
     },
     {
       "scenario": "Dense_Object",
       "trial": 17,
-      "encoding_ns": 16343287,
-      "survey_ns": 2915474,
-      "total_ns": 19258761
+      "encoding_ns": 16940696,
+      "survey_ns": 2547795,
+      "total_ns": 19488491
     },
     {
       "scenario": "Dense_Object",
       "trial": 18,
-      "encoding_ns": 16170628,
-      "survey_ns": 2929525,
-      "total_ns": 19100153
+      "encoding_ns": 15955747,
+      "survey_ns": 3442348,
+      "total_ns": 19398095
     },
     {
       "scenario": "Dense_Object",
       "trial": 19,
-      "encoding_ns": 16389547,
-      "survey_ns": 2952449,
-      "total_ns": 19341996
+      "encoding_ns": 15364830,
+      "survey_ns": 2899824,
+      "total_ns": 18264654
     },
     {
       "scenario": "Dense_Object",
       "trial": 20,
-      "encoding_ns": 16027563,
-      "survey_ns": 2954092,
-      "total_ns": 18981655
+      "encoding_ns": 18779507,
+      "survey_ns": 3040415,
+      "total_ns": 21819922
     },
     {
       "scenario": "Dense_Object",
       "trial": 21,
-      "encoding_ns": 16377679,
-      "survey_ns": 2976886,
-      "total_ns": 19354565
+      "encoding_ns": 16168437,
+      "survey_ns": 3324371,
+      "total_ns": 19492808
     },
     {
       "scenario": "Dense_Object",
       "trial": 22,
-      "encoding_ns": 16340443,
-      "survey_ns": 2954693,
-      "total_ns": 19295136
+      "encoding_ns": 18267909,
+      "survey_ns": 5473108,
+      "total_ns": 23741017
     },
     {
       "scenario": "Dense_Object",
       "trial": 23,
-      "encoding_ns": 16134504,
-      "survey_ns": 3037958,
-      "total_ns": 19172462
+      "encoding_ns": 15779362,
+      "survey_ns": 2222336,
+      "total_ns": 18001698
     },
     {
       "scenario": "Dense_Object",
       "trial": 24,
-      "encoding_ns": 16117799,
-      "survey_ns": 2944858,
-      "total_ns": 19062657
+      "encoding_ns": 12224094,
+      "survey_ns": 2846143,
+      "total_ns": 15070237
     },
     {
       "scenario": "Thin_Skeleton",
       "trial": 0,
-      "encoding_ns": 16123678,
-      "survey_ns": 16380513,
-      "total_ns": 32504191
+      "encoding_ns": 14959241,
+      "survey_ns": 12768622,
+      "total_ns": 27727863
     },
     {
       "scenario": "Thin_Skeleton",
       "trial": 1,
-      "encoding_ns": 16372871,
-      "survey_ns": 16079811,
-      "total_ns": 32452682
+      "encoding_ns": 15372311,
+      "survey_ns": 17261448,
+      "total_ns": 32633759
     },
     {
       "scenario": "Thin_Skeleton",
       "trial": 2,
-      "encoding_ns": 16382927,
-      "survey_ns": 16120132,
-      "total_ns": 32503059
+      "encoding_ns": 13940491,
+      "survey_ns": 12415792,
+      "total_ns": 26356283
     },
     {
       "scenario": "Thin_Skeleton",
       "trial": 3,
-      "encoding_ns": 19816678,
-      "survey_ns": 16291039,
-      "total_ns": 36107717
+      "encoding_ns": 23270274,
+      "survey_ns": 16549574,
+      "total_ns": 39819848
     },
     {
       "scenario": "Thin_Skeleton",
       "trial": 4,
-      "encoding_ns": 17143327,
-      "survey_ns": 14767533,
-      "total_ns": 31910860
+      "encoding_ns": 14875175,
+      "survey_ns": 13151736,
+      "total_ns": 28026911
     },
     {
       "scenario": "Thin_Skeleton",
       "trial": 5,
-      "encoding_ns": 16774143,
-      "survey_ns": 15960383,
-      "total_ns": 32734526
+      "encoding_ns": 15605542,
+      "survey_ns": 14227531,
+      "total_ns": 29833073
     },
     {
       "scenario": "Thin_Skeleton",
       "trial": 6,
-      "encoding_ns": 16597999,
-      "survey_ns": 15735205,
-      "total_ns": 32333204
+      "encoding_ns": 13686700,
+      "survey_ns": 13451547,
+      "total_ns": 27138247
     },
     {
       "scenario": "Thin_Skeleton",
       "trial": 7,
-      "encoding_ns": 16140863,
-      "survey_ns": 15867264,
-      "total_ns": 32008127
+      "encoding_ns": 13841964,
+      "survey_ns": 15086482,
+      "total_ns": 28928446
     },
     {
       "scenario": "Thin_Skeleton",
       "trial": 8,
-      "encoding_ns": 16473122,
-      "survey_ns": 16499192,
-      "total_ns": 32972314
+      "encoding_ns": 15913834,
+      "survey_ns": 17561307,
+      "total_ns": 33475141
     },
     {
       "scenario": "Thin_Skeleton",
       "trial": 9,
-      "encoding_ns": 17986823,
-      "survey_ns": 17885686,
-      "total_ns": 35872509
+      "encoding_ns": 15872632,
+      "survey_ns": 12870295,
+      "total_ns": 28742927
     },
     {
       "scenario": "Thin_Skeleton",
       "trial": 10,
-      "encoding_ns": 17737148,
-      "survey_ns": 17215756,
-      "total_ns": 34952904
+      "encoding_ns": 14226821,
+      "survey_ns": 15076253,
+      "total_ns": 29303074
     },
     {
       "scenario": "Thin_Skeleton",
       "trial": 11,
-      "encoding_ns": 17854164,
-      "survey_ns": 17122386,
-      "total_ns": 34976550
+      "encoding_ns": 15112080,
+      "survey_ns": 15011771,
+      "total_ns": 30123851
     },
     {
       "scenario": "Thin_Skeleton",
       "trial": 12,
-      "encoding_ns": 18082046,
-      "survey_ns": 16890969,
-      "total_ns": 34973015
+      "encoding_ns": 16786244,
+      "survey_ns": 14286130,
+      "total_ns": 31072374
     },
     {
       "scenario": "Thin_Skeleton",
       "trial": 13,
-      "encoding_ns": 17027524,
-      "survey_ns": 16826372,
-      "total_ns": 33853896
+      "encoding_ns": 18359117,
+      "survey_ns": 15775716,
+      "total_ns": 34134833
     },
     {
       "scenario": "Thin_Skeleton",
       "trial": 14,
-      "encoding_ns": 17126212,
-      "survey_ns": 16891229,
-      "total_ns": 34017441
+      "encoding_ns": 15707815,
+      "survey_ns": 14190346,
+      "total_ns": 29898161
     },
     {
       "scenario": "Thin_Skeleton",
       "trial": 15,
-      "encoding_ns": 16826592,
-      "survey_ns": 15429517,
-      "total_ns": 32256109
+      "encoding_ns": 17875359,
+      "survey_ns": 18404584,
+      "total_ns": 36279943
     },
     {
       "scenario": "Thin_Skeleton",
       "trial": 16,
-      "encoding_ns": 15322546,
-      "survey_ns": 15092400,
-      "total_ns": 30414946
+      "encoding_ns": 16513595,
+      "survey_ns": 13508864,
+      "total_ns": 30022459
     },
     {
       "scenario": "Thin_Skeleton",
       "trial": 17,
-      "encoding_ns": 16248325,
-      "survey_ns": 15169376,
-      "total_ns": 31417701
+      "encoding_ns": 13842104,
+      "survey_ns": 13444386,
+      "total_ns": 27286490
     },
     {
       "scenario": "Thin_Skeleton",
       "trial": 18,
-      "encoding_ns": 15541935,
-      "survey_ns": 13782285,
-      "total_ns": 29324220
+      "encoding_ns": 18639972,
+      "survey_ns": 16476959,
+      "total_ns": 35116931
     },
     {
       "scenario": "Thin_Skeleton",
       "trial": 19,
-      "encoding_ns": 16729446,
-      "survey_ns": 17687314,
-      "total_ns": 34416760
+      "encoding_ns": 14326611,
+      "survey_ns": 15875176,
+      "total_ns": 30201787
     },
     {
       "scenario": "Thin_Skeleton",
       "trial": 20,
-      "encoding_ns": 17942546,
-      "survey_ns": 17215926,
-      "total_ns": 35158472
+      "encoding_ns": 19522577,
+      "survey_ns": 14591679,
+      "total_ns": 34114256
     },
     {
       "scenario": "Thin_Skeleton",
       "trial": 21,
-      "encoding_ns": 18179572,
-      "survey_ns": 17051790,
-      "total_ns": 35231362
+      "encoding_ns": 17633225,
+      "survey_ns": 13082674,
+      "total_ns": 30715899
     },
     {
       "scenario": "Thin_Skeleton",
       "trial": 22,
-      "encoding_ns": 17784198,
-      "survey_ns": 17203768,
-      "total_ns": 34987966
+      "encoding_ns": 15493217,
+      "survey_ns": 14423276,
+      "total_ns": 29916493
     },
     {
       "scenario": "Thin_Skeleton",
       "trial": 23,
-      "encoding_ns": 18193513,
-      "survey_ns": 17144299,
-      "total_ns": 35337812
+      "encoding_ns": 14509225,
+      "survey_ns": 13846791,
+      "total_ns": 28356016
     },
     {
       "scenario": "Thin_Skeleton",
       "trial": 24,
-      "encoding_ns": 18485782,
-      "survey_ns": 17303287,
-      "total_ns": 35789069
+      "encoding_ns": 14396897,
+      "survey_ns": 41865169,
+      "total_ns": 56262066
     },
     {
       "scenario": "Hollow_Ring",
       "trial": 0,
-      "encoding_ns": 17851299,
-      "survey_ns": 27816199,
-      "total_ns": 45667498
+      "encoding_ns": 17964563,
+      "survey_ns": 25069832,
+      "total_ns": 43034395
     },
     {
       "scenario": "Hollow_Ring",
       "trial": 1,
-      "encoding_ns": 18406241,
-      "survey_ns": 27906494,
-      "total_ns": 46312735
+      "encoding_ns": 15999623,
+      "survey_ns": 23336459,
+      "total_ns": 39336082
     },
     {
       "scenario": "Hollow_Ring",
       "trial": 2,
-      "encoding_ns": 17818811,
-      "survey_ns": 27758952,
-      "total_ns": 45577763
+      "encoding_ns": 17374337,
+      "survey_ns": 19671075,
+      "total_ns": 37045412
     },
     {
       "scenario": "Hollow_Ring",
       "trial": 3,
-      "encoding_ns": 17903337,
-      "survey_ns": 27819193,
-      "total_ns": 45722530
+      "encoding_ns": 13408163,
+      "survey_ns": 23209638,
+      "total_ns": 36617801
     },
     {
       "scenario": "Hollow_Ring",
       "trial": 4,
-      "encoding_ns": 18385580,
-      "survey_ns": 27797461,
-      "total_ns": 46183041
+      "encoding_ns": 17302099,
+      "survey_ns": 23724502,
+      "total_ns": 41026601
     },
     {
       "scenario": "Hollow_Ring",
       "trial": 5,
-      "encoding_ns": 17751900,
-      "survey_ns": 28105893,
-      "total_ns": 45857793
+      "encoding_ns": 16403559,
+      "survey_ns": 27525069,
+      "total_ns": 43928628
     },
     {
       "scenario": "Hollow_Ring",
       "trial": 6,
-      "encoding_ns": 17909928,
-      "survey_ns": 28042698,
-      "total_ns": 45952626
+      "encoding_ns": 20957618,
+      "survey_ns": 25544754,
+      "total_ns": 46502372
     },
     {
       "scenario": "Hollow_Ring",
       "trial": 7,
-      "encoding_ns": 18634514,
-      "survey_ns": 27870740,
-      "total_ns": 46505254
+      "encoding_ns": 16095767,
+      "survey_ns": 24022920,
+      "total_ns": 40118687
     },
     {
       "scenario": "Hollow_Ring",
       "trial": 8,
-      "encoding_ns": 17354534,
-      "survey_ns": 28566164,
-      "total_ns": 45920698
+      "encoding_ns": 21585730,
+      "survey_ns": 29479732,
+      "total_ns": 51065462
     },
     {
       "scenario": "Hollow_Ring",
       "trial": 9,
-      "encoding_ns": 17712762,
-      "survey_ns": 29512723,
-      "total_ns": 47225485
+      "encoding_ns": 25985942,
+      "survey_ns": 28893327,
+      "total_ns": 54879269
     },
     {
       "scenario": "Hollow_Ring",
       "trial": 10,
-      "encoding_ns": 18941204,
-      "survey_ns": 28169558,
-      "total_ns": 47110762
+      "encoding_ns": 16848788,
+      "survey_ns": 30826295,
+      "total_ns": 47675083
     },
     {
       "scenario": "Hollow_Ring",
       "trial": 11,
-      "encoding_ns": 19408185,
-      "survey_ns": 28005442,
-      "total_ns": 47413627
+      "encoding_ns": 32234639,
+      "survey_ns": 31966313,
+      "total_ns": 64200952
     },
     {
       "scenario": "Hollow_Ring",
       "trial": 12,
-      "encoding_ns": 17914535,
-      "survey_ns": 28027225,
-      "total_ns": 45941760
+      "encoding_ns": 16676109,
+      "survey_ns": 24503791,
+      "total_ns": 41179900
     },
     {
       "scenario": "Hollow_Ring",
       "trial": 13,
-      "encoding_ns": 18824629,
-      "survey_ns": 28197440,
-      "total_ns": 47022069
+      "encoding_ns": 16821316,
+      "survey_ns": 27088122,
+      "total_ns": 43909438
     },
     {
       "scenario": "Hollow_Ring",
       "trial": 14,
-      "encoding_ns": 17996528,
-      "survey_ns": 28432552,
-      "total_ns": 46429080
+      "encoding_ns": 20883035,
+      "survey_ns": 30146565,
+      "total_ns": 51029600
     },
     {
       "scenario": "Hollow_Ring",
       "trial": 15,
-      "encoding_ns": 18274094,
-      "survey_ns": 28581697,
-      "total_ns": 46855791
+      "encoding_ns": 16867536,
+      "survey_ns": 25427950,
+      "total_ns": 42295486
     },
     {
       "scenario": "Hollow_Ring",
       "trial": 16,
-      "encoding_ns": 19356037,
-      "survey_ns": 28427976,
-      "total_ns": 47784013
+      "encoding_ns": 17967988,
+      "survey_ns": 25797003,
+      "total_ns": 43764991
     },
     {
       "scenario": "Hollow_Ring",
       "trial": 17,
-      "encoding_ns": 18271310,
-      "survey_ns": 28078211,
-      "total_ns": 46349521
+      "encoding_ns": 17361438,
+      "survey_ns": 26612978,
+      "total_ns": 43974416
     },
     {
       "scenario": "Hollow_Ring",
       "trial": 18,
-      "encoding_ns": 18514163,
-      "survey_ns": 29429409,
-      "total_ns": 47943572
+      "encoding_ns": 16691673,
+      "survey_ns": 25833748,
+      "total_ns": 42525421
     },
     {
       "scenario": "Hollow_Ring",
       "trial": 19,
-      "encoding_ns": 16766291,
-      "survey_ns": 26325963,
-      "total_ns": 43092254
+      "encoding_ns": 16771472,
+      "survey_ns": 26412468,
+      "total_ns": 43183940
     },
     {
       "scenario": "Hollow_Ring",
       "trial": 20,
-      "encoding_ns": 20174364,
-      "survey_ns": 25569178,
-      "total_ns": 45743542
+      "encoding_ns": 20620843,
+      "survey_ns": 33479879,
+      "total_ns": 54100722
     },
     {
       "scenario": "Hollow_Ring",
       "trial": 21,
-      "encoding_ns": 19095150,
-      "survey_ns": 27971592,
-      "total_ns": 47066742
+      "encoding_ns": 24426816,
+      "survey_ns": 26787701,
+      "total_ns": 51214517
     },
     {
       "scenario": "Hollow_Ring",
       "trial": 22,
-      "encoding_ns": 19457488,
-      "survey_ns": 27719363,
-      "total_ns": 47176851
+      "encoding_ns": 19363784,
+      "survey_ns": 36068471,
+      "total_ns": 55432255
     },
     {
       "scenario": "Hollow_Ring",
       "trial": 23,
-      "encoding_ns": 17946873,
-      "survey_ns": 28232443,
-      "total_ns": 46179316
+      "encoding_ns": 21061574,
+      "survey_ns": 25143608,
+      "total_ns": 46205182
     },
     {
       "scenario": "Hollow_Ring",
       "trial": 24,
-      "encoding_ns": 17521746,
-      "survey_ns": 26925181,
-      "total_ns": 44446927
+      "encoding_ns": 23178672,
+      "survey_ns": 30462438,
+      "total_ns": 53641110
     },
     {
       "scenario": "Double_Ring",
       "trial": 0,
-      "encoding_ns": 17034824,
-      "survey_ns": 20658270,
-      "total_ns": 37693094
+      "encoding_ns": 17809726,
+      "survey_ns": 19132396,
+      "total_ns": 36942122
     },
     {
       "scenario": "Double_Ring",
       "trial": 1,
-      "encoding_ns": 16656848,
-      "survey_ns": 21311530,
-      "total_ns": 37968378
+      "encoding_ns": 17184351,
+      "survey_ns": 18716008,
+      "total_ns": 35900359
     },
     {
       "scenario": "Double_Ring",
       "trial": 2,
-      "encoding_ns": 24149207,
-      "survey_ns": 21860745,
-      "total_ns": 46009952
+      "encoding_ns": 22807695,
+      "survey_ns": 19093528,
+      "total_ns": 41901223
     },
     {
       "scenario": "Double_Ring",
       "trial": 3,
-      "encoding_ns": 21986902,
-      "survey_ns": 22668096,
-      "total_ns": 44654998
+      "encoding_ns": 16114375,
+      "survey_ns": 23919354,
+      "total_ns": 40033729
     },
     {
       "scenario": "Double_Ring",
       "trial": 4,
-      "encoding_ns": 19103268,
-      "survey_ns": 16892261,
-      "total_ns": 35995529
+      "encoding_ns": 16352503,
+      "survey_ns": 24936741,
+      "total_ns": 41289244
     },
     {
       "scenario": "Double_Ring",
       "trial": 5,
-      "encoding_ns": 17635581,
-      "survey_ns": 31909794,
-      "total_ns": 49545375
+      "encoding_ns": 17682661,
+      "survey_ns": 27145498,
+      "total_ns": 44828159
     },
     {
       "scenario": "Double_Ring",
       "trial": 6,
-      "encoding_ns": 26564686,
-      "survey_ns": 23817559,
-      "total_ns": 50382245
+      "encoding_ns": 15460805,
+      "survey_ns": 22519572,
+      "total_ns": 37980377
     },
     {
       "scenario": "Double_Ring",
       "trial": 7,
-      "encoding_ns": 20044610,
-      "survey_ns": 19175927,
-      "total_ns": 39220537
+      "encoding_ns": 22415937,
+      "survey_ns": 17714748,
+      "total_ns": 40130685
     },
     {
       "scenario": "Double_Ring",
       "trial": 8,
-      "encoding_ns": 20264640,
-      "survey_ns": 25173885,
-      "total_ns": 45438525
+      "encoding_ns": 16810511,
+      "survey_ns": 24276189,
+      "total_ns": 41086700
     },
     {
       "scenario": "Double_Ring",
       "trial": 9,
-      "encoding_ns": 20120664,
-      "survey_ns": 19201244,
-      "total_ns": 39321908
+      "encoding_ns": 18714299,
+      "survey_ns": 22470048,
+      "total_ns": 41184347
     },
     {
       "scenario": "Double_Ring",
       "trial": 10,
-      "encoding_ns": 15442997,
-      "survey_ns": 22039828,
-      "total_ns": 37482825
+      "encoding_ns": 15935862,
+      "survey_ns": 24686177,
+      "total_ns": 40622039
     },
     {
       "scenario": "Double_Ring",
       "trial": 11,
-      "encoding_ns": 17379096,
-      "survey_ns": 30345622,
-      "total_ns": 47724718
+      "encoding_ns": 18450323,
+      "survey_ns": 20947321,
+      "total_ns": 39397644
     },
     {
       "scenario": "Double_Ring",
       "trial": 12,
-      "encoding_ns": 18137329,
-      "survey_ns": 19398866,
-      "total_ns": 37536195
+      "encoding_ns": 24590070,
+      "survey_ns": 18246987,
+      "total_ns": 42837057
     },
     {
       "scenario": "Double_Ring",
       "trial": 13,
-      "encoding_ns": 15529666,
-      "survey_ns": 20920764,
-      "total_ns": 36450430
+      "encoding_ns": 16191532,
+      "survey_ns": 21353451,
+      "total_ns": 37544983
     },
     {
       "scenario": "Double_Ring",
       "trial": 14,
-      "encoding_ns": 21486147,
-      "survey_ns": 22511661,
-      "total_ns": 43997808
+      "encoding_ns": 16902949,
+      "survey_ns": 24397427,
+      "total_ns": 41300376
     },
     {
       "scenario": "Double_Ring",
       "trial": 15,
-      "encoding_ns": 18955822,
-      "survey_ns": 24764485,
-      "total_ns": 43720307
+      "encoding_ns": 18020973,
+      "survey_ns": 22448366,
+      "total_ns": 40469339
     },
     {
       "scenario": "Double_Ring",
       "trial": 16,
-      "encoding_ns": 25854014,
-      "survey_ns": 28081982,
-      "total_ns": 53935996
+      "encoding_ns": 48655355,
+      "survey_ns": 23191121,
+      "total_ns": 71846476
     },
     {
       "scenario": "Double_Ring",
       "trial": 17,
-      "encoding_ns": 19954885,
-      "survey_ns": 29971407,
-      "total_ns": 49926292
+      "encoding_ns": 20698338,
+      "survey_ns": 23051992,
+      "total_ns": 43750330
     },
     {
       "scenario": "Double_Ring",
       "trial": 18,
-      "encoding_ns": 26822483,
-      "survey_ns": 22871115,
-      "total_ns": 49693598
+      "encoding_ns": 17692385,
+      "survey_ns": 21842326,
+      "total_ns": 39534711
     },
     {
       "scenario": "Double_Ring",
       "trial": 19,
-      "encoding_ns": 26050819,
-      "survey_ns": 31240780,
-      "total_ns": 57291599
+      "encoding_ns": 23859684,
+      "survey_ns": 22100864,
+      "total_ns": 45960548
     },
     {
       "scenario": "Double_Ring",
       "trial": 20,
-      "encoding_ns": 27688177,
-      "survey_ns": 33839012,
-      "total_ns": 61527189
+      "encoding_ns": 17165544,
+      "survey_ns": 22024178,
+      "total_ns": 39189722
     },
     {
       "scenario": "Double_Ring",
       "trial": 21,
-      "encoding_ns": 23261556,
-      "survey_ns": 23572461,
-      "total_ns": 46834017
+      "encoding_ns": 17447006,
+      "survey_ns": 21763047,
+      "total_ns": 39210053
     },
     {
       "scenario": "Double_Ring",
       "trial": 22,
-      "encoding_ns": 18280754,
-      "survey_ns": 23424900,
-      "total_ns": 41705654
+      "encoding_ns": 17931724,
+      "survey_ns": 21658989,
+      "total_ns": 39590713
     },
     {
       "scenario": "Double_Ring",
       "trial": 23,
-      "encoding_ns": 18835666,
-      "survey_ns": 21872783,
-      "total_ns": 40708449
+      "encoding_ns": 17463211,
+      "survey_ns": 22019341,
+      "total_ns": 39482552
     },
     {
       "scenario": "Double_Ring",
       "trial": 24,
-      "encoding_ns": 17845842,
-      "survey_ns": 21771039,
-      "total_ns": 39616881
+      "encoding_ns": 17073666,
+      "survey_ns": 22062486,
+      "total_ns": 39136152
     },
     {
       "scenario": "Smooth_Gradient",
       "trial": 0,
-      "encoding_ns": 16511980,
-      "survey_ns": 14654834,
-      "total_ns": 31166814
+      "encoding_ns": 17426455,
+      "survey_ns": 14606651,
+      "total_ns": 32033106
     },
     {
       "scenario": "Smooth_Gradient",
       "trial": 1,
-      "encoding_ns": 16542146,
-      "survey_ns": 14159421,
-      "total_ns": 30701567
+      "encoding_ns": 17010431,
+      "survey_ns": 14698369,
+      "total_ns": 31708800
     },
     {
       "scenario": "Smooth_Gradient",
       "trial": 2,
-      "encoding_ns": 16938870,
-      "survey_ns": 17142917,
-      "total_ns": 34081787
+      "encoding_ns": 16812213,
+      "survey_ns": 13525969,
+      "total_ns": 30338182
     },
     {
       "scenario": "Smooth_Gradient",
       "trial": 3,
-      "encoding_ns": 16542336,
-      "survey_ns": 14568705,
-      "total_ns": 31111041
+      "encoding_ns": 13307571,
+      "survey_ns": 11194688,
+      "total_ns": 24502259
     },
     {
       "scenario": "Smooth_Gradient",
       "trial": 4,
-      "encoding_ns": 16562956,
-      "survey_ns": 14461985,
-      "total_ns": 31024941
+      "encoding_ns": 12170714,
+      "survey_ns": 12997912,
+      "total_ns": 25168626
     },
     {
       "scenario": "Smooth_Gradient",
       "trial": 5,
-      "encoding_ns": 16966737,
-      "survey_ns": 14471365,
-      "total_ns": 31438102
+      "encoding_ns": 15085931,
+      "survey_ns": 13461662,
+      "total_ns": 28547593
     },
     {
       "scenario": "Smooth_Gradient",
       "trial": 6,
-      "encoding_ns": 16446082,
-      "survey_ns": 14657849,
-      "total_ns": 31103931
+      "encoding_ns": 15992552,
+      "survey_ns": 13483205,
+      "total_ns": 29475757
     },
     {
       "scenario": "Smooth_Gradient",
       "trial": 7,
-      "encoding_ns": 16457028,
-      "survey_ns": 14442706,
-      "total_ns": 30899734
+      "encoding_ns": 16303213,
+      "survey_ns": 12752498,
+      "total_ns": 29055711
     },
     {
       "scenario": "Smooth_Gradient",
       "trial": 8,
-      "encoding_ns": 15839001,
-      "survey_ns": 11822936,
-      "total_ns": 27661937
+      "encoding_ns": 14770518,
+      "survey_ns": 12415020,
+      "total_ns": 27185538
     },
     {
       "scenario": "Smooth_Gradient",
       "trial": 9,
-      "encoding_ns": 13600442,
-      "survey_ns": 11294003,
-      "total_ns": 24894445
+      "encoding_ns": 13954943,
+      "survey_ns": 11702821,
+      "total_ns": 25657764
     },
     {
       "scenario": "Smooth_Gradient",
       "trial": 10,
-      "encoding_ns": 13530498,
-      "survey_ns": 16180623,
-      "total_ns": 29711121
+      "encoding_ns": 13032959,
+      "survey_ns": 17234287,
+      "total_ns": 30267246
     },
     {
       "scenario": "Smooth_Gradient",
       "trial": 11,
-      "encoding_ns": 17326437,
-      "survey_ns": 12912416,
-      "total_ns": 30238853
+      "encoding_ns": 14532400,
+      "survey_ns": 13238277,
+      "total_ns": 27770677
     },
     {
       "scenario": "Smooth_Gradient",
       "trial": 12,
-      "encoding_ns": 17447284,
-      "survey_ns": 13150287,
-      "total_ns": 30597571
+      "encoding_ns": 17059775,
+      "survey_ns": 13448162,
+      "total_ns": 30507937
     },
     {
       "scenario": "Smooth_Gradient",
       "trial": 13,
-      "encoding_ns": 14198630,
-      "survey_ns": 12221263,
-      "total_ns": 26419893
+      "encoding_ns": 13687552,
+      "survey_ns": 12864186,
+      "total_ns": 26551738
     },
     {
       "scenario": "Smooth_Gradient",
       "trial": 14,
-      "encoding_ns": 16734153,
-      "survey_ns": 14402536,
-      "total_ns": 31136689
+      "encoding_ns": 15145641,
+      "survey_ns": 12698266,
+      "total_ns": 27843907
     },
     {
       "scenario": "Smooth_Gradient",
       "trial": 15,
-      "encoding_ns": 16177979,
-      "survey_ns": 12979612,
-      "total_ns": 29157591
+      "encoding_ns": 15190158,
+      "survey_ns": 14142083,
+      "total_ns": 29332241
     },
     {
       "scenario": "Smooth_Gradient",
       "trial": 16,
-      "encoding_ns": 14059661,
-      "survey_ns": 15312551,
-      "total_ns": 29372212
+      "encoding_ns": 14726341,
+      "survey_ns": 16162688,
+      "total_ns": 30889029
     },
     {
       "scenario": "Smooth_Gradient",
       "trial": 17,
-      "encoding_ns": 14699166,
-      "survey_ns": 11002114,
-      "total_ns": 25701280
+      "encoding_ns": 18726247,
+      "survey_ns": 16877406,
+      "total_ns": 35603653
     },
     {
       "scenario": "Smooth_Gradient",
       "trial": 18,
-      "encoding_ns": 12035655,
-      "survey_ns": 11720943,
-      "total_ns": 23756598
+      "encoding_ns": 15652191,
+      "survey_ns": 15118901,
+      "total_ns": 30771092
     },
     {
       "scenario": "Smooth_Gradient",
       "trial": 19,
-      "encoding_ns": 14128309,
-      "survey_ns": 14824869,
-      "total_ns": 28953178
+      "encoding_ns": 16251822,
+      "survey_ns": 19339923,
+      "total_ns": 35591745
     },
     {
       "scenario": "Smooth_Gradient",
       "trial": 20,
-      "encoding_ns": 13317347,
-      "survey_ns": 27320505,
-      "total_ns": 40637852
+      "encoding_ns": 18617053,
+      "survey_ns": 15388065,
+      "total_ns": 34005118
     },
     {
       "scenario": "Smooth_Gradient",
       "trial": 21,
-      "encoding_ns": 33541247,
-      "survey_ns": 16180743,
-      "total_ns": 49721990
+      "encoding_ns": 19165837,
+      "survey_ns": 15079331,
+      "total_ns": 34245168
     },
     {
       "scenario": "Smooth_Gradient",
       "trial": 22,
-      "encoding_ns": 14030848,
-      "survey_ns": 16297989,
-      "total_ns": 30328837
+      "encoding_ns": 16644440,
+      "survey_ns": 12673270,
+      "total_ns": 29317710
     },
     {
       "scenario": "Smooth_Gradient",
       "trial": 23,
-      "encoding_ns": 22417810,
-      "survey_ns": 15015125,
-      "total_ns": 37432935
+      "encoding_ns": 19171715,
+      "survey_ns": 14806322,
+      "total_ns": 33978037
     },
     {
       "scenario": "Smooth_Gradient",
       "trial": 24,
-      "encoding_ns": 16532180,
-      "survey_ns": 10995144,
-      "total_ns": 27527324
+      "encoding_ns": 19046468,
+      "survey_ns": 13168993,
+      "total_ns": 32215461
     },
     {
       "scenario": "High_Noise_Dark",
       "trial": 0,
-      "encoding_ns": 19203003,
-      "survey_ns": 7296586,
-      "total_ns": 26499589
+      "encoding_ns": 16261386,
+      "survey_ns": 6102833,
+      "total_ns": 22364219
     },
     {
       "scenario": "High_Noise_Dark",
       "trial": 1,
-      "encoding_ns": 22849246,
-      "survey_ns": 2478859,
-      "total_ns": 25328105
+      "encoding_ns": 21019631,
+      "survey_ns": 2476918,
+      "total_ns": 23496549
     },
     {
       "scenario": "High_Noise_Dark",
       "trial": 2,
-      "encoding_ns": 30059633,
-      "survey_ns": 3489245,
-      "total_ns": 33548878
+      "encoding_ns": 18251414,
+      "survey_ns": 2035276,
+      "total_ns": 20286690
     },
     {
       "scenario": "High_Noise_Dark",
       "trial": 3,
-      "encoding_ns": 16411991,
-      "survey_ns": 2848793,
-      "total_ns": 19260784
+      "encoding_ns": 18601335,
+      "survey_ns": 2847666,
+      "total_ns": 21449001
     },
     {
       "scenario": "High_Noise_Dark",
       "trial": 4,
-      "encoding_ns": 15082737,
-      "survey_ns": 2728643,
-      "total_ns": 17811380
+      "encoding_ns": 18474288,
+      "survey_ns": 3601358,
+      "total_ns": 22075646
     },
     {
       "scenario": "High_Noise_Dark",
       "trial": 5,
-      "encoding_ns": 14368114,
-      "survey_ns": 2522845,
-      "total_ns": 16890959
+      "encoding_ns": 17488543,
+      "survey_ns": 3973546,
+      "total_ns": 21462089
     },
     {
       "scenario": "High_Noise_Dark",
       "trial": 6,
-      "encoding_ns": 13602616,
-      "survey_ns": 2919870,
-      "total_ns": 16522486
+      "encoding_ns": 17425173,
+      "survey_ns": 3838874,
+      "total_ns": 21264047
     },
     {
       "scenario": "High_Noise_Dark",
       "trial": 7,
-      "encoding_ns": 15336262,
-      "survey_ns": 2677697,
-      "total_ns": 18013959
+      "encoding_ns": 18998636,
+      "survey_ns": 4053657,
+      "total_ns": 23052293
     },
     {
       "scenario": "High_Noise_Dark",
       "trial": 8,
-      "encoding_ns": 13924038,
-      "survey_ns": 2686610,
-      "total_ns": 16610648
+      "encoding_ns": 17935940,
+      "survey_ns": 2377089,
+      "total_ns": 20313029
     },
     {
       "scenario": "High_Noise_Dark",
       "trial": 9,
-      "encoding_ns": 14838489,
-      "survey_ns": 2994927,
-      "total_ns": 17833416
+      "encoding_ns": 14139159,
+      "survey_ns": 2139273,
+      "total_ns": 16278432
     },
     {
       "scenario": "High_Noise_Dark",
       "trial": 10,
-      "encoding_ns": 16292984,
-      "survey_ns": 2981879,
-      "total_ns": 19274863
+      "encoding_ns": 12518937,
+      "survey_ns": 2518791,
+      "total_ns": 15037728
     },
     {
       "scenario": "High_Noise_Dark",
       "trial": 11,
-      "encoding_ns": 18258156,
-      "survey_ns": 2541037,
-      "total_ns": 20799193
+      "encoding_ns": 13742655,
+      "survey_ns": 2122867,
+      "total_ns": 15865522
     },
     {
       "scenario": "High_Noise_Dark",
       "trial": 12,
-      "encoding_ns": 18714069,
-      "survey_ns": 4497836,
-      "total_ns": 23211905
+      "encoding_ns": 14808215,
+      "survey_ns": 2952062,
+      "total_ns": 17760277
     },
     {
       "scenario": "High_Noise_Dark",
       "trial": 13,
-      "encoding_ns": 22418193,
-      "survey_ns": 4033920,
-      "total_ns": 26452113
+      "encoding_ns": 17981779,
+      "survey_ns": 3167046,
+      "total_ns": 21148825
     },
     {
       "scenario": "High_Noise_Dark",
       "trial": 14,
-      "encoding_ns": 22014678,
-      "survey_ns": 39227996,
-      "total_ns": 61242674
+      "encoding_ns": 22536243,
+      "survey_ns": 34339039,
+      "total_ns": 56875282
     },
     {
       "scenario": "High_Noise_Dark",
       "trial": 15,
-      "encoding_ns": 39568213,
-      "survey_ns": 61215723,
-      "total_ns": 100783936
+      "encoding_ns": 14728214,
+      "survey_ns": 27625620,
+      "total_ns": 42353834
     },
     {
       "scenario": "High_Noise_Dark",
       "trial": 16,
-      "encoding_ns": 30272116,
-      "survey_ns": 4387627,
-      "total_ns": 34659743
+      "encoding_ns": 17354798,
+      "survey_ns": 2854425,
+      "total_ns": 20209223
     },
     {
       "scenario": "High_Noise_Dark",
       "trial": 17,
-      "encoding_ns": 20935876,
-      "survey_ns": 3134320,
-      "total_ns": 24070196
+      "encoding_ns": 17546607,
+      "survey_ns": 3655679,
+      "total_ns": 21202286
     },
     {
       "scenario": "High_Noise_Dark",
       "trial": 18,
-      "encoding_ns": 20876635,
-      "survey_ns": 3100008,
-      "total_ns": 23976643
+      "encoding_ns": 15581956,
+      "survey_ns": 2999904,
+      "total_ns": 18581860
     },
     {
       "scenario": "High_Noise_Dark",
       "trial": 19,
-      "encoding_ns": 18899911,
-      "survey_ns": 3097485,
-      "total_ns": 21997396
+      "encoding_ns": 22324695,
+      "survey_ns": 2937260,
+      "total_ns": 25261955
     },
     {
       "scenario": "High_Noise_Dark",
       "trial": 20,
-      "encoding_ns": 25257723,
-      "survey_ns": 4112494,
-      "total_ns": 29370217
+      "encoding_ns": 18118885,
+      "survey_ns": 2798562,
+      "total_ns": 20917447
     },
     {
       "scenario": "High_Noise_Dark",
       "trial": 21,
-      "encoding_ns": 19531608,
-      "survey_ns": 4535052,
-      "total_ns": 24066660
+      "encoding_ns": 18228880,
+      "survey_ns": 4766562,
+      "total_ns": 22995442
     },
     {
       "scenario": "High_Noise_Dark",
       "trial": 22,
-      "encoding_ns": 17730306,
-      "survey_ns": 55721535,
-      "total_ns": 73451841
+      "encoding_ns": 26429609,
+      "survey_ns": 53915087,
+      "total_ns": 80344696
     },
     {
       "scenario": "High_Noise_Dark",
       "trial": 23,
-      "encoding_ns": 18716121,
-      "survey_ns": 3300975,
-      "total_ns": 22017096
+      "encoding_ns": 21025174,
+      "survey_ns": 2812493,
+      "total_ns": 23837667
     },
     {
       "scenario": "High_Noise_Dark",
       "trial": 24,
-      "encoding_ns": 19215411,
-      "survey_ns": 4604929,
-      "total_ns": 23820340
+      "encoding_ns": 15744260,
+      "survey_ns": 4239855,
+      "total_ns": 19984115
     },
     {
       "scenario": "Multi_Scale_Clusters",
       "trial": 0,
-      "encoding_ns": 26196878,
-      "survey_ns": 13830665,
-      "total_ns": 40027543
+      "encoding_ns": 22706618,
+      "survey_ns": 15016928,
+      "total_ns": 37723546
     },
     {
       "scenario": "Multi_Scale_Clusters",
       "trial": 1,
-      "encoding_ns": 20037798,
-      "survey_ns": 13796569,
-      "total_ns": 33834367
+      "encoding_ns": 19631420,
+      "survey_ns": 12753730,
+      "total_ns": 32385150
     },
     {
       "scenario": "Multi_Scale_Clusters",
       "trial": 2,
-      "encoding_ns": 27821681,
-      "survey_ns": 16696728,
-      "total_ns": 44518409
+      "encoding_ns": 17346180,
+      "survey_ns": 9116107,
+      "total_ns": 26462287
     },
     {
       "scenario": "Multi_Scale_Clusters",
       "trial": 3,
-      "encoding_ns": 52431617,
-      "survey_ns": 21631359,
-      "total_ns": 74062976
+      "encoding_ns": 22732708,
+      "survey_ns": 15903663,
+      "total_ns": 38636371
     },
     {
       "scenario": "Multi_Scale_Clusters",
       "trial": 4,
-      "encoding_ns": 19530546,
-      "survey_ns": 24218226,
-      "total_ns": 43748772
+      "encoding_ns": 48203626,
+      "survey_ns": 10850552,
+      "total_ns": 59054178
     },
     {
       "scenario": "Multi_Scale_Clusters",
       "trial": 5,
-      "encoding_ns": 34992380,
-      "survey_ns": 18324751,
-      "total_ns": 53317131
+      "encoding_ns": 22048474,
+      "survey_ns": 17413792,
+      "total_ns": 39462266
     },
     {
       "scenario": "Multi_Scale_Clusters",
       "trial": 6,
-      "encoding_ns": 43354651,
-      "survey_ns": 13749603,
-      "total_ns": 57104254
+      "encoding_ns": 30232694,
+      "survey_ns": 16296088,
+      "total_ns": 46528782
     },
     {
       "scenario": "Multi_Scale_Clusters",
       "trial": 7,
-      "encoding_ns": 18516924,
-      "survey_ns": 13950387,
-      "total_ns": 32467311
+      "encoding_ns": 22361666,
+      "survey_ns": 11613908,
+      "total_ns": 33975574
     },
     {
       "scenario": "Multi_Scale_Clusters",
       "trial": 8,
-      "encoding_ns": 16435215,
-      "survey_ns": 10946261,
-      "total_ns": 27381476
+      "encoding_ns": 14453081,
+      "survey_ns": 11115359,
+      "total_ns": 25568440
     },
     {
       "scenario": "Multi_Scale_Clusters",
       "trial": 9,
-      "encoding_ns": 16826050,
-      "survey_ns": 10540383,
-      "total_ns": 27366433
+      "encoding_ns": 17717302,
+      "survey_ns": 12253418,
+      "total_ns": 29970720
     },
     {
       "scenario": "Multi_Scale_Clusters",
       "trial": 10,
-      "encoding_ns": 21603361,
-      "survey_ns": 10722530,
-      "total_ns": 32325891
+      "encoding_ns": 17842431,
+      "survey_ns": 10463731,
+      "total_ns": 28306162
     },
     {
       "scenario": "Multi_Scale_Clusters",
       "trial": 11,
-      "encoding_ns": 16207248,
-      "survey_ns": 11075026,
-      "total_ns": 27282274
+      "encoding_ns": 24180797,
+      "survey_ns": 10983341,
+      "total_ns": 35164138
     },
     {
       "scenario": "Multi_Scale_Clusters",
       "trial": 12,
-      "encoding_ns": 17313491,
-      "survey_ns": 10510738,
-      "total_ns": 27824229
+      "encoding_ns": 17355298,
+      "survey_ns": 10835560,
+      "total_ns": 28190858
     },
     {
       "scenario": "Multi_Scale_Clusters",
       "trial": 13,
-      "encoding_ns": 16710073,
-      "survey_ns": 10658263,
-      "total_ns": 27368336
+      "encoding_ns": 17592996,
+      "survey_ns": 10615859,
+      "total_ns": 28208855
     },
     {
       "scenario": "Multi_Scale_Clusters",
       "trial": 14,
-      "encoding_ns": 16751086,
-      "survey_ns": 10713096,
-      "total_ns": 27464182
+      "encoding_ns": 17023129,
+      "survey_ns": 10891373,
+      "total_ns": 27914502
     },
     {
       "scenario": "Multi_Scale_Clusters",
       "trial": 15,
-      "encoding_ns": 16749844,
-      "survey_ns": 10681167,
-      "total_ns": 27431011
+      "encoding_ns": 16782228,
+      "survey_ns": 11071584,
+      "total_ns": 27853812
     },
     {
       "scenario": "Multi_Scale_Clusters",
       "trial": 16,
-      "encoding_ns": 16383135,
-      "survey_ns": 10857486,
-      "total_ns": 27240621
+      "encoding_ns": 17299165,
+      "survey_ns": 10808468,
+      "total_ns": 28107633
     },
     {
       "scenario": "Multi_Scale_Clusters",
       "trial": 17,
-      "encoding_ns": 16241330,
-      "survey_ns": 10848261,
-      "total_ns": 27089591
+      "encoding_ns": 16487866,
+      "survey_ns": 10935560,
+      "total_ns": 27423426
     },
     {
       "scenario": "Multi_Scale_Clusters",
       "trial": 18,
-      "encoding_ns": 14983886,
-      "survey_ns": 11321607,
-      "total_ns": 26305493
+      "encoding_ns": 17116941,
+      "survey_ns": 10837091,
+      "total_ns": 27954032
     },
     {
       "scenario": "Multi_Scale_Clusters",
       "trial": 19,
-      "encoding_ns": 19220264,
-      "survey_ns": 14011666,
-      "total_ns": 33231930
+      "encoding_ns": 14363967,
+      "survey_ns": 11207198,
+      "total_ns": 25571165
     },
     {
       "scenario": "Multi_Scale_Clusters",
       "trial": 20,
-      "encoding_ns": 15356483,
-      "survey_ns": 8682796,
-      "total_ns": 24039279
+      "encoding_ns": 14621223,
+      "survey_ns": 10159094,
+      "total_ns": 24780317
     },
     {
       "scenario": "Multi_Scale_Clusters",
       "trial": 21,
-      "encoding_ns": 17685228,
-      "survey_ns": 11391187,
-      "total_ns": 29076415
+      "encoding_ns": 15326403,
+      "survey_ns": 13516609,
+      "total_ns": 28843012
     },
     {
       "scenario": "Multi_Scale_Clusters",
       "trial": 22,
-      "encoding_ns": 20536562,
-      "survey_ns": 12478364,
-      "total_ns": 33014926
+      "encoding_ns": 25715446,
+      "survey_ns": 16635933,
+      "total_ns": 42351379
     },
     {
       "scenario": "Multi_Scale_Clusters",
       "trial": 23,
-      "encoding_ns": 23554005,
-      "survey_ns": 13131636,
-      "total_ns": 36685641
+      "encoding_ns": 16989074,
+      "survey_ns": 10505834,
+      "total_ns": 27494908
     },
     {
       "scenario": "Multi_Scale_Clusters",
       "trial": 24,
-      "encoding_ns": 19675422,
-      "survey_ns": 9807817,
-      "total_ns": 29483239
+      "encoding_ns": 15046312,
+      "survey_ns": 11508970,
+      "total_ns": 26555282
     },
     {
       "scenario": "Anisotropic_Matrix",
       "trial": 0,
-      "encoding_ns": 16722112,
-      "survey_ns": 12823988,
-      "total_ns": 29546100
+      "encoding_ns": 17370541,
+      "survey_ns": 17276019,
+      "total_ns": 34646560
     },
     {
       "scenario": "Anisotropic_Matrix",
       "trial": 1,
-      "encoding_ns": 16810722,
-      "survey_ns": 10467511,
-      "total_ns": 27278233
+      "encoding_ns": 16471101,
+      "survey_ns": 12519568,
+      "total_ns": 28990669
     },
     {
       "scenario": "Anisotropic_Matrix",
       "trial": 2,
-      "encoding_ns": 21340191,
-      "survey_ns": 12461096,
-      "total_ns": 33801287
+      "encoding_ns": 16517051,
+      "survey_ns": 10585383,
+      "total_ns": 27102434
     },
     {
       "scenario": "Anisotropic_Matrix",
       "trial": 3,
-      "encoding_ns": 16298117,
-      "survey_ns": 16315833,
-      "total_ns": 32613950
+      "encoding_ns": 16071411,
+      "survey_ns": 11040828,
+      "total_ns": 27112239
     },
     {
       "scenario": "Anisotropic_Matrix",
       "trial": 4,
-      "encoding_ns": 18001844,
-      "survey_ns": 13985377,
-      "total_ns": 31987221
+      "encoding_ns": 15027253,
+      "survey_ns": 12065025,
+      "total_ns": 27092278
     },
     {
       "scenario": "Anisotropic_Matrix",
       "trial": 5,
-      "encoding_ns": 44041257,
-      "survey_ns": 30637948,
-      "total_ns": 74679205
+      "encoding_ns": 15201575,
+      "survey_ns": 11574389,
+      "total_ns": 26775964
     },
     {
       "scenario": "Anisotropic_Matrix",
       "trial": 6,
-      "encoding_ns": 16559214,
-      "survey_ns": 13354707,
-      "total_ns": 29913921
+      "encoding_ns": 16650520,
+      "survey_ns": 11638025,
+      "total_ns": 28288545
     },
     {
       "scenario": "Anisotropic_Matrix",
       "trial": 7,
-      "encoding_ns": 16076559,
-      "survey_ns": 10817204,
-      "total_ns": 26893763
+      "encoding_ns": 17556330,
+      "survey_ns": 14442425,
+      "total_ns": 31998755
     },
     {
       "scenario": "Anisotropic_Matrix",
       "trial": 8,
-      "encoding_ns": 16950058,
-      "survey_ns": 10300458,
-      "total_ns": 27250516
+      "encoding_ns": 19058816,
+      "survey_ns": 14495479,
+      "total_ns": 33554295
     },
     {
       "scenario": "Anisotropic_Matrix",
       "trial": 9,
-      "encoding_ns": 14517746,
-      "survey_ns": 11586055,
-      "total_ns": 26103801
+      "encoding_ns": 21858025,
+      "survey_ns": 15784680,
+      "total_ns": 37642705
     },
     {
       "scenario": "Anisotropic_Matrix",
       "trial": 10,
-      "encoding_ns": 16914615,
-      "survey_ns": 11334682,
-      "total_ns": 28249297
+      "encoding_ns": 36434364,
+      "survey_ns": 16475043,
+      "total_ns": 52909407
     },
     {
       "scenario": "Anisotropic_Matrix",
       "trial": 11,
-      "encoding_ns": 17184525,
-      "survey_ns": 10986973,
-      "total_ns": 28171498
+      "encoding_ns": 17510026,
+      "survey_ns": 14431609,
+      "total_ns": 31941635
     },
     {
       "scenario": "Anisotropic_Matrix",
       "trial": 12,
-      "encoding_ns": 14637559,
-      "survey_ns": 10464937,
-      "total_ns": 25102496
+      "encoding_ns": 18440858,
+      "survey_ns": 12127739,
+      "total_ns": 30568597
     },
     {
       "scenario": "Anisotropic_Matrix",
       "trial": 13,
-      "encoding_ns": 15980553,
-      "survey_ns": 13025856,
-      "total_ns": 29006409
+      "encoding_ns": 22421285,
+      "survey_ns": 11092045,
+      "total_ns": 33513330
     },
     {
       "scenario": "Anisotropic_Matrix",
       "trial": 14,
-      "encoding_ns": 18422449,
-      "survey_ns": 10014753,
-      "total_ns": 28437202
+      "encoding_ns": 15682497,
+      "survey_ns": 14183706,
+      "total_ns": 29866203
     },
     {
       "scenario": "Anisotropic_Matrix",
       "trial": 15,
-      "encoding_ns": 16099875,
-      "survey_ns": 12222904,
-      "total_ns": 28322779
+      "encoding_ns": 21833743,
+      "survey_ns": 11594088,
+      "total_ns": 33427831
     },
     {
       "scenario": "Anisotropic_Matrix",
       "trial": 16,
-      "encoding_ns": 15353899,
-      "survey_ns": 11796945,
-      "total_ns": 27150844
+      "encoding_ns": 14256335,
+      "survey_ns": 11701921,
+      "total_ns": 25958256
     },
     {
       "scenario": "Anisotropic_Matrix",
       "trial": 17,
-      "encoding_ns": 16565783,
-      "survey_ns": 12609587,
-      "total_ns": 29175370
+      "encoding_ns": 19947650,
+      "survey_ns": 12385217,
+      "total_ns": 32332867
     },
     {
       "scenario": "Anisotropic_Matrix",
       "trial": 18,
-      "encoding_ns": 27972875,
-      "survey_ns": 11531461,
-      "total_ns": 39504336
+      "encoding_ns": 18811465,
+      "survey_ns": 11802731,
+      "total_ns": 30614196
     },
     {
       "scenario": "Anisotropic_Matrix",
       "trial": 19,
-      "encoding_ns": 14435602,
-      "survey_ns": 10939330,
-      "total_ns": 25374932
+      "encoding_ns": 21069125,
+      "survey_ns": 12652958,
+      "total_ns": 33722083
     },
     {
       "scenario": "Anisotropic_Matrix",
       "trial": 20,
-      "encoding_ns": 14698331,
-      "survey_ns": 9718622,
-      "total_ns": 24416953
+      "encoding_ns": 16166724,
+      "survey_ns": 12372437,
+      "total_ns": 28539161
     },
     {
       "scenario": "Anisotropic_Matrix",
       "trial": 21,
-      "encoding_ns": 16875380,
-      "survey_ns": 15839538,
-      "total_ns": 32714918
+      "encoding_ns": 21304899,
+      "survey_ns": 14726802,
+      "total_ns": 36031701
     },
     {
       "scenario": "Anisotropic_Matrix",
       "trial": 22,
-      "encoding_ns": 14652552,
-      "survey_ns": 10055575,
-      "total_ns": 24708127
+      "encoding_ns": 16068286,
+      "survey_ns": 12200851,
+      "total_ns": 28269137
     },
     {
       "scenario": "Anisotropic_Matrix",
       "trial": 23,
-      "encoding_ns": 20021934,
-      "survey_ns": 12743726,
-      "total_ns": 32765660
+      "encoding_ns": 18111472,
+      "survey_ns": 10611838,
+      "total_ns": 28723310
     },
     {
       "scenario": "Anisotropic_Matrix",
       "trial": 24,
-      "encoding_ns": 13773234,
-      "survey_ns": 10929730,
-      "total_ns": 24702964
+      "encoding_ns": 16029876,
+      "survey_ns": 14932117,
+      "total_ns": 30961993
+    },
+    {
+      "scenario": "rotation",
+      "total_ns": 4870695
+    },
+    {
+      "scenario": "counterfactual",
+      "total_ns": 2337391
+    },
+    {
+      "scenario": "rotation_pipeline",
+      "total_ns": 330503118
     }
   ],
   "environment": {
     "python": "3.12.14",
     "platform": "Linux-6.18.55-x86_64-with-glibc2.39"
   },
-  "source_sha256": "f5da6a53f31b68b87eb035338a663675c1cf1cd10ddba589439b3bd1f62b7312",
+  "source_sha256": "37730197656b260fe649dba6a3a7ad038121ba20c01bbabb1ec85df4f11b7997",
   "records_sha256": "25a2b579561b38bd5df7c569cb16ba20e8fdc97c8968f219b04fdbdcd4ba20de",
-  "raw_results_sha256": "8f02c2494123e986b377fbfe36073b4a547282501f09469c2cf286a65e1013dd"
+  "counterfactual_sha256": "203e37c4e5d76166e92d2764f7bc731fe775fc54ef8fe226f9740920897f7fa5",
+  "rotation_pipeline_sha256": "b1384e55e37e2d59b3416c5fa91d78ee62ff69b1aab8950d304c1b2428cf722c",
+  "raw_results_sha256": "aafd3e9f06873e17a7b90bb3a87ffed4fcd9b887145d33d46b8b9fae47c3f1d7"
 }

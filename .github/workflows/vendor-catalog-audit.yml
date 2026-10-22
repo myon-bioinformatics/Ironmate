@@ -6,6 +6,7 @@ on:
       - vendor-catalog.json
       - vendor.lock.json
       - scripts/vendor_enrollment_audit.py
+      - scripts/parent_vendor_tools_resolve.py
       - .github/workflows/vendor-catalog-audit.yml
   workflow_dispatch:
 
@@ -26,89 +27,10 @@ jobs:
       - name: Resolve parent main for shared catalog audit tools
         id: parent-vendor-tools
         env:
-          PARENT_REPOSITORY: myon-bioinformatics/myon-bioinformatics
-          PARENT_REPOSITORY_ID: "638801160"
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          python -S <<'PY'
-          import os
-          import re
-          import subprocess
-          import sys
-          import urllib.request
-
-          PARENT = os.environ["PARENT_REPOSITORY"]
-          expected_id = int(os.environ["PARENT_REPOSITORY_ID"])
-          remote = "https://github.com/" + PARENT + ".git"
-          repo_id_re = re.compile(
-              r'<meta name="octolytics-dimension-repository_id" content="(\d+)"'
-          )
-          nwo_re = re.compile(
-              r'<meta name="octolytics-dimension-repository_nwo" content="([^"]+)"'
-          )
-          git_env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
-          git_env.update(
-              GIT_TERMINAL_PROMPT="0",
-              GIT_CONFIG_NOSYSTEM="1",
-              GIT_CONFIG_GLOBAL=os.devnull,
-          )
-          git = [
-              "git",
-              "-c",
-              "credential.helper=",
-              "-c",
-              "core.askPass=",
-              "-c",
-              "http.extraHeader=",
-          ]
-
-          symref = subprocess.run(
-              git + ["ls-remote", "--symref", remote, "HEAD"],
-              env=git_env,
-              capture_output=True,
-              timeout=120,
-              check=True,
-          ).stdout.decode("utf-8", "replace")
-          branch = None
-          sha = None
-          for line in symref.splitlines():
-              if line.startswith("ref: refs/heads/"):
-                  branch = line.split("refs/heads/", 1)[1].split("\t", 1)[0]
-              elif re.fullmatch(r"[0-9a-f]{40}\tHEAD", line):
-                  sha = line.split("\t", 1)[0]
-          if not branch or not sha:
-              raise SystemExit("could not resolve parent default branch from ls-remote")
-
-          html = urllib.request.urlopen(
-              "https://github.com/" + PARENT,
-              timeout=60,
-          ).read().decode("utf-8", "replace")
-          id_match = repo_id_re.search(html)
-          if not id_match:
-              raise SystemExit("missing repository id in public page metadata")
-          repo_id = int(id_match.group(1))
-          if repo_id != expected_id:
-              raise SystemExit(
-                  "repository_id mismatch: expected {} got {}".format(expected_id, repo_id)
-              )
-          nwo_match = nwo_re.search(html)
-          if nwo_match and nwo_match.group(1).casefold() != PARENT.casefold():
-              raise SystemExit("repository name mismatch on public page")
-
-          github_output = os.environ["GITHUB_OUTPUT"]
-          with open(github_output, "a", encoding="utf-8") as handle:
-              handle.write("sha={}\n".format(sha))
-              handle.write("branch={}\n".format(branch))
-              handle.write("repository_id={}\n".format(repo_id))
-
-          summary = os.environ.get("GITHUB_STEP_SUMMARY")
-          if summary:
-              with open(summary, "a", encoding="utf-8") as handle:
-                  handle.write("## Resolved parent vendor tools\n\n")
-                  handle.write("- Repository: `{}` (id `{}`)\n".format(PARENT, repo_id))
-                  handle.write("- Default branch: `{}`\n".format(branch))
-                  handle.write("- Commit: `{}`\n".format(sha))
-          PY
+          python -S scripts/parent_vendor_tools_resolve.py --emit-github-actions
       - uses: actions/checkout@v7
         with:
           repository: myon-bioinformatics/myon-bioinformatics
@@ -121,6 +43,12 @@ jobs:
             vendor_consumers.py
             vendor-consumers.json
           sparse-checkout-cone-mode: false
+      - name: Network enrollment audit regressions
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python -m pip install pytest pyyaml
+          python -m pytest -q -m network tests/test_vendor_enrollment_audit.py
       - name: Audit all recommended source and license identities
         env:
           PYTHONPATH: .vendor-audit-tools

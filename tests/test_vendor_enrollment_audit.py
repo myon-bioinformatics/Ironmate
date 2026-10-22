@@ -2,6 +2,7 @@
 import importlib.util
 import json
 import os
+import subprocess
 import sys
 import types
 from pathlib import Path
@@ -65,42 +66,7 @@ def test_consumer_skip_overrides_default(tmp_path, monkeypatch):
     assert proposed['files'] == [] and calls == []
 
 
-def _resolve_parent_main_vendor_tools():
-    import os
-    import re
-    import subprocess
-    import urllib.request
-
-    parent = "myon-bioinformatics/myon-bioinformatics"
-    remote = "https://github.com/" + parent + ".git"
-    git_env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
-    git_env.update(
-        GIT_TERMINAL_PROMPT="0",
-        GIT_CONFIG_NOSYSTEM="1",
-        GIT_CONFIG_GLOBAL=os.devnull,
-    )
-    git = ["git", "-c", "credential.helper=", "-c", "core.askPass=", "-c", "http.extraHeader="]
-    symref = subprocess.run(
-        git + ["ls-remote", "--symref", remote, "HEAD"],
-        env=git_env,
-        capture_output=True,
-        timeout=120,
-        check=True,
-    ).stdout.decode("utf-8", "replace")
-    sha = next(
-        (line.split("\t", 1)[0] for line in symref.splitlines() if re.fullmatch(r"[0-9a-f]{40}\tHEAD", line)),
-        None,
-    )
-    if not sha:
-        raise RuntimeError("could not resolve parent main from ls-remote")
-    base = "https://raw.githubusercontent.com/{}/{}".format(parent, sha)
-    consumers = json.loads(urllib.request.urlopen(base + "/vendor-consumers.json", timeout=60).read())
-    consumers_py = urllib.request.urlopen(base + "/vendor_consumers.py", timeout=60).read()
-    vendor_sync_py = urllib.request.urlopen(base + "/vendor_sync.py", timeout=60).read()
-    return sha, consumers, consumers_py, vendor_sync_py
-
-
-def test_workflow_compares_adopted_lock_before_candidate_enrollment(tmp_path):
+def test_workflow_compares_adopted_lock_before_candidate_enrollment():
     import yaml
     path = ROOT / '.github/workflows/vendor-catalog-audit.yml'
     workflow = yaml.load(path.read_text(), Loader=yaml.BaseLoader)
@@ -111,22 +77,41 @@ def test_workflow_compares_adopted_lock_before_candidate_enrollment(tmp_path):
     shell = steps[candidate]['run']
     assert '--root build/vendor-enrollment-audit/candidate' in shell
     assert 'git diff --exit-code -- vendor.lock.json vendor/' in shell
-    assert 'cp build/vendor-enrollment-audit/proposed-vendor.lock.json vendor.lock.json' not in path.read_text()
     workflow_text = path.read_text(encoding="utf-8")
-    assert "ls-remote" in workflow_text and "638801160" in workflow_text
+    assert 'cp build/vendor-enrollment-audit/proposed-vendor.lock.json vendor.lock.json' not in workflow_text
+    assert "parent_vendor_tools_resolve.py" in workflow_text
     assert "steps.parent-vendor-tools.outputs.sha" in workflow_text
-    # Execute the actual projection and comparator against the real adopted lock.
-    import subprocess
-    _, registry, consumers_py, vendor_sync_py = _resolve_parent_main_vendor_tools()
-    tools = tmp_path / 'parent-tools'
-    tools.mkdir()
-    (tools / 'vendor-consumers.json').write_text(json.dumps(registry))
-    (tools / 'vendor_consumers.py').write_bytes(consumers_py)
-    (tools / 'vendor_sync.py').write_bytes(vendor_sync_py)
+    network_step = next(s for s in steps if s.get('name') == 'Network enrollment audit regressions')
+    assert "-m network" in network_step['run']
+
+
+def _project_ironmate_registry(registry):
     target = next(x for x in registry['consumers'] if x['repository'] == 'myon-bioinformatics/Ironmate')
     target['entries'] = [x for x in target['entries'] if not (
         x['repository'] == 'myon-bioinformatics/myon-bioinformatics' and
         x['source'] in {'git_inspector.py', 'vendor_sync.py'})]
+    return registry
+
+
+@pytest.mark.network
+def test_workflow_compare_matches_live_parent_registry(tmp_path):
+    spec = importlib.util.spec_from_file_location(
+        "parent_vendor_tools_resolve",
+        ROOT / "scripts/parent_vendor_tools_resolve.py",
+    )
+    resolve = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(resolve)
+    fetch_parent_vendor_tool_files = resolve.fetch_parent_vendor_tool_files
+    resolve_parent_vendor_tools_head = resolve.resolve_parent_vendor_tools_head
+
+    resolved = resolve_parent_vendor_tools_head(token=os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN"))
+    payloads = fetch_parent_vendor_tool_files(resolved["sha"])
+    registry = _project_ironmate_registry(payloads["vendor-consumers.json"])
+    tools = tmp_path / 'parent-tools'
+    tools.mkdir()
+    (tools / 'vendor-consumers.json').write_text(json.dumps(registry))
+    (tools / 'vendor_consumers.py').write_bytes(payloads["vendor_consumers.py"])
+    (tools / 'vendor_sync.py').write_bytes(payloads["vendor_sync.py"])
     reg = tmp_path / 'registry.json'
     reg.write_text(json.dumps(registry))
     command = [sys.executable, '-S', str(tools / 'vendor_consumers.py'), 'compare',
@@ -136,12 +121,11 @@ def test_workflow_compares_adopted_lock_before_candidate_enrollment(tmp_path):
     result = subprocess.run(command, capture_output=True, text=True, env=env)
     assert result.returncode == 0, result.stdout + result.stderr
     assert json.loads(result.stdout)['matches'] is True
-    # Removing an adopted source must still fail after the explicit retirement projection.
     lock = json.loads((ROOT / 'vendor.lock.json').read_text())
     lock['files'].pop()
     bad = tmp_path / 'bad.json'
     bad.write_text(json.dumps(lock))
     command[command.index('--lock') + 1] = str(bad)
-    result = subprocess.run(command, capture_output=True, text=True)
+    result = subprocess.run(command, capture_output=True, text=True, env=env)
     assert result.returncode != 0
     assert json.loads(result.stdout)['matches'] is False

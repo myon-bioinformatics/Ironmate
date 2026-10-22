@@ -84,11 +84,14 @@ def test_vendor_catalog_audit_resolves_parent_main_at_runtime():
     path = ROOT / ".github/workflows/vendor-catalog-audit.yml"
     text = path.read_text(encoding="utf-8")
     assert PIN not in text
-    assert "ls-remote" in text and "--symref" in text
-    assert "638801160" in text
-    assert "GITHUB_STEP_SUMMARY" in text
+    assert "parent_vendor_tools_resolve.py" in text
+    assert "GITHUB_TOKEN" in text
     assert "steps.parent-vendor-tools.outputs.sha" in text
-    assert "repository_id mismatch" in text
+    script = (ROOT / "scripts/parent_vendor_tools_resolve.py").read_text(encoding="utf-8")
+    assert "api.github.com/repos/" in script
+    assert "ls-remote" in script and "--symref" in script
+    assert "638801160" in script
+    assert "octolytics" not in text
 
 
 def test_workflow_stages_locked_vendor_evidence(tmp_path):

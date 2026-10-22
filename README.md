@@ -247,7 +247,7 @@ PNG出力に入るのは`IHDR`・`IDAT`・`IEND`と、既定ではironmateの`tE
 - 共通GitHub操作・vendor管理は [親リポジトリ](https://github.com/myon-bioinformatics/myon-bioinformatics) と [gh_identity](https://github.com/myon-bioinformatics/gh_identity) を参照します。
 - 旧GitHubカタログ、MCPサーバー、repository metadata／diagnostics、成果物provenance生成の試作は廃止しました。すべての旧APIが移管先に互換実装されているという意味ではありません。
 - source／niconico実装とテストの移管先は [mcp-toolcall-lab PR #108](https://github.com/myon-bioinformatics/mcp-toolcall-lab/pull/108) で、マージ済みです。このリポジトリの `vendor/niconico_search_api_template.py` は現時点でも残っています。API／MCPの差分吸収の設計は同repo #107（クローズ済み）で扱いました。
-- `vendor/` と `vendor.lock.json` はconsumerの固定コピーです。共有ツール51ファイル（LICENSEを含む）を親の管理方式で登録し、固定ハッシュ検証を行います。`vendor.lock.json` が唯一のprovenanceです。
+- `vendor/` と `vendor.lock.json` はconsumerの固定コピーです。共有ツール58ファイル（24リポジトリ由来、LICENSEを含む）を親の管理方式で登録し、固定ハッシュ検証を行います。`vendor.lock.json` が唯一のprovenanceです。
 
 紹介・メタデータは [ポートフォリオ](https://myon-bioinformatics.github.io/#ironmate) に集約します。Ironmate専用のmetadata stub Pagesは廃止しました。実動デモとして [Image Studio](https://myon-bioinformatics.github.io/Ironmate/) を静的公開し、画像・シーンはブラウザ内だけで扱います。
 

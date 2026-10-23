@@ -11,6 +11,7 @@ import select
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -174,13 +175,24 @@ def test_render_does_not_wait_on_a_terminal_and_validates_a_file(tmp_path):
     master, slave = pty.openpty()
     proc = subprocess.Popen([node, 'studio/render.cjs'], cwd=ROOT, stdin=slave, stdout=slave, stderr=slave)
     os.close(slave)
-    ready, _, _ = select.select([master], [], [], 5)
-    assert ready, 'render.cjs waited on a terminal'
-    chunk = os.read(master, 4096)
+    chunks = []
+    deadline = time.monotonic() + 5
+    while time.monotonic() < deadline:
+        ready, _, _ = select.select([master], [], [], 0.2)
+        if ready:
+            try:
+                chunks.append(os.read(master, 4096))
+            except OSError:
+                break
+        if proc.poll() is not None and not ready:
+            break
+    else:
+        proc.kill()
     proc.wait(timeout=5)
     os.close(master)
+    chunk = b''.join(chunks)
     assert proc.returncode == 2
-    assert b'hint:' in chunk and b'Traceback' not in chunk
+    assert b'stdin is a terminal' in chunk and b'hint:' in chunk and b'Traceback' not in chunk
 
     empty = run(['node', 'studio/render.cjs'], stdin=b'')
     assert empty.returncode == 2 and b'scene JSON' in empty.stderr

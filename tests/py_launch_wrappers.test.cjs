@@ -216,6 +216,15 @@ test("flow_workspace isolated mode still imports sibling Ironmate modules", () =
   assert.deepEqual(patched.spec, workspace.spec);
 });
 
+test("flow_workspace patch preserves non-ASCII labels through isolated utf-8 child", () => {
+  const {importFlow, patchWorkspace} = require(path.join(ROOT, "flow_workspace.cjs"));
+  const raw = fs.readFileSync(path.join(ROOT, "examples/flow.json"), "utf8");
+  const workspace = importFlow(raw);
+  const value = "日本語ラベル & <text>";
+  const patched = patchWorkspace(workspace, [{path: "/steps/0/title", value}]);
+  assert.equal(patched.spec.steps[0].title, value);
+});
+
 test("IRONMATE_PYTHON interpreter choice is unaffected by isolated child PYTHONPATH", (t) => {
   if (process.platform === "win32") {
     t.skip("extensionless shebang fake interpreters are not executable as IRONMATE_PYTHON on Windows");
@@ -227,13 +236,15 @@ test("IRONMATE_PYTHON interpreter choice is unaffected by isolated child PYTHONP
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ironmate-fake-py-"));
   t.after(() => fs.rmSync(dir, {recursive: true, force: true}));
   const {fake, marker} = writeFakePython(dir);
-  const prev = process.env.IRONMATE_PYTHON;
+  const prevIronmate = process.env.IRONMATE_PYTHON;
+  const prevPythonPath = process.env.PYTHONPATH;
   process.env.IRONMATE_PYTHON = fake;
   process.env.PYTHONPATH = shadowDir;
   t.after(() => {
-    if (prev === undefined) delete process.env.IRONMATE_PYTHON;
-    else process.env.IRONMATE_PYTHON = prev;
-    delete process.env.PYTHONPATH;
+    if (prevIronmate === undefined) delete process.env.IRONMATE_PYTHON;
+    else process.env.IRONMATE_PYTHON = prevIronmate;
+    if (prevPythonPath === undefined) delete process.env.PYTHONPATH;
+    else process.env.PYTHONPATH = prevPythonPath;
   });
   const {importFlow} = require(path.join(ROOT, "flow_workspace.cjs"));
   const raw = fs.readFileSync(path.join(ROOT, "examples/flow.json"), "utf8");

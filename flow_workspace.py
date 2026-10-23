@@ -70,7 +70,7 @@ def patch_workspace(workspace, operations):
     if len(document) > MAX_PATCH_DOCUMENT:
         raise ValueError('patch document exceeds 320KiB')
     patched = subprocess.run(
-        [sys.executable, '-I', '-S', '-c',
+        [sys.executable, '-I', '-S', '-X', 'utf8', '-c',
          'import sys,runpy; sys.path.insert(0,sys.argv[1]); '
          'sys.argv=["flow_patch"]; runpy.run_module("tool.flow_patch",run_name="__main__")',
          str(UPSTREAM)],

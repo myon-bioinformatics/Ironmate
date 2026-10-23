@@ -317,7 +317,17 @@ def main(argv=None):
     p.add_argument('--data-uri', action='store_true', help='prefix Base64 with data:image/png;base64,')
     p.add_argument('-o', '--output', type=Path)
     p.add_argument('--force', action='store_true')
+    p.add_argument('--json', action='store_true',
+                   help='on a fixable failure, write one JSON object to stderr; success output is unchanged')
     args = p.parse_args(argv)
+    try:
+        return _run_studio(p, args)
+    except (OSError, ValueError, RuntimeError, subprocess.TimeoutExpired) as exc:
+        from ironmate_cli import emit_error
+        return emit_error('image_studio.py', exc, json_mode=args.json)
+
+
+def _run_studio(p, args):
     if args.build_site:
         print(build_site(args.build_site))
         return 0
@@ -347,8 +357,4 @@ def main(argv=None):
 
 
 if __name__ == '__main__':
-    try:
-        raise SystemExit(main())
-    except (OSError, ValueError, RuntimeError, subprocess.TimeoutExpired) as exc:
-        print(f'error: {exc}', file=sys.stderr)
-        raise SystemExit(2)
+    raise SystemExit(main())

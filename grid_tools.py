@@ -268,23 +268,26 @@ def _read(arg):
 
 
 def main(argv=None):
-    p = argparse.ArgumentParser(prog='python -m grid_tools', description=__doc__.splitlines()[0])
+    json_flag = argparse.ArgumentParser(add_help=False)
+    json_flag.add_argument('--json', action='store_true', default=argparse.SUPPRESS,
+                           help='write JSON (make/photo/load) and, on a fixable failure, one JSON object on stderr')
+    p = argparse.ArgumentParser(prog='python -m grid_tools', description=__doc__.splitlines()[0], parents=[json_flag])
     sub = p.add_subparsers(dest='command', required=True)
-    mk = sub.add_parser('make', help='procedural dot art')
+    mk = sub.add_parser('make', help='procedural dot art', parents=[json_flag])
     mk.add_argument('mask', choices=pixel_grid.MASKS)
     mk.add_argument('--palette', default='C01')
     mk.add_argument('--effect', default='normal', choices=pixel_grid.EFFECTS)
     mk.add_argument('--size', type=int, default=16)
-    ph = sub.add_parser('photo', help='photo -> grid (lossy)')
+    ph = sub.add_parser('photo', help='photo -> grid (lossy)', parents=[json_flag])
     ph.add_argument('input')
     ph.add_argument('--size', type=int, default=32)
     ph.add_argument('--fit', default='crop', choices=photo_grid.FITS)
     ph.add_argument('--colors', type=int, default=8)
     ph.add_argument('--palette')
-    ld = sub.add_parser('load', help='dot-art PNG/SVG/JSON/Base64 -> grid')
+    ld = sub.add_parser('load', help='dot-art PNG/SVG/JSON/Base64 -> grid', parents=[json_flag])
     ld.add_argument('input')
     ld.add_argument('--size', type=int, help='original grid width (skips scale detection)')
-    es = sub.add_parser('estimate', help='recommend a downscale so PNG/Base64 fits a size limit')
+    es = sub.add_parser('estimate', help='recommend a downscale so PNG/Base64 fits a size limit', parents=[json_flag])
     es.add_argument('input', nargs='?', help='image file, Base64 or data URI (optional)')
     es.add_argument('--width', type=int)
     es.add_argument('--height', type=int)
@@ -295,18 +298,19 @@ def main(argv=None):
     es.add_argument('--data-uri', action='store_true', help='limit includes the data:image/png;base64, prefix')
     es.add_argument('--no-meta', action='store_true', help='size output written with --no-meta (default: with header)')
     es.add_argument('--verify', action='store_true', help='encode each candidate and report the real size')
-    ft = sub.add_parser('fit', help='largest verified PNG/Base64 that fits a size limit (auto ratio/meta)')
+    ft = sub.add_parser('fit', help='largest verified PNG/Base64 that fits a size limit (auto ratio/meta)', parents=[json_flag])
     ft.add_argument('input')
     lim = ft.add_mutually_exclusive_group(required=True)
     lim.add_argument('--limit-bytes', type=int)
     lim.add_argument('--limit-chars', type=int)
     ft.add_argument('--data-uri', action='store_true')
     ft.add_argument('--prefer', choices=('lossless', 'largest'), default='lossless')
-    ft.add_argument('--to', choices=('base64', 'png'), default='base64')
+    ft.add_argument('--to', '--format', dest='to', choices=('base64', 'png'), default='base64')
     ft.add_argument('-o', '--output')
     ft.add_argument('--force', action='store_true')
     for cmd in (mk, ph, ld):
-        cmd.add_argument('--to', choices=FORMATS, default='base64' if cmd is mk else 'json')
+        cmd.add_argument('--to', '--format', dest='to', choices=FORMATS, default=None,
+                         help='base64 (make default), json (photo/load default), svg, or png')
         cmd.add_argument('--scale', type=int, default=1, help='output pixels per cell (svg default 8)')
         cmd.add_argument('--data-uri', action='store_true')
         cmd.add_argument('--no-meta', action='store_true', help='omit the ironmate PNG header')
@@ -317,6 +321,24 @@ def main(argv=None):
         cmd.add_argument('-o', '--output')
         cmd.add_argument('--force', action='store_true', help='replace an existing -o file')
     args = p.parse_args(argv)
+    json_mode = getattr(args, 'json', False)
+
+    def fail(exc):
+        from ironmate_cli import emit_error, hint_for
+        if json_mode:
+            return emit_error('grid_tools', exc, json_mode=True)
+        print(f'error: {exc}', file=sys.stderr)
+        hint = hint_for(exc)
+        if hint:
+            print(f'hint: {hint}', file=sys.stderr)
+        return 2
+
+    if args.command in ('make', 'photo', 'load'):
+        if json_mode and args.to not in (None, 'json'):
+            print('grid_tools: --json cannot be combined with a different --to/--format', file=sys.stderr)
+            print('hint: pass only --json, or only --to json', file=sys.stderr)
+            return 2
+        args.to = 'json' if json_mode else (args.to or ('base64' if args.command == 'make' else 'json'))
     if args.command == 'estimate':
         from size_estimate import estimate
         try:
@@ -325,8 +347,7 @@ def main(argv=None):
                               limit_chars=args.limit_chars, data_uri=args.data_uri, verify=args.verify,
                               meta=not args.no_meta)
         except (OSError, ValueError, ImportError) as exc:
-            print(f'error: {exc}', file=sys.stderr)
-            return 2
+            return fail(exc)
         print(json.dumps(result, ensure_ascii=False, indent=1))
         return 0
     if args.command == 'fit':
@@ -335,8 +356,7 @@ def main(argv=None):
             res = ironmate_image.fit_to_limit(_read(args.input), args.limit_bytes, args.limit_chars, args.data_uri,
                                               args.prefer)
         except (OSError, ValueError, ImportError) as exc:
-            print(f'error: {exc}', file=sys.stderr)
-            return 2
+            return fail(exc)
         info = {k: v for k, v in vars(res).items() if k not in ('data', 'text')}
         print(json.dumps(info, ensure_ascii=False), file=sys.stderr)
         data = res.data if args.to == 'png' else (res.text + '\n').encode()
@@ -345,8 +365,7 @@ def main(argv=None):
             try:
                 write_output(args.output, data, args.force)
             except OSError as exc:
-                print(f'error: {exc}', file=sys.stderr)
-                return 2
+                return fail(exc)
         else:
             sys.stdout.buffer.write(data)
             sys.stdout.flush()
@@ -366,16 +385,14 @@ def main(argv=None):
             art = recolor(art, args.recolor)
         result = encode(art, args.to, args.scale, args.data_uri, not args.no_meta)
     except (OSError, ValueError, KeyError) as exc:
-        print(f'error: {exc}', file=sys.stderr)
-        return 2
+        return fail(exc)
     data = result if isinstance(result, bytes) else (result + ('' if result.endswith('\n') else '\n')).encode()
     if args.output:
         from grid_output import write_output
         try:
             write_output(args.output, data, args.force)
         except OSError as exc:
-            print(f'error: {exc}', file=sys.stderr)
-            return 2
+            return fail(exc)
     else:
         sys.stdout.buffer.write(data)
         sys.stdout.flush()

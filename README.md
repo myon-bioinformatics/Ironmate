@@ -208,7 +208,10 @@ python -c "import size_estimate as s;print(s.estimate(width=64,height=64,nbytes=
 # 上限2万文字のBase64に収める（無劣化の縮小率を優先、入らなければメタデータを外して再挑戦）
 python -c "import ironmate_image as im;r=im.fit_to_limit('a.png',max_chars=20000,data_uri=True);print(r.ratio,r.chars,r.meta_used,r.warnings)"
 python -m grid_tools fit a.png --limit-chars 20000 --data-uri -o a.b64    # 結果の要約はstderrにJSON
-# 行ったり来たり
+# 行ったり来たり（同じ操作は CLI でも呼べる）
+python -S ironmate_image.py load a.png
+python -S ironmate_image.py to-base64 a.png
+python -S ironmate_image.py resize a.png 64
 python -c "import ironmate_image as im;s=im.to_base64('a.png');print(im.from_base64(s)['width'])"
 python -c "import ironmate_image as im,grid_tools as g;print(g.encode(im.resize('a.png',64)))"
 ```
@@ -262,7 +265,10 @@ git clone https://github.com/myon-bioinformatics/myon-bioinformatics.git .vendor
 git -C .vendor-sync-tools checkout a9df23dec720f125772a24b77b413552d60060ba
 python -S .vendor-sync-tools/vendor_sync.py check --manifest vendor.lock.json
 uv run --locked python -m pytest -q -m 'not heavy'
+python -S ironmate_tests.py list
 ```
+
+`ironmate_tests.py list` は既定で JSON です。速い Node テストは `python -S ironmate_tests.py run studio-ingress` のように id を指定して実行し、子プロセスの終了コードをそのまま返します。各ツールの `--help` と、直せること（終了コード 2、`--json` なら stderr に JSON）は `ironmate_cli.py` の契約に揃えています。`-o` / `--output` / `--out` は画像ダイジェストと比較シートで同じ出力先です。
 
 xprobeと親のvendorツールはテスト用の別checkoutです。実行時依存として自動取得しません。
 PPTXの新規パッケージには Node.js 24 以上と `npm ci`（固定の `pptxgenjs@4.0.1`）が必要です。Ironmate は依存関係を自動インストールしません。スライド図形の正本は [JSON ↔ OOXML 対応](docs/pptx-ooxml-mapping.md) です。Marp変換時のみ別途インストール済みのMarp CLIが必要です。

@@ -17,6 +17,7 @@ page and in ``digest.json``. Status drives only colour and counts; it is never i
 pixels. Standard library only; image_digest.cjs is the Node entry point.
 
     python -S image_digest.py input.json --out digest/ [--max-bytes 1000000] [--tile 64x128]
+    python -S image_digest.py input.json -o digest/          # -o and --output are the same as --out
 """
 from __future__ import annotations
 
@@ -216,10 +217,12 @@ def write(out, page, summary, info):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument('input', help=f'{SCHEMA} JSON; image paths are relative to it ("-" = stdin with --base)')
-    parser.add_argument('--out', required=True)
+    parser.add_argument('--out', '-o', '--output', required=True, dest='out')
     parser.add_argument('--base', help='directory image paths are relative to (default: the input file directory)')
     parser.add_argument('--max-bytes', type=int, default=1_000_000)
     parser.add_argument('--tile', default='64x128', help='starting thumbnail WIDTHxHEIGHT')
+    parser.add_argument('--json', action='store_true',
+                        help='on a fixable failure, write one JSON object to stderr; success JSON is unchanged')
     args = parser.parse_args(argv)
     try:
         match = re.fullmatch(r'(\d+)x(\d+)', args.tile)
@@ -234,7 +237,14 @@ def main(argv=None):
         page, summary, info = build(spec, base, max_bytes=args.max_bytes, tile=(int(match[1]), int(match[2])))
         write(args.out, page, summary, info)
     except (OSError, ValueError, UnicodeError) as error:
+        from ironmate_cli import emit_error
+        if args.json:
+            return emit_error('image_digest.py', error, json_mode=True)
         print(f'error: {error}', file=sys.stderr)
+        from ironmate_cli import hint_for
+        hint = hint_for(error)
+        if hint:
+            print(f'hint: {hint}', file=sys.stderr)
         return 2
     print(json.dumps(info))
     return 0

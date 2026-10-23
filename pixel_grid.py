@@ -329,17 +329,34 @@ def main(argv=None):
     p.add_argument('--palette', choices=PALETTES, default='C01', help='color ID (C01-C10)')
     p.add_argument('--effect', choices=EFFECTS, default='normal')
     p.add_argument('--size', type=int, default=16, help='canvas size; per-mask range in MASK_BOUNDS')
-    p.add_argument('--format', choices=('emoji', 'json', 'svg', 'png', 'base64'), default='emoji')
+    p.add_argument('--format', choices=('emoji', 'json', 'svg', 'png', 'base64'), default=None,
+                   help='emoji (default), json, svg, png, or base64')
+    p.add_argument('--json', action='store_true', help='write the grid as JSON (same as --format json)')
     p.add_argument('--scale', type=int, help='pixels per cell for svg (default 8) / png, base64 (default 1)')
     p.add_argument('--data-uri', action='store_true', help='base64: emit data:image/png;base64,...')
     p.add_argument('-o', '--output', help='write the result here instead of stdout')
     p.add_argument('--force', action='store_true', help='replace an existing -o file')
     args = p.parse_args(argv)
+    if args.json and args.format not in (None, 'json'):
+        print('pixel_grid.py: --json cannot be combined with a different --format', file=sys.stderr)
+        print('hint: pass only --json, or only --format json', file=sys.stderr)
+        return 2
+    args.format = 'json' if args.json else (args.format or 'emoji')
+
+    def fail(exc):
+        from ironmate_cli import emit_error, hint_for
+        if args.json:
+            return emit_error('pixel_grid.py', exc, json_mode=True)
+        print(f'error: {exc}', file=sys.stderr)
+        hint = hint_for(exc)
+        if hint:
+            print(f'hint: {hint}', file=sys.stderr)
+        return 2
+
     try:
         artifact = render(args.mask, args.palette, args.effect, args.size)
     except ValueError as exc:
-        print(f'error: {exc}', file=sys.stderr)
-        return 2
+        return fail(exc)
     if args.format == 'base64':
         from grid_png import to_base64  # lazy: keeps import of this module inert
         data = (to_base64(artifact, args.scale or 1, args.data_uri) + '\n').encode('ascii')
@@ -357,8 +374,7 @@ def main(argv=None):
         try:
             write_output(args.output, data, args.force)
         except OSError as exc:
-            print(f'error: {exc}', file=sys.stderr)
-            return 2
+            return fail(exc)
     else:
         sys.stdout.flush()
         sys.stdout.buffer.write(data)

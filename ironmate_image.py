@@ -7,7 +7,7 @@
 Output is always the default grid_tools PNG (8-bit RGBA, ironmate metadata when it fits).
 """
 from __future__ import annotations
-import base64, json, os
+import base64, json, os, sys
 from dataclasses import dataclass, field
 from fractions import Fraction
 
@@ -131,3 +131,90 @@ def fit_to_limit(src, max_bytes=None, max_chars=None, data_uri=False, prefer='lo
     h = grid_tools.restore(png)['height'] if meta else pick['height']
     return FitResult(png, text, pick['ratio'], pick['width'], h, len(png), len(text), meta,
                      pick['nearest_lossless'], pick['command'], warnings)
+
+
+def _read_input(path):
+    """Path, stdin, or an inline Base64/data URI/JSON string."""
+    if path == '-':
+        if sys.stdin.isatty():
+            raise ValueError('pass a file or pipe bytes; stdin is a terminal')
+        return sys.stdin.buffer.read(photo_grid.MAX_BYTES * 2)
+    if os.path.isfile(path):
+        with open(path, 'rb') as handle:
+            return handle.read(photo_grid.MAX_BYTES * 2)
+    return path
+
+
+def _emit(data, output, force):
+    if output:
+        from grid_output import write_output
+        write_output(output, data if isinstance(data, bytes) else data.encode('utf-8'), force)
+    elif isinstance(data, bytes):
+        sys.stdout.buffer.write(data)
+    else:
+        sys.stdout.write(data if data.endswith('\n') else data + '\n')
+
+
+def _output_flags(command, *, data_uri=False):
+    if data_uri:
+        command.add_argument('--data-uri', action='store_true', help='prefix Base64 with data:image/png;base64,')
+    command.add_argument('--no-meta', action='store_true', help='omit the ironmate PNG header')
+    command.add_argument('-o', '--output')
+    command.add_argument('--force', action='store_true', help='replace an existing -o file')
+
+
+def main(argv=None):
+    """CLI for load / to-png / to-base64 / resize. Size fitting stays ``python -m grid_tools fit``."""
+    from ironmate_cli import ToolParser, guard
+
+    parser = ToolParser(prog='ironmate_image.py', description=__doc__.splitlines()[0])
+    parser.add_json_flag()
+    commands = parser.add_subparsers(dest='command', required=True)
+    for name, help_text in (
+        ('load', 'anything -> grid JSON'),
+        ('from-base64', 'Base64 or data URI -> grid JSON'),
+    ):
+        command = commands.add_parser(name, help=help_text)
+        command.add_argument('input', help='path, or - for stdin')
+    png_cmd = commands.add_parser('to-png', help='anything -> PNG bytes')
+    png_cmd.add_argument('input', help='path, or - for stdin')
+    _output_flags(png_cmd)
+    b64_cmd = commands.add_parser('to-base64', help='anything -> Base64 PNG text')
+    b64_cmd.add_argument('input', help='path, or - for stdin')
+    _output_flags(b64_cmd, data_uri=True)
+    resize_cmd = commands.add_parser('resize', help='nearest-neighbour resize, then JSON, PNG, or Base64')
+    resize_cmd.add_argument('input', help='path, or - for stdin')
+    resize_cmd.add_argument('width', type=int)
+    resize_cmd.add_argument('--height', type=int)
+    resize_cmd.add_argument('--to', '--format', dest='to', choices=('json', 'png', 'base64'), default='json')
+    _output_flags(resize_cmd, data_uri=True)
+    parser.epilog = 'To fit a size limit: python -m grid_tools fit INPUT --limit-chars N'
+    args = parser.parse_args(argv)
+
+    def work():
+        src = _read_input(args.input)
+        meta = not getattr(args, 'no_meta', False)
+        if args.command == 'load':
+            payload = json.dumps(load(src), ensure_ascii=False) + '\n'
+        elif args.command == 'from-base64':
+            payload = json.dumps(from_base64(src), ensure_ascii=False) + '\n'
+        elif args.command == 'to-png':
+            payload = to_png(src, meta=meta)
+        elif args.command == 'to-base64':
+            payload = to_base64(src, data_uri=args.data_uri, meta=meta) + '\n'
+        else:
+            art = resize(src, args.width, args.height)
+            if args.to == 'png':
+                payload = grid_tools.encode(art, 'png', 1, meta=meta)
+            elif args.to == 'base64':
+                payload = grid_tools.encode(art, 'base64', 1, args.data_uri, meta) + '\n'
+            else:
+                payload = json.dumps(art, ensure_ascii=False) + '\n'
+        _emit(payload, getattr(args, 'output', None), getattr(args, 'force', False))
+        return 0
+
+    return guard('ironmate_image.py', work, json_mode=args.json)
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

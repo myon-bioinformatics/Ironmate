@@ -1,5 +1,4 @@
 """Conservative PPTX attribute replacement prototype. Python 3.11+."""
-import argparse
 import json
 import os
 import tempfile
@@ -117,7 +116,8 @@ def transform(source, rules, *, dry_run=False, destination=None):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description=__doc__)
+    from ironmate_cli import ToolParser, guard
+    parser = ToolParser(description=__doc__, tool="pptx_replace.py")
     parser.add_argument("source", type=Path)
     parser.add_argument("--rules", type=Path)
     parser.add_argument("--replace", nargs=2, metavar=("OLD", "NEW"))
@@ -128,6 +128,7 @@ def main(argv=None):
     parser.add_argument("--bold", choices=("true", "false"))
     parser.add_argument("--output", type=Path)
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_json_flag()
     args = parser.parse_args(argv)
     if not args.dry_run and args.output is None:
         parser.error("--output is required unless --dry-run")
@@ -153,9 +154,13 @@ def main(argv=None):
             rules.append({"operation": "bold", "value": args.bold == "true"})
         if not rules:
             parser.error("specify --rules or an inline operation")
-    result = transform(args.source, rules, dry_run=args.dry_run, destination=args.output)
-    print(json.dumps(result, ensure_ascii=False, indent=2))
+    def work():
+        result = transform(args.source, rules, dry_run=args.dry_run, destination=args.output)
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0
+
+    return guard("pptx_replace.py", work, json_mode=args.json)
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

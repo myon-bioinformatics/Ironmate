@@ -1,5 +1,4 @@
 """Reproduce row, column and grid spacing of existing native PPTX objects."""
-import argparse
 import json
 import math
 import os
@@ -113,16 +112,23 @@ def arrange(source, rules, *, destination=None, dry_run=False):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description=__doc__)
+    from ironmate_cli import ToolParser, guard
+    parser = ToolParser(description=__doc__, tool='pptx_layout.py')
     parser.add_argument('source', type=Path)
     parser.add_argument('--rules', type=Path, required=True)
     parser.add_argument('--output', type=Path)
     parser.add_argument('--dry-run', action='store_true')
+    parser.add_json_flag()
     args = parser.parse_args(argv)
-    with args.rules.open('rb') as stream:
-        rules = tomllib.load(stream).get('rules')
-    print(json.dumps(arrange(args.source, rules, destination=args.output, dry_run=args.dry_run), indent=2))
+
+    def work():
+        with args.rules.open('rb') as stream:
+            rules = tomllib.load(stream).get('rules')
+        print(json.dumps(arrange(args.source, rules, destination=args.output, dry_run=args.dry_run), indent=2))
+        return 0
+
+    return guard('pptx_layout.py', work, json_mode=args.json)
 
 
 if __name__ == '__main__':
-    main()
+    raise SystemExit(main())

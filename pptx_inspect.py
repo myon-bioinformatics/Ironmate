@@ -1,5 +1,4 @@
 """Inspect generated PPTX text editability without assuming raster content is editable."""
-import argparse
 import json
 from pathlib import Path
 from zipfile import ZipFile
@@ -44,17 +43,24 @@ def inspect(path):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description=__doc__)
+    from ironmate_cli import ToolParser, guard
+    parser = ToolParser(description=__doc__, tool="pptx_inspect.py")
     parser.add_argument("source", type=Path)
     parser.add_argument("-o", "--output", type=Path)
+    parser.add_json_flag()
     args = parser.parse_args(argv)
-    report = json.dumps(inspect(args.source), ensure_ascii=False, indent=2) + "\n"
-    if args.output:
-        with args.output.open("x", encoding="utf-8") as stream:
-            stream.write(report)
-    else:
-        print(report, end="")
+
+    def work():
+        report = json.dumps(inspect(args.source), ensure_ascii=False, indent=2) + "\n"
+        if args.output:
+            with args.output.open("x", encoding="utf-8") as stream:
+                stream.write(report)
+        else:
+            print(report, end="")
+        return 0
+
+    return guard("pptx_inspect.py", work, json_mode=args.json)
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

@@ -16,6 +16,12 @@ function lockEntry() {
   return entry;
 }
 
+function resolveRealPython() {
+  const result = spawnSync(PYTHON, ["-c", "import sys; print(sys.executable)"], {encoding: "utf8"});
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  return result.stdout.trim();
+}
+
 function writeFakePython(dir) {
   const marker = path.join(dir, "marker.txt");
   const fake = path.join(dir, "fake-python");
@@ -40,7 +46,54 @@ test("vendored py_launch.cjs matches vendor.lock.json", () => {
   assert.equal(crypto.createHash("sha1").update(Buffer.concat([
     Buffer.from(`blob ${data.length}\0`), data,
   ])).digest("hex"), entry.blob_sha);
-  assert.equal(entry.commit, "2ea31034ca3caa60ed769806baf750d75e296552");
+  assert.equal(entry.commit, "c73821de8492b2394c718cb276cad9f683ff1910");
+});
+
+const PYTHON =
+  process.env.PY_LAUNCH_TEST_PYTHON || (process.platform === "win32" ? "python" : "python3");
+const BIG_STDOUT = path.join(ROOT, "tests/fixtures/py_launch/big_stdout.py");
+
+test("vendored run rejects input above maxInputBytes with EINPUTTOOLARGE", () => {
+  const {run} = require(path.join(ROOT, "vendor/py_launch.cjs"));
+  const input = "x".repeat(200);
+  assert.throws(
+    () => run(BIG_STDOUT, ["1"], {python: PYTHON, input, maxInputBytes: 100}),
+    (err) => err.code === "EINPUTTOOLARGE" && /maxInputBytes/.test(err.message),
+  );
+});
+
+test("vendored run maps responseMaxBytes overflow to ERESPONSETOOLARGE", () => {
+  const {run} = require(path.join(ROOT, "vendor/py_launch.cjs"));
+  assert.throws(
+    () => run(BIG_STDOUT, ["200000"], {python: PYTHON, responseMaxBytes: 1024}),
+    (err) => err.code === "ERESPONSETOOLARGE" && /responseMaxBytes/.test(err.message),
+  );
+});
+
+test("ironmate mapLaunchError relabels EINPUTTOOLARGE for flow export", () => {
+  const {mapLaunchError} = require(path.join(ROOT, "ironmate_py_launch.cjs"));
+  const err = Object.assign(
+    new Error("py_launch: input exceeds maxInputBytes (100; got 200 bytes)"),
+    {code: "EINPUTTOOLARGE"},
+  );
+  assert.throws(
+    () => mapLaunchError(err, "flow Python process failed: ", "flow export failed"),
+    (mapped) => mapped.code === "EINPUTTOOLARGE" &&
+      mapped.message === "flow Python process failed: input exceeds maxInputBytes (100; got 200 bytes)",
+  );
+});
+
+test("ironmate mapLaunchError relabels ERESPONSETOOLARGE for flow export", () => {
+  const {mapLaunchError} = require(path.join(ROOT, "ironmate_py_launch.cjs"));
+  const err = Object.assign(
+    new Error("py_launch: response exceeds responseMaxBytes (1024)"),
+    {code: "ERESPONSETOOLARGE"},
+  );
+  assert.throws(
+    () => mapLaunchError(err, "flow Python process failed: ", "flow export failed", {responseMaxBytes: 1024}),
+    (mapped) => mapped.code === "ERESPONSETOOLARGE" &&
+      mapped.message === "flow Python process failed: response exceeds responseMaxBytes (1024)",
+  );
 });
 
 test("wrappers share ironmate_py_launch.cjs", () => {
@@ -84,6 +137,10 @@ test("flow_export CLI exits 2 when IRONMATE_PYTHON is unusable", () => {
 });
 
 test("IRONMATE_PYTHON is used before system python3 for flow_export", (t) => {
+  if (process.platform === "win32") {
+    t.skip("extensionless shebang fake interpreters are not executable as IRONMATE_PYTHON on Windows");
+    return;
+  }
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ironmate-fake-py-"));
   t.after(() => fs.rmSync(dir, {recursive: true, force: true}));
   const {fake, marker} = writeFakePython(dir);
@@ -98,6 +155,103 @@ test("IRONMATE_PYTHON is used before system python3 for flow_export", (t) => {
     renderFlow(JSON.parse(fs.readFileSync(path.join(ROOT, "examples/flow.json"), "utf8")), {format: "mermaid"});
   } catch {
     // script may fail after interpreter spawn; marker proves which binary ran
+  }
+  assert.equal(fs.readFileSync(marker, "utf8"), "ran");
+});
+
+test("IRONMATE_PYTHON on Windows resolves to a real python.exe without .cmd shims", (t) => {
+  if (process.platform !== "win32") {
+    t.skip("Windows-only IRONMATE_PYTHON executable path coverage");
+    return;
+  }
+  const real = resolveRealPython();
+  assert.ok(fs.existsSync(real));
+  assert.ok(real.toLowerCase().endsWith(".exe"));
+  assert.ok(!/\.(cmd|bat)$/i.test(real));
+  const {resolvePython} = require(path.join(ROOT, "vendor/py_launch.cjs"));
+  const {PY_LAUNCH} = require(path.join(ROOT, "ironmate_py_launch.cjs"));
+  const prev = process.env.IRONMATE_PYTHON;
+  process.env.IRONMATE_PYTHON = real;
+  t.after(() => {
+    if (prev === undefined) delete process.env.IRONMATE_PYTHON;
+    else process.env.IRONMATE_PYTHON = prev;
+  });
+  const resolved = resolvePython(PY_LAUNCH);
+  assert.equal(path.resolve(resolved.cmd), path.resolve(real));
+});
+
+test("flow_workspace rejects oversize stdin with EINPUTTOOLARGE", () => {
+  const {importFlow} = require(path.join(ROOT, "flow_workspace.cjs"));
+  const chunk = "x".repeat(4 * 1024 * 1024);
+  assert.throws(
+    () => importFlow(chunk),
+    (err) => err.code === "EINPUTTOOLARGE" &&
+      err.message.startsWith("flow workspace Python process failed: ") &&
+      /maxInputBytes/.test(err.message),
+  );
+});
+
+test("flow_workspace ignores PYTHONPATH shadowing of stdlib xml under isolated mode", (t) => {
+  const shadowDir = fs.mkdtempSync(path.join(os.tmpdir(), "ironmate-xml-shadow-"));
+  t.after(() => fs.rmSync(shadowDir, {recursive: true, force: true}));
+  fs.writeFileSync(path.join(shadowDir, "xml.py"), "raise RuntimeError('PYTHONPATH shadowed stdlib xml')\n");
+  const raw = fs.readFileSync(path.join(ROOT, "examples/flow.json"), "utf8");
+  const child = spawnSync(
+    process.execPath,
+    ["-e", `const {importFlow} = require(${JSON.stringify(path.join(ROOT, "flow_workspace.cjs"))});
+importFlow(${JSON.stringify(raw)});`],
+    {env: {...process.env, PYTHONPATH: shadowDir}, encoding: "utf8"},
+  );
+  assert.equal(child.status, 0, child.stderr || child.stdout);
+});
+
+test("flow_workspace isolated mode still imports sibling Ironmate modules", () => {
+  const {importFlow, patchWorkspace} = require(path.join(ROOT, "flow_workspace.cjs"));
+  const raw = fs.readFileSync(path.join(ROOT, "examples/flow.json"), "utf8");
+  const workspace = importFlow(raw);
+  assert.equal(workspace.schema, "ironmate-flow/1");
+  assert.ok(workspace.spec && typeof workspace.spec === "object");
+  const patched = patchWorkspace(workspace, []);
+  assert.equal(patched.schema, "ironmate-flow/1");
+  assert.deepEqual(patched.spec, workspace.spec);
+});
+
+test("flow_workspace patch preserves non-ASCII labels through isolated utf-8 child", () => {
+  const {importFlow, patchWorkspace} = require(path.join(ROOT, "flow_workspace.cjs"));
+  const raw = fs.readFileSync(path.join(ROOT, "examples/flow.json"), "utf8");
+  const workspace = importFlow(raw);
+  const value = "日本語ラベル & <text>";
+  const patched = patchWorkspace(workspace, [{path: "/steps/0/title", value}]);
+  assert.equal(patched.spec.steps[0].title, value);
+});
+
+test("IRONMATE_PYTHON interpreter choice is unaffected by isolated child PYTHONPATH", (t) => {
+  if (process.platform === "win32") {
+    t.skip("extensionless shebang fake interpreters are not executable as IRONMATE_PYTHON on Windows");
+    return;
+  }
+  const shadowDir = fs.mkdtempSync(path.join(os.tmpdir(), "ironmate-xml-shadow-"));
+  t.after(() => fs.rmSync(shadowDir, {recursive: true, force: true}));
+  fs.writeFileSync(path.join(shadowDir, "xml.py"), "raise RuntimeError('PYTHONPATH shadowed stdlib xml')\n");
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ironmate-fake-py-"));
+  t.after(() => fs.rmSync(dir, {recursive: true, force: true}));
+  const {fake, marker} = writeFakePython(dir);
+  const prevIronmate = process.env.IRONMATE_PYTHON;
+  const prevPythonPath = process.env.PYTHONPATH;
+  process.env.IRONMATE_PYTHON = fake;
+  process.env.PYTHONPATH = shadowDir;
+  t.after(() => {
+    if (prevIronmate === undefined) delete process.env.IRONMATE_PYTHON;
+    else process.env.IRONMATE_PYTHON = prevIronmate;
+    if (prevPythonPath === undefined) delete process.env.PYTHONPATH;
+    else process.env.PYTHONPATH = prevPythonPath;
+  });
+  const {importFlow} = require(path.join(ROOT, "flow_workspace.cjs"));
+  const raw = fs.readFileSync(path.join(ROOT, "examples/flow.json"), "utf8");
+  try {
+    importFlow(raw);
+  } catch {
+    // fake interpreter exits before returning JSON; marker proves which binary ran
   }
   assert.equal(fs.readFileSync(marker, "utf8"), "ran");
 });

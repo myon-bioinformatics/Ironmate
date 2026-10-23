@@ -1,0 +1,50 @@
+name: Node tests
+
+on:
+  pull_request:
+    paths:
+      - "*.cjs"
+      - "ironmate_py_launch*"
+      - "vendor/py_launch.cjs"
+      - "tests/**/*.cjs"
+      - "tests/fixtures/py_launch/**"
+      - "package.json"
+      - "flow_workspace.py"
+      - ".github/workflows/node-tests.yml"
+  push:
+    branches: [main]
+    paths:
+      - "*.cjs"
+      - "ironmate_py_launch*"
+      - "vendor/py_launch.cjs"
+      - "tests/**/*.cjs"
+      - "tests/fixtures/py_launch/**"
+      - "package.json"
+      - "flow_workspace.py"
+      - ".github/workflows/node-tests.yml"
+
+jobs:
+  node-test:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node-version: ["24", "latest"]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Run Node unit tests
+        run: >-
+          node --test
+          tests/py_launch_wrappers.test.cjs
+          tests/studio_ingress.test.cjs
+          tests/studio_workspace.test.cjs

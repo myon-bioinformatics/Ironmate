@@ -265,7 +265,7 @@ uv run --locked python -m pytest -q -m 'not heavy'
 ```
 
 xprobeと親のvendorツールはテスト用の別checkoutです。実行時依存として自動取得しません。
-PPTXの新規パッケージには Node.js 22 以上（CI は 26）と `npm ci`（固定の `pptxgenjs@4.0.1`）が必要です。Ironmate は依存関係を自動インストールしません。スライド図形の正本は [JSON ↔ OOXML 対応](docs/pptx-ooxml-mapping.md) です。Marp変換時のみ別途インストール済みのMarp CLIが必要です。
+PPTXの新規パッケージには Node.js 24 以上と `npm ci`（固定の `pptxgenjs@4.0.1`）が必要です。Ironmate は依存関係を自動インストールしません。スライド図形の正本は [JSON ↔ OOXML 対応](docs/pptx-ooxml-mapping.md) です。Marp変換時のみ別途インストール済みのMarp CLIが必要です。
 CSVをxlsxにする場合は [Excelワークブック](docs/xlsx-exceljs.md) を使います。文字コードの判定はUTF-8 / BOM / Shift_JIS / CP932です。openpyxlとpandasは使いません。同じ `npm ci` が `exceljs@4.4.0` と SheetJS `xlsx@0.20.3` も入れます。
 
 ## ブラウザ別スクリーンショットの比較
@@ -281,10 +281,14 @@ Markdown の要約を作ります。容量に収まるまでサムネイルを 1
 ## Node から Python（`py_launch`）
 
 `flow_export.cjs`・`flow_workspace.cjs`・`image_digest.cjs` は処理本体を Python に任せ、起動だけ
-親リポジトリ由来の `vendor/py_launch.cjs` に委譲する。API の `python` を省略したときは呼び出しごとに
+親リポジトリ由来の `vendor/py_launch.cjs`（Node.js 24 以上）に委譲する。API の `python` を省略したときは呼び出しごとに
 3.9 以上か短く確認したうえで、`IRONMATE_PYTHON` → `PYTHON` → `python3` → `python`（Windows は `py -3`）
 の順に試す。`IRONMATE_PYTHON` または API の `python` を明示した場合はそこだけを使い、見つからなければ
-フォールバックしない。詳細は [flow export](docs/flow-export.md) と [image digest](docs/image-digest.md)。
+フォールバックしない。`flow_workspace.cjs` は `isolated`（CPython `-I`）で子プロセスの `PYTHON*` 環境を無視し、
+同ディレクトリの `flow_export` 等はスクリプト側で `sys.path` に載せる。JSON リクエストは 4MiB までで、超過時は
+`flow workspace Python process failed:` 付きの `EINPUTTOOLARGE`（`maxInputBytes`）になる。`IRONMATE_PYTHON` は Node 側の
+インタプリタ選択のみで、`-I` の対象にはならない。詳細は
+[flow export](docs/flow-export.md) と [image digest](docs/image-digest.md)。
 
 ## Common JSON flow diagrams
 

@@ -56,6 +56,15 @@ def test_invalid_batch_is_atomic(ops):
     assert w.workspace_bytes(state) == before
 
 
+def test_patch_child_utf8_preserves_non_ascii_labels():
+    """Isolated flow_patch child uses -I -S; -X utf8 keeps stdout UTF-8 on Windows."""
+    state = w.import_flow(RAW)
+    value = '日本語ラベル & <text>'
+    updated = w.patch_workspace(state, [{'path': '/steps/0/title', 'value': value}])
+    assert updated['spec']['steps'][0]['title'] == value
+    assert '統合フロー' in state['original_json']
+
+
 def test_empty_and_maximum_batch():
     state = w.import_flow(RAW)
     assert w.patch_workspace(state, []) == state

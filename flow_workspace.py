@@ -6,9 +6,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 from xml.etree import ElementTree as ET
 
 from flow_export import FORMATS, MAX_INPUT, read_spec, render_flow
@@ -66,7 +70,7 @@ def patch_workspace(workspace, operations):
     if len(document) > MAX_PATCH_DOCUMENT:
         raise ValueError('patch document exceeds 320KiB')
     patched = subprocess.run(
-        [sys.executable, '-I', '-S', '-c',
+        [sys.executable, '-I', '-S', '-X', 'utf8', '-c',
          'import sys,runpy; sys.path.insert(0,sys.argv[1]); '
          'sys.argv=["flow_patch"]; runpy.run_module("tool.flow_patch",run_name="__main__")',
          str(UPSTREAM)],
@@ -138,5 +142,28 @@ def main(argv=None):
     return 0
 
 
+_NODE_BRIDGE_OPS = {
+    'import_flow': import_flow,
+    'patch_workspace': patch_workspace,
+    'validate_workspace': validate_workspace,
+}
+
+
+def _node_bridge_main():
+    name = sys.argv[2]
+    try:
+        operation = _NODE_BRIDGE_OPS[name]
+    except KeyError:
+        raise SystemExit(f'unsupported node bridge operation: {name}') from None
+    values = json.load(sys.stdin.buffer)
+    if name == 'import_flow':
+        values = [values[0].encode('utf-8')]
+    result = operation(*values)
+    sys.stdout.buffer.write(_json_bytes(result))
+    return 0
+
+
 if __name__ == '__main__':
+    if len(sys.argv) >= 3 and sys.argv[1] == '__node_bridge__':
+        raise SystemExit(_node_bridge_main())
     raise SystemExit(main())

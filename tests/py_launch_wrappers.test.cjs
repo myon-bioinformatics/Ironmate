@@ -16,6 +16,12 @@ function lockEntry() {
   return entry;
 }
 
+function resolveRealPython() {
+  const result = spawnSync(PYTHON, ["-c", "import sys; print(sys.executable)"], {encoding: "utf8"});
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  return result.stdout.trim();
+}
+
 function writeFakePython(dir) {
   const marker = path.join(dir, "marker.txt");
   const fake = path.join(dir, "fake-python");
@@ -131,6 +137,10 @@ test("flow_export CLI exits 2 when IRONMATE_PYTHON is unusable", () => {
 });
 
 test("IRONMATE_PYTHON is used before system python3 for flow_export", (t) => {
+  if (process.platform === "win32") {
+    t.skip("extensionless shebang fake interpreters are not executable as IRONMATE_PYTHON on Windows");
+    return;
+  }
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ironmate-fake-py-"));
   t.after(() => fs.rmSync(dir, {recursive: true, force: true}));
   const {fake, marker} = writeFakePython(dir);
@@ -147,4 +157,50 @@ test("IRONMATE_PYTHON is used before system python3 for flow_export", (t) => {
     // script may fail after interpreter spawn; marker proves which binary ran
   }
   assert.equal(fs.readFileSync(marker, "utf8"), "ran");
+});
+
+test("IRONMATE_PYTHON on Windows resolves to a real python.exe without .cmd shims", (t) => {
+  if (process.platform !== "win32") {
+    t.skip("Windows-only IRONMATE_PYTHON executable path coverage");
+    return;
+  }
+  const real = resolveRealPython();
+  assert.ok(fs.existsSync(real));
+  assert.ok(real.toLowerCase().endsWith(".exe"));
+  assert.ok(!/\.(cmd|bat)$/i.test(real));
+  const {resolvePython} = require(path.join(ROOT, "vendor/py_launch.cjs"));
+  const {PY_LAUNCH} = require(path.join(ROOT, "ironmate_py_launch.cjs"));
+  const prev = process.env.IRONMATE_PYTHON;
+  process.env.IRONMATE_PYTHON = real;
+  t.after(() => {
+    if (prev === undefined) delete process.env.IRONMATE_PYTHON;
+    else process.env.IRONMATE_PYTHON = prev;
+  });
+  const resolved = resolvePython(PY_LAUNCH);
+  assert.equal(path.resolve(resolved.cmd), path.resolve(real));
+});
+
+test("flow_workspace rejects oversize stdin with EINPUTTOOLARGE", () => {
+  const {importFlow} = require(path.join(ROOT, "flow_workspace.cjs"));
+  const chunk = "x".repeat(4 * 1024 * 1024);
+  assert.throws(
+    () => importFlow(chunk),
+    (err) => err.code === "EINPUTTOOLARGE" &&
+      err.message.startsWith("flow workspace Python process failed: ") &&
+      /maxInputBytes/.test(err.message),
+  );
+});
+
+test("flow_workspace must ignore PYTHONPATH shadowing of stdlib xml (needs py_launch isolated:true)", (t) => {
+  const shadowDir = fs.mkdtempSync(path.join(os.tmpdir(), "ironmate-xml-shadow-"));
+  t.after(() => fs.rmSync(shadowDir, {recursive: true, force: true}));
+  fs.writeFileSync(path.join(shadowDir, "xml.py"), "raise RuntimeError('PYTHONPATH shadowed stdlib xml')\n");
+  const raw = fs.readFileSync(path.join(ROOT, "examples/flow.json"), "utf8");
+  const child = spawnSync(
+    process.execPath,
+    ["-e", `const {importFlow} = require(${JSON.stringify(path.join(ROOT, "flow_workspace.cjs"))});
+importFlow(${JSON.stringify(raw)});`],
+    {env: {...process.env, PYTHONPATH: shadowDir}, encoding: "utf8"},
+  );
+  assert.equal(child.status, 0, child.stderr || child.stdout);
 });

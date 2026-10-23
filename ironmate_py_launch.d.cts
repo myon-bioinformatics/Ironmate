@@ -5,4 +5,9 @@ export function mapLaunchError(
   err: unknown,
   pythonProcessPrefix: string,
   failureFallback: string,
+  context?: {
+    inputKnownToExceed?: boolean;
+    inputExceededMessage?: string;
+    responseMaxBytes?: number;
+  },
 ): never;

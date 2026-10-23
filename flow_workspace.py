@@ -138,5 +138,17 @@ def main(argv=None):
     return 0
 
 
+def _node_bridge_main():
+    name = sys.argv[2]
+    values = json.load(sys.stdin.buffer)
+    if name == 'import_flow':
+        values = [values[0].encode('utf-8')]
+    result = globals()[name](*values)
+    sys.stdout.buffer.write(_json_bytes(result))
+    return 0
+
+
 if __name__ == '__main__':
+    if len(sys.argv) >= 3 and sys.argv[1] == '__node_bridge__':
+        raise SystemExit(_node_bridge_main())
     raise SystemExit(main())

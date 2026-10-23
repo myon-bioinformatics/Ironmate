@@ -40,7 +40,54 @@ test("vendored py_launch.cjs matches vendor.lock.json", () => {
   assert.equal(crypto.createHash("sha1").update(Buffer.concat([
     Buffer.from(`blob ${data.length}\0`), data,
   ])).digest("hex"), entry.blob_sha);
-  assert.equal(entry.commit, "2ea31034ca3caa60ed769806baf750d75e296552");
+  assert.equal(entry.commit, "173124231fc171c251e35caef1fa67e76d0f8bae");
+});
+
+const PYTHON =
+  process.env.PY_LAUNCH_TEST_PYTHON || (process.platform === "win32" ? "python" : "python3");
+const BIG_STDOUT = path.join(ROOT, "tests/fixtures/py_launch/big_stdout.py");
+
+test("vendored run rejects input above maxInputBytes with EINPUTTOOLARGE", () => {
+  const {run} = require(path.join(ROOT, "vendor/py_launch.cjs"));
+  const input = "x".repeat(200);
+  assert.throws(
+    () => run(BIG_STDOUT, ["1"], {python: PYTHON, input, maxInputBytes: 100}),
+    (err) => err.code === "EINPUTTOOLARGE" && /maxInputBytes/.test(err.message),
+  );
+});
+
+test("vendored run maps responseMaxBytes overflow to ERESPONSETOOLARGE", () => {
+  const {run} = require(path.join(ROOT, "vendor/py_launch.cjs"));
+  assert.throws(
+    () => run(BIG_STDOUT, ["200000"], {python: PYTHON, responseMaxBytes: 1024}),
+    (err) => err.code === "ERESPONSETOOLARGE" && /responseMaxBytes/.test(err.message),
+  );
+});
+
+test("ironmate mapLaunchError relabels EINPUTTOOLARGE for flow export", () => {
+  const {mapLaunchError} = require(path.join(ROOT, "ironmate_py_launch.cjs"));
+  const err = Object.assign(
+    new Error("py_launch: input exceeds maxInputBytes (100; got 200 bytes)"),
+    {code: "EINPUTTOOLARGE"},
+  );
+  assert.throws(
+    () => mapLaunchError(err, "flow Python process failed: ", "flow export failed"),
+    (mapped) => mapped.code === "EINPUTTOOLARGE" &&
+      mapped.message === "flow Python process failed: input exceeds maxInputBytes (100; got 200 bytes)",
+  );
+});
+
+test("ironmate mapLaunchError relabels ERESPONSETOOLARGE for flow export", () => {
+  const {mapLaunchError} = require(path.join(ROOT, "ironmate_py_launch.cjs"));
+  const err = Object.assign(
+    new Error("py_launch: response exceeds responseMaxBytes (1024)"),
+    {code: "ERESPONSETOOLARGE"},
+  );
+  assert.throws(
+    () => mapLaunchError(err, "flow Python process failed: ", "flow export failed", {responseMaxBytes: 1024}),
+    (mapped) => mapped.code === "ERESPONSETOOLARGE" &&
+      mapped.message === "flow Python process failed: response exceeds responseMaxBytes (1024)",
+  );
 });
 
 test("wrappers share ironmate_py_launch.cjs", () => {

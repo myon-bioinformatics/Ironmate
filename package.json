@@ -1,5 +1,8 @@
 {
   "private": true,
+  "engines": {
+    "node": ">=24"
+  },
   "description": "Pinned Node packages for Ironmate. PptxGenJS writes the slide package shell; ExcelJS and SheetJS write xlsx values. Ironmate owns the Open XML for both and does not auto-install these packages.",
   "dependencies": {
     "exceljs": "4.4.0",

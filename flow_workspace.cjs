@@ -1,31 +1,29 @@
 "use strict";
 /** Workspace persistence uses Python; patch semantics belong to locked web-ui. */
-const {spawnSync} = require("node:child_process");
 const path = require("node:path");
-const {main, resolvePython} = require("./vendor/py_launch.cjs");
+const {main, run} = require("./vendor/py_launch.cjs");
 const {mapLaunchError, PY_LAUNCH} = require("./ironmate_py_launch.cjs");
 const root = __dirname;
 const PY_SCRIPT = path.join(root, "flow_workspace.py");
+const MAX_INPUT_BYTES = 4 * 1024 * 1024;
+const RESPONSE_MAX_BYTES = 4 * 1024 * 1024;
 const ERR_PREFIX = "flow workspace Python process failed: ";
 
 function call(name, values, options = {}) {
   const input = Buffer.from(JSON.stringify(values), "utf8");
-  if (input.length > 4 * 1024 * 1024) throw Error("workspace request exceeds 4MiB");
-  const code = "import sys,json;sys.path.insert(0,sys.argv[1]);import flow_workspace as f;" +
-    "v=json.load(sys.stdin);v=[v[0].encode(\"utf-8\")] if sys.argv[2]==\"import_flow\" else v;" +
-    "result=getattr(f,sys.argv[2])(*v);" +
-    "sys.stdout.buffer.write(f._json_bytes(result))";
-  let resolved;
   try {
-    resolved = resolvePython({...PY_LAUNCH, python: options.python});
+    const result = run(PY_SCRIPT, ["__node_bridge__", name], {
+      ...PY_LAUNCH,
+      python: options.python,
+      input,
+      maxInputBytes: MAX_INPUT_BYTES,
+      responseMaxBytes: RESPONSE_MAX_BYTES,
+      timeout: 20000,
+    });
+    return JSON.parse(result.stdout.toString("utf8"));
   } catch (err) {
-    mapLaunchError(err, ERR_PREFIX, "flow workspace failed");
+    mapLaunchError(err, ERR_PREFIX, "flow workspace failed", {responseMaxBytes: RESPONSE_MAX_BYTES});
   }
-  const result = spawnSync(resolved.cmd, [...resolved.prefix, "-I", "-S", "-c", code, root, name],
-    {input, timeout: 20000, maxBuffer: 4 * 1024 * 1024});
-  if (result.error) throw Error(ERR_PREFIX + result.error.message);
-  if (result.status !== 0) throw Error(result.stderr.toString("utf8").trim() || "flow workspace failed");
-  return JSON.parse(result.stdout.toString("utf8"));
 }
 
 function importFlow(text, options) {

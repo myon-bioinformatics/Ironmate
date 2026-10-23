@@ -28,3 +28,37 @@ function decode(text, maxBytes = MAX_BYTES) {
   return {mimeType: actual, bytes};
 }
 module.exports = {MAX_BYTES, sniff, decode};
+
+const INGRESS_HELP = `studio/ingress.cjs — validate clipboard image text
+
+usage:
+  node studio/ingress.cjs decode FILE
+  node studio/ingress.cjs decode -
+
+Success prints {"ok":true,"mime":"...","bytes":N} and does not write the
+image bytes. A fixable problem exits 2. --json writes that problem as one
+JSON object on stderr. A terminal with no pipe exits 2 instead of waiting.
+`;
+
+if (require.main === module) {
+  const fs = require("node:fs");
+  const {fail, wantsJson} = require("../ironmate_cli.cjs");
+  const argv = process.argv.slice(2);
+  const jsonMode = wantsJson(argv);
+  const args = argv.filter((token) => token !== "--json");
+  if (args.includes("--help") || args.includes("-h")) {
+    process.stdout.write(INGRESS_HELP);
+  } else if (args[0] !== "decode" || args.length !== 2) {
+    fail("studio/ingress.cjs", "usage: studio/ingress.cjs decode FILE", "rerun with --help", jsonMode);
+  } else if (args[1] === "-" && process.stdin.isTTY) {
+    fail("studio/ingress.cjs", "stdin is a terminal", "pass a file or pipe text", jsonMode);
+  } else {
+    try {
+      const raw = args[1] === "-" ? fs.readFileSync(0, "utf8") : fs.readFileSync(args[1], "utf8");
+      const decoded = decode(raw);
+      process.stdout.write(JSON.stringify({ok: true, mime: decoded.mimeType, bytes: decoded.bytes.length}) + "\n");
+    } catch (error) {
+      fail("studio/ingress.cjs", error.message, "rerun with --help", jsonMode);
+    }
+  }
+}

@@ -140,7 +140,10 @@ def main(argv=None):
     p.add_argument('--reference', required=True, type=Path)
     p.add_argument('--nearest', required=True, type=Path)
     p.add_argument('--smooth', required=True, type=Path)
-    p.add_argument('--out', required=True, type=Path)
+    p.add_argument('--out', '-o', '--output', required=True, type=Path, dest='out',
+                   help='new or empty directory for the variant PNGs and report.json')
+    p.add_argument('--json', action='store_true',
+                   help='on a fixable failure, write one JSON object to stderr; success JSON is unchanged')
     p.add_argument('--steps', type=int, default=10)
     p.add_argument('--mae-weight', type=float, default=0.5)
     p.add_argument('--quality', action='store_true', help='add foreground, color and registration diagnostics')
@@ -179,7 +182,13 @@ def main(argv=None):
             output['quality_selected'] = report['quality']['selection']['selected_index']
         print(json.dumps(output))
     except (OSError, ValueError) as e:
+        from ironmate_cli import emit_error, hint_for
+        if args.json:
+            return emit_error('image_compare.py', e, json_mode=True)
         print(f'error: {e}', file=sys.stderr)
+        hint = hint_for(e)
+        if hint:
+            print(f'hint: {hint}', file=sys.stderr)
         return 2
     return 0
 

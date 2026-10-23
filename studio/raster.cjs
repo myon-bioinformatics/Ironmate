@@ -1,13 +1,38 @@
-// CPU rasterization through installed Chrome and Node 22's built-in WebSocket.
+// CPU rasterization through installed Chrome and Node's built-in WebSocket.
 // No Playwright/Puppeteer runtime dependency; input HTML comes from core.svg only.
 "use strict";
 const { spawn } = require("node:child_process");
 const { pathToFileURL } = require("node:url");
-const [chrome, html, profile, widthText, heightText] = process.argv.slice(2);
-const width = Number(widthText),
-  height = Number(heightText);
-if (typeof WebSocket === "undefined")
-  throw new Error("PNG export requires Node.js 22 or newer");
+const { fail } = require("../ironmate_cli.cjs");
+
+const HELP = `studio/raster.cjs — rasterize a local HTML file to PNG on stdout
+
+usage:
+  node studio/raster.cjs CHROME HTML PROFILE WIDTH HEIGHT
+
+WIDTH and HEIGHT are positive integers. A wrong argument list exits 2
+before Chrome starts. Remote http and https URLs are blocked.
+`;
+
+const args = process.argv.slice(2);
+if (args.includes("--help") || args.includes("-h")) {
+  process.stdout.write(HELP);
+} else if (args.length !== 5) {
+  fail("studio/raster.cjs", "expected CHROME HTML PROFILE WIDTH HEIGHT", "rerun with --help", false);
+} else {
+  const [chrome, html, profile, widthText, heightText] = args;
+  const width = Number(widthText);
+  const height = Number(heightText);
+  if (!Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1) {
+    fail("studio/raster.cjs", "WIDTH and HEIGHT must be positive integers", "example: 640 480", false);
+  } else if (typeof WebSocket === "undefined") {
+    fail("studio/raster.cjs", "PNG export requires Node.js 22 or newer", "use a Node.js build that provides a global WebSocket", false);
+  } else {
+    startRaster(chrome, html, profile, width, height);
+  }
+}
+
+function startRaster(chrome, html, profile, width, height) {
 let child, socket, timer;
 const pending = new Map(),
   events = new Map();
@@ -153,7 +178,10 @@ const deadline = new Promise((_, reject) => {
           call("Browser.close"),
           new Promise((resolve) => setTimeout(resolve, 1000)),
         ]);
-      } catch {}
+      } catch (closeError) {
+        const detail = closeError && closeError.message ? closeError.message : closeError;
+        process.stderr.write("studio/raster.cjs: browser close failed: " + detail + "\n");
+      }
       socket.close();
     }
     if (child && child.exitCode === null) {
@@ -167,3 +195,4 @@ const deadline = new Promise((_, reject) => {
       if (child.exitCode === null) child.kill();
     }
   });
+}

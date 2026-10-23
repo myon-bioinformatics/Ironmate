@@ -90,7 +90,7 @@ def convert(source, output, *, marp="marp", allow_local_files=False):
     try:
         slides = require_package(output)
     except Exception as exc:
-        raise RuntimeError("Marp output is not a readable PPTX") from exc
+        raise RuntimeError(f"Marp output is not a readable PPTX: {exc}") from exc
     return {"source": str(source), "output": str(output), "slides": slides, "backend": "marp"}
 
 
@@ -227,7 +227,12 @@ def review(*, source=None, text=None, directory, marp='marp', mmdc=None,
             report.update(stage='complete', preview=preview, final_pptx_sha256=final_hash)
     except Exception as exc:
         report.update(failed_stage=report['stage'], stage='failed', error_type=type(exc).__name__)
-        raise RuntimeError(f"review failed at {report['failed_stage']} ({type(exc).__name__}); see review.json") from None
+        detail = str(exc).strip().replace("\n", " ")
+        if len(detail) > 400:
+            detail = detail[:400] + "..."
+        raise RuntimeError(
+            f"review failed at {report['failed_stage']} ({type(exc).__name__}: {detail}); see review.json"
+        ) from exc
     finally:
         (target / 'review.json').write_text(json.dumps(report, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
     return report
@@ -283,7 +288,10 @@ def main(argv=None):
         Argument(("--table-region",), {"type": float, "nargs": 4, "default": (.5,1.2,9,4), "metavar": ("X","Y","WIDTH","HEIGHT")}),
         Argument(("--table-columns",), {"type": int}),
         Argument(("--enrich",), {"type": Path, "help": "TOML patterns applied as native OOXML shapes after Marp"}),
+        Argument(("--json",), {"action": "store_true", "help": "on a fixable failure, write one JSON object to stderr"}),
     ], description=__doc__)
+    from ironmate_cli import bind_json_errors, guard
+    bind_json_errors(parser, argv, "pptx_pipeline.py")
     args = parser.parse_args(argv)
     if (args.source is None) == (args.text is None):
         parser.error("provide exactly one of source or --text")
@@ -305,14 +313,19 @@ def main(argv=None):
     common = dict(source=None if inline is not None else args.source, text=inline,
                   marp=args.marp, mmdc=args.mmdc, background=args.background,
                   svg_foreground=args.svg_foreground, enrich_patterns=patterns)
-    if args.review is not None:
-        result = review(directory=args.review, sha=args.review_sha, run_id=args.review_run_id, **common)
-    else:
-        result = run(output=args.output, **common)
-    if args.source == "-" and args.review is None:
-        result["conversion"]["source"] = "stdin"
-    print(json.dumps(result, ensure_ascii=False, indent=2))
+    def work():
+        if args.review is not None:
+            result = review(directory=args.review, sha=args.review_sha, run_id=args.review_run_id, **common)
+        else:
+            result = run(output=args.output, **common)
+        if args.source == "-" and args.review is None:
+            result["conversion"]["source"] = "stdin"
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0
+
+    return guard("pptx_pipeline.py", work, json_mode=args.json,
+                 extra=(RuntimeError, subprocess.CalledProcessError, subprocess.TimeoutExpired))
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

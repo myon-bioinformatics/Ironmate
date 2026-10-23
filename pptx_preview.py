@@ -73,7 +73,8 @@ def render_preview_html(html, directory, *, expected_slides, sha, run_id, timeou
             already_failed = sys.exc_info()[0] is not None
             try:
                 browser.close()
-            except Exception:
+            except Exception as exc:
                 if not already_failed:
                     raise
+                sys.stderr.write(f'pptx_preview: browser close failed: {exc}\n')
     return result

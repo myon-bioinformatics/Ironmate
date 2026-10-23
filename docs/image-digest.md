@@ -7,8 +7,13 @@ published-app の実行のように、全体の成果物が大きくてダウン
 
 ```sh
 python -S image_digest.py input.json --out digest/            # 画像パスは input.json からの相対パス
+python -S image_digest.py input.json -o digest/               # -o と --output は --out と同じ
 node image_digest.cjs input.json digest/                       # Node から（処理は Python が持つ）
+node image_digest.cjs input.json --out digest/ --tile 64x128   # Python と同じフラグ
+node image_digest.cjs --help
 ```
+
+直せない入力は終了コード 2 です。`--json` を付けると、その失敗は stderr の JSON 1 個になり、成功時の stdout は変わりません。引数が足りないときは待たずに使い方を出します。
 
 Node の API（`buildDigest`）の型は `image_digest.d.cts` にある。ほかの Node API（`flow_export.cjs`、
 `flow_workspace.cjs`、`studio/ingress.cjs`）も同じ名前の `.d.cts` を持ち、本体は JavaScript のまま。

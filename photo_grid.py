@@ -392,12 +392,19 @@ def main(argv=None):
     p.add_argument('--fit', choices=FITS, default='crop')
     p.add_argument('--colors', type=int, default=8, help='median-cut colors, 1-16 (default 8)')
     p.add_argument('--palette', choices=PALETTES, help='use a fixed pixel_grid palette instead')
-    p.add_argument('--format', choices=('json', 'svg', 'png', 'base64'), default='json')
+    p.add_argument('--format', choices=('json', 'svg', 'png', 'base64'), default=None,
+                   help='json (default), svg, png, or base64')
+    p.add_argument('--json', action='store_true', help='write JSON (the default; rejects a different --format)')
     p.add_argument('--data-uri', action='store_true', help='base64: emit data:image/png;base64,...')
     p.add_argument('--scale', type=int, help='pixels per cell, 1-64 (default svg 8, png/base64 1)')
     p.add_argument('-o', '--output', help='write the result here instead of stdout')
     p.add_argument('--force', action='store_true', help='replace an existing -o file')
     args = p.parse_args(argv)
+    if args.json and args.format not in (None, 'json'):
+        print('photo_grid.py: --json cannot be combined with a different --format', file=sys.stderr)
+        print('hint: pass only --json, or only --format json', file=sys.stderr)
+        return 2
+    args.format = args.format or 'json'
     try:
         if args.input == '-':
             text = sys.stdin.buffer.read(MAX_BYTES * 2)
@@ -423,7 +430,13 @@ def main(argv=None):
             sys.stdout.buffer.write(result)
             sys.stdout.flush()
     except (OSError, UnicodeDecodeError, ValueError) as exc:
+        from ironmate_cli import emit_error, hint_for
+        if args.json:
+            return emit_error('photo_grid.py', exc, json_mode=True)
         print(f'error: {exc}', file=sys.stderr)
+        hint = hint_for(exc)
+        if hint:
+            print(f'hint: {hint}', file=sys.stderr)
         return 2
     return 0
 

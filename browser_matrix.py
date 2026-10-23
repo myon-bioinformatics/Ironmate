@@ -16,6 +16,7 @@ is RGB MAE/RMSE between tiles, a screen-level hint for "this engine draws the pa
 differently", not a pixel-exact regression gate. Standard library only.
 
     python -S browser_matrix.py app-results --out matrix [--shot width-384] [--reference Linux-chromium-desktop]
+    # -o and --output are the same flag as --out.
 """
 from __future__ import annotations
 
@@ -213,7 +214,7 @@ def write(out, report, sheet, tiles):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument('root', type=Path, help='browser-test-kit app-results tree')
-    parser.add_argument('--out', type=Path)
+    parser.add_argument('--out', '-o', '--output', type=Path, dest='out')
     parser.add_argument('--page', action='append', help='page-name glob; repeat for OR')
     parser.add_argument('--env', action='append', help='environment-name glob; repeat for OR')
     parser.add_argument('--list', action='store_true', help='list selected paths as JSON without decoding or writing images')
@@ -240,6 +241,10 @@ def main(argv=None):
         write(args.out, report, sheet, tiles)
     except (OSError, ValueError) as error:
         print(f'error: {error}', file=sys.stderr)
+        from ironmate_cli import hint_for
+        hint = hint_for(error)
+        if hint:
+            print(f'hint: {hint}', file=sys.stderr)
         return 2
     print(json.dumps({'pages': len(report['pages']), 'envs': len(report['envs']), 'cells': len(report['cells']),
                       'missing': len(report['missing']), 'reference': report['reference'], 'out': str(args.out)}))

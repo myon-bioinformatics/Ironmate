@@ -138,3 +138,54 @@ def parse_shelf(items: list[dict | str], *, max_bytes: int = MAX_BYTES) -> list[
             mime, data, kind = None, None, "text"
         parsed.append({"type": kind, "data": data, "mime": mime, "text": text, "label": label})
     return parsed
+
+
+def main(argv=None):
+    """Validate clipboard text. Success is JSON. Image bytes are not written back."""
+    import json
+    import sys
+    from pathlib import Path
+
+    from ironmate_cli import ToolParser, guard
+
+    parser = ToolParser(prog='studio_ingress.py', description=__doc__.splitlines()[0])
+    parser.add_json_flag()
+    commands = parser.add_subparsers(dest='command', required=True)
+    decode_cmd = commands.add_parser('decode', help='validate one Base64 image or data URI')
+    decode_cmd.add_argument('input', help='text file, or - for stdin')
+    shelf_cmd = commands.add_parser('shelf', help='validate a JSON array of shelf items')
+    shelf_cmd.add_argument('input', help='JSON file, or - for stdin')
+    args = parser.parse_args(argv)
+
+    def read():
+        if args.input == '-':
+            if sys.stdin.isatty():
+                parser.error('pass a file or pipe text; stdin is a terminal')
+            return sys.stdin.buffer.read()
+        return Path(args.input).read_bytes()
+
+    def work():
+        raw = read()
+        if args.command == 'decode':
+            mime, data = decode(raw.decode('utf-8'))
+            print(json.dumps({'ok': True, 'mime': mime, 'bytes': len(data)}, ensure_ascii=False))
+        else:
+            items = json.loads(raw.decode('utf-8'))
+            summary = []
+            for item in parse_shelf(items):
+                row = {'type': item['type'], 'label': item['label']}
+                if item['type'] == 'image':
+                    row['mime'] = item['mime']
+                    row['bytes'] = len(item['data'])
+                else:
+                    row['chars'] = len(item['text'])
+                summary.append(row)
+            print(json.dumps({'ok': True, 'items': summary}, ensure_ascii=False))
+        return 0
+
+    return guard('studio_ingress.py', work, json_mode=args.json)
+
+
+if __name__ == '__main__':
+    import sys
+    raise SystemExit(main())

@@ -46,7 +46,7 @@ test("vendored py_launch.cjs matches vendor.lock.json", () => {
   assert.equal(crypto.createHash("sha1").update(Buffer.concat([
     Buffer.from(`blob ${data.length}\0`), data,
   ])).digest("hex"), entry.blob_sha);
-  assert.equal(entry.commit, "173124231fc171c251e35caef1fa67e76d0f8bae");
+  assert.equal(entry.commit, "c73821de8492b2394c718cb276cad9f683ff1910");
 });
 
 const PYTHON =
@@ -191,7 +191,7 @@ test("flow_workspace rejects oversize stdin with EINPUTTOOLARGE", () => {
   );
 });
 
-test("flow_workspace must ignore PYTHONPATH shadowing of stdlib xml (needs py_launch isolated:true)", (t) => {
+test("flow_workspace ignores PYTHONPATH shadowing of stdlib xml under isolated mode", (t) => {
   const shadowDir = fs.mkdtempSync(path.join(os.tmpdir(), "ironmate-xml-shadow-"));
   t.after(() => fs.rmSync(shadowDir, {recursive: true, force: true}));
   fs.writeFileSync(path.join(shadowDir, "xml.py"), "raise RuntimeError('PYTHONPATH shadowed stdlib xml')\n");
@@ -203,4 +203,44 @@ importFlow(${JSON.stringify(raw)});`],
     {env: {...process.env, PYTHONPATH: shadowDir}, encoding: "utf8"},
   );
   assert.equal(child.status, 0, child.stderr || child.stdout);
+});
+
+test("flow_workspace isolated mode still imports sibling Ironmate modules", () => {
+  const {importFlow, patchWorkspace} = require(path.join(ROOT, "flow_workspace.cjs"));
+  const raw = fs.readFileSync(path.join(ROOT, "examples/flow.json"), "utf8");
+  const workspace = importFlow(raw);
+  assert.equal(workspace.schema, "ironmate-flow/1");
+  assert.ok(workspace.spec && typeof workspace.spec === "object");
+  const patched = patchWorkspace(workspace, []);
+  assert.equal(patched.schema, "ironmate-flow/1");
+  assert.deepEqual(patched.spec, workspace.spec);
+});
+
+test("IRONMATE_PYTHON interpreter choice is unaffected by isolated child PYTHONPATH", (t) => {
+  if (process.platform === "win32") {
+    t.skip("extensionless shebang fake interpreters are not executable as IRONMATE_PYTHON on Windows");
+    return;
+  }
+  const shadowDir = fs.mkdtempSync(path.join(os.tmpdir(), "ironmate-xml-shadow-"));
+  t.after(() => fs.rmSync(shadowDir, {recursive: true, force: true}));
+  fs.writeFileSync(path.join(shadowDir, "xml.py"), "raise RuntimeError('PYTHONPATH shadowed stdlib xml')\n");
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ironmate-fake-py-"));
+  t.after(() => fs.rmSync(dir, {recursive: true, force: true}));
+  const {fake, marker} = writeFakePython(dir);
+  const prev = process.env.IRONMATE_PYTHON;
+  process.env.IRONMATE_PYTHON = fake;
+  process.env.PYTHONPATH = shadowDir;
+  t.after(() => {
+    if (prev === undefined) delete process.env.IRONMATE_PYTHON;
+    else process.env.IRONMATE_PYTHON = prev;
+    delete process.env.PYTHONPATH;
+  });
+  const {importFlow} = require(path.join(ROOT, "flow_workspace.cjs"));
+  const raw = fs.readFileSync(path.join(ROOT, "examples/flow.json"), "utf8");
+  try {
+    importFlow(raw);
+  } catch {
+    // fake interpreter exits before returning JSON; marker proves which binary ran
+  }
+  assert.equal(fs.readFileSync(marker, "utf8"), "ran");
 });

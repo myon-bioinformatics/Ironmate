@@ -6,9 +6,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 from xml.etree import ElementTree as ET
 
 from flow_export import FORMATS, MAX_INPUT, read_spec, render_flow

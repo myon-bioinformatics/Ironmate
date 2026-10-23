@@ -284,8 +284,10 @@ Markdown の要約を作ります。容量に収まるまでサムネイルを 1
 親リポジトリ由来の `vendor/py_launch.cjs`（Node.js 24 以上）に委譲する。API の `python` を省略したときは呼び出しごとに
 3.9 以上か短く確認したうえで、`IRONMATE_PYTHON` → `PYTHON` → `python3` → `python`（Windows は `py -3`）
 の順に試す。`IRONMATE_PYTHON` または API の `python` を明示した場合はそこだけを使い、見つからなければ
-フォールバックしない。`flow_workspace.cjs` の JSON リクエストは 4MiB までで、超過時は
-`flow workspace Python process failed:` 付きの `EINPUTTOOLARGE`（`maxInputBytes`）になる。詳細は
+フォールバックしない。`flow_workspace.cjs` は `isolated`（CPython `-I`）で子プロセスの `PYTHON*` 環境を無視し、
+同ディレクトリの `flow_export` 等はスクリプト側で `sys.path` に載せる。JSON リクエストは 4MiB までで、超過時は
+`flow workspace Python process failed:` 付きの `EINPUTTOOLARGE`（`maxInputBytes`）になる。`IRONMATE_PYTHON` は Node 側の
+インタプリタ選択のみで、`-I` の対象にはならない。詳細は
 [flow export](docs/flow-export.md) と [image digest](docs/image-digest.md)。
 
 ## Common JSON flow diagrams

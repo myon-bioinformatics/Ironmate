@@ -8,12 +8,13 @@ const PY_SCRIPT = path.join(root, "flow_workspace.py");
 const MAX_INPUT_BYTES = 4 * 1024 * 1024;
 const RESPONSE_MAX_BYTES = 4 * 1024 * 1024;
 const ERR_PREFIX = "flow workspace Python process failed: ";
+const WORKSPACE_LAUNCH = {...PY_LAUNCH, isolated: true};
 
 function call(name, values, options = {}) {
   const input = Buffer.from(JSON.stringify(values), "utf8");
   try {
     const result = run(PY_SCRIPT, ["__node_bridge__", name], {
-      ...PY_LAUNCH,
+      ...WORKSPACE_LAUNCH,
       python: options.python,
       input,
       maxInputBytes: MAX_INPUT_BYTES,
@@ -48,6 +49,6 @@ function patchAndRender(workspace, operations, options = {}) {
 }
 
 if (require.main === module) {
-  main(PY_SCRIPT, PY_LAUNCH);
+  main(PY_SCRIPT, WORKSPACE_LAUNCH);
 }
 module.exports = {importFlow, patchWorkspace, renderWorkspace, patchAndRender};

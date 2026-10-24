@@ -48,7 +48,7 @@ python -m pytest -q tests/test_studio_ingress.py tests/test_image_studio.py test
 build succeeded. The existing complete `tests/image_studio_browser.cjs` suite
 also passed with `IRONMATE_STUDIO_STATIC=1` in Chromium, including its scale,
 tradeoff, export, history and PPTX image checks. Browser reproduction commands and Flutter source references
-are in [image-studio.md](../../image-studio.md#画像入力とクリップボードの形式選択).
+are in [image-studio.md](../../image-studio.md#image-input-and-clipboard-format-selection).
 
 The existing 32MiB input ceiling, 4MP limit and PNG normalization remain.
 Flutter's 40MP ceiling and default 2/3 downscale are intentionally not adopted:

@@ -1,84 +1,84 @@
-# Image Studio — スタンプを重ねて画像にする
+# Image Studio — layer stamps into an image
 
 ```sh
 python -S image_studio.py
 ```
 
-表示された `http://127.0.0.1:8765` をブラウザで開く。Python標準ライブラリとブラウザだけで動く。
-Dart・Flutter・Plotly・画像生成APIは不要。画像やシーンはブラウザ内で処理し、サーバーへ送信しない。
-公開用の静的画面は https://myon-bioinformatics.github.io/Ironmate/ に配信する。
-GitHub Pages上ではPythonなしで動く。公開対象は固定したHTML/JS/CSSだけで、作成した画像・シーンJSONは含めない。
+Open the shown `http://127.0.0.1:8765` in a browser. It runs with only the Python standard library and a browser.
+No Dart, Flutter, Plotly or image-generation API is needed. Images and scenes are processed in the browser and not sent to the server.
+A static public version is served at https://myon-bioinformatics.github.io/Ironmate/.
+On GitHub Pages it runs without Python. Only fixed HTML/JS/CSS is published; images and scene JSON you create are not included.
 
-![Image Studioの実ブラウザ画面](evidence/image-studio/desktop.png)
+![Image Studio in a real browser](evidence/image-studio/desktop.png)
 
-## 操作
+## Usage
 
-1. 「四角」「丸」「三角」「文字」を選び、キャンバスを押して配置する。写真なしでも使える。
-2. 絵文字ボタンを選んで繰り返し押す。「文字・カスタムスタンプ」に任意の文字列も入力できる。
-3. 「写真・画像スタンプ」でローカルのPNG/JPEG/WebPを置く。複数の画像を重ねられる。
-4. レイヤーを選んで「選択したレイヤーをスタンプに」。図形・文字・画像・行列を複製して押せる。
-5. 「選択」で内側をドラッグして移動、右下の青い点で拡縮。右の入力で位置・寸法・角度・不透明度を変更。
-   文字のドラッグ拡縮はフォントサイズも変える。文字内容や色は「入力した文字・色を適用」で変更する。
-6. 「前へ／後ろへ」で重ね順、「複製／削除」でレイヤーを編集。戻す／やり直すは最大40状態。
-   JSONの読込や「新しいキャンバス」も履歴に残る。選択枠は書き出す画像には入らない。
-7. PNG・SVGをダウンロード。再編集には「JSON保存」を使う。元画像・数値・レイヤーが入る。
-   このJSONは元画像を含むので、共有すれば元画像も渡る。モザイク加工後の共有にはPNGを使う。
+1. Choose `四角` (rectangle), `丸` (circle), `三角` (triangle) or `文字` (text) and click the canvas to place it. Works without photos.
+2. Choose an emoji button and click repeatedly. Any string can also be entered in `文字・カスタムスタンプ` (text / custom stamp).
+3. Place local PNG/JPEG/WebP files with `写真・画像スタンプ` (photo / image stamp). Multiple images can be layered.
+4. Select a layer and use `選択したレイヤーをスタンプに` (make the selected layer a stamp) to duplicate and stamp shapes, text, images or matrices.
+5. In `選択` (select) mode, drag the inside to move and the blue dot at the bottom right to scale. Change position, size, angle and opacity with the inputs on the right.
+   Drag-scaling text also changes the font size. Change text content and color with `入力した文字・色を適用` (apply entered text and color).
+6. Edit layers with `前へ／後ろへ` (forward / backward) for stacking order and `複製／削除` (duplicate / delete). Undo/redo keeps up to 40 states.
+   Loading JSON and `新しいキャンバス` (new canvas) are also recorded in history. The selection frame is not included in exported images.
+7. Download PNG or SVG. Use `JSON保存` (save JSON) for re-editing; it contains original images, values and layers.
+   This JSON includes original images, so sharing it shares them too. Use PNG to share after applying a mosaic.
 
-PNGは初期1280×720で、資料用の16:9画像として使える。背景は透明にもできる。
-幅・高さを変更して任意の比率で作成できる（最大4MP、各辺64〜4096）。
-ブラウザのJSON再読込で配置と元画像を保持し、同一ブラウザ・フォントではPNGのバイト一致を検証している。
-フォント・絵文字の見た目は端末依存であり、環境をまたぐ画素一致は保証しない。
-SVGの文字・絵文字はフォントに依存するalphaマスクまたはtextで、アウトライン化しないため、見た目を固定して配布する場合はPNGを使う。
+PNG defaults to 1280×720, usable as a 16:9 image for documents. The background can be transparent.
+Width and height can be changed for any aspect ratio (max 4 MP, 64–4096 per side).
+Reloading JSON in the browser keeps layout and original images, and PNG byte equality is verified in the same browser and fonts.
+Font and emoji appearance depend on the device; pixel equality across environments is not guaranteed.
+Text and emoji in SVG are font-dependent alpha masks or text, not outlined, so use PNG to distribute a fixed appearance.
 
-## Base64でFlutterへ渡す
+## Passing to Flutter via Base64
 
-「Base64 / 渡す」で出力PNGを標準Base64にする。PNG data URI／Base64のみを切り替え、
-コピーまたはテキスト保存できる。コピーを拒否された場合は文字列を選択して手動コピーできる。
-出力はPNGのバイト列と完全一致する。URL-safe化、padding除去、百分率エンコードはしない。
+`Base64 / 渡す` (Base64 / hand off) converts the output PNG to standard Base64. You can switch between PNG data URI and plain Base64,
+and copy or save as text. If copying is refused, select the string and copy it manually.
+The output matches the PNG bytes exactly. No URL-safe conversion, padding removal or percent encoding.
 
-Flutter main `13905a4d90f97daa73069d6fbff43acd6a65a760` の
-`lib/shared/clipboard/base64_image_bridge.dart` を参照して確認した。
-同実装が受け取れるPNG data URI／標準Base64、32MiB以下の条件で出力する。
-Flutterのコード・ビルド・CIを変更せず、既存のクリップボード欄へ貼り付けるための受け渡しである。
-Flutter上の実操作を今回再実行したという意味ではない。既存Pythonの厳密なBase64 decoderとPNGバイト一致で検証した。
+Checked against `lib/shared/clipboard/base64_image_bridge.dart` in
+Flutter main `13905a4d90f97daa73069d6fbff43acd6a65a760`.
+Output meets that implementation's accepted PNG data URI / standard Base64 at 32 MiB or less.
+This is a hand-off for pasting into the existing clipboard field without changing Flutter code, builds or CI.
+It does not mean the operation in Flutter was re-run this time. It was verified with the existing strict Python Base64 decoder and PNG byte equality.
 
-## 画像入力とクリップボードの形式選択
+## Image input and clipboard format selection
 
-ファイル選択・カメラ用file input・明示的なBase64入力・クリップボード画像を同じ検証・PNG正規化経路に渡す。
-ファイル選択のキャンセルではシーンを変更しない。`capture`はOS/ブラウザへのヒントであり、カメラ起動を保証しない。
+File selection, the camera file input, explicit Base64 input and clipboard images all go through the same validation and PNG normalization path.
+Canceling file selection does not change the scene. `capture` is a hint to the OS/browser and does not guarantee the camera opens.
 
-クリップボードの「画像を取り込む」は次の順で選択する。
+The clipboard's `画像を取り込む` (import image) chooses in this order.
 
-1. 有効な画像Base64/data URIがテキストとして読めれば優先する。
-2. 明示的な`data:image/...`、またはPNG/JPEG/WebPの先頭バイトを持つ生Base64が不正ならエラーにする。
-   別の古い画像を黙って取り込まない。MIME不一致、デコード失敗、容量超過も含む。
-3. 無関係な通常テキスト（画像以外のBase64を含む）・空文字列・テキスト取得失敗では、
-   `clipboard.read()`からPNG/JPEG/WebPを探す。取得できない形式/項目があっても後続の画像を試す。
-4. 取得できなければ、権限拒否・API非対応・取得失敗・画像なし・不正画像を区別する。
-   テキスト取得の権限拒否だけで中断しない。両方失敗した場合の優先度は、権限拒否→不正画像→その他取得失敗。
+1. If a valid image Base64/data URI can be read as text, it takes priority.
+2. An explicit `data:image/...`, or raw Base64 starting with PNG/JPEG/WebP magic bytes, that is invalid is an error.
+   It never silently imports a different older image. This includes MIME mismatch, decode failure and exceeding the size limit.
+3. For unrelated ordinary text (including non-image Base64), an empty string or a failed text read,
+   it looks for PNG/JPEG/WebP via `clipboard.read()`. Formats/items that cannot be read do not stop it from trying later images.
+4. If nothing is obtained, it distinguishes permission denied, API unsupported, read failure, no image and invalid image.
+   A permission denial on the text read alone does not abort. If both fail, priority is permission denied → invalid image → other read failures.
 
-エラーダイアログの`data-code`には`clipboard-denied`、`clipboard-unsupported`、
-`clipboard-read-failed`、`clipboard-no-image`、`clipboard-invalid-image`を設定する。
-Clipboard APIには安全なコンテキスト（HTTPS/localhost）、ユーザー操作や権限が必要で、対応範囲はOS/ブラウザ依存。
-非対応/拒否時は既存のファイル選択・Base64入力を利用できる。
+The error dialog's `data-code` is set to `clipboard-denied`, `clipboard-unsupported`,
+`clipboard-read-failed`, `clipboard-no-image` or `clipboard-invalid-image`.
+The Clipboard API needs a secure context (HTTPS/localhost), a user gesture or permission, and support depends on the OS/browser.
+When unsupported or denied, the existing file selection and Base64 input remain available.
 
-Flutter main `f8fe4e81d783258a4b8c730ea400acb7167372a2`の
-[PhotoImportLimits](https://github.com/myon-bioinformatics/flutter_navigation_basic/blob/f8fe4e81d783258a4b8c730ea400acb7167372a2/lib/features/photo_studio/data/photo_import_limits.dart)と
-[Base64ImageBridge](https://github.com/myon-bioinformatics/flutter_navigation_basic/blob/f8fe4e81d783258a4b8c730ea400acb7167372a2/lib/shared/clipboard/base64_image_bridge.dart)を参照した仕様差：
+Spec differences, referencing [PhotoImportLimits](https://github.com/myon-bioinformatics/flutter_navigation_basic/blob/f8fe4e81d783258a4b8c730ea400acb7167372a2/lib/features/photo_studio/data/photo_import_limits.dart) and
+[Base64ImageBridge](https://github.com/myon-bioinformatics/flutter_navigation_basic/blob/f8fe4e81d783258a4b8c730ea400acb7167372a2/lib/shared/clipboard/base64_image_bridge.dart)
+in Flutter main `f8fe4e81d783258a4b8c730ea400acb7167372a2`:
 
-| 項目 | Ironmate | Flutter Photo Studio |
+| Item | Ironmate | Flutter Photo Studio |
 | --- | --- | --- |
-| 入力byte上限 | 32MiB（Base64復号後、バイナリも同じ） | 32MiB |
-| 画像画素上限 | 4,194,304画素（既存の4MP制限を維持） | 40,000,000画素 |
-| 取込時の縮小 | なし。上限超過は明示的に拒否 | 既定2/3、文書の長辺4096以下へ縮小 |
-| 保存画像 | 検証後PNG正規化、取込寸法を維持 | PNG正規化・縮小 |
+| Input byte limit | 32 MiB (after Base64 decoding; same for binary) | 32 MiB |
+| Image pixel limit | 4,194,304 pixels (keeps the existing 4 MP limit) | 40,000,000 pixels |
+| Downscaling on import | None. Over-limit input is explicitly rejected | Default 2/3, downscaled to a document long side of 4096 or less |
+| Stored image | PNG-normalized after validation, import size kept | PNG-normalized and downscaled |
 
-Ironmateの4MPは既存のモザイク処理・描画負荷を制限する意図的な上限。
-40MPの取得・安全な縮小は今回未対応。デコード後にCanvas縮小するだけではデコード時のメモリ負荷は抑えられず、
-元画像を保持する仕様にも影響するため、自動縮小・40MP対応への変更は別途検証する。
-既存シーンの埋込PNGは1画像12,000,000文字、合計20,000,000文字の制限もあり、入力32MiBがすべて保存可能という意味ではない。
+Ironmate's 4 MP is an intentional limit on existing mosaic processing and rendering load.
+Reading 40 MP and downscaling it safely is not supported yet. Downscaling with Canvas after decoding does not reduce memory load during decoding,
+and it affects the spec of keeping original images, so a change to automatic downscaling / 40 MP support will be verified separately.
+Embedded PNGs in existing scenes are also limited to 12,000,000 characters per image and 20,000,000 in total, so a 32 MiB input is not necessarily storable.
 
-再現（テスト専用Playwright 1.58.2、ランタイム依存の追加なし）：
+Reproduction (test-only Playwright 1.58.2, no added runtime dependencies):
 
 ```sh
 npm install --prefix build/clipboard-tools --no-save --ignore-scripts --package-lock=false playwright@1.64.1
@@ -86,87 +86,87 @@ node build/clipboard-tools/node_modules/playwright/cli.js install --with-deps ch
 IRONMATE_PLAYWRIGHT_MODULE="$PWD/build/clipboard-tools/node_modules/playwright" node tests/studio_clipboard.cjs
 ```
 
-静的ビルドの`/Ironmate/`サブパスで、実ブラウザのUI・PNG/JPEG/WebPデコード・RGBA・入力byte/画素境界・キャンセルを確認する。
-形式の共存・権限拒否・非対応はClipboard API境界のテストダブルで再現する。
-Chromiumでは追加で実`ClipboardItem`に通常テキストとPNGを同時に書き、ボタン経由で読む。
-Firefox/WebKitのOSクリップボード連携、Android/iOS実機、実カメラはこのテストの成功からは主張しない。
-CIは3エンジンを独立実行し、バージョン・検証項目・画面を`studio-clipboard-*` artifactへ保存する。
-今回の取得処理はIronmate内に留め、2系統以上での実利用を確認するまでweb-uiへ移さない。
+On the static build's `/Ironmate/` subpath, it checks the real-browser UI, PNG/JPEG/WebP decoding, RGBA, input byte/pixel boundaries and cancellation.
+Coexisting formats, permission denial and lack of support are reproduced with test doubles at the Clipboard API boundary.
+On Chromium it additionally writes ordinary text and a PNG together to a real `ClipboardItem` and reads them via the button.
+Passing this test is not a claim about OS clipboard integration on Firefox/WebKit, real Android/iOS devices or real cameras.
+CI runs the three engines independently and saves versions, checks and screenshots to `studio-clipboard-*` artifacts.
+This reading logic stays in Ironmate and will not move to web-ui until real use in two or more places is confirmed.
 
-## 時計・矢印・顔文字と単色のスタンプ
+## Clock, arrow, emoticon and monochrome stamps
 
-「時計」は入力した時刻のスナップショットで、12目盛りと2本の針を図形として保存する。
-「矢印」は直線＋独立した矢羽根で描く。矢羽根は「🔰を黒にする」／「三角形」を選び、先端／中央へ配置できる。
-🔰はalpha maskで黒一色にし、右向きへ90度回して重ねる。絵文字の形は端末のフォントに依存する。
-旧sceneで形の指定がない矢印は従来の三角形のまま。絵文字ボタンの🔰も黒色スタンプとして置ける。
-中央配置は既存PPTXの `arrow_geometry` と同じ中心・方向の契約で比較する。
-回転で任意の方向を向けられ、SVG markerやネイティブ矢印には置換しない。
+`時計` (clock) is a snapshot of the entered time, saved as shapes: 12 ticks and 2 hands.
+`矢印` (arrow) is drawn as a straight line plus a separate arrowhead. The arrowhead can be `🔰を黒にする` (make 🔰 black) or `三角形` (triangle), placed at the tip or center.
+🔰 is made solid black through its alpha mask and rotated 90 degrees to point right. The emoji's shape depends on the device font.
+Arrows in old scenes with no shape specified stay as the existing triangle. The 🔰 emoji button can also place a black stamp.
+Center placement is compared against the same center/direction contract as the existing PPTX `arrow_geometry`.
+Rotation can point it in any direction; it is not replaced with SVG markers or native arrows.
 
-文字・顔文字・絵文字・画像を「単色で描く」にすると、元のalphaをマスクとして指定色を塗る。
-カラーフォントが色を内蔵する場合も、単にtextのfillを変えることに頼らない。
-写真を単色化すると不透明な範囲全体が塗られる。輪郭抽出・被写体の切り抜き機能ではない。
-顔文字は文字入力から任意に追加できる。ASCIIアートには「等幅」を選べる。
-「時計・矢印・顔文字の例」でそのまま試せる。
+Setting text, emoticons, emoji or images to `単色で描く` (draw in one color) fills the chosen color using the original alpha as a mask.
+Even when a color font has built-in colors, it does not rely on simply changing the text fill.
+Making a photo monochrome fills its whole opaque area. It is not outline extraction or subject cutout.
+Emoticons can be added freely through text input. `等幅` (monospace) can be chosen for ASCII art.
+`時計・矢印・顔文字の例` (clock / arrow / emoticon example) lets you try it right away.
 
-## 出力倍率とCLI
+## Output scale and CLI
 
-画面上部の1×／2×／4×／8×は、同じviewBoxを保ってSVG・PNG・Base64を再描画する。
-元のシーンサイズやレイヤー座標は変更しない。最大8192px／辺・合計16MP。
-文字・図形は元データから描き直し、埋込画像は「ドットを保持」／「なめらかに補間」で拡大する。
-補間が細部を取り戻すという意味ではない。
+1×/2×/4×/8× at the top of the screen redraw SVG, PNG and Base64 keeping the same viewBox.
+The original scene size and layer coordinates are unchanged. Max 8192 px per side and 16 MP total.
+Text and shapes are redrawn from source data; embedded images are upscaled with `ドットを保持` (keep pixels) or `なめらかに補間` (smooth interpolation).
+Interpolation does not mean recovering detail.
 
-GUIで保存したJSONも、Pythonで用意したJSONも同じレンダラーでCLI出力できる。
-SVGにはNode.js、PNG/Base64にはNode.js 22以降とインストール済みChrome/Chromiumが必要。
-画像生成API、GPU、Playwright/Puppeteerの実行時依存は不要。フォントはホストOSのものを使う。
+JSON saved from the GUI and JSON prepared in Python can both be output from the CLI with the same renderer.
+SVG needs Node.js; PNG/Base64 need Node.js 22+ and an installed Chrome/Chromium.
+No image-generation API, GPU or Playwright/Puppeteer runtime dependency is needed. Fonts come from the host OS.
 
 ```sh
 python -S image_studio.py --render scene.json --format svg --scale 4 -o poster.svg
 python -S image_studio.py --render scene.json --format png --scale 2 -o poster.png
 python -S image_studio.py --render scene.json --format base64 --data-uri -o image.base64.txt
-# ChromeがPATHにない場合のみ --chrome /path/to/chrome を付ける
+# add --chrome /path/to/chrome only if Chrome is not on PATH
 python -S image_studio.py --build-site build/studio-site
 ```
 
-出力先の既存ファイルは拒否し、明示した `--force` の場合だけ置換する。
-静的サイト用の出力先は新しいディレクトリまたは空ディレクトリを指定する。
+Existing output files are rejected and replaced only with an explicit `--force`.
+For the static site, specify a new or empty output directory.
 
-[MAE優先・RMSE優先・中間・バランス版のCLI比較](image-comparison.md) は、UIと分離した任意の実験ツールとして利用できる。
+The [CLI comparison of MAE-priority, RMSE-priority, midpoint and balanced versions](image-comparison.md) is available as an optional experiment tool separate from the UI.
 
-[拡大比較と受け渡しの検証記録](evidence/studio-delivery/report.md) に、成功・誤差・処理時間を残す。
+Successes, errors and processing times are kept in the [verification record for upscaling comparison and hand-off](evidence/studio-delivery/report.md).
 
-## 数値 → 色 → ヒートマップ
+## Numbers → color → heatmap
 
-「数値行列」に `[[0,1,2],[3,null,4]]` のようなJSONを入力して配置する。
-行列JSONファイル、またはPlotlyの単一heatmap traceを含む `{data:[...]}` も読み込める。
-`z`・`x`・`y`・`zmin`・`zmax`を利用し、**先頭行を上**に配置する。
-Plotlyの軸順序・レイアウト・注釈・colorscale・customdataの描画互換ではない。
-DRAgoWingの研究結果は書き換えず、JSONのsourceに入力を保管する別の合成画像である。
+Enter JSON such as `[[0,1,2],[3,null,4]]` in `数値行列` (numeric matrix) and place it.
+A matrix JSON file, or `{data:[...]}` containing a single Plotly heatmap trace, can also be loaded.
+It uses `z`, `x`, `y`, `zmin` and `zmax`, and places **the first row at the top**.
+It is not rendering-compatible with Plotly's axis order, layout, annotations, colorscale or customdata.
+DRAgoWing's research results are not rewritten; this is a separate composite image that stores the input in the JSON's source.
 
-「色の段階」を2〜256で変えると色だけが量子化される。連続色に戻すこともできる。
-元のz値は変更しない。nullは欠測として透明にし、0とは区別する。
-セルのtitleにラベルと元の数値を入れる。数値ラベルは狭いセルでは省略される。
-表示色は5点の独自スケールで、色の見た目が元グラフと一致するとは主張しない。
-最大4096セル。NaN・Infinity・bool・JavaScriptの安全整数範囲を超える整数は拒否する。
-JSONの小数は通常のPython/JavaScript浮動小数であり、任意精度の十進数計算ではない。
+Changing `色の段階` (color steps) from 2 to 256 quantizes only the colors. It can be set back to continuous color.
+The original z values are unchanged. null is treated as missing and drawn transparent, distinct from 0.
+Each cell's title holds the label and original value. Value labels are omitted in narrow cells.
+Display colors use a custom 5-point scale, with no claim that they match the original chart's appearance.
+Max 4096 cells. NaN, Infinity, bools and integers beyond JavaScript's safe integer range are rejected.
+JSON decimals are ordinary Python/JavaScript floats, not arbitrary-precision decimal arithmetic.
 
-Pythonから編集用JSONを用意することもできる。
+Editable JSON can also be prepared from Python.
 
 ```sh
 python -S image_studio.py --heatmap matrix.json -o scene.json
 ```
 
-出力ファイルがあればエラーにする。意図した置換には `--force` を付ける。
-作成したscene.jsonを画面の「開く」で読めば文字やスタンプを足せる。
+It errors if the output file exists. Add `--force` for an intended replacement.
+Open the resulting scene.json with `開く` (open) on screen to add text and stamps.
 
-## 画像 → モザイク → 粒度と色数を探索
+## Image → mosaic → exploring granularity and color count
 
-画像レイヤーを選び、「モザイクのセル幅」と「色の段階」を変更する。
-各ブロックの元RGBA画素を平均し、端の余りセルも含める。
-RGBはalphaで重み付けし、透明画素の隠れた色が不透明画素を汚さないようにする。
-各段階で保持した**元画像から**計算するため、セル幅を1・色段階を256に戻せば元の表示に戻る。
-モザイク済み画像しかない場合に、失われた細部を復元する機能ではない。
+Select an image layer and change `モザイクのセル幅` (mosaic cell width) and `色の段階` (color steps).
+Original RGBA pixels in each block are averaged, including leftover edge cells.
+RGB is weighted by alpha so hidden colors of transparent pixels do not taint opaque ones.
+Each step is computed **from the kept original image**, so setting cell width back to 1 and color steps to 256 restores the original display.
+It does not restore lost detail when only a mosaicked image exists.
 
-Python側にも同じ演算を用意し、独立したJS実装とのRGBA一致をテストする。
+The same operation is also provided in Python, and RGBA equality with the independent JS implementation is tested.
 
 ```python
 import grid_tools
@@ -177,90 +177,90 @@ with open('mosaic.png', 'wb') as out:
     out.write(grid_tools.encode(result, 'png'))
 ```
 
-このPython例はgrid_toolsが扱うPNG/gridを対象にする。
-ブラウザ入力ではPNG/JPEG/WebPをブラウザがデコードしてPNGに正規化する。
-完全透明の隠れたRGB・EXIF等のメタデータ保存、アニメーション保持は保証しない。
+This Python example targets PNG/grid handled by grid_tools.
+For browser input, the browser decodes PNG/JPEG/WebP and normalizes to PNG.
+Keeping hidden RGB of fully transparent pixels, metadata such as EXIF, or animation is not guaranteed.
 
-## PPTXとの接続
+## Connecting to PPTX
 
-出力PNGをPowerPointへ画像として挿入できる。
-既存のMarp/Markdown経路ではPNGをBase64のdata URIにして `![図](data:image/png;base64,...)` として埋め込める。
-既存の標準変換はローカルファイル参照を許可しないため、相対パスのPNGがそのまま読めるとは限らない。
-ブラウザ検証では、既存の固定PptxGenJS 4.0.1を使って1スライドPPTXに出力PNGを挿入し、
-ZIP内の `ppt/media/*.png` が元PNGとバイト単位で一致することを確認する。
-PPTX上で個々のスタンプをネイティブ図形として編集できるという意味ではない。
-画面の書出し対象はPNG・SVG・JSON・PNG Base64。PPTXのサンプル生成は検証スクリプトで行う。
+Output PNGs can be inserted into PowerPoint as images.
+In the existing Marp/Markdown path, a PNG can be embedded as a Base64 data URI like `![図](data:image/png;base64,...)`.
+The existing standard conversion does not allow local file references, so relative-path PNGs may not load as-is.
+Browser verification inserts the output PNG into a one-slide PPTX with the existing pinned PptxGenJS 4.0.1
+and checks that `ppt/media/*.png` in the ZIP matches the original PNG byte for byte.
+It does not mean individual stamps are editable as native shapes in the PPTX.
+On-screen export targets are PNG, SVG, JSON and PNG Base64. Sample PPTX generation is done by the verification script.
 
-## 先行実装から引き継いだ範囲
+## What was carried over from prior implementations
 
-| 参照 | 取り入れた考え方 | Ironmate側の実装 |
+| Reference | Idea adopted | Ironmate implementation |
 |---|---|---|
-| Flutter 写真館 `studio_document.dart` / `photo_studio_state.dart` | 画像の有無と独立した枠・スタンプ、編集状態と履歴の分離 | SVGのレイヤーscene、JSON履歴、PNG画像化。Dartコードの移植はしない |
-| DRAgoWing `dragowing/figures.py::heatmap_figure` | 数値と表示色の分離、欠測・ラベルの保持 | 単一heatmap JSONの数値取り込みと独自の色段階調整。研究値・描画定義を置換しない |
-| Ironmate `grid_tools.py` / `grid_png.py` | 固定RGBAとPNGの画素検証 | Pythonモザイクの入出力に再利用 |
-| IronmateのPptxGenJS | 既存の固定依存を使うPPTX生成 | ブラウザ出力PNGを挿入してmedia一致を検証 |
+| Flutter photo studio `studio_document.dart` / `photo_studio_state.dart` | Frames and stamps independent of whether there is an image; separating edit state from history | SVG layer scenes, JSON history, PNG rendering. Dart code is not ported |
+| DRAgoWing `dragowing/figures.py::heatmap_figure` | Separating values from display colors; keeping missing values and labels | Importing values from a single heatmap JSON and custom color-step adjustment. Research values and rendering definitions are not replaced |
+| Ironmate `grid_tools.py` / `grid_png.py` | Pixel verification with fixed RGBA and PNG | Reused for Python mosaic input/output |
+| Ironmate's PptxGenJS | PPTX generation using the existing pinned dependency | Inserts browser-output PNGs and verifies the media match |
 
-参照時点: Flutter main `13905a4d` を含む写真館、Aoi mainのDRAgoWing。
-正確な確認SHAは [検証記録](evidence/image-studio/report.md) に記載する。
-ソースは参照したが、他リポジトリのコードや依存物を新たにvendorコピーしていない。
+Reference points: the photo studio including Flutter main `13905a4d`, and DRAgoWing on Aoi main.
+Exact checked SHAs are in the [verification record](evidence/image-studio/report.md).
+Sources were referenced, but no code or dependencies from other repositories were newly vendor-copied.
 
-## 制限と検証
+## Limits and verification
 
-最大100レイヤー、埋め込みPNGは1枚12MB・合計20MB、1画像4MP、シーンJSON20MB。
-ブラウザのメモリ消費に依存するため、12MP写真の対話編集や処理速度は検証対象外。
-画面はメモリ上で編集し、JSON保存前の変更があればページ離脱時に確認を出す。
-ブラウザを閉じても自動復旧する機能はない。
-元画像を含むシーン全体を履歴に保持するため、画像が多いとメモリ消費が増える。
+Max 100 layers; embedded PNGs up to 12 MB each and 20 MB total; 4 MP per image; scene JSON 20 MB.
+It depends on browser memory use, so interactive editing and processing speed for 12 MP photos are out of scope.
+Editing happens in memory, and leaving the page with changes not yet saved as JSON prompts for confirmation.
+There is no automatic recovery after closing the browser.
+History holds the whole scene including original images, so many images increase memory use.
 
-### 作業履歴の保存・復元と整理
+### Saving, restoring and tidying work history
 
-「作業履歴を保存」は最大40状態と現在の位置を
-`ironmate-studio-workspace/1` JSONに保存する。「作業履歴を開く」で、画像を含む過去の状態と
-undo/redoの位置まで復元できる。単一シーンのJSON保存とは別のファイル形式である。
-保存・読込は共通の `StudioCore.workspaceText` / `workspaceHistory` を使い、
-32MiB以下のUTF-8実byte数、状態数、現在位置、各シーンを検査する。
-保存は状態ごとに容量を数え、上限超過時はdownloadも保存成功表示も行わない。
-読込は全状態の埋め込み画像をデコードできた後で編集状態を置き換える。
-読めない画像や不正な履歴を開いた場合、現在のシーン・履歴を保持する。
+`作業履歴を保存` (save work history) saves up to 40 states and the current position to
+`ironmate-studio-workspace/1` JSON. `作業履歴を開く` (open work history) restores past states with images,
+including the undo/redo position. It is a different file format from single-scene JSON.
+Save and load use the shared `StudioCore.workspaceText` / `workspaceHistory`,
+checking real UTF-8 byte count of at most 32 MiB, number of states, current position and each scene.
+Saving counts size per state; when over the limit, it neither downloads nor shows a success message.
+Loading replaces the edit state only after every state's embedded images decode.
+Opening unreadable images or invalid history keeps the current scene and history.
 
-履歴欄の「現在の状態だけ残す」は確認後に過去のundo/redo履歴を削除する。
-現在の画像・文字・図形・レイヤー属性は変更しない。容量超過時には、必要な履歴を先に別保存したうえで
-この操作を使い、現在のシーンから履歴を保存し直せる。
-画像を履歴状態間で重複排除する形式への変更や、ブラウザを閉じた後の自動復旧は含まない。
+`現在の状態だけ残す` (keep only the current state) in the history panel deletes past undo/redo history after confirmation.
+Current images, text, shapes and layer attributes are unchanged. When over the size limit, save the history you need separately first,
+then use this to re-save history from the current scene.
+It does not change the format to deduplicate images across history states, nor add automatic recovery after closing the browser.
 
 ```sh
 python -m pytest -q tests/test_image_studio.py
 python -m pytest -q tests/test_studio_workspace.py
-# ブラウザとPPTXの証跡。test-only Playwrightと既存pptxgenjsが必要
+# Browser and PPTX evidence. Needs test-only Playwright and the existing pptxgenjs
 IRONMATE_CHROME=/path/to/chrome node tests/image_studio_browser.cjs
 ```
 
-ブラウザ検証は既存のPPTX integrationジョブで実行し、既存workflowのartifactに証跡を添付する。
-Python/JSの色変換、alpha付きモザイク、端の余り、数値保持、SVGエスケープ、履歴分岐、
-HTTPの限定公開、既存ファイルの上書き拒否を回帰テストする。
-実ブラウザでは移動・拡縮・カスタムスタンプ・絵文字・undo/redo・PNG/JSON往復・オフライン・
-390px幅の横はみ出し・PPTX挿入を検証する。
+Browser verification runs in the existing PPTX integration job and attaches evidence to the existing workflow's artifact.
+Regression tests cover Python/JS color conversion, mosaics with alpha, leftover edges, value preservation, SVG escaping, history branching,
+restricted HTTP serving and refusing to overwrite existing files.
+In a real browser it verifies moving, scaling, custom stamps, emoji, undo/redo, PNG/JSON round-trips, offline use,
+horizontal overflow at 390 px width and PPTX insertion.
 
-画素完全一致・RGBA残差が可逆性の主判定である。
-3-Way Surveyは構造の補助評価として継続し、この画面の画像品質を保証する指標には変更しない。
+Exact pixel matches and RGBA residuals are the primary test of reversibility.
+3-Way Survey continues as an auxiliary structural evaluation and is not turned into a metric guaranteeing this screen's image quality.
 
 ### Clipboard Shelf
 
-シェルフはページ内のメモリだけに最大20件を保持し、サーバー送信・永続保存は行わない。
-画像の復号後バイト数と通常テキストのUTF-8バイト数の合計は32MiB以下。
-Base64は復号前の正確なサイズ、バイナリは`Blob.size`を`arrayBuffer()`前に確認する。
-並行した読み込み分も残量として予約し、クリア後に進行中の追加が復活しない。
-画像コピーは他のページやアプリでも再利用できるdata URIとなる。
-プレビューのObject URLは削除・全消去時に解放する。
+The shelf keeps up to 20 items in page memory only, with no server upload or persistent storage.
+The total of decoded image bytes and UTF-8 bytes of ordinary text is at most 32 MiB.
+Base64 is checked for its exact size before decoding, and binary for `Blob.size` before `arrayBuffer()`.
+Concurrent reads are reserved against the remaining capacity, and in-progress additions do not reappear after clearing.
+Image copies become data URIs reusable in other pages and apps.
+Preview Object URLs are released on deletion and on clearing all.
 
-`studio_ingress.parse_shelf()`も同じ合計容量と20件上限を適用する（Python標準ライブラリのみ）。
-`data:` URI、既知の画像シグネチャで始まる生Base64、`type="image"`または`mime`を
-指定した辞書は画像として検証し、不正な形式・MIME不一致・容量超過をテキストへ降格しない。
-画像の意味を持たない文字列は通常テキストとして扱う。画像辞書の例:
-`{"type": "image", "mime": "image/png", "text": "data:image/png;base64,...", "label": "画像"}`。
-戻り値の各項目は`type`, `data`, `mime`, `text`, `label`を持つ。
+`studio_ingress.parse_shelf()` applies the same total size and 20-item limit (Python standard library only).
+`data:` URIs, raw Base64 starting with a known image signature, and dicts specifying `type="image"` or `mime`
+are validated as images; invalid formats, MIME mismatches and over-limit sizes are not demoted to text.
+Strings with no image meaning are treated as ordinary text. Example image dict:
+`{"type": "image", "mime": "image/png", "text": "data:image/png;base64,...", "label": "画像"}`.
+Each returned item has `type`, `data`, `mime`, `text` and `label`.
 
-回帰検証は`tests/test_studio_ingress.py`と`tests/studio_shelf_browser.cjs`。
-後者は既存の`tests/image_studio_browser.cjs`から静的Pages相当の配信で実行される。
-クリップボード取得・権限エラーはモックし、実Chromium上で検証・コピー生成・URL解放・画像取込を確認する。
-OS固有のクリップボード権限UIを直接操作する試験ではない。
+Regression checks are `tests/test_studio_ingress.py` and `tests/studio_shelf_browser.cjs`.
+The latter runs from the existing `tests/image_studio_browser.cjs` with static, Pages-equivalent serving.
+Clipboard reads and permission errors are mocked, and validation, copy generation, URL release and image import are checked on real Chromium.
+It does not directly operate OS-specific clipboard permission UI.

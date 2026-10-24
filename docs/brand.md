@@ -1,54 +1,54 @@
-# Ironmate のロゴ6案
+# Six Ironmate logo concepts
 
-共通の核は **I’m のアポストロフィを🔰に置き換えること**です。faviconでも I と m を残します。**正式版は未決定**です。6案を用途に応じて使い分け、以下の割り当ても暫定とします。
+The shared core is **replacing the apostrophe in I’m with 🔰**. The favicon also keeps the I and m. **The official version is undecided.** The six concepts are used by purpose, and the assignments below are provisional.
 
-| 案 | 素材 | 想定用途・今回の配置 |
+| Concept | Assets | Intended use / current placement |
 | --- | --- | --- |
-| ① Pixel Mono | `studio/brand/mono.svg` | SVGロゴ・白黒資料。ギャラリーの印刷時に表示 |
-| ② Dark Green | `studio/brand/dark-green.svg`、`icon-192.png` | GitHub向け画像。faviconに暫定採用 |
-| ③ Famicom Retro | `studio/brand/famicom.svg`、`readme.svg` | README先頭に暫定採用 |
-| ④ GameBoy Style | `studio/brand/gameboy.svg` | 6案ギャラリーのヘッダーに暫定採用 |
-| ⑤ Heatmap Pixel | `studio/brand/heatmap.svg`、`hero.svg` | 3画面のヘッダーとブラウザツールのHeroに暫定採用 |
-| ⑥ Pixel 3D | `studio/brand/pixel-3d.svg` | ホーム画面追加アイコン・ランチャーに暫定採用 |
+| ① Pixel Mono | `studio/brand/mono.svg` | SVG logo, black-and-white material. Shown when printing the gallery |
+| ② Dark Green | `studio/brand/dark-green.svg`, `icon-192.png` | Images for GitHub. Provisionally used as the favicon |
+| ③ Famicom Retro | `studio/brand/famicom.svg`, `readme.svg` | Provisionally used at the top of the README |
+| ④ GameBoy Style | `studio/brand/gameboy.svg` | Provisionally used in the six-concept gallery header |
+| ⑤ Heatmap Pixel | `studio/brand/heatmap.svg`, `hero.svg` | Provisionally used in the three screens' headers and the browser tools' Hero |
+| ⑥ Pixel 3D | `studio/brand/pixel-3d.svg` | Provisionally used for the add-to-home-screen icon and launcher |
 
-GitHubアカウントのプロフィール画像は変更していません。実機へのホーム画面追加は利用者が行います。今回はサイト側のアイコン指定とmanifestを整えています。
+The GitHub account's profile image is unchanged. Adding to a real device's home screen is up to the user; this change sets up the site's icon declarations and manifest.
 
-## 共通ルール
+## Common rules
 
-16×16の整数グリッドを共通字形とし、文字も矩形で描きます。フォント・絵文字フォントに依存しません。SVGは `shape-rendering="crispEdges"`、PNGは整数倍の最近傍拡大です。ICOは16・32・48pxのPNGを格納します。
+A 16×16 integer grid is the shared glyph set, and letters are drawn with rectangles too. Nothing depends on fonts or emoji fonts. SVGs use `shape-rendering="crispEdges"`; PNGs use integer nearest-neighbor upscaling. The ICO holds 16, 32 and 48 px PNGs.
 
-🔰内部のヒートマップは離散セルで、グラデーションは使いません。ファミコン・GameBoyの枠と3Dの影も整数座標で描き、曲線・ぼかしを使いません。
+The heatmap inside 🔰 uses discrete cells, with no gradients. Famicom/GameBoy frames and 3D shadows are also drawn on integer coordinates, with no curves or blur.
 
-## 差し替え・再生成
+## Replacing and regenerating
 
-- favicon：`studio/index.html` と `studio/tools/index.html` の `rel="icon"`。`icon.svg` は現在Dark Greenの互換名です。
-- ヘッダー：同HTML内の `.brand img`。Slide StudioはImage Studioから生成するため同時に反映します。
-- Hero：`studio/tools/index.html` の `.brand-hero`。
-- README：先頭の画像リンク。
-- ホーム画面：`manifest.webmanifest` と `apple-touch-icon.png`（180px）。Android向け192px・512pxと、マスク用512pxの不透明PNGを用意。
-- ギャラリー：`/brand/`。6案を閲覧・保存でき、印刷時はモノクロを表示。
+- Favicon: `rel="icon"` in `studio/index.html` and `studio/tools/index.html`. `icon.svg` is currently a compatibility name for Dark Green.
+- Header: `.brand img` in the same HTML. Slide Studio is generated from Image Studio, so it updates at the same time.
+- Hero: `.brand-hero` in `studio/tools/index.html`.
+- README: the image link at the top.
+- Home screen: `manifest.webmanifest` and `apple-touch-icon.png` (180 px). Provides 192 px and 512 px for Android, plus an opaque 512 px PNG for masking.
+- Gallery: `/brand/`. Browse and save all six concepts; the mono version is shown when printing.
 
-リポジトリのルートで `python -S scripts/build_brand.py` を実行します。Python標準ライブラリと既存の `grid_png.py` だけを使用します。
+Run `python -S scripts/build_brand.py` at the repository root. It uses only the Python standard library and the existing `grid_png.py`.
 
-公開対象は `image_studio.py` の明示的なallowlistで指定し、6案のSVGをギャラリー向けに配布します。README専用SVGと生成スクリプトは配布しません。
+Public files are specified by an explicit allowlist in `image_studio.py`, and the six SVGs are distributed for the gallery. The README-only SVG and the generator script are not distributed.
 
-## 検証
+## Verification
 
-- 関連Pythonテスト：29 passed、1 skipped（既存のスライドシェル再生成は `npm ci` 未実施のため）。
-- Chromium：静的ビルドの `/Ironmate/`、`/Ironmate/tools/`、`/Ironmate/slides/`、`/Ironmate/brand/` を1440px・390px幅で確認。8ケースでロゴ表示、favicon 200、ブランド枠の収まりを確認。manifestのブラウザ解析・ホーム画面アイコンの取得も成功。コンソールエラーなし。
-- ローカルPythonサーバー：SVG・PNG・ICOのContent-Typeと配信バイト列を既存テストで確認。
-- 16px・32px・48pxの実寸表示と整数倍拡大を目視確認。
+- Related Python tests: 29 passed, 1 skipped (the existing slide shell regeneration, since `npm ci` was not run).
+- Chromium: checked `/Ironmate/`, `/Ironmate/tools/`, `/Ironmate/slides/` and `/Ironmate/brand/` of the static build at 1440 px and 390 px widths. Across 8 cases, confirmed logo display, favicon 200 and that the brand frame fits. Browser manifest parsing and fetching home-screen icons also succeeded. No console errors.
+- Local Python server: Content-Type and served bytes of SVG, PNG and ICO checked by existing tests.
+- Visually checked actual-size display at 16, 32 and 48 px and integer upscaling.
 
-[ブラウザ確認結果](evidence/brand/browser-results.json) ／ [390pxの画面](evidence/brand/mobile.png)
+[Browser check results](evidence/brand/browser-results.json) / [390 px screen](evidence/brand/mobile.png)
 
-![6案とREADME・Heroの暫定配置](evidence/brand/preview.png)
+![Six concepts and provisional README/Hero placement](evidence/brand/preview.png)
 
-## ホーム画面追加
+## Adding to the home screen
 
-ブラウザの「ホーム画面に追加」を使用します。Android向けmanifestにはアプリ名、アイコン、開始URL、スコープと3ツールへのショートカットを指定しています。iPhone向けは `apple-touch-icon` を全画面に指定しています。faviconは②、ホーム画面アイコンは⑥です。
+Use the browser's "Add to Home Screen". The Android manifest specifies the app name, icons, start URL, scope and shortcuts to the three tools. For iPhone, `apple-touch-icon` is specified for full screen. The favicon is ②; the home-screen icon is ⑥.
 
-マスク用アイコンの全前景画素が中央80%円内に収まること、透過画素がないことを検証しています。実機での追加操作は未検証であり、manifestによる指定がオフライン動作を提供するものではありません。
+Tests verify that all foreground pixels of the maskable icon fit within the central 80% circle and that it has no transparent pixels. Adding on a real device is unverified, and the manifest declaration does not provide offline operation.
 
-参照：[Web App Manifest icons](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Manifest/Reference/icons)、[Apple Web Clipアイコン](https://developer.apple.com/library/archive/documentation/AppleApplications/Reference/SafariWebContent/ConfiguringWebApplications/ConfiguringWebApplications.html)。
+References: [Web App Manifest icons](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Manifest/Reference/icons), [Apple Web Clip icons](https://developer.apple.com/library/archive/documentation/AppleApplications/Reference/SafariWebContent/ConfiguringWebApplications/ConfiguringWebApplications.html).
 
-[6案ギャラリーのスマホ表示](evidence/brand/gallery-mobile.png)
+[Six-concept gallery on a phone](evidence/brand/gallery-mobile.png)

@@ -1,57 +1,57 @@
-# GitHub Pages版のブラウザツール
+# Browser tools on GitHub Pages
 
 - Slide Studio: https://myon-bioinformatics.github.io/Ironmate/slides/
 - Image Studio: https://myon-bioinformatics.github.io/Ironmate/
-- ドット絵・画像一覧・Base64容量: https://myon-bioinformatics.github.io/Ironmate/tools/
-- ポートフォリオ: https://myon-bioinformatics.github.io/#ironmate
+- Pixel art, image grid, Base64 size: https://myon-bioinformatics.github.io/Ironmate/tools/
+- Portfolio: https://myon-bioinformatics.github.io/#ironmate
 
-追加のJavaScriptパッケージや外部CDNは使いません。HTML/CSS/JavaScriptと、Python版から生成した公開プリセットだけを配信します。画像・JSONはブラウザ内で処理し、アップロードしません。
+No extra JavaScript packages or external CDNs are used. Only HTML/CSS/JavaScript and public presets generated from the Python version are served. Images and JSON are processed in the browser and not uploaded.
 
-## Dockerでビルド・起動
+## Build and run with Docker
 
 ```sh
 docker build -f Dockerfile.pages --target runtime -t ironmate-pages .
 docker run --rm -p 127.0.0.1:8080:8080 ironmate-pages
-# http://localhost:8080/Ironmate/ または http://localhost:8080/Ironmate/tools/ または http://localhost:8080/Ironmate/slides/
+# http://localhost:8080/Ironmate/ or http://localhost:8080/Ironmate/tools/ or http://localhost:8080/Ironmate/slides/
 ```
 
-GitHub Pages用の公開ファイルだけを取り出す場合：
+To extract only the public files for GitHub Pages:
 
 ```sh
 docker build -f Dockerfile.pages --target artifact --output type=local,dest=build/studio-site .
 ```
 
-Python標準ライブラリだけで同じ静的ファイルを作ることもできます：
+The same static files can also be built with only the Python standard library:
 
 ```sh
 python -S image_studio.py --build-site build/studio-site
-# 出力先は新規または空のディレクトリ
+# the output must be a new or empty directory
 ```
 
-`studio-pages.yml`はDockerで静的ファイルを生成し、コンテナ上の`/Ironmate/`を実ブラウザで検証してから公開します。公開環境でDockerやPythonが動いているわけではありません。権限・公開先・既存StudioのURLは維持します。
+`studio-pages.yml` generates the static files with Docker, verifies `/Ironmate/` in the container with a real browser, then publishes. Docker and Python do not run in the published environment. Permissions, publish target and existing Studio URLs are unchanged.
 
-## 対応範囲
+## Coverage
 
-| 機能 | Pagesでの動作 | ローカル版との境界 |
+| Feature | Behavior on Pages | Boundary with the local version |
 | --- | --- | --- |
-| Image Studio | 既存の図形・画像・文字・ヒートマップ・モザイク、履歴、クリップボード、PNG/SVG/JSON/Base64 | 既存の入力・画素・容量制限を維持 |
-| ドット絵 | 5形×4加工×5サイズ、10配色ID、色番号のクリック編集、JSON読込、最近傍拡縮、配色変更、1状態のundo | プリセット元サイズは16/23/31/32/64。出力グリッドは1〜256セル／辺。Pythonの任意サイズ手続き生成・写真減色・スパース走査・プローブ縮小は移植していない |
-| ドット絵出力 | PNG/SVG/JSON/Base64。1/2/8/16倍 | PNGはRGBAを直接deflateし、透明画素の隠れたRGBと色表を保持。Python版との圧縮byte一致は保証しない。PNGにはCompressionStream対応ブラウザが必要 |
-| 画像一覧 | PNG/JPEG/WebP最大20枚、列数変更、一覧PNG、画像埋込HTML | 1枚8MiB・合計32MiB・1画像4MP。デコード後に画素数を検査し、長辺512px以下のサムネイルを保持。元画像byte・メタデータ保持、合否・MAE/RMSE算出は対象外 |
-| Base64容量 | File.sizeから`4*ceil(bytes/3)`を計算。PNG data URIなら22文字加算 | 圧縮率や縮小率の推定ではない。ファイルを読み込まずサイズだけ使う |
-| スライド・PPTX作成 | [Slide Studio](slide-studio.md)で文字・図形・矢印・画像を配置し、複数枚のPPTX出力 | 任意PPTXの読込・既存PPTX編集・PDF描画はCLI |
-| 既存PPTX/PDF・外部API | 実行環境を必要とする範囲を画面に明記 | pptx_pipeline.py / pptx_replace.py / pptx_preview.py等を手元で実行。#145のpypdf取得はブラウザ用の実装ではない |
+| Image Studio | Existing shapes, images, text, heatmaps, mosaics, history, clipboard, PNG/SVG/JSON/Base64 | Existing input, pixel and size limits are kept |
+| Pixel art | 5 shapes × 4 treatments × 5 sizes, 10 palette IDs, click-editing color indices, JSON import, nearest-neighbor scaling, palette change, one-step undo | Preset source sizes are 16/23/31/32/64. Output grid is 1–256 cells per side. Python's arbitrary-size procedural generation, photo color reduction, sparse scanning and probe downscaling are not ported |
+| Pixel art export | PNG/SVG/JSON/Base64 at 1/2/8/16x | PNG deflates RGBA directly, keeping hidden RGB of transparent pixels and the color table. Compressed bytes are not guaranteed to match the Python version. PNG needs a browser with CompressionStream |
+| Image grid | Up to 20 PNG/JPEG/WebP, column count, grid PNG, HTML with embedded images | 8 MiB per image, 32 MiB total, 4 MP per image. Pixel count is checked after decoding; thumbnails up to 512 px on the long side are kept. Keeping original bytes/metadata and pass/fail or MAE/RMSE computation are out of scope |
+| Base64 size | Computes `4*ceil(bytes/3)` from File.size; adds 22 characters for a PNG data URI | Not an estimate of compression or downscaling. Uses only the size without reading the file |
+| Slides / PPTX creation | Place text, shapes, arrows and images in [Slide Studio](slide-studio.md) and export multi-slide PPTX | Reading arbitrary PPTX, editing existing PPTX and PDF rendering are CLI-only |
+| Existing PPTX/PDF, external APIs | The parts that need a runtime are stated on screen | Run pptx_pipeline.py / pptx_replace.py / pptx_preview.py etc. locally. The pypdf fetch from #145 is not a browser implementation |
 
-画像一覧のデコードはブラウザ実装に依存します。アニメーション、EXIF・色管理の完全保持、OS間のフォント一致は対象外です。ファイル選択をキャンセルした場合や不正なJSONを選択した場合は、現在の作業を保持します。ページを閉じると作業は失われるので明示的に保存してください。
+Image grid decoding depends on the browser implementation. Animation, full EXIF/color-management preservation and cross-OS font matching are out of scope. Canceling a file selection or choosing invalid JSON keeps the current work. Work is lost when the page closes, so save explicitly.
 
-## 検証
+## Verification
 
 ```sh
 python -m pytest -q tests/test_pages_tools.py tests/test_studio_delivery.py tests/test_image_studio.py
-# Dockerを上記の8080番ポートで起動した後、テスト専用Playwrightで実行：
+# after starting Docker on port 8080 as above, run with the test-only Playwright:
 IRONMATE_PLAYWRIGHT_MODULE="$PWD/build/pages-test/node_modules/playwright" node tests/pages_browser.cjs
 ```
 
-全100プリセットの色番号を既存Python実装と照合します。最近傍拡縮は奇数・非正方形を含めてPythonと比較します。ブラウザ検証は既存Studioからの導線、PNG/SVG/JSON/Base64出力、PNG→Pythonでの完全復元、サイズ変更・undo、不正JSONの拒否、画像一覧、ファイル名のHTMLエスケープ、Base64容量、390px幅の画面を確認します。
+Color indices of all 100 presets are checked against the existing Python implementation. Nearest-neighbor scaling is compared with Python, including odd and non-square sizes. Browser checks cover the link from the existing Studio, PNG/SVG/JSON/Base64 export, lossless PNG→Python round-trip, resizing and undo, rejecting invalid JSON, the image grid, HTML-escaping file names, Base64 size and a 390 px-wide screen.
 
-公開allowlistに入力画像・作業JSON・リポジトリの証跡・Pythonソースを含めません。生成物は約400KBのHTML/JS/CSSとプリセットです。
+The public allowlist excludes input images, working JSON, repository evidence and Python source. The output is about 400 KB of HTML/JS/CSS plus presets.

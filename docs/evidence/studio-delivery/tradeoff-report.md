@@ -1,74 +1,74 @@
-# 追試: 黒い🔰と複数の拡大候補
+# Follow-up: a black 🔰 and multiple upscaling candidates
 
-2026-10-17。ユーザーの追加方針に応じた探索的検証。
-[最初の記録](report.md) の精度・速度・失敗を削除・変更せず、この記録を追加する。
+2026-10-17. Exploratory verification following the user's additional direction.
+This record is added without deleting or changing the accuracy, speed or failures in the [first record](report.md).
 
-## 🔰を黒い矢羽根にする
+## Making 🔰 a black arrowhead
 
-元の🔰のalphaを用いて黒一色へ変換し、-90度回して直線に重ねる。
-三角形と切り替え、先端／中央へ置ける。旧sceneでは形の省略時に三角形を維持。
-同じ🔰ボタンは黒い文字スタンプとしても使える。ブラウザで黒画素の存在と黄緑の残留0を検証した。
-SVG・CLIは同じrendererを使用。形状はOSの絵文字フォントに依存し、ローカルのmonochrome fontでは
-片側が塗り・片側が輪郭となる。特定端末のカラー絵文字と形が完全一致するとは扱わない。
+The original 🔰 alpha is used to convert it to solid black, rotated -90 degrees and overlaid on a straight line.
+It can be switched with the triangle and placed at the tip or center. Old scenes keep the triangle when the shape is omitted.
+The same 🔰 button also works as a black text stamp. The browser verified that black pixels exist and zero yellow-green remains.
+SVG and CLI use the same renderer. The shape depends on the OS emoji font; with the local monochrome font,
+one side is filled and the other outlined. It is not treated as an exact match for a given device's color emoji.
 
-![黒い🔰の矢羽根を重ねた実出力](beginner-stamps.png)
+![Actual output with black 🔰 arrowheads overlaid](beginner-stamps.png)
 
-[scene](beginner-scene.json) / [4倍SVG](beginner-4x.svg)
+[scene](beginner-scene.json) / [4x SVG](beginner-4x.svg)
 
-## 2指標と等重みの補助スコア
+## Two metrics and an equal-weight auxiliary score
 
-MAE、RMSE、50%の中間、重みを明示したバランス版を別ファイルとして保持する。
-候補0〜10は最近傍と平滑補間の混合率0.0〜1.0。premultiplied alpha、8-bit sRGBで混合。
-比較は白背景へ合成したRGB。元RGBAの完全一致画素数とalpha誤差は別に残す。
-従来の完全一致・残差評価、Three-WayのIoUを置き換えない。
+MAE, RMSE, the 50% midpoint and a balanced version with explicit weights are kept as separate files.
+Candidates 0–10 are nearest-neighbor/smooth-interpolation mix ratios 0.0–1.0, mixed in premultiplied alpha, 8-bit sRGB.
+Comparison is on RGB composited onto white. Exact-match pixel counts and alpha error of the original RGBA are kept separately.
+This does not replace the existing exact-match/residual evaluation or Three-Way IoU.
 
-補助スコアは `100*(1-(w*MAE+(1-w)*RMSE)/255)`、今回w=0.5。
-知覚品質や普遍的な正解ではなく、明示した方針による順位である。
-単一の順位だけでなく全候補・Pareto集合・入力SHA-256を保存する。
-[CLIと定義](../../image-comparison.md) に再利用用の契約を記載した。
+The auxiliary score is `100*(1-(w*MAE+(1-w)*RMSE)/255)`, with w=0.5 here.
+It is a ranking under an explicit policy, not perceptual quality or a universal right answer.
+Beyond a single ranking, all candidates, the Pareto set and input SHA-256 are saved.
+The reusable contract is documented in [CLI and definitions](../../image-comparison.md).
 
-### 最初の256×256合成例に適用した結果（この基準を見た後のoracle選択）
+### Results on the first 256×256 synthetic example (oracle selection after seeing this reference)
 
-| 役割 | 平滑補間率 | MAE | RMSE | 補助スコア |
+| Role | Smooth ratio | MAE | RMSE | Auxiliary score |
 |---|---:|---:|---:|---:|
-| MAE優先 | 0.0 | 14.497630 | 36.023626 | 90.093871 |
-| RMSE優先 | 0.9 | 16.307892 | 30.612404 | 90.799942 |
-| 中間 | 0.5 | 15.440592 | 31.883027 | 90.720859 |
-| バランス | 0.8 | 16.094147 | 30.737891 | 90.817247 |
+| MAE priority | 0.0 | 14.497630 | 36.023626 | 90.093871 |
+| RMSE priority | 0.9 | 16.307892 | 30.612404 | 90.799942 |
+| Midpoint | 0.5 | 15.440592 | 31.883027 | 90.720859 |
+| Balanced | 0.8 | 16.094147 | 30.737891 | 90.817247 |
 
-バランス版は最近傍よりMAEが悪化し、RMSE優先よりRMSEが悪化する。
-この不利も残す。元図形の再描画を競争相手に入れて自明なスコア100を採ることはしない。
-[生の結果](tradeoff-original/report.json) と、入力3PNG・選択した4PNGを同ディレクトリに保存した。
-全11候補のPNGはCI artifactにも保存する。
+The balanced version has worse MAE than nearest-neighbor and worse RMSE than RMSE priority.
+This disadvantage is kept too. Redrawing the original shapes is not entered as a competitor to take a trivial score of 100.
+The [raw results](tradeoff-original/report.json), the 3 input PNGs and the 4 selected PNGs are saved in that directory.
+PNGs for all 11 candidates are also saved as a CI artifact.
 
 ```sh
 python -S image_compare.py --reference docs/evidence/studio-delivery/tradeoff-original/reference.png --nearest docs/evidence/studio-delivery/tradeoff-original/nearest.png --smooth docs/evidence/studio-delivery/tradeoff-original/smooth.png --out build/reproduce-tradeoff
 ```
 
-## seedと条件を分けた探索・追試
+## Exploration and follow-up with separate seeds and conditions
 
-128×128の既知基準を16×16に縮小し、128×128へ戻す。
-図形、格子と整合するドット絵、グラデーションの3条件。各seedで同じ候補11段階と同じ重みを使う。
-seed `20261017` だけで各役割の混合率を選択し、`20261018` / `20261019`へ固定して適用。
-全種類を等重みでまとめた最初の方針はMAE優先・RMSE優先・バランスのすべてで率0が選ばれた。
-ドット絵で最近傍が完全一致する影響が大きく、一律の平滑化改善は確認できなかった。この結果を保持する。
+A known 128×128 reference is downscaled to 16×16 and back to 128×128.
+Three conditions: shapes, pixel art aligned to the grid, and gradients. Each seed uses the same 11 candidate steps and the same weights.
+Mix ratios for each role were selected on seed `20261017` alone, then applied fixed to `20261018` / `20261019`.
+The first policy, pooling all kinds with equal weight, selected ratio 0 for MAE priority, RMSE priority and balanced alike.
+The exact nearest-neighbor match on pixel art dominated, and no uniform improvement from smoothing was found. This result is kept.
 
-種類別の方針も追加探索した。種類はfixtureに与えたラベルで、未知画像から自動分類していない。
-選択率はseed17の各種類だけから得たものだが、この方針を追加した時点でseed18/19の結果は見ていた。
-従って種類別方針のseed18/19を未観測の独立確認とは数えない。
-追加の未使用seed `20261020` / `20261021` を生成して、率・重みを変えずに追試した。
-全体として合成条件上の探索であり、自然画像への一般化を示さない。
+Per-kind policies were also explored. Kinds are labels given to the fixtures, not automatic classification of unknown images.
+Selected ratios came from each kind on seed17 only, but seed18/19 results had already been seen when this policy was added.
+So seed18/19 for the per-kind policy are not counted as unseen independent confirmation.
+Additional unused seeds `20261020` / `20261021` were generated and tested with ratios and weights unchanged.
+Overall this is exploration on synthetic conditions and does not show generalization to natural images.
 
-| 種類 | MAE優先 | RMSE優先 | 中間 | バランス |
+| Kind | MAE priority | RMSE priority | Midpoint | Balanced |
 |---|---:|---:|---:|---:|
-| 図形 | 0.0 | 0.7 | 0.5 | 0.6 |
-| ドット絵 | 0.0 | 0.0 | 0.5 | 0.0 |
-| グラデーション | 0.9 | 1.0 | 0.5 | 0.9 |
+| Shapes | 0.0 | 0.7 | 0.5 | 0.6 |
+| Pixel art | 0.0 | 0.0 | 0.5 | 0.0 |
+| Gradient | 0.9 | 1.0 | 0.5 | 0.9 |
 
-[全15ケース×11候補の生の測定値](tradeoff-seeds.json) に全体方針・種類別方針・各caseのoracleを区別して記録。
-種類別方針は基準を見たcaseごとのoracleに一致する保証はない。
+[Raw measurements for all 15 cases × 11 candidates](tradeoff-seeds.json) record the overall policy, per-kind policy and each case's oracle separately.
+The per-kind policy is not guaranteed to match each case's oracle chosen after seeing the reference.
 
-| seed | 種類 | 固定した役割 | 混合率 | MAE | RMSE | 補助スコア |
+| seed | Kind | Fixed role | Mix ratio | MAE | RMSE | Auxiliary score |
 |---|---|---|---:|---:|---:|---:|
 | 20261020 | shapes | mae_priority | 0.0 | 6.370911 | 21.543645 | 94.526558 |
 | 20261020 | shapes | rmse_priority | 0.7 | 7.029683 | 18.343335 | 95.024898 |
@@ -95,14 +95,14 @@ seed `20261017` だけで各役割の混合率を選択し、`20261018` / `20261
 | 20261021 | gradient | midpoint | 0.5 | 1.121338 | 1.548952 | 99.476414 |
 | 20261021 | gradient | balanced | 0.9 | 0.962769 | 1.231685 | 99.569715 |
 
-## 実装・検証と既存ツール
+## Implementation, verification and existing tools
 
-新しいCLIはUIから独立した小さなモジュール。Pythonの既存PNG decoder/encoder/outputを再利用し、
-ブラウザ配信物を増やさない。web-uiの既存検査はPNG hashの完全一致で、今回の補間評価とは目的が異なる。
-PythDRagorasの複数軸・選択条件固定・別データ確認、SakAnalyticsの感度分析の考え方を参照し、
-分類のMCCなどを画素誤差へそのまま輸入しない。確認したSHAと適用範囲はCLI文書に明記した。
+The new CLI is a small module independent of the UI. It reuses Python's existing PNG decoder/encoder/output
+and adds nothing to browser deliverables. web-ui's existing check is an exact PNG hash match, with a different purpose from this interpolation evaluation.
+It draws on PythDRagoras's multiple axes, fixed selection conditions and separate-data confirmation, and SakAnalytics's sensitivity analysis,
+without importing classification MCC etc. directly into pixel error. The checked SHAs and scope are stated in the CLI doc.
 
-対象Python 32テスト、静的/オフライン/clipboard/CPU CLI/PPTXを含む全ブラウザ試験がローカルで成功。
-αマスクの黒化・向き、重み0/1、丸め、隠れたRGB、寸法不一致、既存ファイルの保護、候補画素総数上限も確認した。
-[followup-source-sha256.json](followup-source-sha256.json) に対象コードを記録。
-新しいPython/JS実行時パッケージ、Flutterの変更、他repoのvendorコピーは追加していない。
+The 32 target Python tests and all browser tests, including static/offline/clipboard/CPU CLI/PPTX, passed locally.
+Also checked: alpha-mask blackening and orientation, weights 0/1, rounding, hidden RGB, size mismatch, protecting existing files and the total candidate pixel cap.
+Target code is recorded in [followup-source-sha256.json](followup-source-sha256.json).
+No new Python/JS runtime packages, Flutter changes or vendor copies in other repos were added.

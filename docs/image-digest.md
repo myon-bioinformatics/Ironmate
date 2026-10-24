@@ -1,30 +1,30 @@
 <!-- image-digest.md -->
-# 画像の要約ページ（image_digest）
+# Image digest page (image_digest)
 
-多数の画像と、それぞれの合否（status）から、軽い 1 枚の HTML とレビュー用の Markdown 要約を作る。
-行と列は何でもよい（ページ × 環境、ケース × 端末、スライド × テーマなど）。browser-test-kit の
-published-app の実行のように、全体の成果物が大きくてダウンロードしにくいときに、全体を 1 ページで見渡すためのもの。
+Builds a single lightweight HTML page and a Markdown summary for review from many images and their pass/fail status.
+Rows and columns can be anything (page × environment, case × device, slide × theme, etc.). It is for seeing everything on one page
+when the full output is too large to download conveniently, as with browser-test-kit's published-app runs.
 
 ```sh
-python -S image_digest.py input.json --out digest/            # 画像パスは input.json からの相対パス
-python -S image_digest.py input.json -o digest/               # -o と --output は --out と同じ
-node image_digest.cjs input.json digest/                       # Node から（処理は Python が持つ）
-node image_digest.cjs input.json --out digest/ --tile 64x128   # Python と同じフラグ
+python -S image_digest.py input.json --out digest/            # image paths are relative to input.json
+python -S image_digest.py input.json -o digest/               # -o and --output are the same as --out
+node image_digest.cjs input.json digest/                       # from Node (Python does the work)
+node image_digest.cjs input.json --out digest/ --tile 64x128   # same flags as Python
 node image_digest.cjs --help
 ```
 
-直せない入力は終了コード 2 です。`--json` を付けると、その失敗は stderr の JSON 1 個になり、成功時の stdout は変わりません。引数が足りないときは待たずに使い方を出します。
+Unfixable input exits with code 2. With `--json`, that failure becomes a single JSON object on stderr; stdout on success is unchanged. Missing arguments print usage without waiting.
 
-Node の API（`buildDigest`）の型は `image_digest.d.cts` にある。ほかの Node API（`flow_export.cjs`、
-`flow_workspace.cjs`、`studio/ingress.cjs`）も同じ名前の `.d.cts` を持ち、本体は JavaScript のまま。
+Types for the Node API (`buildDigest`) are in `image_digest.d.cts`. The other Node APIs (`flow_export.cjs`,
+`flow_workspace.cjs`, `studio/ingress.cjs`) also have `.d.cts` files of the same name; the implementations stay JavaScript.
 
-Node ラッパーは親由来の `vendor/py_launch.cjs` で Python を起動する。API の `python` を省略したときは
-各呼び出しで 3.9 以上の短いバージョン確認のあと、順に `IRONMATE_PYTHON` → `PYTHON` → `python3` →
-`python`（Windows では `py -3`）を試す。API の `python` または設定済み `IRONMATE_PYTHON` はフォールバックしない。
-起動失敗は `image digest Python process failed: …`（ライブラリ）または CLI 終了コード `2`。
-詳細は [flow export の Node 起動](flow-export.md) と同じ。
+The Node wrapper launches Python with `vendor/py_launch.cjs`, inherited from the parent. When the API's `python` is omitted,
+each call runs a short version check for 3.9+ and then tries, in order, `IRONMATE_PYTHON` → `PYTHON` → `python3` →
+`python` (`py -3` on Windows). The API's `python` or a set `IRONMATE_PYTHON` does not fall back.
+Launch failures give `image digest Python process failed: …` (library) or CLI exit code `2`.
+Details are the same as [Node launch for flow export](flow-export.md).
 
-入力は `ironmate-image-digest-input/1`:
+Input is `ironmate-image-digest-input/1`:
 
 ```json
 {"schema": "ironmate-image-digest-input/1", "title": "Published app run",
@@ -35,67 +35,67 @@ Node ラッパーは親由来の `vendor/py_launch.cjs` で Python を起動す�
             "notes": ["320px:overlap"]}]}
 ```
 
-出力:
+Output:
 
-- `digest.html`: サムネイルを data URI で埋め込んだ 1 ファイル。JavaScript なしで、どこでも開ける。
-- `summary.md`: 行ごとの合格数と「見るべきところ」の表。PR コメントやジョブの要約にそのまま貼れる。
-- `digest.json`（`ironmate-image-digest/1`）: 使ったサムネイル寸法、バイト数、status ごとの件数。
+- `digest.html`: one file with thumbnails embedded as data URIs. No JavaScript; opens anywhere.
+- `summary.md`: pass counts per row and a table of what to look at. Can be pasted as-is into PR comments or job summaries.
+- `digest.json` (`ironmate-image-digest/1`): the thumbnail size used, byte count and counts per status.
 
-サムネイルは 64x128 px（`--tile` で変更可）から始め、`--max-bytes`（既定 1MB）に収まるまで
-縦横を半分（画素数 1/4）にする。下限は 16x32。status は色分けと件数にだけ使い、画素から合否を推測しない。
-セルのない組み合わせは「not run」と明示する。画像パスは入力ディレクトリ内の相対パスに限る。
+Thumbnails start at 64x128 px (changeable with `--tile`) and are halved in each dimension (1/4 the pixels) until
+they fit in `--max-bytes` (default 1 MB). The minimum is 16x32. Status is used only for color coding and counts; pass/fail is never inferred from pixels.
+Combinations without a cell are marked explicitly as "not run". Image paths must be relative paths inside the input directory.
 
-## 入力・出力契約
+## Input/output contract
 
-- `base` は存在する入力ディレクトリ。CLI は入力 JSON の親ディレクトリ（`--base` で変更可）、
-  stdin と Node API は明示指定する。画像の実体パスを解決し、ファイル自身・親ディレクトリの
-  symlink を経由して入力ディレクトリ外へ出る参照は拒否する。入力内を指す symlink は許可する。
-- 画像は通常ファイルの PNG（8-bit gray / gray+alpha / RGB / RGBA、非インターレース）。
-  1 ファイル 32MiB **以下**、総画素数 16,777,216（4096×4096）以下。サイズを読み込み前に確認し、
-  読み込み自体も 32MiB+1 byte に制限する。画像が無いセルは `image` を省略または `null` にできる。
-- 行・列は重複しない 1〜120 文字のラベル（制御文字不可）。セルは最大 2000 件、同じ行・列の重複不可。
-  `status` は `[a-z][a-z0-9_-]{0,23}`（省略時 `unknown`）。`pass` だけを合格数へ加算する。
-  `notes` は各 200 文字以下で先頭 6 件を HTML、先頭 2 件を Markdown の不合格理由に表示する。
-  Markdown 表の改行は空白へまとめ、区切り・HTML・装飾用文字をエスケープする。
-- 各画像の実体は 1 回だけ読み込み・デコードする。元画像から各候補寸法の PNG を作り、
-  縮小の反復で再利用する。候補は縦横半減、下限 16×32。全画像のフル解像度画素を保持しない。
-- 出力先は新規または空のディレクトリ。通常ファイル、空でないディレクトリ、symlink
-  （リンク切れを含む）は `write()` が `ValueError` で拒否する。CLI はエラー時に終了コード 2、
-  Node API は例外となる。入力は実行中に変更しないスナップショットを使う。
-- `build(spec, base, max_bytes=..., tile=(64, 128))` は `(HTML, Markdown, info)` を返す。
-  `write(out, *build(...))` は 3 ファイルを保存する。Node は
-  `buildDigest(spec, {base, out, maxBytes, tile: "64x128"})` で保存し、同じ `info` を返す。
-- `info` は `schema`, `tile: [width,height]`, `bytes`（HTML の UTF-8 byte 数）、`fits`,
-  `rows`, `cols`（行・列数）、`passed`, `statuses`（明示セルの status ごとの件数）。
-  省略セルは `statuses` に含めない。最小寸法でも収まらなければ出力は生成し `fits: false` とする。
-  上限は保証されないので、アップロード前に呼出側で `fits` を確認する。
+- `base` is an existing input directory. The CLI uses the input JSON's parent directory (changeable with `--base`);
+  stdin and the Node API specify it explicitly. Real image paths are resolved, and references that leave the input directory through
+  a symlink on the file itself or a parent directory are rejected. Symlinks pointing inside the input are allowed.
+- Images are regular PNG files (8-bit gray / gray+alpha / RGB / RGBA, non-interlaced).
+  **At most** 32 MiB per file and 16,777,216 (4096×4096) total pixels. Size is checked before reading,
+  and reading itself is capped at 32 MiB + 1 byte. Cells without an image may omit `image` or set it to `null`.
+- Rows and columns are unique labels of 1–120 characters (no control characters). At most 2000 cells, with no duplicate row/column pairs.
+  `status` is `[a-z][a-z0-9_-]{0,23}` (default `unknown`). Only `pass` counts toward the pass count.
+  `notes` are at most 200 characters each; the first 6 are shown in HTML and the first 2 as failure reasons in Markdown.
+  Line breaks in Markdown tables are collapsed to spaces, and separator, HTML and formatting characters are escaped.
+- Each image file is read and decoded exactly once. PNGs for each candidate size are made from the original
+  and reused across downscaling iterations. Candidates halve each dimension down to 16×32. Full-resolution pixels of all images are not kept.
+- The output must be a new or empty directory. `write()` rejects a regular file, a nonempty directory or a symlink
+  (including a dangling one) with `ValueError`. On error the CLI exits with code 2,
+  and the Node API throws. Input is used as a snapshot that does not change during the run.
+- `build(spec, base, max_bytes=..., tile=(64, 128))` returns `(HTML, Markdown, info)`.
+  `write(out, *build(...))` saves the 3 files. Node saves with
+  `buildDigest(spec, {base, out, maxBytes, tile: "64x128"})` and returns the same `info`.
+- `info` has `schema`, `tile: [width,height]`, `bytes` (UTF-8 byte count of the HTML), `fits`,
+  `rows`, `cols` (row/column counts), `passed`, and `statuses` (counts per status of explicit cells).
+  Omitted cells are not counted in `statuses`. If even the minimum size does not fit, output is still produced with `fits: false`.
+  The limit is not guaranteed, so callers should check `fits` before uploading.
 
-## browser-test-kit からの接続
+## Connecting from browser-test-kit
 
-`scripts/app_digest.py` の観測・合否判定は browser-test-kit 側に残し、描画入力だけを次のように変換できる。
+Observation and pass/fail judgment in `scripts/app_digest.py` stay on the browser-test-kit side; only the rendering input can be converted as follows.
 
-| browser-test-kit | image_digest 入力 |
+| browser-test-kit | image_digest input |
 | --- | --- |
-| 予定ページ一覧 | `rows`（未実行ページも残す） |
-| `planned_envs(runners)` | `cols`（未実行環境も残す） |
+| List of planned pages | `rows` (keep pages that did not run) |
+| `planned_envs(runners)` | `cols` (keep environments that did not run) |
 | `(adapter, OS-channel/browser-profile)` | `cell.row`, `cell.col` |
-| `find_shots(root, shot)` の PNG | `cell.image`（入力 root からの相対パス） |
-| 観測の `verdict` | `cell.status`（画素から推測しない） |
-| レイアウト・クリックの失敗理由 | `cell.notes` |
-| ビルド SHA、run URL | `meta.build`, `meta.link`（https のみ） |
+| PNGs from `find_shots(root, shot)` | `cell.image` (relative path from the input root) |
+| Observation `verdict` | `cell.status` (not inferred from pixels) |
+| Layout/click failure reasons | `cell.notes` |
+| Build SHA, run URL | `meta.build`, `meta.link` (https only) |
 
-画像だけがある場合は `status: "unknown"` と `notes: ["no record"]`、観測だけがある場合は
-画像無しのセルにする。画像も観測も無い組合せはセルを省略し「not run」にする。
-セルごとにビルドが異なる場合は各セルの notes に短い build 表示を加え、全体の build と区別する。
+With only an image, use `status: "unknown"` and `notes: ["no record"]`; with only an observation,
+use a cell without an image. Omit the cell when there is neither image nor observation, giving "not run".
+If builds differ per cell, add a short build label to each cell's notes to distinguish it from the overall build.
 
-現行 btk は `btk-app-digest/1` の `pages` / `envs` を使うため、そのままの JSON 置換ではない。
-移行アダプターで `rows` / `cols` から名前を変換するか、呼出側を新 schema に対応させる。
-また `app_digest_comment.py` は `<!-- platform-apps-digest -->` と Markdown 60,000 bytes 以下を要求する。
-Python では `summary_markdown(validate(spec), marker='<!-- platform-apps-digest -->')` で既存 marker を維持できる。
-Node の既定 marker は `<!-- ironmate-image-digest -->` なので、投稿前にアダプターで調整する。
-`max_bytes` は HTML の上限であり、Markdown の投稿上限とは別に検査する。
+Current btk uses `pages` / `envs` from `btk-app-digest/1`, so this is not a drop-in JSON replacement.
+Either rename from `rows` / `cols` in a migration adapter or update the caller to the new schema.
+Also, `app_digest_comment.py` requires `<!-- platform-apps-digest -->` and Markdown of at most 60,000 bytes.
+In Python, `summary_markdown(validate(spec), marker='<!-- platform-apps-digest -->')` keeps the existing marker.
+Node's default marker is `<!-- ironmate-image-digest -->`, so adjust it in the adapter before posting.
+`max_bytes` is the HTML limit and is checked separately from the Markdown posting limit.
 
-呼出例（btk 側で作った上記 schema の `spec` を渡す）:
+Example call (pass a `spec` in the schema above, built on the btk side):
 
 ```python
 from image_digest import build, summary_markdown, validate, write
@@ -103,7 +103,7 @@ from image_digest import build, summary_markdown, validate, write
 page, _, info = build(spec, results_root)
 summary = summary_markdown(validate(spec), marker='<!-- platform-apps-digest -->')
 write(out, page, summary, info)
-# info['fits'] と len(summary.encode('utf-8')) <= 60_000 を投稿・配布前に確認する。
+# check info['fits'] and len(summary.encode('utf-8')) <= 60_000 before posting or distributing.
 ```
 
-この PR は Ironmate 側の契約と安全性を整備する。btk の既存描画を置き換える変更は含まない。
+This PR sets up the contract and safety on the Ironmate side. It does not replace btk's existing rendering.

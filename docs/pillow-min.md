@@ -1,49 +1,49 @@
 # pillow_min.py
 
-`pillow_min.py` は、PNG と APNG を扱うための Pillow の代替です。標準モジュールだけで書いた1ファイルで、Python 3.9 以上で動きます。正本はこのリポジトリにあり、利用側は vendor-lock で取り込みます（Issue #153）。
+`pillow_min.py` is a Pillow replacement for PNG and APNG. It is a single file using only standard modules and runs on Python 3.9+. The source of truth lives in this repository; consumers pull it in via vendor-lock (Issue #153).
 
-## 対象範囲
+## Scope
 
-利用側が実際に呼んでいる Pillow 13 の API を、同じ結果になるように実装しています。
+The Pillow 13 APIs that consumers actually call are implemented to give the same results.
 
-| 区分 | API |
+| Category | API |
 |---|---|
-| 読み込み | `Image.open`（パス・bytes・ファイル風オブジェクト）、`n_frames` / `is_animated` / `seek` / `tell`、`info` |
-| 画像の作成 | `Image.new` / `frombytes` / `putdata` / `putpixel` / `putpalette` / `getpalette` |
-| 変換・参照 | `convert`（L / LA / RGB / RGBA へ）、`crop`、`split`、`point`、`histogram`、`getbbox`、`getextrema`、`getpixel`、`tobytes`、`width` / `height` / `size` / `mode` |
-| 書き出し | `save`（PNG のみ。モード 1 / L / LA / P / I;16 / RGB / RGBA、`transparency` / `bits` / `compress_level`） |
-| 差分 | `ImageChops.difference` / `lighter` / `darker` |
-| 独自の補助 | `open_bytes`（RGBA で返す）、`decode_png_rgba`、`iter_apng_frames`、`encode_png`、`decode_base64`、`Image.to_base64`、`diff_metrics`、`paeth`、`unfilter_scanlines` |
+| Reading | `Image.open` (path, bytes, file-like object), `n_frames` / `is_animated` / `seek` / `tell`, `info` |
+| Creating images | `Image.new` / `frombytes` / `putdata` / `putpixel` / `putpalette` / `getpalette` |
+| Conversion / access | `convert` (to L / LA / RGB / RGBA), `crop`, `split`, `point`, `histogram`, `getbbox`, `getextrema`, `getpixel`, `tobytes`, `width` / `height` / `size` / `mode` |
+| Writing | `save` (PNG only; modes 1 / L / LA / P / I;16 / RGB / RGBA, `transparency` / `bits` / `compress_level`) |
+| Differences | `ImageChops.difference` / `lighter` / `darker` |
+| Own helpers | `open_bytes` (returns RGBA), `decode_png_rgba`, `iter_apng_frames`, `encode_png`, `decode_base64`, `Image.to_base64`, `diff_metrics`, `paeth`, `unfilter_scanlines` |
 
-PNG はすべての色タイプとビット深度（1 / 2 / 4 / 8 / 16bit）、インターレース（Adam7）、tRNS、短いパレットに対応します。開いたときのモードは Pillow と同じです（例：16bit グレーは `I;16`、16bit グレー＋アルファは `RGBA`、1bit グレーは `1`）。
+PNG supports all color types and bit depths (1 / 2 / 4 / 8 / 16-bit), interlacing (Adam7), tRNS and short palettes. The mode on open matches Pillow (e.g. 16-bit gray is `I;16`, 16-bit gray + alpha is `RGBA`, 1-bit gray is `1`).
 
-## Pillow の挙動に合わせている点
+## Matching Pillow's behavior
 
-結果を Pillow と一致させるため、次の挙動もそのまま再現しています。
+To match Pillow's results, the following behaviors are reproduced as-is.
 
-- 16bit グレー（`I;16`）を 8bit に変換するときは、縮小せず 255 で頭打ちにします。
-- tRNS の透過キーは下位 8bit だけを比較します。2bit・4bit グレーでは、拡大後の値とキーをそのまま比べます。
-- グレースケール変換は Pillow と同じ固定小数点の式（L24）を使います。
-- `Image.new` に整数の色を渡すと、複数バンドのモードではリトルエンディアンで展開します。RGBA の既定色は透明な黒です。
-- APNG のフレーム合成は Pillow の dispose / blend の手順どおりです。OVER の合成はマスク付き貼り付けの式で計算します。「直前に戻す」の結果は、Pillow と同様に前のフレームの画素を読んだかどうかで変わります。
-- サイズ上限は Pillow と同じです。`MAX_IMAGE_PIXELS`（既定 89,478,485 画素）を超えると `DecompressionBombWarning`、その2倍を超えると `DecompressionBombError` です。この値はモジュール属性で、呼び出し時に読み直します。
+- Converting 16-bit gray (`I;16`) to 8-bit clamps at 255 instead of scaling.
+- tRNS transparency keys compare only the low 8 bits. For 2-bit and 4-bit gray, the expanded value is compared to the key directly.
+- Grayscale conversion uses the same fixed-point formula as Pillow (L24).
+- An integer color passed to `Image.new` is unpacked little-endian for multi-band modes. The RGBA default is transparent black.
+- APNG frame compositing follows Pillow's dispose / blend steps. OVER compositing uses the masked-paste formula. As in Pillow, the result of "dispose to previous" depends on whether the previous frame's pixels were read.
+- Size limits match Pillow. Above `MAX_IMAGE_PIXELS` (default 89,478,485 pixels) gives `DecompressionBombWarning`; above twice that gives `DecompressionBombError`. The value is a module attribute re-read on each call.
 
-## Pillow と意図的に違う点
+## Intentional differences from Pillow
 
-| 項目 | Pillow | pillow_min |
+| Item | Pillow | pillow_min |
 |---|---|---|
-| 形式 | JPEG・WebP・GIF なども読める | PNG と APNG だけ。ほかは `UnsupportedImageError` |
-| 壊れたファイル | 一部のチャンクの CRC を見ない。末尾の余分なデータや途中までのファイルを読めることがある | すべてのチャンクの CRC を検証し、末尾の余分なデータと途中で切れたファイルは開くときにエラー |
-| エラーの型 | `OSError` の派生（`UnidentifiedImageError` など） | `ImageDecodeError` は `ValueError` と `OSError` の両方の派生。どちらで捕まえても動く。メッセージの文面は異なる |
-| 16bit グレーの APNG を OVER で合成 | `conversion from I;16 to RGBA not supported` で失敗 | 合成できる（マスクは不透明として扱う） |
-| インターレースの APNG の2枚目以降 | Pillow 13 の不具合で失敗（`decoderconfig` がフレームごとに伸びる） | 読める |
-| 巻き戻し（`seek` で前のフレームへ） | OVER 合成でパレットのアルファが書き換わり、新しく開いた場合と変換結果がずれることがある | 新しく開いて同じフレームへ移動した場合と同じ結果 |
-| 変換後の `info['transparency']` | 変換先によっては RGB のキーなどに書き換えて残す | 別モードへ変換したら削除する |
-| 未対応の API | — | APNG の書き出し（`save_all`）、P / 1 / I;16 への変換、`resize` / `paste` / `ImageDraw`、`I;16` の `histogram` / `point`、テキスト・dpi・gamma・ICC の `info` |
-| 速度 | C 実装 | 純 Python。1280×720 の読み込みは 0.1〜1 秒（Paeth フィルタが多いほど遅い）。`image_diff` 相当の差分処理は 0.3 秒前後 |
+| Formats | Also reads JPEG, WebP, GIF, etc. | PNG and APNG only; others raise `UnsupportedImageError` |
+| Broken files | Skips CRC on some chunks; may read files with trailing data or truncated files | Verifies CRC on every chunk; trailing data and truncated files error on open |
+| Error types | Subclasses of `OSError` (`UnidentifiedImageError` etc.) | `ImageDecodeError` subclasses both `ValueError` and `OSError`, so catching either works. Message wording differs |
+| OVER compositing of 16-bit gray APNG | Fails with `conversion from I;16 to RGBA not supported` | Composites (the mask is treated as opaque) |
+| Second and later frames of interlaced APNG | Fails due to a Pillow 13 bug (`decoderconfig` grows per frame) | Reads |
+| Rewinding (`seek` to an earlier frame) | OVER compositing rewrites the palette alpha, so the converted result may differ from a fresh open | Same result as a fresh open seeking to the same frame |
+| `info['transparency']` after conversion | Kept, rewritten e.g. as an RGB key depending on the target | Removed on conversion to another mode |
+| Unsupported APIs | — | APNG writing (`save_all`), conversion to P / 1 / I;16, `resize` / `paste` / `ImageDraw`, `histogram` / `point` on `I;16`, text/dpi/gamma/ICC `info` |
+| Speed | C implementation | Pure Python. Reading 1280×720 takes 0.1–1 s (slower with more Paeth filters). `image_diff`-equivalent diffing is around 0.3 s |
 
-## 検証
+## Verification
 
-- `tests/test_pillow_min_parity.py`：Pillow を参照実装にした、シード固定のランダム照合です（Pillow は dev 依存だけで、`pillow_min` 本体は import しません）。全色タイプ・ビット深度・フィルタ・インターレース・範囲外の透過キーの読み込み、Pillow が書いた APNG と手作りの APNG（部分フレーム、全 dispose / blend、既定画像あり／なし、fdAT の分割）の各フレームを照合します。フレームは「各フレームを読みながら進む」場合と「直接移動する」場合の両方で比べます。ほかに Image / ImageChops の各操作、`save` の往復、上限の扱いも照合します。
-- `tests/test_pillow_min.py`：#152 で追加した単体テストです。
-- browser-test-kit の `scripts/image_diff.py` を pillow_min に切り替えて、Pillow 版と比べました。ランダムな 300 組（全 PNG 形式、APNG、zip メンバー、clip / viewport、tolerance、壊れた入力を含む）で、終了コードと標準出力がすべて一致しました。壊れた入力でのエラーの文面だけが異なります。
+- `tests/test_pillow_min_parity.py`: seeded random comparison with Pillow as the reference (Pillow is a dev-only dependency; `pillow_min` itself does not import it). It compares reading all color types, bit depths, filters, interlacing and out-of-range transparency keys, plus every frame of Pillow-written and hand-made APNGs (partial frames, all dispose / blend modes, with/without default image, split fdAT). Frames are compared both "reading each frame in sequence" and "seeking directly". It also compares each Image / ImageChops operation, `save` round-trips and limit handling.
+- `tests/test_pillow_min.py`: unit tests added in #152.
+- browser-test-kit's `scripts/image_diff.py` was switched to pillow_min and compared with the Pillow version. Over 300 random cases (all PNG formats, APNG, zip members, clip / viewport, tolerance, broken inputs), exit codes and stdout all matched. Only error wording on broken inputs differed.

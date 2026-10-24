@@ -1,32 +1,32 @@
-# ブラウザ別スクリーンショットの比較シート
+# Per-browser screenshot comparison sheet
 
-`browser_matrix.py` は、browser-test-kit の `platform-apps` が保存したスクリーンショットを読み、
-「ページ × 環境（OS・ブラウザ・プロファイル）」の比較シートを作る。Python 標準ライブラリと
-Ironmate の PNG コーデックだけを使う。
+`browser_matrix.py` reads screenshots saved by browser-test-kit's `platform-apps` and builds a
+"page × environment (OS, browser, profile)" comparison sheet. It uses only the Python standard library
+and Ironmate's PNG codec.
 
 ```sh
-python -S browser_matrix.py app-results --out matrix                     # 既定: width-384 の画面
+python -S browser_matrix.py app-results --out matrix                     # default: the width-384 shot
 python -S browser_matrix.py app-results --out matrix-initial --shot initial --reference macOS-webkit-desktop
 ```
 
-入力は任意の深さの `.../<page>/<OS>-<browser>-<profile>/<shot>.png`。browser-test-kit の artifact を
-展開したままのツリーをそのまま渡せる。同じページと環境の組み合わせが 2 枚ある場合は止まる。
+Input is `.../<page>/<OS>-<browser>-<profile>/<shot>.png` at any depth. A browser-test-kit artifact tree
+can be passed as extracted. It stops if the same page and environment pair has two images.
 
-## 出力
+## Output
 
-- `sheet.png`: 行がページ、列が環境。スクリーンショットのない組み合わせは灰色。
-- `tiles/<page>/<env>.png` と `index.html`: 同じ並びをラベル付きの表で見る。
-- `report.json`（`ironmate-browser-matrix/1`）: 各セルの元ファイル・SHA-256・元の寸法と、基準環境との差。
+- `sheet.png`: rows are pages, columns are environments. Pairs with no screenshot are gray.
+- `tiles/<page>/<env>.png` and `index.html`: the same layout as a labeled table.
+- `report.json` (`ironmate-browser-matrix/1`): each cell's source file, SHA-256 and original dimensions, and its difference from the reference environment.
 
-## 差の意味
+## What the difference means
 
-端末ごとに devicePixelRatio が違う（iPhone 3 倍、Pixel 2.625 倍）ため、各画像を共通の幅に面積サンプリングで縮め、
-共通の高さに切り詰めるか白で埋めてから比べる。タイルの寸法（既定 160x320）と間隔（既定 8 px）は、browser-test-kit の既定の幅グリッドに合わせて 8 px の倍数にしている。決まりではなく既定値なので、実機の幅に合わせたいときなどは `--tile 195x422 --gap 4` のように任意の値に切り替えられる。差は、タイル同士の RGB の MAE / RMSE（0〜255）。
-「このエンジンではページの描かれ方が違う」という画面単位の手がかりで、画素単位の回帰判定ではない。
-基準環境は既定で `Linux-chromium-desktop`（なければ環境名で最初のもの）。
+devicePixelRatio differs per device (3x on iPhone, 2.625x on Pixel), so each image is area-sampled down to a common width,
+then cropped or padded with white to a common height before comparing. Tile size (default 160x320) and gap (default 8 px) are multiples of 8 px to match browser-test-kit's default width grid. These are defaults, not rules, so you can switch to any value, e.g. `--tile 195x422 --gap 4` to match a real device width. The difference is the RGB MAE / RMSE (0–255) between tiles.
+It is a screen-level hint that "this engine draws the page differently", not a pixel-level regression check.
+The reference environment defaults to `Linux-chromium-desktop` (otherwise the first by environment name).
 
-モバイル表示はエミュレーションで、実機の画面ではない。公開サイトは実行のたびに変わりうるので、
-どの build を見たかは browser-test-kit の記録（`target.provenance`）で確かめる。
+Mobile views are emulated, not real device screens. Public sites can change between runs, so
+check which build was seen in browser-test-kit's record (`target.provenance`).
 
 ## CI integration and coverage
 

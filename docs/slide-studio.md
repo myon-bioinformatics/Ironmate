@@ -1,65 +1,65 @@
-# Slide Studio：ブラウザで複数スライドを作り、PPTXへ保存
+# Slide Studio: build multiple slides in the browser and save as PPTX
 
 https://myon-bioinformatics.github.io/Ironmate/slides/
 
-Image Studioの図形・文字・画像編集を、そのままスライド単位で利用します。
-インストール・外部CDN・サーバー処理は不要です。入力画像・編集中のJSONを送信しません。
+Image Studio's shape, text and image editing is reused per slide.
+No installation, external CDN or server processing is needed. Input images and in-progress JSON are not sent anywhere.
 
-## 操作
+## Usage
 
-1. 最初のスライドには、黒いタイトルと本文を配置しています。レイヤーを選び、左の文字欄へ貼り付けて「入力した文字・色を適用」を押します。右の位置・寸法・文字サイズで調整します。
-2. 上部のタイトル・本文欄から、文字を入れたテキストボックスを追加できます。「文字の見本」で日本語・英数字・英文を本文欄に入れられます。タイトルは太字です。文字レイヤーを選んで「太字を切替」も使えます。
-3. 「編集できる矢印を追加」で直線＋三角の矢羽根を置きます。移動・拡縮・回転・色変更はImage Studioと同じです。中央の矢羽根も利用できます。
-4. 「白紙」「スライド複製」、スライド選択、前後の並べ替え、削除を使って資料を作ります。全スライドは同じキャンバス寸法にします。各スライドを切り替えると、その時点の配置を保持して編集履歴を開始し直します。
-5. 「PPTXを書き出す」で全スライドを保存します。「全スライドJSON保存」も使うと、画像を含む編集用データを後で読み直せます。通常の「JSON保存」「作業履歴を保存」は現在の1スライドだけの保存です。
+1. The first slide has a black title and body. Select a layer, paste into the text field on the left, and press `入力した文字・色を適用` (apply entered text and color). Adjust with the position, size and font size on the right.
+2. Text boxes with content can be added from the title and body fields at the top. `文字の見本` (text samples) inserts Japanese, alphanumeric and English text into the body field. Titles are bold. You can also select a text layer and use `太字を切替` (toggle bold).
+3. `編集できる矢印を追加` (add an editable arrow) places a straight line with a triangular arrowhead. Moving, scaling, rotating and recoloring work as in Image Studio. The centered arrowhead is also available.
+4. Build a deck with `白紙` (blank), `スライド複製` (duplicate slide), slide selection, reordering and deletion. All slides use the same canvas size. Switching slides keeps the current layout and restarts the edit history.
+5. `PPTXを書き出す` (export PPTX) saves all slides. Also using `全スライドJSON保存` (save all slides as JSON) lets you reload the editable data, images included, later. The regular `JSON保存` (save JSON) and `作業履歴を保存` (save work history) save only the current slide.
 
-ページ離脱時に未保存変更を確認します。自動保存やPPTXファイルの再インポートはありません。
+Unsaved changes are confirmed when leaving the page. There is no autosave or re-import of PPTX files.
 
-## PowerPointで編集できる範囲
+## What is editable in PowerPoint
 
-| 対象 | PPTXの保存形式 |
+| Target | Saved form in PPTX |
 | --- | --- |
-| 通常の文字 | ネイティブのテキストボックス。改行、サイズ、色、不透明度、太字、回転を保持 |
-| 四角・丸・三角 | ネイティブ図形 |
-| 三角の矢羽根の矢印 | 直線と三角の自由形状をグループ化。回転・中央配置を保持。標準の線端矢印属性を使わない |
-| 画像 | PNG。モザイクがあるときは加工後のPNG |
-| 時計・ヒートマップ・単色スタンプ・🔰の矢印 | レイヤー単位でPNGにする。その画像の位置・寸法・回転はPPTXでも変更可能 |
+| Regular text | Native text box. Keeps line breaks, size, color, opacity, bold and rotation |
+| Rectangles, circles, triangles | Native shapes |
+| Arrows with triangular heads | A grouped straight line and triangular freeform. Keeps rotation and centering. Does not use the standard line-end arrow attribute |
+| Images | PNG; the processed PNG when a mosaic is applied |
+| Clocks, heatmaps, solid stamps, 🔰 arrows | Rendered to PNG per layer. That image's position, size and rotation remain editable in the PPTX |
 
-画面の「タイトル」「本文」は編集開始用のひな形です。PowerPointのマスターに紐付くプレースホルダーではなく、独立したテキストボックスとして出力します。
-フォント指定は通常Meiryo、等幅MS Gothic。フォントファイルは埋め込みません。表示先にないフォントは代替されるため、改行位置・字幅・絵文字の表示が一致するとは限りません。
-文字はボックス幅で自動折り返しします。日本語・英語の単語を区切り、幅を超える長い単語やURLは書記素単位で分割します。結合文字や絵文字の途中では分割しません。明示改行・空行・末尾の改行を保持し、文字サイズ・太字・フォント・幅を変更すると再計算します。回転は行分割後にボックス全体へ適用します。
-画面とブラウザからのPPTX出力は、同じフォント実測値・行分割・1.3倍の行送りを使用します。明示改行はPPTXの段落、自動折り返しは編集可能な行区切りにします。PPTX側の幅による折り返しも有効です。出力時の行区切りは残るため、PowerPointで幅を広げても行は自動結合されません。幅を狭める場合やフォント置換・PowerPointの文字組みで追加の折り返しが起きる場合があります。完全な日本語禁則処理は行いません。
-自動縮小・ボックスの高さの自動変更はしません。高さを超えた文字は画面・PPTXとも下へ続くため、長文では高さ・位置・文字サイズを調整してください。自動折り返し位置はJSONの元の文章に書き込みません。折り返し時の区切りの半角空白・タブは行端で取り除きますが、元の文章はJSONに保持します。
-旧形式の全スライドJSON・単一シーンJSON・作業履歴も読み込めます。Slide Studioの通常文字は`wrap`省略時に折り返し、`wrap: false`では明示改行のみになります。Image Studioの省略時の動作は維持します。Nodeから直接PPTXを生成する場合はフォント実測の代わりに保守的な字幅推定を使うため、ブラウザ出力と行分割が異なる場合があります。
-PPTXが複数スライドを持つ場合も、スライド全体を1枚の画像に変換しません。
+The on-screen `タイトル` (title) and `本文` (body) are starter templates. They are exported as independent text boxes, not placeholders tied to a PowerPoint master.
+Fonts are Meiryo normally and MS Gothic for monospace. Font files are not embedded. Missing fonts are substituted on the viewing side, so line-break positions, character widths and emoji display may not match.
+Text wraps automatically at the box width. Japanese and English words are segmented, and long words or URLs wider than the box are split by grapheme. Splits never land inside combining characters or emoji. Explicit line breaks, blank lines and trailing line breaks are kept, and wrapping is recomputed when font size, bold, font or width change. Rotation is applied to the whole box after line splitting.
+On-screen display and browser PPTX export use the same measured font metrics, line splitting and 1.3x line spacing. Explicit line breaks become PPTX paragraphs; automatic wraps become editable line breaks. Width-based wrapping on the PPTX side is also enabled. The exported line breaks remain, so widening the box in PowerPoint does not rejoin lines automatically. Narrowing it, font substitution or PowerPoint's typesetting may add extra wraps. Full Japanese line-breaking rules (kinsoku) are not applied.
+There is no auto-shrink or automatic box-height change. Text taller than the box continues downward both on screen and in the PPTX, so adjust height, position or font size for long text. Automatic wrap positions are not written into the original text in the JSON. Half-width spaces and tabs at wrap points are trimmed at line ends, but the original text is kept in the JSON.
+Old-format all-slide JSON, single-scene JSON and work history can also be loaded. Slide Studio's regular text wraps when `wrap` is omitted; with `wrap: false` only explicit line breaks apply. Image Studio's default when omitted is unchanged. Generating PPTX directly from Node uses a conservative character-width estimate instead of measured fonts, so line splitting may differ from browser output.
+Even with multiple slides, a PPTX never converts a whole slide into a single image.
 
-## 制限
+## Limits
 
-最大20スライド、全スライドJSONとPPTXはそれぞれ32MiB以下。1スライド100レイヤー・4MPなど、Image Studioの制限も適用します。
-画像化するレイヤーは最大4MPでレンダリングします。PNGの圧縮効率や描画フォントはブラウザに依存します。
-PPTX内の画像を含む編集は再編集用JSONで保持します。写真のEXIF・完全透明画素の隠れたRGB・元画像メタデータをPPTXに保持することは保証しません。
-既存の任意PPTXの読み込み・テーマ再現、PDFレンダリング、アニメーション、ノート、表・グラフのネイティブ出力は今回の対象外です。
+Up to 20 slides; all-slide JSON and PPTX are each at most 32 MiB. Image Studio's limits, such as 100 layers and 4 MP per slide, also apply.
+Layers converted to images are rendered at up to 4 MP. PNG compression efficiency and rendering fonts depend on the browser.
+Edits involving images in the PPTX are kept in the re-editable JSON. Keeping photo EXIF, hidden RGB of fully transparent pixels or original image metadata in the PPTX is not guaranteed.
+Reading arbitrary existing PPTX and reproducing themes, PDF rendering, animation, notes, and native tables/charts are out of scope for now.
 
-## 実装と再生成
+## Implementation and regeneration
 
-既存の`npm ci`で固定したPptxGenJS 4.0.1と`pptxgen_render.mjs`から、空のPPTXの土台を生成します。生成したXMLを`studio/slides/package.js`に保持し、日付を固定して再現可能にしています。ブラウザでは外部ライブラリを読み込みません。
+An empty PPTX skeleton is generated from PptxGenJS 4.0.1, pinned by the existing `npm ci`, and `pptxgen_render.mjs`. The generated XML is kept in `studio/slides/package.js` with a fixed date for reproducibility. The browser loads no external libraries.
 
 ```sh
 npm ci --ignore-scripts
 python -S scripts/build_slide_shell.py
 ```
 
-ブラウザの`pptx.js`は、この土台にスライド順序・ネイティブ文字・図形・画像のOpen XMLを組み立て、CRC付きの標準ZIPへ格納します。必要なパーツと関係を明示的に生成し、入力JSONから任意のXML・ZIPパス・外部参照を受け取りません。
-`image_studio.py --build-site`とDockerの公開allowlistに、生成済みXML・JS/CSS・編集画面だけを追加します。PPTXや画像などの利用者の出力は公開ビルドに含めません。
+The browser's `pptx.js` assembles slide order, native text, shapes and image Open XML onto this skeleton and stores it in a standard ZIP with CRCs. Required parts and relationships are generated explicitly; no arbitrary XML, ZIP paths or external references are accepted from input JSON.
+Only the generated XML, JS/CSS and editor screen are added to `image_studio.py --build-site` and Docker's public allowlist. User output such as PPTX and images is not included in the public build.
 
-## 検証
+## Verification
 
-- Node側で生成した複数スライドを、既存のPPTX検査・XMLパーサー・ZIP CRC検証・全Relationshipの参照解決で確認。
-- 文字列のエスケープ、改行、色・サイズ・太字、不透明度、グループ化した矢印、サイズの異なるスライド・XML制御文字の拒否を確認。
-- 生成したXMLの土台が、既存の固定JS writerから再生成したものと一致することを確認。
-- ブラウザで、文字編集、スライド追加・複製・並べ替え・削除、JSON保存・再読込、不正入力時の現状維持、ネイティブ文字＋矢印と時計画像を含む2枚のPPTXを検証。
-- 長い日本語・英文・URL・結合文字・絵文字、明示改行・空行・末尾改行、幅・文字サイズ・太字・等幅フォント・回転の変更を検証。ブラウザで表示した各行と、実際にダウンロードしたPPTXの文字列・段落・行区切りを照合し、旧JSON・作業履歴の読み込みと390px幅も確認。
-- テスト専用の第三者ライブラリpython-pptxで生成ファイルを読み込み、LibreOfficeでPDF化して目視確認。Microsoft PowerPointアプリでの実操作は未実施。
+- Multi-slide decks generated on the Node side are checked with the existing PPTX inspection, XML parser, ZIP CRC verification and resolution of every Relationship.
+- Checked string escaping, line breaks, color/size/bold, opacity, grouped arrows, and rejection of mismatched slide sizes and XML control characters.
+- Confirmed the generated XML skeleton matches a regeneration from the existing pinned JS writer.
+- In the browser, verified text editing, adding/duplicating/reordering/deleting slides, JSON save and reload, keeping current state on invalid input, and a two-slide PPTX with native text + arrows and a clock image.
+- Verified long Japanese, English, URLs, combining characters and emoji; explicit line breaks, blank lines and trailing line breaks; and changes to width, font size, bold, monospace font and rotation. Each line shown in the browser was matched against the text, paragraphs and line breaks of the actually downloaded PPTX, and loading old JSON/work history and a 390 px width were also checked.
+- Generated files were read with the test-only third-party library python-pptx and converted to PDF with LibreOffice for visual checks. Hands-on use in the Microsoft PowerPoint app has not been done.
 
 ```sh
 python -m pytest -q tests/test_browser_slides.py tests/test_pages_tools.py tests/test_studio_delivery.py

@@ -1,123 +1,123 @@
-# 3-Way Survey：画像構造の補助評価の試作
+# 3-Way Survey: prototype auxiliary evaluation of image structure
 
-ドット絵の拡大・縮小・復元の検証に追加する、行列射影と三値ビットマスクによる
-構造評価の実験である。既存の `grid_tools.py` の画素完全一致・残差検証と併用する。
-この実験の出力はパッチ座標の集合であり、滑らかなRGB画像や失われた細部を生成するものではない。
+An experiment in structure evaluation using matrix projections and ternary bitmasks, added to the verification of
+pixel-art upscaling, downscaling and restoration. It is used together with the existing exact-pixel and residual checks in `grid_tools.py`.
+This experiment's output is a set of patch coordinates; it does not generate smooth RGB images or lost detail.
 
-## 実行
+## Running
 
-Python 3.10以降、標準ライブラリだけで実行できる。import時のI/Oはない。
+Runs on Python 3.10+ with only the standard library. No I/O at import time.
 
 ```sh
 python -S scripts/littlebit_jev_3way_survey.py --trials 40 --train-trials 4 --large-raster
 python -m pytest -q tests/test_three_way_survey.py
 ```
 
-`build/three-way-survey/` に `report.md`、全試行の `results.json` と6枚のSVGを出す。
-SVGは緑=正解との一致、赤=偽陽性、黄=見逃し、灰=背景。
-JSONにはコードのSHA-256、Python/OS/アーキテクチャ、seed、閾値探索履歴、
-各試行のTP/FP/FN/TN、IoU、適合率・再現率、重心誤差、5種類の平行移動、
-予測座標集合のハッシュ、段階別時間を保存する。
+Writes `report.md`, `results.json` for all trials and 6 SVGs to `build/three-way-survey/`.
+In the SVGs, green = match with ground truth, red = false positive, yellow = miss, gray = background.
+The JSON saves the code's SHA-256, Python/OS/architecture, seeds, threshold search history,
+each trial's TP/FP/FN/TN, IoU, precision/recall, centroid error, five translations,
+a hash of the predicted coordinate set, and per-stage timings.
 
-## 方式と検証の境界
+## Method and verification boundaries
 
-ユーザー提示のLittleBit/FairyFuse/Jev等の名称を受け継いだ研究候補である。
-それぞれの論文実装との同等性は確認していない。スクリプト名・関数名は提案との対応用。
-学習済みモデルの出力・勾配・予測器を使っておらず、XAIの忠実度比較も実施していない。
+This is a research candidate inheriting names such as LittleBit/FairyFuse/Jev suggested by the user.
+Equivalence with each paper's implementation has not been confirmed. Script and function names map to the proposal.
+It uses no trained model outputs, gradients or predictors, and no XAI fidelity comparison was performed.
 
-| 段階 | 実装 | 意味と制限 |
+| Stage | Implementation | Meaning and limits |
 |---|---|---|
-| 入力 | 行8要素・列8要素の整数信号 | 主評価の6シナリオは合成プロファイルで、実際の8×8画素ではない |
-| 実画素アダプター | `project_raster`、8×8ブロックの行平均・列平均 | 非重複ブロック、縦横8の倍数に限定。rank分解ではない |
-| 符号化 | FWHTのH8/2を整数丸め、DCを除去、ACを三値化 | 正規直交回転ではなく、絶対輝度・色・一部の細部を失う |
-| Way 1 | active_spinsとACのL1和で候補選別 | `ub_threshold`という名前は提案互換。判定スコアの上界保証はない |
-| Way 2 | 回転・反転・消去の距離差、stride 1/2/4の4近傍 | 三値L1距離をビットAND/OR/XOR/popcountで計算する |
-| Way 3 | 履歴の座標・方向ビットと相手の逆方向ビットを照合 | 元画素・元ビット列を引数に取らない独立関数。穴埋めや面の補間はしない |
-| Inject | 無地→単独模様→9点の連結模様を注入し再実行 | 単独ノイズを落としても、整合した偽模様まで見抜けるとは限らない |
+| Input | Integer signals of 8 row elements and 8 column elements | The 6 main-evaluation scenarios are synthetic profiles, not real 8×8 pixels |
+| Real-pixel adapter | `project_raster`, row and column means of 8×8 blocks | Non-overlapping blocks, dimensions limited to multiples of 8. Not a rank decomposition |
+| Encoding | Integer-rounded H8/2 of FWHT, DC removed, AC ternarized | Not an orthonormal rotation; loses absolute brightness, color and some detail |
+| Way 1 | Candidate screening by active_spins and the L1 sum of AC | The name `ub_threshold` is kept for compatibility with the proposal. No upper-bound guarantee on the decision score |
+| Way 2 | Distance differences under rotation, flip and erasure; 4-neighborhoods at stride 1/2/4 | Ternary L1 distance computed with bit AND/OR/XOR/popcount |
+| Way 3 | Matches history coordinates/direction bits against the partner's reverse-direction bits | An independent function that takes no original pixels or bit strings as arguments. No hole filling or surface interpolation |
+| Inject | Re-run after injecting blank → a single pattern → a connected 9-point pattern | Dropping isolated noise does not mean consistent fake patterns are caught |
 
-三値距離は `sum(abs(a_i-b_i))` と厳密に一致する。正負衝突が2、
-空孔との遷移が1である。この距離だけで物理学モデルのハミルトニアンや
-熱力学的挙動を実装したことにはならない。
+Ternary distance matches `sum(abs(a_i-b_i))` exactly. A positive/negative collision is 2,
+and a transition to/from a vacancy is 1. This distance alone does not implement a physics model's Hamiltonian
+or thermodynamic behavior.
 
-乗算・浮動小数点ゼロの対象は `fwht8_add_only`、`rotate_8bit`、
-`fairyfuse_ternary_diff`、`LittleBitTernaryPatch`、`interaction`、`row_offsets`、
-`ThreeWaySurveyEngine`、`reconstruct_blind` であり、ASTで検査する。
-座標の行オフセットも加算で作る。提案を再現する旧再構成、合成データ、
-実画素アダプター、評価・時間集計には乗算や除算がある。
-Pythonインタープリター内部の演算やハードウェア命令数を保証するものではない。
-符号化を済ませた後の候補スキップ率は、全処理を省いた割合や速度向上率とは異なる。
+The multiplication-free and floating-point-free targets are `fwht8_add_only`, `rotate_8bit`,
+`fairyfuse_ternary_diff`, `LittleBitTernaryPatch`, `interaction`, `row_offsets`,
+`ThreeWaySurveyEngine` and `reconstruct_blind`, checked via the AST.
+Coordinate row offsets are also built by addition. The old reconstruction reproducing the proposal, synthetic data,
+the real-pixel adapter, and evaluation/timing aggregation do use multiplication and division.
+This guarantees nothing about operations inside the Python interpreter or hardware instruction counts.
+The candidate skip rate after encoding differs from the fraction of total work skipped or a speedup.
 
-## 提案から修正した評価条件
+## Evaluation conditions corrected from the proposal
 
-1. 消去の摂動は `abs(collapse_distance-original_distance)` で測る。
-   提案の `collapse_distance >> 1` は元状態との差ではなかった。
-2. 接続先が履歴に存在するだけでは不十分とし、同じstrideの逆方向ビットも必要にする。
-   x/yの境界を確認してから一次元座標へ変換する。
-3. 感度比較は**確定した同じ座標集合**をトーラス上で平行移動する。
-   元とシフト後で点の採用条件を変えない。点数は厳密に保ち、正解は動かさない。
-   提案の別条件で濾過した値も `legacy_shift_iou` として別途記録する。
-4. 重心は整数切捨てせず、L1誤差をパッチ単位で報告する。重心がない場合は`None`。
-   IoU・FP/FNも併記するため、異なる輪郭が同じ重心になる場合も隠さない。
-5. 「ノイズが消える」「滑らかな境界を必ず救える」を合格条件にしない。
-   stride 1だけのアブレーションと比較し、改善・悪化の両方を残す。
+1. Erasure perturbation is measured as `abs(collapse_distance-original_distance)`.
+   The proposal's `collapse_distance >> 1` was not a difference from the original state.
+2. A neighbor merely existing in history is not enough; the reverse-direction bit at the same stride is also required.
+   x/y bounds are checked before converting to a one-dimensional coordinate.
+3. Sensitivity comparison translates **the same fixed coordinate set** on a torus.
+   The point-acceptance conditions do not change between original and shifted. Point counts are kept exactly, and ground truth does not move.
+   Values filtered under the proposal's separate conditions are recorded separately as `legacy_shift_iou`.
+4. Centroids are not truncated to integers; L1 error is reported in patch units. With no centroid, it is `None`.
+   IoU and FP/FN are reported alongside, so different outlines with the same centroid are not hidden.
+5. "Noise disappears" and "smooth boundaries are always rescued" are not pass conditions.
+   Compared with a stride-1-only ablation, both improvements and regressions are kept.
 
-ビット回転はFWHT係数の並べ替えであり、元画素の空間移動そのものではない。
-感度比較の移動量はパッチ単位。トーラスなので端から出た点は反対側に回る。
-周期模様・誤検出ではIoUの差がゼロや負になることもあり、感度低下量に合格閾値は置かない。
+Bit rotation is a permutation of FWHT coefficients, not a spatial shift of the original pixels.
+Shift amounts in the sensitivity comparison are in patch units. On a torus, points leaving one edge wrap to the other.
+With periodic patterns or false detections the IoU difference can be zero or negative, so no pass threshold is set on sensitivity drop.
 
-## チューニングとモンテカルロ設計
+## Tuning and Monte Carlo design
 
-学習seed `20261017`、各シナリオ4試行で以下の12構成を比較する。
+With training seed `20261017` and 4 trials per scenario, the following 12 configurations are compared.
 
 - deadzone_shift: 2 / 3
 - ub_threshold: 26 / 64
 - min_links: 1 / 2 / 3
-- max_diff: 4で固定
+- max_diff: fixed at 4
 
-学習側の平均IoUが最大の構成を1つ選び、固定する。
-その後に未使用seed `20261018` と `20261019` の各40試行を評価する。
-評価側を見て閾値を調整し直す処理はない。
-各seed・シナリオ・試行の乱数をSHA-256から独立に作るため、実行順序を変えても入力は変わらない。
-提案とは乱数ストリームが異なるが、信号生成分布と6種類の形状は維持している。
+The configuration with the highest mean IoU on the training side is chosen and fixed.
+Then unused seeds `20261018` and `20261019` are evaluated with 40 trials each.
+There is no re-tuning of thresholds after looking at the evaluation side.
+Random numbers for each seed, scenario and trial are derived independently from SHA-256, so changing execution order does not change inputs.
+The random stream differs from the proposal, but the signal generation distribution and the 6 shapes are kept.
 
-比較は提示方式・評価修正版の既定値・学習側で調整した修正版・stride 1のみの4構成。
-各構成480試行、491,520パッチ。評価合計1,920試行、1,966,080パッチ。
-これに学習288試行、294,912パッチと任意の12MPラスタ測定が加わる。
-形状と信号分布は共通なので、未使用seedでの一致も未知の実画像への汎化証明にはならない。
+Four configurations are compared: the proposed method, the corrected-evaluation defaults, the corrected version tuned on the training side, and stride 1 only.
+Each configuration has 480 trials and 491,520 patches; the evaluation totals 1,920 trials and 1,966,080 patches.
+On top of this are 288 training trials, 294,912 patches and an optional 12 MP raster measurement.
+Shapes and signal distributions are shared, so agreement on unused seeds is not proof of generalization to unknown real images.
 
-時間は合成生成・符号化・探索/再構成・その合計を分離する。
-主評価の合計にはIoU計算・JSON/SVG書出しは含まない。
-12MP測定は本物の4000×3000画素のグレースケール配列を作り、行・列射影時間も測る。
-JPEG/PNGのdecode、RGB変換、スマートフォン実機での計測は含まない。
-実行環境の混雑やPythonの版に依存するため、時間をCIの合否基準にはしない。
+Timing separates synthetic generation, encoding, search/reconstruction and their total.
+The main evaluation total excludes IoU computation and JSON/SVG writing.
+The 12 MP measurement builds a real 4000×3000 grayscale array and also times the row/column projections.
+JPEG/PNG decoding, RGB conversion and measurement on real smartphones are not included.
+Timing depends on load in the execution environment and the Python version, so it is not a CI pass/fail criterion.
 
-## 画像の復元評価との接続
+## Connection to image restoration evaluation
 
-既存の `pixel_grid.render` → `grid_tools.resize` の32→64→32経路に対し、
-画素一致と、この実画素アダプターを通した構造集合の一致を確認する。
-元画素の残差がゼロという従来の判定が主であり、この特徴量一致は補助判定である。
+For the existing `pixel_grid.render` → `grid_tools.resize` 32→64→32 path,
+pixel matches and matches of the structure set through this real-pixel adapter are checked.
+The existing check of zero residual on original pixels is primary; this feature match is auxiliary.
 
-明示的な反例として、値1/255が交互の市松模様と一様128の8×8画素は、
-行・列平均が同じになるため符号化も同じになる。三値化前から情報が落ちている。
-この指標だけでは、復元時のムラ・滑らかさ・色・細部を判定できない。
-連結した偽模様を注入すると構造評価を通ることも、対照実験と回帰テストに残した。
+As an explicit counterexample, an 8×8 checkerboard alternating values 1/255 and a uniform 128 have
+the same row/column means and so the same encoding. Information is lost before ternarization.
+This metric alone cannot judge unevenness, smoothness, color or detail in restoration.
+That an injected connected fake pattern passes the structure evaluation is also kept in the control experiment and regression tests.
 
 ## CI
 
-`.github/workflows/verify_3way_survey.yml` は関連PR、mainへの関連push、手動実行、
-毎朝08:00 JSTに実測する。定期実行はmainに入ってから有効。
-権限はcontents:read、タイムアウト15分。MarkdownをJob Summaryへ、JSON/SVGをartifactへ保存する。
-失敗を握りつぶすパイプは使わず、例外は非ゼロ終了する。
-回帰テストとJUnitは既存の `mcp-tests.yml` に自動で含まれ、共通JUnit収集経路を利用する。
+`.github/workflows/verify_3way_survey.yml` measures on related PRs, related pushes to main, manual runs,
+and every morning at 08:00 JST. The schedule takes effect once it is on main.
+Permissions are contents:read, with a 15-minute timeout. Markdown goes to the Job Summary and JSON/SVG to an artifact.
+No pipes that swallow failures are used; exceptions exit nonzero.
+Regression tests and JUnit are automatically included in the existing `mcp-tests.yml` and use the shared JUnit collection path.
 
-測定結果は [初回CPU実測](evidence/three-way-survey/report.md) を参照。
+For measured results see the [first CPU measurement](evidence/three-way-survey/report.md).
 
-## 初回の読み取り
+## First reading
 
-学習側で選ばれた値は `deadzone_shift=3, ub_threshold=64, min_links=2, max_diff=4`。
-下表は未使用2 seedの各40試行をまとめた値。FP/FNは80試行の合計である。
+The values chosen on the training side are `deadzone_shift=3, ub_threshold=64, min_links=2, max_diff=4`.
+The table below aggregates 40 trials each on the 2 unused seeds. FP/FN are totals over 80 trials.
 
-| シナリオ | 提示方式 IoU | 修正既定 IoU | 調整後 IoU | 調整後 FP/FN | stride 1のみ IoU |
+| Scenario | Proposed IoU | Corrected default IoU | Tuned IoU | Tuned FP/FN | Stride 1 only IoU |
 |---|---:|---:|---:|---:|---:|
 | Dense Object | 99.20% | 99.35% | 100.00% | 0/0 | 100.00% |
 | Thin Skeleton | 96.49% | 97.67% | 100.00% | 0/0 | 100.00% |
@@ -126,69 +126,69 @@ JPEG/PNGのdecode、RGB変換、スマートフォン実機での計測は含ま
 | High Noise Dark | 91.82% | 90.97% | 99.74% | 30/0 | 100.00% |
 | Multi Scale Clusters | 98.53% | 98.94% | 100.00% | 0/0 | 100.00% |
 
-修正しただけで全指標が改善したわけではない。学習側での閾値調整の効果が大きい。
-stride 1だけではリングを320点見逃す一方、暗所ノイズの偽陽性は0になる。
-Smooth Gradientではstride 1でも同じ結果であり、この入力ではマルチストライドが
-必須とは言えない。形状ごとの利点と代償を残し、全体平均だけで採用しない。
+The correction alone did not improve every metric. Threshold tuning on the training side had a large effect.
+Stride 1 alone misses 320 points on the ring, while false positives on dark noise drop to 0.
+Smooth Gradient gives the same result with stride 1, so multi-stride is not shown to be
+necessary for this input. Per-shape benefits and costs are kept, and adoption is not based on the overall mean alone.
 
-注入対照では無地0点・単独注入0点・連結9点注入9点を検出した。
-連結した偽模様は通るため、構造整合性を意味的な正しさに置き換えることはできない。
+In the injection control, it detected 0 points for blank, 0 for a single injection and 9 for a connected 9-point injection.
+Connected fake patterns pass, so structural consistency cannot stand in for semantic correctness.
 
-`results.json.gz` は全試行の圧縮した生データ、`summary.json` は要約と生データの
-SHA-256である。再実行で精度・予測ハッシュは比較できるが、処理時間の一致は求めない。
+`results.json.gz` is compressed raw data for all trials; `summary.json` holds the summary and
+the raw data's SHA-256. Re-runs can compare accuracy and prediction hashes, but matching processing times is not required.
 
-## 形状・信号分布を分けた追加ホールドアウト
+## Additional holdout separating shapes and signal distributions
 
-既存の6シナリオと閾値探索に含まれない入力族を、別の
-`scripts/survey_holdout.py` で検証する。既存エンジンをimportし、初回実測の
-`deadzone_shift=3, ub_threshold=64, min_links=2, max_diff=4` とstride 1/2/4を
-固定する。再チューニング、元のシナリオ・反例・実測証跡の置換は行わない。
-Aoiの正確なFWHTとは別に、こちらのH8//2による整数丸めを維持する。
+Input families not in the existing 6 scenarios or the threshold search are verified with a separate
+`scripts/survey_holdout.py`. It imports the existing engine and fixes the first measurement's
+`deadzone_shift=3, ub_threshold=64, min_links=2, max_diff=4` and stride 1/2/4.
+No re-tuning, and no replacing the original scenarios, counterexamples or measurement evidence.
+Separately from Aoi's exact FWHT, the integer rounding of H8//2 here is kept.
 
 ```sh
 python -S scripts/survey_holdout.py --trials 3 --output build/survey-holdout
 python -m pytest -q tests/test_three_way_survey.py tests/test_survey_holdout.py
 ```
 
-- 新しい形状3族: 凹部が繰り返す櫛形、9個の穴を持つ板、画像端で折り返す1点幅の蛇行路
-- 新しい信号4族: パッチごとの位相混合、振幅1/2/3/4/6/8の低コントラスト量子化、各係数を確率0.12で0/255へ置き換えるインパルスノイズ、隣接成分に相関のあるランダムウォーク
-- 対照: 従来のDense Object形状・信号、形状だけを変える3条件、信号だけを変える4条件、両方を変える12条件
-- 未使用seed 20261020/20261021、各条件・seedで3試行、32×32パッチ。計120ケース、122,880パッチ。形状の左右・上下反転は試行番号で事前に決め、信号族によって正解座標を変えない
+- 3 new shape families: a comb with repeating notches, a plate with 9 holes, and a 1-point-wide meandering path that wraps at the image edge
+- 4 new signal families: per-patch phase mixing, low-contrast quantization with amplitude 1/2/3/4/6/8, impulse noise replacing each coefficient with 0/255 with probability 0.12, and a random walk with correlated adjacent components
+- Controls: the existing Dense Object shape and signal, 3 conditions changing only the shape, 4 changing only the signal, and 12 changing both
+- Unused seeds 20261020/20261021, 3 trials per condition and seed, 32×32 patches; 120 cases and 122,880 patches in total. Horizontal/vertical flips of shapes are fixed in advance by trial number, and ground-truth coordinates do not change with the signal family
 
-「未知」は従来の6シナリオとそのチューニングに対する意味であり、自然画像への汎化や
-他の研究で未使用であることを示さない。結果を読んだ後の本データは回帰セットとなり、
-後続の調整を評価する独立なホールドアウトとして再利用してはならない。
+"Unknown" here is relative to the existing 6 scenarios and their tuning; it does not indicate generalization to natural images
+or being unused in other research. Once the results have been read, this data becomes a regression set
+and must not be reused as an independent holdout for evaluating later tuning.
 
-### 実測と失敗の区別
+### Measurements vs failures
 
-[追加実測レポート](evidence/survey-holdout/report.md) と
-[全ケースの要約・ハッシュ](evidence/survey-holdout/summary.json) を保存した。
-形状だけを変えた18ケースはIoU 100%だった。一方、Dense Object形状を固定して
-信号分布を変えると平均IoUは位相混合98.44%、低コントラスト9.11%、
-0/255への外れ値混入66.63%、ランダムウォーク27.62%となった。
-形状・信号の組合せではIoU 0のケースもあり、検出なしの適合率・重心は`null`で残す。
-この結果は今回の合成プロファイルに限られ、普遍的な精度保証にはならない。
+The [additional measurement report](evidence/survey-holdout/report.md) and
+[summary and hashes for all cases](evidence/survey-holdout/summary.json) are saved.
+The 18 cases changing only the shape had 100% IoU. On the other hand, fixing the Dense Object shape and
+changing the signal distribution gave mean IoU of 98.44% for phase mixing, 9.11% for low contrast,
+66.63% for 0/255 outlier injection and 27.62% for the random walk.
+Some shape × signal combinations have IoU 0; precision and centroid with no detections are kept as `null`.
+These results are limited to these synthetic profiles and are not a universal accuracy guarantee.
 
-誤検出や見逃しは`observed_mismatch`として保存し、それ自体を実験コードの失敗には
-しない。回帰テストは観測値・入力ハッシュを固定して、予告しない結果の変化を検知する。
-不正な入力、集計の不整合、履歴からの再構成不一致、エンジン例外、非有限値のJSON化は
-別扱いで失敗させる。既知の丸め損失、孤立した正当な点の見逃し、射影衝突、
-連結した偽模様の通過を、100%一致の合格条件で消さない。
+False detections and misses are saved as `observed_mismatch` and are not themselves treated as failures of the experiment code.
+Regression tests pin observed values and input hashes to detect unannounced changes in results.
+Invalid input, aggregation inconsistencies, reconstruction mismatches from history, engine exceptions and JSON serialization of non-finite values
+are handled separately as failures. Known rounding loss, misses of isolated legitimate points, projection collisions
+and connected fake patterns passing are not erased by a 100%-match pass condition.
 
-実行先の`results.json.gz`には全入力ベクトル・正解座標・予測座標を保存する。
-`summary.json`は同じ各ケースのseed、導出seed、入力・正解・予測のSHA-256、
-TP/FP/FN/TN、IoU、適合率・再現率、重心誤差を保持する。既定実行の圧縮した全入力は
-約1.6MBで、リポジトリには要約とレポートだけを置き、実行時に再生成する。
-engine/harnessのSHA-256と全recordsのSHA-256を使って再現性を確認できる。
-実行環境欄を除いたrecordsは決定的で、時間の一致は求めない。
+`results.json.gz` in the output directory saves all input vectors, ground-truth coordinates and predicted coordinates.
+`summary.json` keeps, for the same cases, the seed, derived seed, SHA-256 of input/ground truth/prediction,
+TP/FP/FN/TN, IoU, precision/recall and centroid error. The compressed full input for the default run is
+about 1.6 MB; only the summary and report are kept in the repository, and the rest is regenerated at run time.
+Reproducibility can be checked with the engine/harness SHA-256 and the SHA-256 of all records.
+Records excluding the environment fields are deterministic; matching timings is not required.
 
-標準ライブラリだけのCLI、保存入力からの再実行、独立したパッチ単位の集計、
-チューニング呼出し禁止、元の形状との非一致、入力族の性質、例外伝播をテストする。
-既存の通常pytestに自動で含まれ、新しい定期実行やworkflow変更は追加しない。
+Tests cover the standard-library-only CLI, re-running from saved input, independent per-patch aggregation,
+a ban on calling tuning, non-matching with the original shapes, properties of the input families and exception propagation.
+They are automatically included in the existing regular pytest; no new schedule or workflow changes are added.
 
-## 追加実験: 穴の厳密計数と位相リング
+## Additional experiment: exact hole counting and phase rings
 
-[5-Way topology and phase-ring experiment](five-way-survey.md) は、単一ファイルで
-校正・不動点反復・穴の数・8/16方向リングを検証する追加実験である。
-4×4全配置の独立BFS照合と、90度回転／任意角度の区別、実測の失敗例を記録する。
-既存の本評価器・固定ホールドアウト・証跡は変更しない。
+The [5-Way topology and phase-ring experiment](five-way-survey.md) is an additional single-file experiment verifying
+calibration, fixed-point iteration, hole counts and 8/16-direction rings.
+It records independent BFS cross-checks over all 4×4 configurations, the distinction between 90-degree and arbitrary-angle rotation, and measured failure cases.
+The existing main evaluator, fixed holdout and evidence are unchanged.

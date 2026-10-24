@@ -1,148 +1,148 @@
-# ドット絵試作：第1弾の契約と次の段階
+# Pixel art prototype: first-stage contract and next steps
 
-Ironmate #77の「試作・検証・候補として保管」に沿った候補。
-ユーザーの目標は、まず絵文字で機械生成と加工を試し、将来は写真変換や
-認識できるオリジナルキャラクターの表現へ進むことである。
-第1弾は品質を完成と判定するものではなく、再現可能な色番号グリッドを作る。
+A candidate following Ironmate #77's "prototype, verify and keep as a candidate".
+The user's goal is to first try machine generation and processing with emoji, and later move on to photo conversion and
+expressing recognizable original characters.
+The first stage does not judge quality as finished; it produces a reproducible grid of color indices.
 
-## 実装した範囲
+## What is implemented
 
-`pixel_grid.py` は単一ファイル・stdlib-onlyで、import時に入出力しない。
-`render(mask, palette, effect, size)` が `ironmate-pixel-grid/1` を返す（`resampling: procedural_mask`）。
-`filename(artifact)` は `{形}_{色ID}_{加工}_{サイズ}.png`（例：`triangle_C01_shadow_32.png`）。
+`pixel_grid.py` is a single stdlib-only file with no I/O at import time.
+`render(mask, palette, effect, size)` returns `ironmate-pixel-grid/1` (`resampling: procedural_mask`).
+`filename(artifact)` gives `{shape}_{colorID}_{effect}_{size}.png` (e.g. `triangle_C01_shadow_32.png`).
 
-| 軸 | 現在 |
+| Axis | Current |
 | --- | --- |
-| 形 | triangle / diamond / cloud / circle / rock（手続き生成） |
-| 配色 | 色ID `C01`〜`C10`（main/shadowから派生） |
-| 加工 | normal / shadow / highlight / outline（いずれか1つ） |
-| サイズ | 形ごとの範囲内の任意の整数（下表） |
-| 正規データ | 色番号の二次元配列＋固定RGBA palette（0=透明） |
-| 出力 | 絵文字 / JSON / SVG / PNG |
+| Shape | triangle / diamond / cloud / circle / rock (procedural) |
+| Palette | Color IDs `C01`–`C10` (derived from main/shadow) |
+| Effect | normal / shadow / highlight / outline (one of them) |
+| Size | Any integer within each shape's range (table below) |
+| Canonical data | 2D array of color indices + fixed RGBA palette (0 = transparent) |
+| Output | Emoji / JSON / SVG / PNG |
 
-`SIZES = (8, 16, 32, 64, 128)` は photo_grid.py と共有する代表サイズとして残す。
-pixel_grid では8を下限としない形がある（cloud・diamondは8では描かない）。
+`SIZES = (8, 16, 32, 64, 128)` is kept as the representative sizes shared with photo_grid.py.
+In pixel_grid some shapes do not have 8 as their minimum (cloud and diamond are not drawn at 8).
 
-### 色ID
+### Color IDs
 
-- IDは `C` ＋2桁の連番（`C01`〜`C10`）。一度割り当てたIDは別の色に再利用しない。
-  色名（grass等）は `PALETTE_LABELS` の参考ラベルで、CLI・JSON・ファイル名には使わない。
-- 定義は `PALETTE_BASE[ID] = (main, shadow)`。色番号は 0=透明、1=main、2=shadow、3=highlight、4=outline。
-- highlight・outlineはRGBの各成分を整数で四捨五入（0.5は切り上げ）して派生する：
-  - highlight = round((3 × main + 2 × 255) / 5)（mainを白へ40%寄せる）
-  - outline = round(shadow / 2)（shadowを黒へ50%寄せる）
-- C05（main #FFFFFF）はhighlightがmainと同じ色になる。
+- IDs are `C` + a 2-digit sequence number (`C01`–`C10`). An assigned ID is never reused for a different color.
+  Color names (grass etc.) are reference labels in `PALETTE_LABELS` and are not used in the CLI, JSON or filenames.
+- Defined as `PALETTE_BASE[ID] = (main, shadow)`. Color indices: 0 = transparent, 1 = main, 2 = shadow, 3 = highlight, 4 = outline.
+- highlight and outline are derived by rounding each RGB component to an integer (0.5 rounds up):
+  - highlight = round((3 × main + 2 × 255) / 5) (moves main 40% toward white)
+  - outline = round(shadow / 2) (moves shadow 50% toward black)
+- For C05 (main #FFFFFF), highlight is the same color as main.
 
-| ID | main | shadow | ラベル |
+| ID | main | shadow | Label |
 | --- | --- | --- | --- |
 | C01 | #5BBD3E | #418A2D | grass |
 | C02 | #63B3FF | #3F75CC | water |
 | C03 | #FF6A00 | #CC3D00 | lava |
 | C04 | #A84DFF | #7520B8 | poison |
 | C05 | #FFFFFF | #CFD8E6 | snow |
-| C06 | #E0C072 | #B08D45 | sand（仮） |
-| C07 | #9EA4AB | #6D737B | stone（仮） |
-| C08 | #A8693A | #744423 | wood（仮） |
-| C09 | #FFD23F | #C99A17 | gold（仮） |
-| C10 | #FF86C0 | #C9568F | blossom（仮） |
+| C06 | #E0C072 | #B08D45 | sand (provisional) |
+| C07 | #9EA4AB | #6D737B | stone (provisional) |
+| C08 | #A8693A | #744423 | wood (provisional) |
+| C09 | #FFD23F | #C99A17 | gold (provisional) |
+| C10 | #FF86C0 | #C9568F | blossom (provisional) |
 
-C01〜C05はユーザー指定の値。C06〜C10は10色にするための仮の値で、目視評価は未実施。
+C01–C05 are user-specified values. C06–C10 are provisional values to reach 10 colors and have not been visually evaluated.
 
-### 形（手続き生成）
+### Shapes (procedural)
 
-固定seedの拡大ではなく、サイズごとに図形を計算し直す。外周1セルは透明margin。
+Rather than upscaling a fixed seed, the shape is recomputed for each size. The outer 1 cell is a transparent margin.
 
-| 形 | 生成方法 | サイズ範囲 |
+| Shape | Generation | Size range |
 | --- | --- | --- |
-| triangle | 1行ごとに左右1セルずつ広げる（頂点1または2セル、高さ≒幅/2） | 5〜256 |
-| diamond | セル中心の L1距離 ≤ 半径 | 9〜256 |
-| circle | セル中心の距離 ≤ 半径 | 6〜256 |
-| rock | 指数2.6の超楕円（高さ0.7×幅）、下側を平らにカット | 7〜256 |
-| cloud | 平らな底の上に3つの円（左右r=0.16W、中央r=0.2W）、各列の穴を埋める | 16〜256 |
+| triangle | Widens by 1 cell on each side per row (apex 1 or 2 cells, height ≈ width/2) | 5–256 |
+| diamond | L1 distance of cell centers ≤ radius | 9–256 |
+| circle | Distance of cell centers ≤ radius | 6–256 |
+| rock | Superellipse with exponent 2.6 (height 0.7 × width), bottom cut flat | 7–256 |
+| cloud | 3 circles on a flat bottom (sides r = 0.16W, center r = 0.2W), with holes in each column filled | 16–256 |
 
-品質規則（`mask_problem`）に合わない場合は、半径・幅を少し小さくする等の決まった順の候補を試し、
-最初に合格したものを使う。どれも合格しなければ `ValueError`。範囲外のサイズも `ValueError`。
+If the quality rules (`mask_problem`) are not met, candidates are tried in a fixed order, such as slightly shrinking the radius or width,
+and the first that passes is used. If none passes, `ValueError`. Out-of-range sizes also raise `ValueError`.
 
-### 品質規則
+### Quality rules
 
-1. 透明margin、4連結、穴・列の途切れなし（cloud以外は行の途切れもなし）。
-2. 左右対称。circle・diamondは上下対称も必要。
-3. 輪郭のぎざぎざなし：上端・下端（列ごと）と左端（行ごと）の各輪郭を単調な区間に分け、
-   - 2セル以上の段差が平らな区間と隣り合わない（2×2の階段を作らない）
-   - 隣り合う同じ種類の区間（段差の大きさ、平らな区間の長さ）の比が2倍以内
-   （区間の両端は切れているので比較しない）。cloudの左端は、puffの切れ込みより下だけを見る。
-4. 形として読めること：triangleは頂点2セル以下で底辺が最大、diamondは頂点2セル以下・充填率0.65以下、
-   circleは外接四角形が正方形で角が空き充填率0.68〜0.9、rockは横長・角が空き・底辺が幅の半分以上、
-   cloudは上端に2つ以上の切れ込み・底辺が幅の半分以上・頂上が1セルの尖りでないこと。
+1. Transparent margin, 4-connected, no holes or column gaps (no row gaps either, except for cloud).
+2. Left-right symmetric. circle and diamond also need top-bottom symmetry.
+3. No jagged outlines: split each of the top and bottom edges (per column) and the left edge (per row) into monotone runs, and
+   - a step of 2 or more cells is not adjacent to a flat run (no 2×2 staircases)
+   - the ratio of adjacent runs of the same kind (step size, flat run length) is within 2×
+   (runs at the ends are cut off, so they are not compared). For cloud's left edge, only the part below the puff notches is checked.
+4. Readable as the shape: triangle has an apex of 2 cells or less and the widest base; diamond has an apex of 2 cells or less and fill ratio 0.65 or less;
+   circle has a square bounding box, empty corners and fill ratio 0.68–0.9; rock is wide, with empty corners and a base at least half the width;
+   cloud has 2 or more notches on top, a base at least half the width, and a top that is not a 1-cell spike.
 
-サイズ範囲は3〜256の全サイズを走査して決めた。下限は「それ以上の全サイズが合格する最小値」。
-下限未満で合格するサイズ（diamondの5・7、cloudの14）もあるが、範囲を連続にするため採用しない。
-上限256は出力サイズの方針上の上限で、品質規則の限界ではない。
-範囲内では5つの形が同じサイズで互いに異なることも確認している（16〜64）。
+Size ranges were determined by scanning all sizes from 3 to 256. The minimum is "the smallest value from which all larger sizes pass".
+Some sizes below the minimum pass (5 and 7 for diamond, 14 for cloud), but they are not adopted so the range stays contiguous.
+The maximum 256 is a policy limit on output size, not a limit of the quality rules.
+Within the range, the 5 shapes are also confirmed to differ from each other at the same size (16–64).
 
-### 加工
+### Effects
 
-色番号の置換で表す。影＝形の下1/3を2、明部＝上1/3を3、
-輪郭＝4近傍に透明がある形の内側のセルを4。silhouetteは変えない。
+Expressed as color-index replacement. Shadow = bottom 1/3 of the shape becomes 2, highlight = top 1/3 becomes 3,
+outline = cells inside the shape with a transparent 4-neighbor become 4. The silhouette does not change.
 
-同じ入力は同じ出力。乱数・ネットワーク・外部モデルは使わない。
-絵文字は各色に最も近い絵文字を選ぶ近似表示で、正確な色・透過はJSONで判定する。
+The same input gives the same output. No randomness, network or external models.
+Emoji are an approximate display choosing the closest emoji for each color; exact color and transparency are judged from the JSON.
 
-## 検証と評価
+## Verification and evaluation
 
-行・列射影と三値ビットマスクによる構造の補助評価を
-[3-Way Survey実験](three-way-survey.md) に追加した。拡大→元サイズの
-画素一致と構造一致を併用し、情報が失われる市松模様の反例も検証する。
-滑らかな画像の生成品質や色・細部の評価は、この構造指標だけでは判定しない。
+An auxiliary structural evaluation using row/column projections and ternary bitmasks was added
+in the [3-Way Survey experiment](three-way-survey.md). It combines pixel matching and structure matching for
+upscaling → original size, and also verifies the checkerboard counterexample where information is lost.
+Generation quality of smooth images and evaluation of color and detail are not judged by this structural metric alone.
 
-自動テストでは範囲内の全サイズ（heavy）の品質規則、奇数・代表サイズでの寸法・色範囲・決定性、
-加工前後のsilhouette維持、影/明部の位置、輪郭境界、入力拒否、
-CLI JSONと副作用のないimportを検証する。
-既存pytestからJUnitを生成できるため、専用の証跡生成処理は増やさない。
+Automated tests verify the quality rules at all in-range sizes (heavy), dimensions, color range and determinism at odd and representative sizes,
+silhouette preservation before and after effects, shadow/highlight positions, outline boundaries, input rejection,
+CLI JSON and side-effect-free import.
+JUnit can be produced from the existing pytest, so no dedicated evidence generation is added.
 
-目視評価では「単色でも形が分かるか」「影が形を説明しているか」
-「小型で特徴が残るか」「palette変更後も明暗を読み取れるか」を確認する。
-人の品質評価は未実施。テスト成功を美的品質の合格に置き換えない。
-候補はこのrepoで保持し、他consumerの需要・契約が明確になってから独立させる。
+Visual evaluation checks "Is the shape recognizable even in one color?", "Does the shadow explain the shape?",
+"Do features survive at small sizes?" and "Can light and dark be read after changing the palette?".
+Human quality evaluation has not been done. Passing tests is not a substitute for passing on aesthetic quality.
+Candidates are kept in this repo and spun out once demand and contracts from other consumers are clear.
 
-## 今後の段階（未実装）
+## Future stages (not implemented)
 
-1. **出力とサイズ別設計**：JSON gridからPNG/SVGへ出力（`grid_svg.py`・`grid_png.py`で試作済み）。
-   16/32/64それぞれのseedまたは輪郭規則を用意し、単なる拡大との差を比較する。
-   観察用拡大は最近傍でセル境界を維持する。
-2. **キャラクター部品**：胴体・頭・目・口・手足・装備をlayerで合成。
-   anchor、重なり順、左右対称と例外、poseを明示する。
-   「ロボット」「丸い顔」などのオリジナル形状で識別性を評価する。
-   地形向け5マスクの色変更だけでキャラクター品質を達成したとは扱わない。
-3. **写真変換**：画像decode→向き補正→crop/背景処理→低解像度化→減色→
-   任意dither→グリッド→出力。入力写真はユーザーが選んだものを使用する。
-   背景除去や目・輪郭の意味的修正は、単なる減色とは別の処理・評価になる。
-4. **写真からキャラクター化**：crop/減色したbaselineと、部品へ特徴を移す方式を比較。
-   顔の可読性・輪郭・色数・不要な孤立点を人が評価する。自動で高品質になるとは約束しない。
+1. **Output and per-size design**: output from the JSON grid to PNG/SVG (prototyped in `grid_svg.py` and `grid_png.py`).
+   Prepare seeds or outline rules for each of 16/32/64 and compare with simple upscaling.
+   Upscaling for viewing uses nearest neighbor to keep cell boundaries.
+2. **Character parts**: compose torso, head, eyes, mouth, limbs and equipment as layers.
+   Make anchors, stacking order, left-right symmetry and its exceptions, and poses explicit.
+   Evaluate distinctiveness with original shapes such as "robot" or "round face".
+   Recoloring the 5 terrain masks alone is not treated as achieving character quality.
+3. **Photo conversion**: image decode → orientation correction → crop/background handling → downscaling → color reduction →
+   optional dither → grid → output. Input photos are ones the user chooses.
+   Background removal and semantic fixes of eyes or outlines are separate processes and evaluations from simple color reduction.
+4. **Photo to character**: compare a cropped/color-reduced baseline with transferring features onto parts.
+   People evaluate face readability, outlines, color count and unwanted isolated pixels. No promise of automatic high quality.
 
-写真の低解像度化は最初から最近傍だけに固定せず、BOX/LANCZOS等を比較する。
-表示用の整数倍拡大はNEAREST。減色は固定paletteまたはquantize、ditherは
-無しをbaselineにして細部・ノイズとの関係を比較する。
-Pillowにはこれらの操作がある。ただしJPEG/PNG等のdecodeを含む写真adapterは
-任意の依存として分離する判断が必要で、コアにPillowを必須化する変更は行っていない。
-一次資料：[Pillow Image reference](https://pillow.readthedocs.io/en/stable/reference/Image.html)。
+Photo downscaling is not fixed to nearest neighbor from the start; BOX/LANCZOS etc. are compared.
+Integer upscaling for display uses NEAREST. Color reduction uses a fixed palette or quantize, and dither uses
+none as the baseline to compare its relationship with detail and noise.
+Pillow has these operations. However, a photo adapter including JPEG/PNG decoding needs a decision to separate it
+as an optional dependency, and no change making Pillow required in the core has been made.
+Primary source: [Pillow Image reference](https://pillow.readthedocs.io/en/stable/reference/Image.html).
 
-## 第1弾で決めないこと
+## What the first stage does not decide
 
-キャラクター完成品・写真adapter・Web画面・PNG/SVG・大量ファイル保存・
-animationはまだない。Gradioが必要になった場合は既存mcp-toolcall-lab環境への
-接続を検討し、Ironmateの旧キャラクター/LLM基盤を復活させない。
+There are no finished characters, photo adapter, web UI, PNG/SVG, bulk file saving or
+animation yet. If Gradio becomes necessary, connecting to the existing mcp-toolcall-lab environment
+will be considered, and Ironmate's old character/LLM foundation will not be revived.
 
-## 配色置換の目的とOffice CLIへの接続
+## Purpose of palette replacement and connection to an Office CLI
 
-目的は、同じ形・配置を再利用し、色や文字などの指定した属性を機械的に
-置換することである。絵文字は最初の確認手段であり、CSSは必要としない。
-参考の素材アイデア集には純粋な配色変更のほか、内部模様や部品の変更も
-含まれる。それらは別の加工として扱い、色変更だけの成果と混同しない。
+The purpose is to reuse the same shape and layout and mechanically replace specified attributes
+such as color or text. Emoji are the first way to check, and CSS is not needed.
+The reference collection of asset ideas includes not only pure palette changes but also changes to inner patterns and parts.
+Those are treated as separate effects and not confused with color-only results.
 
-まず雲型で、茂み・水・溶岩・雪の配色を比較できる。
-次の例では色番号グリッドが完全に同じで、RGBAテーブルだけが変わる。
-用途名は見立てであり、素材としての識別性は別途目視評価する。
+First, the cloud shape lets you compare bush, water, lava and snow palettes.
+In the following example the color-index grid is identical and only the RGBA table changes.
+The use names are figurative; distinctiveness as assets is evaluated visually separately.
 
 ```python
 from pixel_grid import render
@@ -156,169 +156,168 @@ assert all(item["pixels"] == baseline for item in variants.values())
 assert len({tuple(item["colors"]) for item in variants.values()}) == 4
 ```
 
-Office CLIは今後の別の試作で、まず既存PPTXの文字と塗り色の置換を対象にする。
-このPRにはPPTX編集・出力機能は含めない。PPTXはPresentationMLの複数partと
-relationshipを持つパッケージなので、ZIP内の全XMLを無条件に文字列置換する
-方式ではなく、対象part・図形・属性を特定して編集する方針とする。
-将来のWord/Excel対応でも、形式ごとのXML構造を扱うadapterを分ける。
+An Office CLI is a separate future prototype, first targeting replacement of text and fill colors in existing PPTX files.
+This PR does not include PPTX editing or output. A PPTX is a package with multiple PresentationML parts and
+relationships, so rather than unconditionally string-replacing all XML in the ZIP,
+the policy is to identify and edit the target part, shape and attribute.
+Future Word/Excel support will also use separate adapters that handle each format's XML structure.
 
-最初のOffice試作で確認する項目：
+Items to check in the first Office prototype:
 
-- 対象のslideと図形を指定し、変更予定・一致件数をdry-runで表示する。
-- 文字が複数runに分かれる場合の扱いを定義し、対象外の文字や書式を保持する。
-- 直接RGB指定とテーマ参照色を区別し、図形単体の色変更とテーマ変更を分ける。
-- 入力とは別ファイルへ出力し、対象外partの内容とrelationshipを保持する。
-- ZIP/XMLの再読込・変更差分の検証に加え、レンダリングして表示を確認する。
+- Specify the target slide and shape, and show planned changes and match counts in a dry run.
+- Define handling when text is split across multiple runs, and keep out-of-scope text and formatting.
+- Distinguish direct RGB from theme color references, and separate per-shape color changes from theme changes.
+- Write to a file separate from the input, keeping the content and relationships of out-of-scope parts.
+- Besides re-reading the ZIP/XML and verifying the diff, render it to check the display.
 
-ドット絵は色番号グリッド、Officeは文書内の図形・文字を入力にするが、
-「構造を保持して指定した属性を置換する」という検証の考え方を共通にする。
-画像として配置する場合の配色変更と、編集可能な図形の塗り色変更は別処理になる。
+Pixel art takes a color-index grid as input and Office takes shapes and text in a document,
+but they share the verification idea of "keep the structure and replace specified attributes".
+Recoloring when placed as an image and changing the fill color of editable shapes are separate processes.
 
-一次資料：[Microsoft Learn — PresentationML](https://learn.microsoft.com/en-us/office/open-xml/presentation/overview)、
-[Working with slide masters](https://learn.microsoft.com/en-us/office/open-xml/presentation/working-with-slide-masters)。
+Primary sources: [Microsoft Learn — PresentationML](https://learn.microsoft.com/en-us/office/open-xml/presentation/overview),
+[Working with slide masters](https://learn.microsoft.com/en-us/office/open-xml/presentation/working-with-slide-masters).
 
-### 優先順位と依存の方針
+### Priorities and dependency policy
 
-- 最初はPPTXの色・文字・背景の変換に集中する。「文字をすべて黒に」
-  「背景を白に」「指定の灰色だけを置換」を別々の操作として扱う。
-  文字色と背景色に同じRGBが使われていても、対象の役割で選択する。
-- CSSは出力の必須基盤にしない。一方、外部HTML/CSSを読む際は入力仕様を
-  理解して吸収する。取得済みデータの解析とネットワーク取得を分離し、
-  CSS対応を理由に外部資源の取得を無条件に増やさない。
-  CSSの「#」に関する具体的な不足機能は、対象コード・入力例を確認してから
-  別案件として定義する。この試作でHTML/CSS readerを拡張したとは扱わない。
-- XML parserを自作することは目的にしない。既存の標準機能を利用し、
-  Officeの対象選択・変換・検証のノウハウを蓄積する。
-- stdlib-onlyや単一ファイルをOffice機能全体に強制しない。
-  python-pptxは必要な操作と互換性を確認して採用できる候補であり、
-  現段階では依存に追加しない。
-- openpyxlは導入しない。表データはCSV/TSVや利用可能な既存サービスで
-  目的を満たせるか先に判断する。Excel固有の新規作成・編集は、
-  それらで満たせない需要が具体化したものに絞る。
+- Focus first on converting PPTX colors, text and backgrounds. Treat "make all text black",
+  "make the background white" and "replace only a specified gray" as separate operations.
+  Even if text and background use the same RGB, select by the target's role.
+- CSS is not a required foundation for output. On the other hand, when reading external HTML/CSS,
+  understand and absorb the input spec. Separate parsing of already-fetched data from network fetching,
+  and do not unconditionally increase fetching of external resources for the sake of CSS support.
+  Specific missing features around CSS "#" will be defined as a separate item after checking the target code and input examples.
+  This prototype is not treated as having extended an HTML/CSS reader.
+- Writing our own XML parser is not a goal. Use existing standard features and
+  accumulate know-how for Office target selection, conversion and verification.
+- stdlib-only and single-file are not forced on all Office features.
+  python-pptx is a candidate that can be adopted after checking the needed operations and compatibility,
+  and is not added as a dependency at this stage.
+- openpyxl is not introduced. First judge whether tabular data needs can be met with CSV/TSV or available existing services.
+  Excel-specific creation and editing is limited to concrete demand those cannot meet.
 
-共通化候補は「対象・属性・変更前の条件・変更後の値・変更件数・検証結果」。
-ドットのpaletteとOfficeの書式を同じ内部構造へ無理に統合せず、
-まず各形式で小さく実証し、同じ規則が使える箇所を後から抽出する。
-正規表現やMarkdown等の既存ツールも、契約が合う部分で再利用を検討する。
+Candidates for sharing are "target, attribute, pre-change condition, new value, change count and verification result".
+Pixel palettes and Office formatting are not forced into the same internal structure;
+first prove each format on a small scale, then extract places where the same rules apply.
+Reusing existing tools such as regular expressions and Markdown is also considered where the contract fits.
 
-追加の参考画像では、python-pptxによるテキスト・色・リンク付き図形の作成、
-スライド順序とページ番号の変更、変更前の図形情報をハッシュ化する例を確認した。
-写真から読み取れるコードの参考であり、元PPTXの正常性を検証したものではない。
-図形種別・位置・寸法・文字だけのハッシュでは色等の保持を確認できないため、
-検証対象は実際の変更内容に応じて定義する。
+Additional reference images showed examples of creating text, colors and linked shapes with python-pptx,
+changing slide order and page numbers, and hashing shape information before changes.
+These are references for code read from photos, not verification that the original PPTX is sound.
+A hash of only shape type, position, size and text cannot confirm that colors etc. are kept,
+so verification targets are defined according to the actual changes.
 
-### 写真入力の最初の到達点：Base64からドットグリッドへ
+### First milestone for photo input: Base64 to a dot grid
 
-写真側の最初のゴールは、Base64で渡された画像を読み、指定した解像度の
-ドットグリッドとして出力すること。圧縮率の改善やCSSでの表示は要件にしない。
+The first goal on the photo side is to read an image passed as Base64 and output it as a dot grid
+at a specified resolution. Better compression and CSS display are not requirements.
 
-Base64はバイナリを文字で受け渡す表現であり、画素や色の配列そのものではない。
-JPEG/PNGのBase64文字列に任意の置換をしても、意図したドット化にはならない。
-処理を次の段階に分ける。
+Base64 is a representation for passing binary as text, not an array of pixels or colors itself.
+Arbitrary replacements on a JPEG/PNG Base64 string do not produce the intended pixelation.
+Processing is split into the following stages.
 
-1. Base64を検証・復号して、元の画像ファイルのbytesへ戻す。
-2. 画像形式に対応したdecoderで幅・高さ・画素を取り出す。
-3. 指定解像度または縮小率で代表色を求め、必要なら固定paletteへ割り当てる。
-4. 色番号グリッドと配色をJSONへ出し、絵文字を確認用に使う。
+1. Validate and decode the Base64 back into the original image file's bytes.
+2. Extract width, height and pixels with a decoder for the image format.
+3. Find representative colors at the specified resolution or reduction ratio, and assign them to a fixed palette if needed.
+4. Output the color-index grid and palette to JSON, and use emoji for checking.
 
-第1段階はPython標準のbase64で扱えるが、第2段階のJPEG/PNG展開とは別である。
-Pillowの採用は未決定とし、既存の利用可能なdecoderや共有ツールも確認する。
-依存を避けるためにJPEG等のdecoderを独自実装する方針にはしない。
-画素配列を直接受け取って第3段階以降を先に検証することもできるが、
-その結果を写真のBase64入力対応済みとは呼ばない。
+Stage 1 can be handled by Python's standard base64, but it is separate from stage 2's JPEG/PNG decoding.
+Adopting Pillow is undecided; existing available decoders and shared tools will also be checked.
+The policy is not to implement our own JPEG etc. decoders to avoid dependencies.
+Pixel arrays can be accepted directly to verify stage 3 onward first,
+but that result is not called support for photo Base64 input.
 
-入力上限・画素数上限、不正Base64・未対応形式の扱いと、向き・縦横比・
-透過の規則は実装時に定義する。外部URLの自動取得は必要としない。
-CSSの読み取りに関する既存の横断資産は、必要になった時点で参照し、
-この写真変換コアの必須依存にはしない。
+Input and pixel-count limits, handling of invalid Base64 and unsupported formats, and rules for orientation, aspect ratio and
+transparency will be defined at implementation time. Automatic fetching of external URLs is not needed.
+Existing cross-cutting assets for reading CSS will be referenced when needed,
+and not made a required dependency of this photo conversion core.
 
-一次資料：[Python base64](https://docs.python.org/3/library/base64.html)。
+Primary source: [Python base64](https://docs.python.org/3/library/base64.html).
 
-#### 試作実装（`photo_grid.py`、Python 3.11以上）
+#### Prototype implementation (`photo_grid.py`, Python 3.11+)
 
-| 段階 | 規則 |
+| Stage | Rule |
 | --- | --- |
-| Base64 | 生Base64または`data:<type>;base64,`。空白・改行は除去。英数字`+/`と末尾`=`2個まで以外、長さが4の倍数でない入力は拒否。復号後32 MiB（33,554,432 bytes）まで（flutter_navigation_basic の `maxInputBytes` と同じ。Base64長は先に `4*((max+2)//3)` 文字で判定） |
-| decode | adapter契約は`bytes -> (width, height, RGBA行のbytes)`。PNG署名なら`decode_png`（zlib+struct、CRC検査、8bit gray/gray+alpha/RGB/RGBA、非interlaceのみ）。それ以外は`decode_pillow`（Pillowがある場合のみ。EXIF向き補正あり）。上限4096×4096画素 |
-| crop/fit | 既定`crop`は短辺に合わせた中央の正方形を切り出す。`contain`は縦横比を保って全体を収め、余白を透明にする。canvasは8/16/32/64/128 |
-| 縮小 | 面積平均（端の画素は重なった面積で重み付け）。alphaで重み付けし、透明画素の色は混ぜない |
-| 減色 | 既定はmedian cut（1〜16色、既定8色、同値時の選び方を固定）。`--palette`ではpixel_grid.pyの固定paletteの番号1〜4へ最近色（RGB二乗距離、同距離は小さい番号）で割り当てる |
-| 透過 | 平均alphaが128未満のセルは色番号0（`#00000000`）。それ以外は不透明色として出力 |
+| Base64 | Raw Base64 or `data:<type>;base64,`. Whitespace and newlines are removed. Input with characters other than alphanumerics, `+/` and up to 2 trailing `=`, or with a length not a multiple of 4, is rejected. Up to 32 MiB (33,554,432 bytes) after decoding (same as flutter_navigation_basic's `maxInputBytes`; the Base64 length is checked first against `4*((max+2)//3)` characters) |
+| decode | The adapter contract is `bytes -> (width, height, bytes of RGBA rows)`. With a PNG signature, `decode_png` (zlib+struct, CRC checks, 8-bit gray/gray+alpha/RGB/RGBA, non-interlaced only). Otherwise `decode_pillow` (only if Pillow is available; with EXIF orientation correction). Limit 4096×4096 pixels |
+| crop/fit | The default `crop` cuts out a centered square fitted to the short side. `contain` fits the whole image keeping the aspect ratio, with transparent padding. Canvas is 8/16/32/64/128 |
+| Downscaling | Area averaging (edge pixels weighted by overlapping area). Weighted by alpha; colors of transparent pixels are not mixed in |
+| Color reduction | Default is median cut (1–16 colors, default 8, with a fixed tie-break). With `--palette`, colors are assigned to indices 1–4 of pixel_grid.py's fixed palette by nearest color (squared RGB distance; ties go to the lower index) |
+| Transparency | Cells with mean alpha below 128 get color index 0 (`#00000000`). Others are output as opaque colors |
 
-入力形式：Base64（生・data URI）または画像ファイル。拡張子ではなく先頭bytesで判別する（`_sniff`）。
-- PNG（8bit gray/gray+alpha/RGB/RGBA、非interlace）：標準ライブラリ（zlib＋struct）。
-- palette・16bit・interlaceのPNG：標準decoderは拒否し、Pillowがあれば自動でPillowへ切り替える。
-- JPEG/JPG・WebP：Pillowがある場合のみ（DCT・VP8/VP8Lの展開は標準ライブラリにない）。Pillowを
-  開く形式を限定するため、他の形式がJPEG等を名乗っても読まない。WebPアニメーションは先頭フレーム。
-- SVG（ベクター、描画器が必要）・GIF・BMP・TIFF・ICO・HEIC/AVIF：Pillowの有無に関係なく
-  「… input is not supported」で拒否する。
-形式ごとの理由と挙動はREADMEの表を参照。`tests/test_image_formats.py` が表の挙動を検証する。
+Input formats: Base64 (raw or data URI) or an image file. Detected by the leading bytes, not the extension (`_sniff`).
+- PNG (8-bit gray/gray+alpha/RGB/RGBA, non-interlaced): standard library (zlib + struct).
+- Palette, 16-bit and interlaced PNG: the standard decoder rejects them and automatically switches to Pillow if available.
+- JPEG/JPG and WebP: only with Pillow (DCT and VP8/VP8L decoding are not in the standard library). To limit the formats
+  Pillow opens, other formats claiming to be JPEG etc. are not read. For animated WebP, the first frame.
+- SVG (vector, needs a renderer), GIF, BMP, TIFF, ICO, HEIC/AVIF: rejected with "… input is not supported"
+  regardless of whether Pillow is available.
+See the table in the README for per-format reasons and behavior. `tests/test_image_formats.py` verifies the table's behavior.
 
-#### PNG出力（`grid_png.py`）
+#### PNG output (`grid_png.py`)
 
-`to_png(artifact, scale=1)` は同じgrid JSONから8bit RGBA・非interlace・filter 0・zlib level 9の
-PNGを標準ライブラリ（zlib+struct）で書く。時刻・テキストchunkを入れないため同じ入力は同じbytes。
-`scale`（1〜64）は整数倍の最近傍拡大で、出力は4096×4096画素まで。色番号0はそのRGBA（通常は透明）で書く。
-`photo_grid.py`・`pixel_grid.py`の`--format png`（遅延import）または`grid_png.py`のCLIで使う。
-標準PNG decoderでの読み戻しが元の色と一致することをテストで確認している。
+`to_png(artifact, scale=1)` writes an 8-bit RGBA, non-interlaced, filter 0, zlib level 9
+PNG from the same grid JSON with the standard library (zlib+struct). No time or text chunks, so the same input gives the same bytes.
+`scale` (1–64) is integer nearest-neighbor upscaling, with output up to 4096×4096 pixels. Color index 0 is written as its RGBA (usually transparent).
+Use it via `--format png` in `photo_grid.py` and `pixel_grid.py` (lazy import) or the `grid_png.py` CLI.
+Tests confirm that reading back with the standard PNG decoder matches the original colors.
 
-#### Base64出力（可逆性）
+#### Base64 output (reversibility)
 
-`--format base64`（`photo_grid.py`・`pixel_grid.py`、`grid_png.to_base64`）は、`--format png`と
-同じbytesをBase64で出す。`--data-uri`で`data:image/png;base64,`付き。`--scale`と`-o`に従う。
-出力はそのまま`photo_grid.py`の入力にできる。
+`--format base64` (`photo_grid.py`, `pixel_grid.py`, `grid_png.to_base64`) outputs the same bytes as `--format png`
+as Base64. `--data-uri` adds `data:image/png;base64,`. It follows `--scale` and `-o`.
+The output can be used directly as input to `photo_grid.py`.
 
-- scale 1で、同じ`--size`を指定して読み戻すと元のgrid（palette＋色番号）と一致する。
-  pixel_grid.pyのgridは同じ`--palette`、photo_grid.pyのgridは`--colors`を元の不透明色数にする。
-- scale>1のPNGは、元の`--size`を指定すれば同じgridに戻る（各セルがscale×scaleの同色ブロックのため）。
-  異なる`--size`では別のgridになる。
-- median cutの出力は、どのセルにも使われない色をpaletteから除く（色番号は詰め直す）。
-  そのため photo_grid.py の出力は `--colors`=不透明色数で読み戻すと一致する。
-- 外部で作ったgridは、色番号0が透明・不透明色がRGB昇順・全色使用・重複なしの場合に一致する。
-  それ以外（0が透明でない、未使用色、半透明色alpha 1〜254）はセルの色は保てても番号やalphaは一致しない。
-  非正方形や8/16/32/64/128以外の寸法のgridは、PNG/Base64には書けるがphoto_grid.pyの入力では
-  正方形canvasへcropされるため同じgridには戻らない。
+- At scale 1, reading back with the same `--size` matches the original grid (palette + color indices).
+  For pixel_grid.py grids use the same `--palette`; for photo_grid.py grids set `--colors` to the original opaque color count.
+- PNGs with scale > 1 return to the same grid if the original `--size` is given (each cell is a scale × scale block of one color).
+  A different `--size` gives a different grid.
+- Median cut output removes colors not used by any cell from the palette (color indices are renumbered).
+  So photo_grid.py output matches when read back with `--colors` = opaque color count.
+- Externally made grids match if color index 0 is transparent, opaque colors are in ascending RGB order, all colors are used and there are no duplicates.
+  Otherwise (0 not transparent, unused colors, semi-transparent colors with alpha 1–254), cell colors may be kept but indices or alpha will not match.
+  Non-square grids or sizes other than 8/16/32/64/128 can be written to PNG/Base64, but as photo_grid.py input
+  they are cropped to a square canvas and do not return to the same grid.
 
-Base64入力の規則：標準アルファベットと`=`padding必須（URL-safeの`-_`・padding省略は拒否）。
-空白・CRLF改行・先頭のBOMは無視。`data:`のschemeとtypeは大文字小文字を区別しない。
-data URIのtypeは省略か`image/png`・`image/jpeg`・`image/jpg`・`image/webp`のみで、
-復号したbytesの形式と一致しない場合はエラー（例：`data:text/plain;base64,`、`data:image/svg+xml;base64,`）。
+Base64 input rules: standard alphabet with required `=` padding (URL-safe `-_` and omitted padding are rejected).
+Whitespace, CRLF newlines and a leading BOM are ignored. The `data:` scheme and type are case-insensitive.
+The data URI type must be omitted or one of `image/png`, `image/jpeg`, `image/jpg` and `image/webp`,
+and it is an error if it does not match the decoded bytes' format (e.g. `data:text/plain;base64,`, `data:image/svg+xml;base64,`).
 
-#### SVG出力（`grid_svg.py`）
+#### SVG output (`grid_svg.py`)
 
-`to_svg(artifact, scale=8)` は `ironmate-pixel-grid/1` のJSON（pixel_grid.py・photo_grid.py共通）から
-SVGを標準ライブラリだけで書く。Base64→decode→grid→SVGを1コマンドで行える
-（`photo_grid.py --format svg [-o out.svg]`、既定はJSONのまま）。
+`to_svg(artifact, scale=8)` writes SVG with only the standard library from `ironmate-pixel-grid/1` JSON (shared by pixel_grid.py and photo_grid.py).
+Base64 → decode → grid → SVG can be done in one command
+(`photo_grid.py --format svg [-o out.svg]`; the default stays JSON).
 
-- `viewBox`はグリッド単位、`--scale`（1〜64、既定8）はwidth/heightのみ変える。`shape-rendering="crispEdges"`。
-- 同じ色の横方向の連続を1つの`<rect>`にまとめる（`--no-merge`で1セル1つ）。塗られる範囲は同じ。
-- 色番号0とalpha 0の色は出力しない。`fill="#rrggbb"`、alpha<255は`fill-opacity`。
-- metadataは`<title>`/`<desc>`にXMLエスケープして入れる。同じ入力なら同じSVG。
-- WebP出力、PPTXネイティブ図形出力は行わない。
+- `viewBox` is in grid units; `--scale` (1–64, default 8) changes only width/height. `shape-rendering="crispEdges"`.
+- Horizontal runs of the same color are merged into one `<rect>` (`--no-merge` gives one per cell). The painted area is the same.
+- Color index 0 and colors with alpha 0 are not output. `fill="#rrggbb"`, with `fill-opacity` for alpha < 255.
+- Metadata goes into `<title>`/`<desc>`, XML-escaped. The same input gives the same SVG.
+- No WebP output or native PPTX shape output.
 
-同じ入力・同じ指定なら同じJSONになる。乱数・ネットワークは使わない。
-PNGのdecoderは対象を8bitの基本形式に絞った小さなadapterで、パレットPNG・16bit・
-interlace・APNG・色空間chunk（gAMA/iCCP等）は扱わない（前3つは明示的にエラー）。
-JPEG等のdecoderは独自実装せず、Pillowへ任せる方針を維持する。
-Pillow版と標準版は同じadapter契約なので、後から差し替え・追加できる。
+The same input and options give the same JSON. No randomness or network.
+The PNG decoder is a small adapter limited to basic 8-bit formats, and does not handle palette PNG, 16-bit,
+interlaced, APNG or color-space chunks (gAMA/iCCP etc.) (the first three are explicit errors).
+The policy of not implementing our own JPEG etc. decoders and leaving them to Pillow is kept.
+The Pillow and standard versions share the same adapter contract, so they can be swapped or added later.
 
-制限：ditherなし、縮小方式は面積平均のみ（BOX/LANCZOS等との比較は未実施）、
-出力はJSON/SVG/PNG（WebP出力はなし）、背景除去・顔などの意味的補正なし。
-標準版は純Pythonなので大きな画像は遅い（1000×1000で約1秒の目安）。
-見た目の品質は評価していない。
+Limits: no dither, downscaling is area averaging only (no comparison with BOX/LANCZOS etc. yet),
+output is JSON/SVG/PNG (no WebP output), no background removal or semantic corrections such as faces.
+The standard version is pure Python, so large images are slow (roughly 1 second for 1000×1000).
+Visual quality has not been evaluated.
 
-#### 往復ツール（`grid_tools.py`）とSVG入力の部分集合（`svg_raster.py`）
+#### Round-trip tools (`grid_tools.py`) and the SVG input subset (`svg_raster.py`)
 
-- `restore`：meta付きPNGは元JSONに完全復元。metaなしは`--size`か連続長の最大公約数で倍率を決め、各ブロックが単色でなければエラー。
-- `resize`：セル中心の最近傍（`(2i+1)*old // (2*new)`）。拡大→元サイズは常に一致、縮小は情報が落ちる。
-- `recolor`：色IDの表に差し替えるだけ（番号不変）で往復一致。
-- SVG入力は`rect`・`circle`・`ellipse`・`polygon`・`g`(translate)と単色塗りのみ。曲線パス・グラデーション・CSS・外部参照・DOCTYPE/ENTITYは理由付きで拒否（`tests/test_svg_raster.py`）。
-- 条件表はREADMEの「1行で往復する」を正とする。Pillow・numpyはテスト依存に追加し、実行時は任意。
+- `restore`: PNGs with meta are fully restored to the original JSON. Without meta, the scale is determined by `--size` or the GCD of run lengths, and it errors unless each block is a single color.
+- `resize`: nearest neighbor at cell centers (`(2i+1)*old // (2*new)`). Upscaling → original size always matches; downscaling loses information.
+- `recolor`: only swaps the color ID table (indices unchanged), so round-trips match.
+- SVG input is only `rect`, `circle`, `ellipse`, `polygon`, `g` (translate) and solid fills. Curved paths, gradients, CSS, external references and DOCTYPE/ENTITY are rejected with reasons (`tests/test_svg_raster.py`).
+- The README's "Round-trip in one line" is the authoritative condition table. Pillow and numpy are added as test dependencies and are optional at runtime.
 
-#### 検証の強化（性質テスト・変異テスト・行列での見方）
+#### Stronger verification (property tests, mutation tests, matrix view)
 
-- `tests/test_grid_properties.py`：固定seedの乱数で11種の敵対的grid（多色・1違いの近似色・alpha 1〜255全部・市松・1点だけ違う・1×N/N×1・素数サイズ・透明のみ・単色・偶然そろったブロック）を作り、条件表の全経路を(x, y, RGBA)単位で独立のoracleと比較（標準・Pillow・numpy）。重い版は`heavy`。
-- 変異テスト：2点の入れ替え、1チャンネル±1、行のずらし、転置、反転、色表の順序変更、meta破損・改ざんがすべて検出されることを確認。
-- 作ったPNG：filter 0〜4（行ごとの混在含む）、IDAT分割、余分なチャンク、CRC不一致、IEND後・zlib後の余分なbytes。
-- `tests/test_grid_matrix.py`：gridをRGBA 4枚の行列として扱い、可逆経路の残差 R = 復元 − 元 が厳密に0であることを確認。特異値やsign+scaleの指紋は補助にとどめる（特異値は反転・転置を見逃すことをテストで示した）。非可逆経路（縮小→拡大、JPEG）はRMSで誤差を報告する。
-  考え方はmyon-bioinformatics/Aoiの`pythdragoras/littlebit_prune.py`（SVD残差、符号＋スケール）と`queryu/ask/suggest.py`（SVD＋符号の索引）から。コードの取り込みはしていない。
+- `tests/test_grid_properties.py`: generates 11 kinds of adversarial grids with fixed-seed randomness (many colors, near colors differing by 1, every alpha 1–255, checkerboard, one differing pixel, 1×N/N×1, prime sizes, transparent only, single color, accidentally aligned blocks) and compares every path in the condition table per (x, y, RGBA) against an independent oracle (standard, Pillow, numpy). The heavy version is `heavy`.
+- Mutation tests: confirm that swapping 2 pixels, ±1 on one channel, shifting a row, transposing, flipping, reordering the color table and corrupting or tampering with meta are all detected.
+- Crafted PNGs: filters 0–4 (including mixed per row), split IDAT, extra chunks, CRC mismatch, extra bytes after IEND and after zlib.
+- `tests/test_grid_matrix.py`: treats a grid as four RGBA matrices and confirms the residual R = restored − original is exactly 0 for reversible paths. Singular values and sign+scale fingerprints are auxiliary only (tests show singular values miss flips and transposes). Lossy paths (downscale → upscale, JPEG) report error as RMS.
+  The ideas come from myon-bioinformatics/Aoi's `pythdragoras/littlebit_prune.py` (SVD residual, sign + scale) and `queryu/ask/suggest.py` (SVD + sign index). No code was brought in.

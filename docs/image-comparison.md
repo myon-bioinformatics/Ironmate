@@ -1,98 +1,98 @@
-# PNG拡大候補を複数の軸で比べる
+# Comparing PNG upscaling candidates on multiple axes
 
-`image_compare.py` は、同じ寸法の基準PNG・最近傍拡大PNG・平滑補間PNGを受け取り、
-既存の2画像の混合率を振って候補を保存する。Python標準ライブラリとIronmateのPNG codecだけを使う。
-Image StudioのUIや配信ファイルには追加依存を持ち込まない。
+`image_compare.py` takes a reference PNG, a nearest-neighbor upscaled PNG and a smooth-interpolated PNG of the same size,
+sweeps the mix ratio between the two existing images and saves the candidates. It uses only the Python standard library and Ironmate's PNG codec.
+It brings no extra dependencies into Image Studio's UI or served files.
 
 ```sh
 python -S image_compare.py --reference truth.png --nearest nearest.png --smooth smooth.png --out variants
-# MAEを75%、RMSEを25%として評価する例
+# example weighting MAE 75% and RMSE 25%
 python -S image_compare.py --reference truth.png --nearest nearest.png --smooth smooth.png --mae-weight 0.75 --out variants-mae75
 ```
 
-基準画像は必須。未知の原画像を採点できるという意味ではなく、基準付き実験の候補比較用である。
-入力はPNG 32MiB・4MPまで、寸法が異なる入力は拒否する。
-既存stdlib codecの範囲（8-bit gray/gray+alpha/RGB/RGBA、非インターレース）に限る。
-混合率は既定0.0〜1.0の11段階。`--steps`は2〜100の偶数で、全候補の合計は16MPまで。
-出力先は新しいディレクトリまたは空ディレクトリだけを許可する。入力を変更しない。
+A reference image is required. This does not mean unknown originals can be scored; it is for comparing candidates in reference-based experiments.
+Inputs are PNGs up to 32 MiB and 4 MP; inputs of different sizes are rejected.
+Limited to the existing stdlib codec's range (8-bit gray/gray+alpha/RGB/RGBA, non-interlaced).
+Mix ratios default to 11 steps from 0.0 to 1.0. `--steps` is an even number from 2 to 100, with all candidates totaling at most 16 MP.
+Only a new or empty output directory is allowed. Inputs are not modified.
 
-## 出力と評価定義
+## Outputs and evaluation definitions
 
-- `variant-00.png` など: 全候補。元の最近傍／平滑補間も端点として残す。
-- `mae_priority.png`: 平均絶対誤差（MAE）が最小の候補。
-- `rmse_priority.png`: 二乗平均平方根誤差（RMSE）が最小の候補。
-- `midpoint.png`: 混合率0.5。中間だから最良とは限らない。
-- `balanced.png`: 明示した重みのスコアが最高の候補。
-- `report.json`: 全候補の誤差、入力ハッシュ、選択理由・重み・Pareto集合。複数の役割が同じ画像を指す場合もある。
+- `variant-00.png` etc.: all candidates. The original nearest-neighbor / smooth images are kept as endpoints.
+- `mae_priority.png`: the candidate with the lowest mean absolute error (MAE).
+- `rmse_priority.png`: the candidate with the lowest root mean square error (RMSE).
+- `midpoint.png`: mix ratio 0.5. Being in the middle does not make it best.
+- `balanced.png`: the candidate with the highest score under the explicit weights.
+- `report.json`: errors for all candidates, input hashes, selection reasons, weights and the Pareto set. Several roles may point to the same image.
 
-RGBを白背景へ合成してから、全画素×3チャンネルを0〜255の同じスケールで測る。
-alphaのMAE、完全一致する元RGBA画素数も別に出す。完全透明の隠れたRGBが違うと、
-表示誤差は0でも元RGBAの完全一致にはならない。従来の完全一致・残差評価を置き換えない。
-混合はpremultiplied alphaの8-bit sRGBで整数丸めする。線形光での補間ではなく、未知の細部は追加しない。
+RGB is composited onto white, then all pixels × 3 channels are measured on the same 0–255 scale.
+Alpha MAE and the count of exactly matching original RGBA pixels are reported separately. If the hidden RGB of fully transparent pixels differs,
+display error can be 0 without an exact original RGBA match. This does not replace the existing exact-match/residual evaluation.
+Mixing is integer-rounded in premultiplied-alpha 8-bit sRGB. It is not interpolation in linear light and adds no unknown detail.
 
-補助スコアは `100 × (1 − (w × MAE + (1 − w) × RMSE) / 255)`。既定の `w=0.5` は
-両誤差を同じ重みで扱うという方針で、知覚的な正解や普遍的な最良値ではない。
-重みを変えると選ばれる候補も変わり得る。候補ごとのmin/maxに合わせて正規化し直さない。
-Pareto集合は、MAE・RMSEの両方で劣る候補を除いたもの。総合スコアとは別に全候補を保持する。
-同点は、各誤差または候補indexの明示した順序で決定する。
+The auxiliary score is `100 × (1 − (w × MAE + (1 − w) × RMSE) / 255)`. The default `w=0.5` is
+a policy of weighting both errors equally, not a perceptual right answer or a universal best.
+Changing the weight can change which candidate is chosen. Scores are not renormalized to each candidate set's min/max.
+The Pareto set excludes candidates worse on both MAE and RMSE. All candidates are kept separately from the overall score.
+Ties are broken by an explicit order of each error, then candidate index.
 
-## 先行ロジックとの関係
+## Relation to prior logic
 
-PythDRagoras `83a53f60d1b5dec70df841a1104d4c78fbe4a494` の `rule_search.py` は、
-precision/recallを残したままMCCで順位付けし、候補を探索前に決め、別データで確認する。
-Aoi `62ad1e49154121cf237d52de352404c4400e6a55` の
-`sakanalytics/league_laboratory.py`・`pythdragoras/score_sensitivity.py` も、複数軸・変化量・条件を区別して残す。
-今回取り入れたのは、全候補の保持・複数軸・選択条件の固定・別seed評価の方法。
-二値分類のMCC/precision/recallを画素誤差へ直接転用していない。
+`rule_search.py` in PythDRagoras `83a53f60d1b5dec70df841a1104d4c78fbe4a494`
+ranks by MCC while keeping precision/recall, fixes candidates before searching, and confirms on separate data.
+In Aoi `62ad1e49154121cf237d52de352404c4400e6a55`,
+`sakanalytics/league_laboratory.py` and `pythdragoras/score_sensitivity.py` also keep multiple axes, deltas and conditions distinct.
+What was adopted here: keeping all candidates, multiple axes, fixing selection conditions and evaluating on separate seeds.
+Binary-classification MCC/precision/recall are not repurposed directly for pixel error.
 
-web-ui `9ab07c0e09cd06209dd795f7a8f9a595da302c36` の `scripts/check_visual_regression.py` は
-PNG寸法とSHA-256による完全一致を扱う。画素誤差・候補補間は提供していないため、
-既存のIronmate `photo_grid.decode_png`・`grid_png.to_png`・`grid_output.write_output` を再利用した。
-他repoのコードやPython/JS依存を新たにコピーしていない。
-将来共通化する場合も、PNG寸法・基準の有無・alpha/背景・誤差定義を契約にし、
-web-uiの完全一致検査を緩めるものとして扱わない。
+`scripts/check_visual_regression.py` in web-ui `9ab07c0e09cd06209dd795f7a8f9a595da302c36`
+handles exact matches by PNG size and SHA-256. It provides no pixel error or candidate interpolation,
+so Ironmate's existing `photo_grid.decode_png`, `grid_png.to_png` and `grid_output.write_output` were reused.
+No code or Python/JS dependencies from other repos were newly copied.
+If this is shared in the future, PNG size, presence of a reference, alpha/background and error definitions would be the contract,
+and it would not be treated as loosening web-ui's exact-match check.
 
-[実験記録](evidence/studio-delivery/tradeoff-report.md) に、元の比較と別seedの成功・悪化を両方保存する。
+The [experiment record](evidence/studio-delivery/tradeoff-report.md) keeps both the original comparison and the separate-seed successes and regressions.
 
-## 形状・色・欠損を併記して選ぶ（任意）
+## Choosing with shape, color and loss side by side (optional)
 
 ```sh
 python -S image_compare.py --reference truth.png --nearest nearest.png --smooth smooth.png \
   --quality --select-by energy_dice --max-missing-foreground 0 --out variants-quality
 ```
 
-`--quality` は既存候補を変更せず、`report.json` の `quality` に同一基準画像での
-IoU、Dice、Energy Dice、Near Field、RGBA類似度、未補正の前景欠け・過剰画素数、
-位置合わせの移動量と切り落としを追加する。形状定義は110ケースの実験と同じ
-白背景への合成・白からの距離>32、基準固定の前方エッジ重み、探索半径2である。
-既定のMAE/RMSE用レポートと4役割のPNGは従来どおり。
-診断は候補合計1MPまで（従来の拡大候補生成は16MPまで）。追加依存は不要。
+`--quality` leaves existing candidates unchanged and adds to `quality` in `report.json`, against the same reference image:
+IoU, Dice, Energy Dice, Near Field, RGBA similarity, uncorrected missing/extra foreground pixel counts,
+and alignment shift and clipping. The shape definition matches the 110-case experiment:
+composite onto white, distance from white > 32, reference-fixed forward edge weights, search radius 2.
+The default MAE/RMSE report and the four role PNGs are unchanged.
+Diagnostics are limited to 1 MP of candidates in total (existing upscaling candidate generation allows 16 MP). No extra dependencies.
 
-`--select-by` は `rgb_mae` / `rgb_rmse` / `balance_score` / `iou` /
-`energy_dice` / `near_field` / `rgba_similarity` から選ぶ。省略時は従来のBalanced。
-選択した元候補を `quality_selected.png` に保存し、選択indexを標準出力にも返す。
-`--max-missing-foreground N` は未補正の前景欠け画素数の上限。
-前景マスクでの欠けであり、情報消失の正確な数や可逆性を保証するものではない。
-条件を満たさない場合は `selected_index: null` と除外理由を記録し、選択PNGを作らない。
-Energy Diceの未定義値も同様に除外し、別指標へ自動で切り替えない。
-これらのフラグは `--quality` を必要とする。
+`--select-by` chooses from `rgb_mae` / `rgb_rmse` / `balance_score` / `iou` /
+`energy_dice` / `near_field` / `rgba_similarity`. The default is the existing Balanced.
+The selected source candidate is saved as `quality_selected.png`, and the selected index is also printed to stdout.
+`--max-missing-foreground N` caps the uncorrected missing foreground pixel count.
+This is loss in the foreground mask; it does not guarantee an exact count of lost information or reversibility.
+If no candidate meets the conditions, `selected_index: null` and the exclusion reasons are recorded, and no selected PNG is made.
+Undefined Energy Dice values are excluded the same way, with no automatic switch to another metric.
+These flags require `--quality`.
 
-`studio_candidate_selection.select_quality()` は共通API。
-同じ寸法と基準RGBAのSHA-256を持つ候補だけを受け付ける。
-`max_source_clipped_nonfill` で変換時の既知の切り落としも制約にできる。
-由来が不明な候補はこの制約から除外する。通常の入力PNGから変換履歴を推測せず、
-`source_clipped_nonfill` は `null`。位置合わせ操作の切り落としとは別に扱う。
+`studio_candidate_selection.select_quality()` is the shared API.
+It accepts only candidates with the same size and the same SHA-256 of the reference RGBA.
+`max_source_clipped_nonfill` can also constrain known clipping during conversion.
+Candidates of unknown origin are excluded by this constraint. Conversion history is not inferred from regular input PNGs, so
+`source_clipped_nonfill` is `null`. It is handled separately from clipping by alignment.
 
-全指標について同点集合も残す。MAE/RMSE/Balancedの同点処理は既存の副誤差→index、
-他の指標はindex順。全同点時の先頭選択は画質優位を意味しない。
-`quality.summary.legacy` はMAE/RMSEの既存Pareto集合、`quality_pareto` は
-MAE・RMSE・IoU・Energy Dice・Near Fieldの明示した5軸。
-DiceはIoUと同順位であり、今回の不透明画像のRGBA類似度はMAEと同順位なので、
-既定の5軸には加えない。透明画像ではRGBAと表示RGB誤差が異なるため、必要なら
-`pareto_indices(rows, axes=...)` で軸を明示する。
-欠損を隠し得るAligned IoUや処理時間は既定の画質Paretoに含めない。
-未定義の軸がある候補はPareto計算から除外し、そのindexを明示する。
+Tie sets are kept for every metric. Ties in MAE/RMSE/Balanced use the existing secondary error → index;
+other metrics use index order. Choosing the first when everything ties does not mean better quality.
+`quality.summary.legacy` is the existing MAE/RMSE Pareto set; `quality_pareto` uses the explicit five axes
+MAE, RMSE, IoU, Energy Dice and Near Field.
+Dice ranks the same as IoU, and RGBA similarity for these opaque images ranks the same as MAE,
+so they are not in the default five axes. For transparent images RGBA and displayed RGB error differ, so if needed
+specify axes explicitly with `pareto_indices(rows, axes=...)`.
+Aligned IoU, which can hide loss, and processing time are not in the default quality Pareto.
+Candidates with an undefined axis are excluded from the Pareto computation, and their indices are listed explicitly.
 
-[110ケースとの照合・拡大と縮小の再現実験](evidence/studio-quality-selection/report.md)
-には指標の重複、順位逆転、位置合わせ時の欠損、観測処理時間を分けて記録した。
-基準付きの探索的選択であり、人間による知覚評価や未知画像の普遍的な最高画質判定ではない。
+[Cross-check with the 110 cases and reproduction experiments for upscaling and downscaling](evidence/studio-quality-selection/report.md)
+records metric overlap, rank reversals, loss under alignment and observed processing time separately.
+It is an exploratory reference-based selection, not a human perceptual evaluation or a universal best-quality verdict for unknown images.

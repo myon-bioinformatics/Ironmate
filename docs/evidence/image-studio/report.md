@@ -1,89 +1,89 @@
-# Image Studio 検証記録
+# Image Studio verification record
 
-記録: 2026-10-17
+Recorded: 2026-10-17
 
-Ironmate main `680b35f6daeee52dff1ccf5998e313203ac7f210` に対する追加試作。
-図形・文字・絵文字・ローカル画像を合成し、ヒートマップの色段階とモザイクの粒度を探索する。
-既存の3-Way Surveyの結果・閾値・生データは変更していない。
+An additional prototype on Ironmate main `680b35f6daeee52dff1ccf5998e313203ac7f210`.
+It composites shapes, text, emoji and local images, and explores heatmap color steps and mosaic granularity.
+The existing 3-Way Survey results, thresholds and raw data are unchanged.
 
-## 実際の出力
+## Actual output
 
-- [デスクトップ画面](desktop.png) / [390px幅の画面](mobile.png)
-- [作成したPNG](demo.png) / [SVG](demo.svg) / [再編集用JSON](demo-scene.json)
-- [実ブラウザの検証結果](browser-result.json) / [対象ソースのSHA-256](source-sha256.json)
+- [Desktop screen](desktop.png) / [390 px-wide screen](mobile.png)
+- [Generated PNG](demo.png) / [SVG](demo.svg) / [Re-editable JSON](demo-scene.json)
+- [Real-browser verification results](browser-result.json) / [SHA-256 of target sources](source-sha256.json)
 
-![スタンプと行列から作成したPNG](demo.png)
+![PNG made from stamps and a matrix](demo.png)
 
-これは架空の数値を用いた合成例で、Aoiの野球分析結果ではない。
-ユーザー提供の画像をリポジトリへ転載していない。
+This is a synthetic example with made-up numbers, not Aoi's baseball analysis results.
+No user-provided images are reproduced in the repository.
 
-## 参照した先行実装
+## Prior implementations referenced
 
-| 対象 | 確認SHA | 参照箇所 |
+| Target | Checked SHA | Referenced code |
 |---|---|---|
 | Flutter Navigation Basic | `13905a4d90f97daa73069d6fbff43acd6a65a760` | `lib/features/photo_studio/domain/studio_document.dart`, `photo_studio_state.dart`, `studio_geometry.dart`, `emoji_stamp.dart` |
-| Aoi / DRAgoWing | `62ad1e49154121cf237d52de352404c4400e6a55` | `dragowing/figures.py::heatmap_figure`, 描画・書出し経路 |
+| Aoi / DRAgoWing | `62ad1e49154121cf237d52de352404c4400e6a55` | `dragowing/figures.py::heatmap_figure`, rendering and export path |
 
-状態をレイヤーとして保持すること、表示色と元の数値を分離することを参照した。
-DartのコードやPlotly本体を取り込まず、PythonとJSの独立実装にした。
-Plotlyのグラフ描画を再現するのではなく、単一heatmap traceの数値を合成画像用に取り込む。
-先頭行を上として描くため、Plotly側の軸の設定が異なる場合には上下順も同じとは限らない。
+Referenced: keeping state as layers, and separating display color from the original values.
+No Dart code or Plotly itself was pulled in; Python and JS are independent implementations.
+It does not reproduce Plotly chart rendering; it imports a single heatmap trace's values for compositing.
+The first row is drawn at the top, so vertical order may differ if the Plotly axis settings differ.
 
-## 数値・画像の回帰検証
+## Numeric and image regression checks
 
-`python -m pytest -q tests/test_image_studio.py`: **16 passed**。
+`python -m pytest -q tests/test_image_studio.py`: **16 passed**.
 
-- Python/JSの色変換: 負数、範囲外、定数行列、欠測、連続／量子化の37条件で一致。
-- 元の浮動小数値・null・軸ラベル・sourceを保存し、色段階変更で数値が変化しない。
-- 非長方形、bool、非有限値、安全整数範囲外、極端に大きな整数を拒否する。
-- 7×5 RGBA画像のセル幅1/3/128、色段階256/4/2の4条件でPythonとJSの全画素が一致。
-- ブロック平均ではalphaを考慮。透明な青と不透明な赤の平均は半透明の赤であり、紫にはしない。
-- 端の余りセルを保持し、PNG encode/decode後のRGBAも一致。
-- SVG内の文字列をエスケープし、外部URL画像、無効な寸法・角度、重複IDを拒否する。
-- Undo後の別編集でRedo枝が消えること、状態を参照共有で破壊しないことを確認。
-- ローカルHTTPは固定した4ファイルだけを配信し、プロジェクト内の他ファイルやPOSTを受け付けない。
-- Python CLIは既存の出力ファイルを明示なしに上書きしない。
+- Python/JS color conversion: match across 37 conditions covering negatives, out-of-range, constant matrices, missing values and continuous/quantized.
+- Original floats, nulls, axis labels and source are saved; changing color steps does not change values.
+- Rejects non-rectangular input, bools, non-finite values, out-of-safe-integer values and extremely large integers.
+- All pixels match between Python and JS for a 7×5 RGBA image under 4 conditions of cell width 1/3/128 and color steps 256/4/2.
+- Block averaging accounts for alpha. The average of transparent blue and opaque red is semi-transparent red, not purple.
+- Leftover edge cells are kept, and RGBA also matches after PNG encode/decode.
+- Strings in SVG are escaped; external URL images, invalid sizes/angles and duplicate IDs are rejected.
+- Confirmed a new edit after Undo drops the Redo branch, and state is not corrupted through shared references.
+- Local HTTP serves only 4 fixed files and accepts neither other project files nor POST.
+- The Python CLI does not overwrite existing output files without an explicit flag.
 
-## 実ブラウザ・PPTX検証
+## Real-browser and PPTX verification
 
-Python 3.12.14 / Node 24.19.0 / Chromium 133.0.6943.0 / Linux x86_64。
-ブラウザの自動操作にはtest-only Playwrightを利用。
-日本語・絵文字用のNotoフォントを検証環境へ導入して目視確認した。
-この環境の絵文字は単色。利用端末の絵文字フォントにより見た目は変わる。
+Python 3.12.14 / Node 24.19.0 / Chromium 133.0.6943.0 / Linux x86_64.
+Browser automation uses test-only Playwright.
+Noto fonts for Japanese and emoji were installed in the test environment for visual checks.
+Emoji in this environment are monochrome; appearance varies with the device's emoji font.
 
-`node tests/image_studio_browser.cjs`: 成功。
-テストはPythonサーバーを自分で起動し、終了時に停止する。CDNや外部画像には接続しない。
+`node tests/image_studio_browser.cjs`: passed.
+The test starts its own Python server and stops it on exit. It connects to no CDN or external images.
 
-| 検証 | 結果 |
+| Check | Result |
 |---|---|
-| 図形の配置・内側からの移動・右下ハンドルでの拡縮 | 成功 |
-| 選択レイヤーのカスタムスタンプ化、繰り返し配置 | 成功 |
-| 絵文字の配置、Undo/Redoでのレイヤー数復帰 | 成功 |
-| ヒートマップの色段階変更 | 元のz値が完全一致 |
-| モザイクのセル幅を変更してから1へ戻す | 保持した元画像のPNGを再利用 |
-| キャッシュ上限を超える20画像の加工 | 全画像が設定どおりの処理済み画素を表示 |
-| JSON保存→別編集→読込 | シーンが完全一致、同一環境でPNGバイト一致 |
-| オフラインでのPNG出力 | オンライン時のPNGとバイト一致 |
-| 選択ハンドル | SVG・PNGには含まれない |
-| 390px幅 | 横方向のページはみ出しなし |
-| PNG→固定PptxGenJS 4.0.1→PPTX | media内のPNGが出力PNGとバイト一致 |
-| JavaScript例外・外部HTTP通信 | 0件 |
+| Placing shapes, moving from inside, scaling with the bottom-right handle | Passed |
+| Turning the selected layer into a custom stamp, repeated placement | Passed |
+| Placing emoji, layer count restored by Undo/Redo | Passed |
+| Changing heatmap color steps | Original z values match exactly |
+| Changing mosaic cell width, then back to 1 | Reuses the kept original image PNG |
+| Processing 20 images beyond the cache limit | All images show processed pixels as configured |
+| Save JSON → other edits → load | Scene matches exactly; PNG bytes match in the same environment |
+| PNG export offline | Byte-identical to the online PNG |
+| Selection handles | Not included in SVG/PNG |
+| 390 px width | No horizontal page overflow |
+| PNG → pinned PptxGenJS 4.0.1 → PPTX | PNG in media is byte-identical to the exported PNG |
+| JavaScript exceptions, external HTTP requests | 0 |
 
-キャッシュ容量を超える画像の表示試験で、必要な処理済み画像を各描画へ渡す方式に修正した。
-単にキャッシュから落ちた画像を元画像で表示することがないように回帰試験を追加した。
-これは画素の滑らかさ・自然画像の復元精度・高速性の証明ではない。
-PPTXは画像として挿入した検証であり、スタンプがPPTXネイティブ図形になったわけではない。
+A display test with images exceeding cache capacity led to a fix that passes the needed processed image to each render.
+A regression test was added so an image evicted from the cache is never simply shown as the original.
+This does not prove pixel smoothness, natural-image restoration accuracy or speed.
+The PPTX check inserts images; stamps did not become native PPTX shapes.
 
-## 既存機能・CI
+## Existing features and CI
 
-既存のPython・PPTX統合workflowへstudioのパスを追加した。
-実ブラウザ検証は既存のPPTX統合ジョブの後半で行い、既存テストの前に失敗して
-PPTX検証を省略する配置にはしていない。既存artifactの中へブラウザ証跡も保存する。
-workflow権限、配布設定、JUnit集計経路は変更しない。
+Studio paths were added to the existing Python/PPTX integration workflow.
+Real-browser checks run in the latter half of the existing PPTX integration job, not placed where failing before existing tests
+would skip PPTX checks. Browser evidence is also saved in the existing artifact.
+Workflow permissions, distribution settings and the JUnit aggregation path are unchanged.
 
-actionlint 1.7.7、Python compile、Node構文検査、git diff --checkは成功。
-ローカルの既存suiteに必要な親ツールとxprobeは、workflowと同じ固定SHAを用意して確認した。
+actionlint 1.7.7, Python compile, Node syntax check and git diff --check passed.
+Parent tools and xprobe needed by the existing local suite were set up at the same pinned SHAs as the workflow.
 
-`python -m pytest -q -m 'not heavy'`: **790 passed / 13 skipped / 7 deselected**。
-13 skipは既存のオプションMarp/Chromiumレーンであり、新規Python/JS検証のskipはない。
-Marp/PPTX実機能のCIと新規ブラウザ検証はGitHub Actionsの統合ジョブでも確認する。
+`python -m pytest -q -m 'not heavy'`: **790 passed / 13 skipped / 7 deselected**.
+The 13 skips are the existing optional Marp/Chromium lanes; no new Python/JS checks are skipped.
+CI for real Marp/PPTX features and the new browser checks is also confirmed in the GitHub Actions integration job.

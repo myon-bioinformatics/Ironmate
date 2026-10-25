@@ -70,7 +70,14 @@ second implementation. It delegates process launch to the vendored parent
 `vendor/py_launch.cjs` (shared with `flow_workspace.cjs` and `image_digest.cjs`).
 
 **Interpreter resolution (Node wrappers):** each call runs a short Python 3.9+
-version probe before spawning the tool. Order when the API `python` option is
+version probe before spawning the tool. The launcher is pinned to parent commit
+`1116d5c4f55d25af4d21cfe9b3c88f49d3a476fa`. The probe honors the same
+`noSite` / `isolated` flags as the tool: ambient `sitecustomize` cannot run during
+discovery when either flag is enabled. Node remains 24 or later, with no upper bound.
+The shared launcher's asynchronous `main` also forwards every SIGINT / SIGTERM
+while its child is alive,
+including SIGTERM after an ignored SIGINT. Wrapper behavior is unchanged.
+Order when the API `python` option is
 unset: `IRONMATE_PYTHON`, then `PYTHON`, then `python3`, `python`, and on
 Windows `py -3`. An explicit API `python` path or a set `IRONMATE_PYTHON` does
 not fall back to later candidates. Windows `.cmd`/`.bat` shims are rejected.

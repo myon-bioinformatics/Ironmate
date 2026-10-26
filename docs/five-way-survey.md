@@ -353,3 +353,64 @@ uses stdlib Fraction and has extra arithmetic/GCD cost. This is an optional
 interchange layer, not a multiplication-free fraction arithmetic engine or a
 measured speed optimization. Reuse parsed values rather than repeatedly
 formatting/parsing in inference loops.
+
+## Optional lossless representation adapters
+
+`scripts/bit_representation.py` is a standalone stdlib interchange layer, separate
+from the multiplication-free image kernel and its octal/hex CLI. No image
+threshold, detector, fingerprint algorithm, or inference path is changed.
+
+- `fingerprint64_to_bytes` / `fingerprint64_from_bytes`: a strict unsigned
+  64-bit value becomes exactly eight **big-endian** bytes. Leading zero bytes
+  are preserved; negative, oversized and wrong-length inputs are errors.
+  This is packing, not compression or a self-describing file format. Callers
+  must retain the fingerprint algorithm/version separately.
+- `integer_to_digits` / `digits_to_integer`: bases **2..256**, including
+  3, 7, 11, 13, 17, 23, 32, 64 and 128. The project-specific record is
+  `(sign, digits)` where sign is -1/0/+1 and digits are a most-significant-first
+  tuple. Base is external metadata; no universal alphabet or guessed radix.
+  Tuple storage is not compact binary packing and base 64 digits are not the
+  standardized Base64 transfer encoding. Base 256 digit values match byte
+  values, but only the explicit byte adapter packs them.
+- `integer_to_balanced_ternary` / `balanced_ternary_to_integer`: exact positional
+  signed trits -1/0/+1, most significant first. Example: 2 -> `(1, -1)` because
+  3 - 1 = 2. These are positional digits, not an image's spatial three-state
+  spin mask; changing notation does not change the detector.
+- `rational_to_digits` / `rational_from_digits`: reduced exact numerator and
+  denominator records in any supported base. No rounding or recurring expansion
+  is needed. This does not remove quantization/resampling error when mapping
+  rational coordinates onto image pixels.
+- `digits_to_tokens` / `tokens_to_digits`: optional custom symbol/emoji alphabet.
+  Token boundaries remain an explicit tuple, so multi-codepoint emoji and
+  overlapping token spellings are not concatenated ambiguously. The exact
+  alphabet/order must accompany the representation. No Unicode normalization
+  is implicit. For balanced trits, map -1/0/+1 to digit indices 0/1/2 first.
+
+```python
+from scripts.bit_representation import (
+    fingerprint64_to_bytes, fingerprint64_from_bytes,
+    integer_to_digits, digits_to_integer, integer_to_balanced_ternary,
+    rational_to_digits, rational_from_digits, digits_to_tokens,
+)
+raw = fingerprint64_to_bytes(0x0123456789abcdef)  # exactly 8 bytes
+assert fingerprint64_from_bytes(raw) == 0x0123456789abcdef
+sign, digits = integer_to_digits(255, 16)          # (1, (15, 15))
+assert digits_to_integer(sign, digits, 16) == 255
+assert integer_to_balanced_ternary(2) == (1, -1)
+n, d = rational_to_digits(1, 3, 7)
+assert rational_from_digits(n, d, 7).denominator == 3
+assert digits_to_tokens((0, 1, 2), ('➖', '⚪', '➕')) == ('➖', '⚪', '➕')
+```
+
+A symbol's information capacity is not its UTF-8 storage size: emoji can consume
+multiple bytes/codepoints. Substitution does not give smaller storage or faster
+arithmetic. Adapters use standard integer divmod/multiply and Fraction reduction;
+they are not a multiplication-free engine and no speed improvement is claimed.
+Keep masks/integers in the hot path, convert once at interchange boundaries,
+and use the eight-byte adapter for fingerprint storage. Generic base conversion
+cost grows with digit count; arbitrary precision does not mean constant time.
+
+Checks: `python -m pytest -q tests/test_bit_representation.py` covers every base
+2..256, independently reconstructed signed large integers, all balanced values
+-4096..4096, a byte-order known vector and 64-bit bounds, exact rationals, and
+multi-codepoint/overlapping custom tokens with invalid-input rejection.

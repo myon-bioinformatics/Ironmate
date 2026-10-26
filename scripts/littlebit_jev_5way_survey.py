@@ -21,6 +21,42 @@ SCENARIOS = ('Dense_Object', 'Thin_Skeleton', 'Hollow_Ring', 'Double_Ring',
              'Anisotropic_Matrix')
 
 
+
+# Bit order: 00, 01, 10, 11 (least to most significant).
+BOOLEAN_4BIT_LUT = (
+    "FALSE", "NOR({A}, {B})", "(NOT({A}) AND {B})", "NOT({A})",
+    "({A} AND NOT({B}))", "NOT({B})", "({A} XOR {B})", "NAND({A}, {B})",
+    "({A} AND {B})", "({A} XNOR {B})", "{B}", "({A} => {B})",
+    "{A}", "({B} => {A})", "({A} OR {B})", "TRUE",
+)
+
+
+def classify_pairwise_boolean_4bit_lut(base_board, bit_a, bit_b, oracle_fn):
+    """Classify a deterministic oracle's two-bit restriction at one background.
+
+    Exactly four actual calls; errors propagate. This does not establish a
+    global clause or allow overlapping features to be greedily discarded.
+    """
+    if type(base_board) is not int or base_board < 0:
+        raise ValueError('base_board must be a nonnegative integer')
+    for bit in (bit_a, bit_b):
+        if type(bit) is not int or bit <= 0 or bit & (bit - 1):
+            raise ValueError('features must be positive one-hot integers')
+    if bit_a == bit_b:
+        raise ValueError('features must be distinct')
+    background = base_board & ~(bit_a | bit_b)
+    code = 0
+    boards = (background, background | bit_b, background | bit_a,
+              background | bit_a | bit_b)
+    for index, board in enumerate(boards):
+        response = oracle_fn(board)
+        if type(response) is not bool:
+            raise TypeError('oracle must return bool')
+        code |= int(response) << index
+    return {'tt_code': code, 'formula': BOOLEAN_4BIT_LUT[code],
+            'background': background, 'queries_used': 4}
+
+
 def row_offsets(w, h):
     if type(w) is not int or type(h) is not int or w <= 0 or h <= 0:
         raise ValueError('positive integer dimensions required')

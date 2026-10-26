@@ -281,3 +281,21 @@ all 400 truth/prediction coordinate hashes, and the complete detector,
 counterfactual and rotation-pipeline digests. It still yielded 25/200 predicted
 topology matches and scenario mean IoU of 0–38.08%. These are research baselines,
 not 95% detection accuracy, a GPU substitute or a 0.3ms incremental-search result.
+
+## Complete two-input truth-table restriction
+
+`classify_pairwise_boolean_4bit_lut(base_board, bit_a, bit_b, oracle_fn)`
+queries 00, 01, 10, 11 exactly once each and returns all 16 possible operator
+names, including constants and projections. Inputs require distinct one-hot
+features and an actual bool-returning deterministic oracle. Errors propagate.
+The selected background is returned explicitly. Four calls classify only this
+restriction: changing another feature can change XOR into constant TRUE.
+This is not identification of a global clause, a causal rule, or evidence for
+NPB outcomes. No greedy feature consumption or automatic repair is performed.
+Python calls and tuple lookup are not a one-clock latency guarantee.
+
+Verification: `python -m unittest discover -s tests -p test_boolean_4bit_lut.py`.
+Independent Boolean operator functions cover every code; other controls cover
+background dependence, sparse feature positions, invalid input and oracle errors.
+The supplied crossing/fingerprint/repair benchmark percentages have not been
+reproduced by this addition. Junction separation remains a separate experiment.

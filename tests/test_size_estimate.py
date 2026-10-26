@@ -205,3 +205,27 @@ def test_estimate_without_verify_includes_meta_overhead(tmp_path):
     hdr_on = s.estimate(width=64, height=64, nbytes=3000, limit_bytes=10 ** 6)
     hdr_off = s.estimate(width=64, height=64, nbytes=3000, limit_bytes=10 ** 6, meta=False)
     assert hdr_on['recommended']['upper_bytes'] > hdr_off['recommended']['upper_bytes']
+
+
+@pytest.mark.parametrize('n', [2**53-1, 2**53, 2**53+1, 2**64-1, 10**400])
+@pytest.mark.parametrize('data_uri', [False, True])
+def test_large_base64_length_without_float_rounding_or_overflow(n, data_uri):
+    groups, remainder = divmod(n, 3)
+    expected = 4 * (groups + bool(remainder))
+    prefix = s.DATA_URI_PREFIX if data_uri else 0
+    assert s.base64_chars(n, data_uri) == expected + prefix
+    budget = expected + prefix
+    capacity = s.bytes_for_chars(budget, data_uri)
+    assert capacity >= n
+    assert s.base64_chars(capacity, data_uri) <= budget
+    assert s.base64_chars(capacity + 1, data_uri) > budget
+
+
+@pytest.mark.parametrize('data_uri', [False, True])
+def test_base64_budget_boundary_matches_actual_encoded_bytes(data_uri):
+    import base64
+    prefix = s.DATA_URI_PREFIX if data_uri else 0
+    for budget in range(prefix, prefix + 80):
+        capacity = s.bytes_for_chars(budget, data_uri)
+        assert len(base64.b64encode(bytes(capacity))) + prefix <= budget
+        assert len(base64.b64encode(bytes(capacity + 1))) + prefix > budget

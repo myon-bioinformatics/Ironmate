@@ -466,3 +466,31 @@ Tests compare limb reconstruction/addition with independent Python big integers,
 including long carry chains and a 4097-bit value. Known byte vectors establish
 byte/channel ordering independently of round trips; every 8-bit channel value
 is exercised, and malformed widths/ranges/types are rejected.
+
+### Base64 transport budgets reuse the image facade
+
+Existing `ironmate_image.fit_to_limit` and `python -m grid_tools fit` already
+try candidate sizes (including 3/4), encode PNGs, and verify the actual Base64
+length. Reuse them rather than a second image-resize engine:
+
+```sh
+python -c "import ironmate_image as im; print(im.fit_to_limit('input.png', max_chars=20000).text)"
+python -m grid_tools fit input.png --limit-chars 20000 -o output.b64
+```
+
+Base64 of n bytes has exactly `4 * ((n + 2) // 3)` characters before wrappers.
+`size_estimate.base64_chars` now uses only integer arithmetic, avoiding float
+rounding/overflow even for large size metadata. `bytes_for_chars` provides the
+inverse byte budget; data URI mode includes the PNG prefix. JSON/envelope and
+newline overhead must be budgeted separately. These helpers measure size only,
+not allocate an image of the reported length.
+
+A 3/4 file-byte reduction approximately offsets 4/3 Base64 expansion, but
+scaling both dimensions by 3/4 retains about 9/16 as many pixels, not 3/4.
+PNG/JPEG byte size is not proportional to pixel area, so exact encoded output
+must be measured. Existing fitting selects among discrete candidates; its
+lossless preference refers to preserving dot-art cells, not arbitrary natural
+image fidelity or global optimality. Downsampling can lose information and
+metadata may be dropped with a warning; no silent universal compensation or
+fixed 3/4 shrink is added. Where binary transport is allowed, raw image bytes
+avoid Base64 expansion without altering image dimensions.

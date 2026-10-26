@@ -414,3 +414,55 @@ Checks: `python -m pytest -q tests/test_bit_representation.py` covers every base
 2..256, independently reconstructed signed large integers, all balanced values
 -4096..4096, a byte-order known vector and 64-bit bounds, exact rationals, and
 multi-codepoint/overlapping custom tokens with invalid-input rejection.
+
+### 32-bit limbs, fingerprint batches and RGB8
+
+The representation adapter additionally exposes:
+
+| API | Contract |
+|---|---|
+| `integer_to_u32_limbs` / `u32_limbs_to_integer` | Unsigned base-2^32 digits, **least-significant first**; zero `(0,)` |
+| `add_u32_limbs` | Unsigned limb addition, carry propagated exactly, no overflow wrap; canonical leading-zero removal |
+| `fingerprints64_to_bytes` / `fingerprints64_from_bytes` | Concatenated big-endian 8-byte records, order/duplicates/zeroes preserved; empty batches allowed |
+| `rgb8_to_integer` / `integer_to_rgb8` | Raw RGB channels and `0xRRGGBB` unsigned 24-bit integer |
+| `rgb8_to_bytes` / `rgb8_from_bytes` | Exactly three bytes in R, G, B order |
+
+Limb order is deliberately distinct from the generic most-significant-first
+digit API: it allows addition to propagate carry from index zero. For example,
+`0x123456789abcdef0` becomes `(0x9abcdef0, 0x12345678)` and adding one to
+`(0xffffffff, 0xffffffff)` yields `(0, 0, 1)`. Negative limb values, bools and
+out-of-range values are rejected. Signed integer adapters remain available
+separately; limbs are not a two's-complement signed protocol. No new general
+big-integer multiplication/division engine replaces Python's integer runtime.
+This is an interchange/reference addition API, not a measured acceleration.
+
+Fingerprint batches are raw packed records, not compression or a self-describing
+archive: callers retain count (or infer byte length / 8), algorithm version and
+context separately. These are 64-bit masks only; larger spatial bitboards must
+not be truncated to fit. Batch decoding materializes a tuple; large streams can
+be split into chunks at eight-byte boundaries by the caller. A 10,000-mask test
+packs to exactly 80,000 bytes and restores every value. This length does not
+include Python object overhead or external metadata.
+
+RGB packing is exact storage only, without alpha, gamma/color-space conversion,
+resampling or channel-wise arithmetic. Do not add packed RGB integers to blend
+colors: carries can cross channel boundaries. Channels outside 0..255 raise an
+error rather than silently clipping or wrapping. Pixel layout/width/height,
+row stride, color space and alpha semantics are caller metadata.
+
+```python
+from scripts.bit_representation import (
+    integer_to_u32_limbs, add_u32_limbs, u32_limbs_to_integer,
+    fingerprints64_to_bytes, fingerprints64_from_bytes,
+    rgb8_to_integer, rgb8_to_bytes, rgb8_from_bytes,
+)
+assert u32_limbs_to_integer(add_u32_limbs((0xffffffff,), (1,))) == 1 << 32
+assert fingerprints64_from_bytes(fingerprints64_to_bytes((0, 7, 0))) == (0, 7, 0)
+assert rgb8_to_integer(18, 52, 86) == 0x123456
+assert rgb8_from_bytes(rgb8_to_bytes(18, 52, 86)) == (18, 52, 86)
+```
+
+Tests compare limb reconstruction/addition with independent Python big integers,
+including long carry chains and a 4097-bit value. Known byte vectors establish
+byte/channel ordering independently of round trips; every 8-bit channel value
+is exercised, and malformed widths/ranges/types are rejected.

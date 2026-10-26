@@ -134,3 +134,87 @@ def tokens_to_digits(tokens, alphabet):
     if any(type(token) is not str or token not in lookup for token in tokens):
         raise ValueError('unknown token')
     return tuple(lookup[token] for token in tokens)
+
+
+def _u32_limbs(limbs):
+    if not isinstance(limbs, (tuple, list)) or not limbs:
+        raise ValueError('limbs must be a nonempty tuple/list')
+    for limb in limbs:
+        if type(limb) is not int or not 0 <= limb < (1 << 32):
+            raise ValueError('limbs must be unsigned 32-bit integers')
+
+
+def integer_to_u32_limbs(value):
+    """Unsigned base-2**32 digits, least-significant limb first; zero -> (0,)."""
+    _integer(value)
+    if value < 0:
+        raise ValueError('value must be unsigned')
+    limbs = []
+    while value:
+        limbs.append(value & 0xffffffff)
+        value >>= 32
+    return tuple(limbs) if limbs else (0,)
+
+
+def u32_limbs_to_integer(limbs):
+    _u32_limbs(limbs)
+    value = 0
+    for limb in reversed(limbs):
+        value = (value << 32) | limb
+    return value
+
+
+def add_u32_limbs(left, right):
+    """Exact unsigned addition with explicit carry; canonical result, no wrap."""
+    _u32_limbs(left)
+    _u32_limbs(right)
+    result, carry = [], 0
+    for i in range(max(len(left), len(right))):
+        total = (left[i] if i < len(left) else 0) + (right[i] if i < len(right) else 0) + carry
+        result.append(total & 0xffffffff)
+        carry = total >> 32
+    if carry:
+        result.append(carry)
+    while len(result) > 1 and result[-1] == 0:
+        result.pop()
+    return tuple(result)
+
+
+def fingerprints64_to_bytes(values):
+    """Concatenated eight-byte big-endian records, preserving order/duplicates."""
+    packed = bytearray()
+    for value in values:
+        packed.extend(fingerprint64_to_bytes(value))
+    return bytes(packed)
+
+
+def fingerprints64_from_bytes(data):
+    """Decode a raw record batch; empty bytes -> empty tuple."""
+    if type(data) is not bytes or len(data) % 8:
+        raise ValueError('batch requires bytes with length divisible by eight')
+    return tuple(fingerprint64_from_bytes(data[i:i+8]) for i in range(0, len(data), 8))
+
+
+def rgb8_to_integer(red, green, blue):
+    """Three raw channels -> 0xRRGGBB; no color-space conversion or clipping."""
+    for channel in (red, green, blue):
+        if type(channel) is not int or not 0 <= channel <= 255:
+            raise ValueError('RGB channels must be integers in 0..255')
+    return (red << 16) | (green << 8) | blue
+
+
+def integer_to_rgb8(value):
+    _integer(value)
+    if not 0 <= value < (1 << 24):
+        raise ValueError('RGB value must fit unsigned 24 bits')
+    return value >> 16, (value >> 8) & 255, value & 255
+
+
+def rgb8_to_bytes(red, green, blue):
+    return rgb8_to_integer(red, green, blue).to_bytes(3, 'big')
+
+
+def rgb8_from_bytes(data):
+    if type(data) is not bytes or len(data) != 3:
+        raise ValueError('RGB requires exactly three bytes')
+    return integer_to_rgb8(int.from_bytes(data, 'big'))

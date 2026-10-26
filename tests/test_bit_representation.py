@@ -71,3 +71,59 @@ def test_symbol_tokens_preserve_boundaries():
 def test_reject_invalid_data(fn,args):
     with pytest.raises(ValueError):
         fn(*args)
+
+
+def test_u32_limb_order_and_carry_against_python_integer():
+    assert r.integer_to_u32_limbs(0x123456789abcdef0) == (0x9abcdef0, 0x12345678)
+    assert r.add_u32_limbs((0xffffffff, 0xffffffff), (1,)) == (0, 0, 1)
+    assert r.add_u32_limbs((0, 0), (0,)) == (0,)
+    rng = random.Random(32128)
+    cases = [0, 1, (1 << 32)-1, 1 << 32, (1 << 64)-1, 1 << 4096]
+    cases += [rng.getrandbits(rng.randrange(1, 2048)) for _ in range(150)]
+    for value in cases:
+        limbs = r.integer_to_u32_limbs(value)
+        assert r.u32_limbs_to_integer(limbs) == value
+        assert sum(limb << (32*i) for i, limb in enumerate(limbs)) == value
+        other = rng.getrandbits(1024)
+        added = r.add_u32_limbs(limbs, r.integer_to_u32_limbs(other))
+        assert r.u32_limbs_to_integer(added) == value + other
+
+
+def test_mask_batch_byte_order_and_many_masks():
+    values = (0, 1, (1 << 64)-1, 0x0123456789abcdef, 0)
+    packed = r.fingerprints64_to_bytes(iter(values))
+    assert packed == bytes.fromhex('00000000000000000000000000000001ffffffffffffffff0123456789abcdef0000000000000000')
+    assert r.fingerprints64_from_bytes(packed) == values
+    assert r.fingerprints64_to_bytes(()) == b''
+    assert r.fingerprints64_from_bytes(b'') == ()
+    rng = random.Random(64)
+    many = tuple(rng.getrandbits(64) for _ in range(10000))
+    data = r.fingerprints64_to_bytes(many)
+    assert len(data) == 80000
+    assert r.fingerprints64_from_bytes(data) == many
+
+
+def test_rgb_channel_positions_and_roundtrips():
+    assert r.rgb8_to_integer(0x12, 0x34, 0x56) == 0x123456
+    assert r.rgb8_to_bytes(0x12, 0x34, 0x56) == b'\x12\x34\x56'
+    for channel in range(256):
+        for rgb in ((channel,0,0), (0,channel,0), (0,0,channel), (channel,channel,channel)):
+            assert r.integer_to_rgb8(r.rgb8_to_integer(*rgb)) == rgb
+            assert r.rgb8_from_bytes(r.rgb8_to_bytes(*rgb)) == rgb
+
+
+@pytest.mark.parametrize('fn,args', [
+    (r.integer_to_u32_limbs,(-1,)), (r.integer_to_u32_limbs,(True,)),
+    (r.u32_limbs_to_integer,((),)), (r.u32_limbs_to_integer,((-1,),)),
+    (r.u32_limbs_to_integer,((1 << 32,),)), (r.u32_limbs_to_integer,((True,),)),
+    (r.add_u32_limbs,((0,), (1 << 32,))),
+    (r.fingerprints64_to_bytes,((0,-1),)), (r.fingerprints64_to_bytes,((True,),)),
+    (r.fingerprints64_from_bytes,(bytes(9),)), (r.fingerprints64_from_bytes,('12345678',)),
+    (r.rgb8_to_integer,(256,0,0)), (r.rgb8_to_integer,(0,-1,0)),
+    (r.rgb8_to_bytes,(0,0,True)), (r.integer_to_rgb8,(1 << 24,)),
+    (r.integer_to_rgb8,(-1,)), (r.integer_to_rgb8,(True,)),
+    (r.rgb8_from_bytes,(bytes(4),)), (r.rgb8_from_bytes,('RGB',)),
+])
+def test_new_adapters_reject_invalid_data(fn,args):
+    with pytest.raises(ValueError):
+        fn(*args)

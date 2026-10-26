@@ -368,7 +368,10 @@ threshold, detector, fingerprint algorithm, or inference path is changed.
 - `integer_to_digits` / `digits_to_integer`: bases **2..256**, including
   3, 7, 11, 13, 17, 23, 32, 64 and 128. The project-specific record is
   `(sign, digits)` where sign is -1/0/+1 and digits are a most-significant-first
-  tuple. Base is external metadata; no universal alphabet or guessed radix.
+  tuple. Zero is emitted as `(0, (0,))`. Decoding accepts leading zero
+  digits, but requires sign 0 exactly when the magnitude is zero; positive
+  and negative zero records raise `ValueError`, including inside rational
+  records. Nonzero magnitudes require sign -1 or +1. Base is external metadata; no universal alphabet or guessed radix.
   Tuple storage is not compact binary packing and base 64 digits are not the
   standardized Base64 transfer encoding. Base 256 digit values match byte
   values, but only the explicit byte adapter packs them.

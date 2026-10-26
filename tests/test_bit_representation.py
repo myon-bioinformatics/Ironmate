@@ -127,3 +127,36 @@ def test_rgb_channel_positions_and_roundtrips():
 def test_new_adapters_reject_invalid_data(fn,args):
     with pytest.raises(ValueError):
         fn(*args)
+
+
+@pytest.mark.parametrize('base', range(2, 257))
+def test_zero_sign_contract_and_leading_zeros(base):
+    assert r.integer_to_digits(0, base) == (0, (0,))
+    for digits in ((0,), (0, 0, 0), [0, 0]):
+        assert r.digits_to_integer(0, digits, base) == 0
+        for sign in (-1, 1):
+            with pytest.raises(ValueError, match='zero value requires zero sign'):
+                r.digits_to_integer(sign, digits, base)
+    for digits in ((1,), (0, 0, 1), [0, base - 1, 1]):
+        magnitude = sum(d * base**i for i, d in enumerate(reversed(digits)))
+        for sign in (-1, 1):
+            value = r.digits_to_integer(sign, digits, base)
+            assert value == sign * magnitude
+            assert r.integer_to_digits(value, base)[0] == sign
+        with pytest.raises(ValueError, match='zero sign requires zero value'):
+            r.digits_to_integer(0, digits, base)
+
+
+@pytest.mark.parametrize('base', range(2, 257))
+def test_rational_records_share_zero_sign_contract(base):
+    zero, one = (0, (0, 0)), (1, (0, 1))
+    assert r.rational_from_digits(zero, one, base) == Fraction(0)
+    assert r.rational_to_digits(0, -base, base) == ((0, (0,)), (1, (1,)))
+    for sign in (-1, 1):
+        signed_zero = (sign, (0, 0))
+        with pytest.raises(ValueError, match='zero value requires zero sign'):
+            r.rational_from_digits(signed_zero, one, base)
+        with pytest.raises(ValueError, match='zero value requires zero sign'):
+            r.rational_from_digits(one, signed_zero, base)
+    with pytest.raises(ValueError, match='denominator must not be zero'):
+        r.rational_from_digits(one, zero, base)

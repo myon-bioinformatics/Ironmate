@@ -32,7 +32,10 @@ def integer_to_digits(value, base):
 
 
 def digits_to_integer(sign, digits, base):
-    """Decode explicit positional digits. Leading zero digits are accepted."""
+    """Decode positional digits; leading zeros are accepted, signed zero is not.
+
+    A zero magnitude requires sign 0; a nonzero magnitude requires -1 or 1.
+    """
     _base(base)
     if type(sign) is not int or sign not in (-1, 0, 1):
         raise ValueError('sign must be -1, 0 or 1')
@@ -45,6 +48,8 @@ def digits_to_integer(sign, digits, base):
         value = value * base + digit
     if sign == 0 and value != 0:
         raise ValueError('zero sign requires zero value')
+    if value == 0 and sign != 0:
+        raise ValueError('zero value requires zero sign')
     return -value if sign < 0 else value
 
 

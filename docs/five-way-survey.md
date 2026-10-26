@@ -518,3 +518,59 @@ only to exercise transport; it does not assert image-container validity.
 Existing image-format tests supply separate JPEG/WebP input coverage.
 
 Reproduce: `python -m pytest -q tests/test_image_base64_cycles.py tests/test_studio_ingress.py tests/test_image_formats.py`.
+
+## Verified local distance-one boundary audit
+
+`scripts/boundary_twins.py` adds `evaluate_rule` for jointly evaluated AND,
+OR-mask, forbidden-bit and arbitrary 4-bit LUT clauses (including XOR/NAND).
+Overlapping clauses are allowed; impossible conjunctions remain impossible.
+`audit_boundary_twins(board, mutable_mask, predicate, oracle=...)` deterministically
+checks every allowed one-bit neighbor of the supplied board and returns only
+pairs whose full predicate values differ. Positive/negative endpoints and the
+changed bit are explicit. Two missing AND bits correctly yield no one-bit rescue.
+No positive board is fabricated by OR-ing clause fragments: that construction
+can violate overlapping XOR/NOT clauses before any boundary is tested.
+
+This is a **local audit**, not enumeration of all boundary edges of the Boolean
+hypercube, a constant-time algebraic solver, or a global minimal repair search.
+For k mutable bits it makes 1+k predicate calls. An optional independent oracle
+checks unique reported endpoints and records its labels/agreement separately;
+surrogate reversal alone is not oracle verification. Both categories count
+against max_queries (default 4096); exhaustion/errors raise without returning a
+complete report. Predicates/oracles must return bool and be deterministic.
+Runtime/memory grow with k, mask width and predicate cost; no microsecond claim.
+
+```python
+from scripts.boundary_twins import evaluate_rule, audit_boundary_twins
+rule = lambda b: evaluate_rule(b, must_and=2, pair_tables=((1, 2, 6),))
+report = audit_boundary_twins(3, 3, rule)
+assert [(p['positive'], p['negative']) for p in report['pairs']] == [(2, 3)]
+# No external oracle was checked: oracle_verified is None.
+```
+
+Independent exhaustive tests cover all 256 three-input Boolean functions at
+all eight inputs; expected neighbors are obtained by separately enumerating
+all boards and testing Hamming distance. Additional tests cover every two-input
+LUT, contradictory/overlapping clauses, immutable high bits, oracle mismatch,
+cache/call accounting, budget exhaustion, invalid masks and propagated errors.
+No inference about NPB outcomes or causally actionable interventions follows:
+real features can be correlated, impossible to toggle independently, or missing
+from a surrogate. The mutable mask alone is not a feasibility model.
+
+### Supplied macro-scene proposal: deferred, not verified
+
+The supplied seven-scenario percentages/timings have no executable trial dataset
+or measurement trace in this change and are not adopted as results. Its direction
+classifier maps west to sector 7 and east to 0, violating the intended eight-slot
+opposition. Existing `direction_slot` has tested cardinal/quarter-turn behavior
+and should be reused for a future experiment rather than restoring that formula.
+Mass-only ordering leaves equal-mass correspondence dependent on input order.
+OR-ing all pair vectors into 64 bits discards edge labels/multiplicity and admits
+collisions; symmetric or collinear scenes can be indistinguishable from mirrors.
+L1 radii/floored centroids and discrete bins do not ensure arbitrary-angle/scale
+invariance. Averaging macro and micro scores is not a proof of identity, nor is
+it a geometric mean. Pair construction is quadratic in part count, not O(1).
+Future scene work needs explicit part identities/correspondence, all tied
+alignments, independently transformed coordinate controls, mirror/symmetry and
+collision negatives, and separate measured retrieval/verification results.
+The scene proposal is not integrated into detection or frozen evidence here.

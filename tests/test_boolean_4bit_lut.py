@@ -73,3 +73,35 @@ class RadixConversion(unittest.TestCase):
         result = subprocess.run([sys.executable, '-S', s.__file__, '--convert',
                                  '8','16','89'], capture_output=True, text=True)
         self.assertEqual(result.returncode, 2)
+
+class ExactRadixNumbers(unittest.TestCase):
+    def test_signed_points_fractions_and_exponents(self):
+        from fractions import Fraction
+        cases = [('0x1.8',16,Fraction(3,2)), ('-0o1.4',8,Fraction(-3,2)),
+                 ('0x1@-2',16,Fraction(1,256)), ('0o1@-2',8,Fraction(1,64)),
+                 ('0xe',16,Fraction(14)), ('0x1/0x3',16,Fraction(1,3)),
+                 ('-0o1/-0o3',8,Fraction(1,3)), ('0x.8',16,Fraction(1,2)),
+                 ('0o7@+2',8,Fraction(448))]
+        for text, base, expected in cases:
+            self.assertEqual(s.parse_radix_number(text,base), expected)
+            for target in (8,16):
+                rendered = s.convert_radix_number(text,base,target)
+                self.assertEqual(s.parse_radix_number(rendered,target), expected)
+        self.assertEqual(s.convert_radix_number('0x1.8',16,8), '0o1.4')
+        self.assertEqual(s.convert_radix_number('0o1/0o3',8,16), '0x1/0x3')
+
+    def test_many_exact_rational_roundtrips(self):
+        from fractions import Fraction
+        for n in range(-30,31):
+            for d in range(1,35):
+                text = hex(n) + '/' + hex(d)
+                converted = s.convert_radix_number(text,16,8)
+                self.assertEqual(s.parse_radix_number(converted,8), Fraction(n,d))
+                back = s.convert_radix_number(converted,8,16)
+                self.assertEqual(s.parse_radix_number(back,16), Fraction(n,d))
+
+    def test_invalid_numbers(self):
+        for text in ('0x1/0', '.', '0x1.2.3', '0x1@-4097', '0x1@2@3',
+                     '0x1@0x2', '0x1@+-2', '--1.0', '0x1.g', 'NaN', 'inf'):
+            with self.assertRaises(ValueError, msg=text):
+                s.convert_radix_number(text,16,8)

@@ -322,3 +322,34 @@ Python integer text (optional prefix/underscores/whitespace), rejects malformed
 or negative values, and normalizes prefixes/case/leading zeroes. Numeric value,
 not original spelling or width, survives the round trip. The CLI exits before
 benchmarking or writing reports. Conversion is opt-in, outside the hot path.
+
+
+### Signed exact numbers (separate from unsigned bitboards)
+
+The CLI now uses `convert_radix_number`, with exact `Fraction` intermediates;
+`convert_bitboard_radix` retains its unsigned integer contract. Supported inputs:
+signed integers, radix points, integer numerator/denominator pairs, and an
+optional `@` exponent. Examples:
+
+| Input | Meaning | Converted output |
+|---|---|---|
+| `-0x1.8` (base 16) | minus three halves | `-0o1.4` |
+| `0x1@-2` (base 16) | 1 times 16 to power -2 | `0o0.002` |
+| `0o1/0o3` (base 8) | one third | `0x1/0x3` |
+
+Exponent digits after `@` are signed **decimal integers**, while the exponent's
+base is the selected input radix (8 or 16). Hex `e` remains a digit, never an
+exponent marker. Decimal mantissa input/base 10 is not supported. For negative
+CLI input use e.g. `--convert 16 8 ' -0x1.8'` (leading space keeps argparse from
+interpreting it as an option; the parser strips whitespace).
+
+Finite expansions are rendered exactly with radix points; other rationals
+remain reduced fractions, avoiding recurring-digit loops and rounding. Output
+normalizes spelling and does not preserve trailing zeroes. No float is used.
+Input text is capped at 4096 characters and exponent magnitude at 4096 to avoid
+accidental huge allocations. Zero denominators and malformed values are errors.
+Integer builtins and shifts handle base conversion; general fraction reduction
+uses stdlib Fraction and has extra arithmetic/GCD cost. This is an optional
+interchange layer, not a multiplication-free fraction arithmetic engine or a
+measured speed optimization. Reuse parsed values rather than repeatedly
+formatting/parsing in inference loops.

@@ -7,6 +7,7 @@ Integer kernel ends before evaluation(); only reporting/fixtures use floats/*.
 from __future__ import annotations
 
 import argparse
+from fractions import Fraction
 import hashlib
 import json
 import math
@@ -74,6 +75,82 @@ def convert_bitboard_radix(text, from_base, to_base):
     if value < 0 or text.lstrip().startswith('-'):
         raise ValueError('bitboards must be unsigned')
     return oct(value) if to_base == 8 else hex(value)
+
+
+
+def parse_radix_number(text, base):
+    """Exact signed radix-point, integer fraction, or mantissa@radix-exponent.
+
+    Exponents use decimal signed integers; @ avoids ambiguity with hex digit e.
+    Limit text/exponents to bound accidental resource use in the CLI.
+    """
+    if type(base) is not int or base not in (8, 16):
+        raise ValueError('base must be 8 or 16')
+    if type(text) is not str or len(text) > 4096:
+        raise ValueError('number must be text of at most 4096 characters')
+    text = text.strip()
+    exponent = 0
+    if '@' in text:
+        text, exp = text.split('@')
+        if not exp or not exp.lstrip('+-').isascii() or not exp.lstrip('+-').isdigit():
+            raise ValueError('exponent must be a signed decimal integer')
+        exponent = int(exp)
+        if abs(exponent) > 4096:
+            raise ValueError('exponent magnitude must be at most 4096')
+    if '/' in text:
+        numerator, denominator = text.split('/')
+        denominator = int(denominator, base)
+        if denominator == 0:
+            raise ValueError('denominator must not be zero')
+        value = Fraction(int(numerator, base), denominator)
+    else:
+        sign = -1 if text.startswith('-') else 1
+        mantissa = text.lstrip('+-')
+        if text.startswith(('++', '--', '+-', '-+')):
+            raise ValueError('invalid sign')
+        if '.' in mantissa:
+            whole, fraction = mantissa.split('.')
+            prefix = '0x' if base == 16 else '0o'
+            if whole.lower().startswith(prefix):
+                whole = whole[2:]
+            digits = '0123456789abcdef'[:base]
+            if not whole and not fraction:
+                raise ValueError('missing digits')
+            if any(c.lower() not in digits for c in whole + fraction):
+                raise ValueError('invalid radix-point digits')
+            shift = len(fraction) << (2 if base == 16 else 0)
+            if base == 8:
+                shift = (len(fraction) << 1) + len(fraction)
+            numerator = int((whole or '0') + fraction, base)
+            value = Fraction(-numerator if sign < 0 else numerator, 1 << shift)
+        else:
+            value = Fraction(int(text, base))
+    shift = (abs(exponent) << 2) if base == 16 else ((abs(exponent) << 1) + abs(exponent))
+    if exponent < 0:
+        return Fraction(value.numerator, value.denominator << shift)
+    return Fraction(value.numerator << shift, value.denominator)
+
+
+def convert_radix_number(text, from_base, to_base):
+    """Exact conversion: finite radix point when possible, fraction otherwise."""
+    if type(to_base) is not int or to_base not in (8, 16):
+        raise ValueError('base must be 8 or 16')
+    value = parse_radix_number(text, from_base)
+    numerator, denominator = value.numerator, value.denominator
+    render = hex if to_base == 16 else oct
+    if denominator == 1:
+        return render(numerator)
+    if denominator & (denominator - 1):
+        return render(numerator) + '/' + render(denominator)
+    bits = denominator.bit_length() - 1
+    group = 4 if to_base == 16 else 3
+    digits = (bits + group - 1) // group
+    padded_bits = (digits << 2) if group == 4 else ((digits << 1) + digits)
+    scaled = abs(numerator) << (padded_bits - bits)
+    spec = 'x' if to_base == 16 else 'o'
+    raw = format(scaled, spec).zfill(digits + 1)
+    prefix = '0x' if to_base == 16 else '0o'
+    return ('-' if numerator < 0 else '') + prefix + raw[:-digits] + '.' + raw[-digits:]
 
 
 def row_offsets(w, h):
@@ -1073,12 +1150,12 @@ def main(argv=None):
     parser.add_argument('--seed', type=int, default=20261022)
     parser.add_argument('--output', type=Path, default=Path('build/five-way-survey'))
     parser.add_argument('--convert', nargs=3, metavar=('FROM', 'TO', 'TEXT'),
-                        help='convert unsigned octal/hex (bases 8 or 16) and exit')
+                        help='convert exact signed octal/hex numbers (bases 8 or 16) and exit')
     args = parser.parse_args(argv)
     if args.convert is not None:
         source, target, text = args.convert
         try:
-            print(convert_bitboard_radix(text, int(source), int(target)))
+            print(convert_radix_number(text, int(source), int(target)))
         except ValueError as exc:
             parser.error(str(exc))
         return

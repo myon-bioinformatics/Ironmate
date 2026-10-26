@@ -45,3 +45,31 @@ class TruthTables(unittest.TestCase):
             raise RuntimeError('oracle failed')
         with self.assertRaises(RuntimeError):
             s.classify_pairwise_boolean_4bit_lut(0,1,2,broken)
+
+class RadixConversion(unittest.TestCase):
+    def test_roundtrip_without_width_loss(self):
+        for value in (*range(256), (1 << 64) - 1, 1 << 64, (1 << 1024) + 15):
+            octal = s.convert_bitboard_radix(hex(value), 16, 8)
+            self.assertEqual(octal, oct(value))
+            self.assertEqual(s.convert_bitboard_radix(octal, 8, 16), hex(value))
+        self.assertEqual(s.convert_bitboard_radix(' FF ', 16, 8), '0o377')
+        self.assertEqual(s.convert_bitboard_radix('0Xf_f', 16, 16), '0xff')
+
+    def test_invalid_values(self):
+        for args in (('8',8,16), ('',16,8), ('-1',16,8), ('-0',8,16),
+                     ('0xff',8,16), ('1',10,8), ('1',16,True), (1,16,8)):
+            with self.assertRaises(ValueError):
+                s.convert_bitboard_radix(*args)
+
+    def test_cli_converts_without_running_benchmark(self):
+        import subprocess
+        import sys
+        for source, target, text, expected in (
+            ('16','8','0xff','0o377'), ('8','16','377','0xff')):
+            result = subprocess.run([sys.executable, '-S', s.__file__, '--convert',
+                                     source, target, text], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout.strip(), expected)
+        result = subprocess.run([sys.executable, '-S', s.__file__, '--convert',
+                                 '8','16','89'], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 2)

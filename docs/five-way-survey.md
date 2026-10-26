@@ -299,3 +299,26 @@ Independent Boolean operator functions cover every code; other controls cover
 background dependence, sparse feature positions, invalid input and oracle errors.
 The supplied crossing/fingerprint/repair benchmark percentages have not been
 reproduced by this addition. Junction separation remains a separate experiment.
+
+### Octal / hexadecimal interchange
+
+4 bits have 16 possible values; this is separate from an 8-bit width or base 8.
+Hex digits encode four bits each, octal digits three. Internal masks stay as
+integers, so inference never needs a string conversion. Python already provides
+`int(text, 8/16)`, `oct(value)` and `hex(value)`; the convenience entry below
+uses these builtins rather than a second arithmetic conversion implementation.
+Parsing/formatting cost grows with digit count; no speedup claim is made.
+
+```sh
+python -S scripts/littlebit_jev_5way_survey.py --convert 16 8 0xff
+# 0o377
+python -S scripts/littlebit_jev_5way_survey.py --convert 8 16 0o377
+# 0xff
+```
+
+The same `convert_bitboard_radix(text, from_base, to_base)` API handles LUT
+codes, 8-bit values and 64-bit masks without truncation. It accepts unsigned
+Python integer text (optional prefix/underscores/whitespace), rejects malformed
+or negative values, and normalizes prefixes/case/leading zeroes. Numeric value,
+not original spelling or width, survives the round trip. The CLI exits before
+benchmarking or writing reports. Conversion is opt-in, outside the hot path.

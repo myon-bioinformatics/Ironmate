@@ -57,6 +57,25 @@ def classify_pairwise_boolean_4bit_lut(base_board, bit_a, bit_b, oracle_fn):
             'background': background, 'queries_used': 4}
 
 
+
+def convert_bitboard_radix(text, from_base, to_base):
+    """Convert unsigned octal/hex text via Python's integer builtins.
+
+    Prefixes, underscores and surrounding whitespace follow int() syntax.
+    The result is normalized, lowercase and prefixed; no fixed-width truncation.
+    Formatting is kept outside classification/inference hot paths.
+    """
+    if type(text) is not str:
+        raise ValueError('text must be a string')
+    for base in (from_base, to_base):
+        if type(base) is not int or base not in (8, 16):
+            raise ValueError('base must be 8 or 16')
+    value = int(text, from_base)
+    if value < 0 or text.lstrip().startswith('-'):
+        raise ValueError('bitboards must be unsigned')
+    return oct(value) if to_base == 8 else hex(value)
+
+
 def row_offsets(w, h):
     if type(w) is not int or type(h) is not int or w <= 0 or h <= 0:
         raise ValueError('positive integer dimensions required')
@@ -1053,7 +1072,16 @@ def main(argv=None):
     parser.add_argument('--trials', type=int, default=25)
     parser.add_argument('--seed', type=int, default=20261022)
     parser.add_argument('--output', type=Path, default=Path('build/five-way-survey'))
+    parser.add_argument('--convert', nargs=3, metavar=('FROM', 'TO', 'TEXT'),
+                        help='convert unsigned octal/hex (bases 8 or 16) and exit')
     args = parser.parse_args(argv)
+    if args.convert is not None:
+        source, target, text = args.convert
+        try:
+            print(convert_bitboard_radix(text, int(source), int(target)))
+        except ValueError as exc:
+            parser.error(str(exc))
+        return
     if not 1 <= args.trials <= 1000:
         parser.error('--trials must be 1..1000')
     report = run_benchmark(args.trials, args.seed)

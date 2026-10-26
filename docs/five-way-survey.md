@@ -494,3 +494,27 @@ image fidelity or global optimality. Downsampling can lose information and
 metadata may be dropped with a warning; no silent universal compensation or
 fixed 3/4 shrink is added. Where binary transport is allowed, raw image bytes
 avoid Base64 expansion without altering image dimensions.
+
+### Repeated Base64/image interchange tests
+
+`tests/test_image_base64_cycles.py` exercises 16 seeded metadata/data-URI
+configurations for 25 PNG cycles each (400 cycles), alternating dict/JSON,
+binary bytes, filesystem paths, raw Base64 and data URI inputs. Every cycle
+compares dimensions and original RGBA colors, including RGB under transparent
+alpha, partial transparency, duplicate palette colors and unused palette entries.
+With metadata the palette is preserved, but duplicate RGBA palette entries
+canonicalize to their first index on restore: equal pixels do not imply identical
+original palette indices or all artifact fields. No JPEG re-encoding fidelity,
+resize reversibility, arbitrary external PNG codec coverage, or compressed-byte
+identity is inferred from these lossless PNG controls.
+
+Additional controls run four real stdlib-only Python stdin/stdout PNG/Base64
+cycles, all three padding-length residues over 12 transport cycles each,
+whitespace wrapping, exact decoded-byte budgets and one-byte-under limits,
+invalid alphabet/truncation/MIME mismatch rejection, and four repeated verified
+fit calls with a stable generous character budget. Invalid payloads are never
+fed forward as successful results. The padding test appends bytes after a PNG
+only to exercise transport; it does not assert image-container validity.
+Existing image-format tests supply separate JPEG/WebP input coverage.
+
+Reproduce: `python -m pytest -q tests/test_image_base64_cycles.py tests/test_studio_ingress.py tests/test_image_formats.py`.

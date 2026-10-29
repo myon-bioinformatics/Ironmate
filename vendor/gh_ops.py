@@ -31,7 +31,9 @@ is a thin adapter over them::
     python -S gh_ops.py url compare OWNER/REPO main feature   # no network; prints web + api URLs
 
 Exit codes: 0 = OK, 1 = a checked condition was not met, 2 = input or
-communication error.
+communication error. Flags are matched in full (no abbreviations).
+``--json-errors`` prints ``{"ok": false, "error", "exit_code", "hint"}``
+on stdout for exit 2. Without it, errors stay on stderr and stdout stays empty.
 """
 from __future__ import annotations
 
@@ -174,7 +176,8 @@ class Client:
     def get(self, path: str, *, params: dict | None = None) -> Any:
         return self.request("GET", path, params=params).data
 
-    def paginate(self, path: str, *, params: dict | None = None, key: str | None = None, max_pages: int = 50) -> list:
+    def paginate(self, path: str, *, params: dict | None = None, key: str | None = None, max_pages: int = 50,
+                 require_total_count: bool = False) -> list:
         if max_pages < 1:
             raise GhOpsError("pagination requires a positive page limit")
         items: list = []
@@ -189,6 +192,10 @@ class Client:
                 raise GhOpsError("pagination cycle; incomplete response")
             seen.add(request_url)
             response = self.request("GET", url, params=query)
+            if require_total_count and (not key or not isinstance(response.data, dict)
+                                        or "total_count" not in response.data
+                                        or not isinstance(response.data.get(key), list)):
+                raise GhOpsError("pagination requires a counted list; incomplete response")
             if key and "total_count" in response.data:
                 count = response.data["total_count"]
                 if type(count) is not int or count < 0 or (expected is not None and count != expected):
@@ -895,6 +902,128 @@ def issue_comment_create(repo: str, number: int, *, body: str, write: bool = Fal
             "reason": "" if verified else "comment was posted but body verification differed; inspect before retrying"}
 
 
+_VARIABLE_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\Z")
+
+
+def _variable_state(client: Client, repo: str, name: str) -> str:
+    """Prove absence with a complete scoped listing, never with a bare 404."""
+    path = f"/repos/{repo}/actions/variables/{urllib.parse.quote(name, safe='')}"
+    try:
+        observed = client.get(path)
+    except GhOpsError as error:
+        if error.http_status != 404:
+            raise
+        # GitHub may hide inaccessible resources behind 404. A successful,
+        # complete listing proves access to the specific variables scope.
+        rows = client.paginate(f"/repos/{repo}/actions/variables", key="variables", require_total_count=True)
+        names = set()
+        for row in rows:
+            candidate = row.get("name") if isinstance(row, dict) else None
+            if not isinstance(candidate, str) or not _VARIABLE_NAME.fullmatch(candidate):
+                raise GhOpsError("variable listing contains an invalid name; incomplete response")
+            canonical = candidate.casefold()
+            if canonical in names:
+                raise GhOpsError("variable listing contains duplicate names; incomplete response")
+            names.add(canonical)
+        return "present" if name.casefold() in names else "absent"
+    if not isinstance(observed, dict) or not isinstance(observed.get("name"), str) or observed["name"].casefold() != name.casefold():
+        raise GhOpsError("variable read-back has an unexpected identity")
+    return "present"
+
+
+def variable_delete(repo: str, name: str, *, write: bool = False, client: Client | None = None) -> dict:
+    """Delete one repository Actions variable, dry-run by default.
+
+    A 404 is ambiguous. Absence is accepted only after a successful, complete
+    repository-variable listing also excludes the name. Inaccessible, malformed
+    or incomplete listings never prove absence, before or after DELETE.
+    ``name`` is the variable's name; its value is never fetched into the result.
+    """
+    if not isinstance(name, str) or not _VARIABLE_NAME.fullmatch(name):
+        raise GhOpsError(f"invalid variable name: {name!r}")
+    client, repo = _client(client), _repo(repo)
+    path = f"/repos/{repo}/actions/variables/{urllib.parse.quote(name, safe='')}"
+    try:
+        before = _variable_state(client, repo, name)
+    except GhOpsError as error:
+        return {"ok": False, "dry_run": not write, "deleted": False, "name": name, "status": "inaccessible",
+                "http_status": error.http_status, "reason": f"cannot confirm the variable exists: {error}"}
+    if before == "absent":
+        return {"ok": True, "dry_run": not write, "deleted": False, "name": name, "status": "already_absent"}
+    if not write:
+        return {"ok": True, "dry_run": True, "deleted": False, "name": name, "status": "would_delete",
+                "would_delete": {"path": path}}
+    try:
+        client.request("DELETE", path, expect=(204,))
+    except GhOpsError as error:
+        uncertain = error.http_status is None or error.http_status >= 500
+        return {"ok": False, "dry_run": False, "deleted": None if uncertain else False, "name": name,
+                "status": "mutation_uncertain" if uncertain else "mutation_failed", "verified": False,
+                "mutation_status": "uncertain" if uncertain else "failed", "http_status": error.http_status,
+                "reason": f"DELETE did not return a success receipt; inspect before retrying: {error}"}
+    try:
+        after = _variable_state(client, repo, name)
+    except GhOpsError as error:
+        return {"ok": False, "dry_run": False, "deleted": True, "name": name, "status": "verification_uncertain",
+                "verified": False, "mutation_status": "succeeded", "http_status": error.http_status,
+                "reason": f"DELETE succeeded but absence could not be verified; inspect before retrying: {error}"}
+    verified = after == "absent"
+    return {"ok": verified, "dry_run": False, "deleted": True, "name": name,
+            "status": "verified" if verified else "verification_failed", "verified": verified,
+            "mutation_status": "succeeded",
+            "reason": "" if verified else "variable is still present after DELETE"}
+
+
+def issue_comment_upsert(repo: str, number: int, *, body: str, marker: str, author: str,
+                         write: bool = False, client: Client | None = None) -> dict:
+    """Update a PR's newest comment by ``author`` starting with ``marker``, or create one.
+
+    Other authors' matching comments are ignored. The caller must still supply
+    credentials allowed to edit the selected author's comment. ``body`` must
+    start with ``marker``; post-write receipts distinguish mutation and verification.
+    """
+    if not marker or not body.startswith(marker):
+        raise GhOpsError("body must start with the marker")
+    if not author:
+        raise GhOpsError("author must not be empty")
+    client, repo, number = _client(client), _repo(repo), int(number)
+    # Match issue_comment_create's PR-only target contract on every path.
+    client.get(f"/repos/{repo}/pulls/{number}")
+    comments = client.paginate(f"/repos/{repo}/issues/{number}/comments")
+    mine = [c for c in comments
+            if (c.get("user") or {}).get("login") == author and (c.get("body") or "").startswith(marker)]
+    if not mine:
+        result = issue_comment_create(repo, number, body=body, write=write, client=client)
+        return {**result, "action": "create"}
+    comment_id = int(mine[-1]["id"])
+    path = f"/repos/{repo}/issues/comments/{comment_id}"
+    if (mine[-1].get("body") or "") == body:
+        return {"ok": True, "dry_run": not write, "action": "unchanged", "comment_id": comment_id}
+    if not write:
+        return {"ok": True, "dry_run": True, "action": "update", "comment_id": comment_id,
+                "would_patch": {"path": path, "body_chars": len(body)}}
+    try:
+        client.request("PATCH", path, {"body": body})
+    except GhOpsError as error:
+        uncertain = error.http_status is None or error.http_status >= 500
+        return {"ok": False, "dry_run": False, "action": "update", "comment_id": comment_id,
+                "updated": None if uncertain else False, "verified": False,
+                "status": "mutation_uncertain" if uncertain else "mutation_failed",
+                "mutation_status": "uncertain" if uncertain else "failed", "http_status": error.http_status,
+                "reason": f"comment PATCH did not return success; inspect before retrying: {error}"}
+    try:
+        observed = client.get(path)
+    except GhOpsError as error:
+        return {"ok": False, "dry_run": False, "action": "update", "comment_id": comment_id,
+                "updated": True, "verified": False, "status": "verification_uncertain",
+                "mutation_status": "succeeded", "http_status": error.http_status,
+                "reason": f"comment PATCH succeeded but verification failed; inspect before retrying: {error}"}
+    verified = isinstance(observed, dict) and observed.get("body") == body
+    return {"ok": verified, "dry_run": False, "action": "update", "comment_id": comment_id, "verified": verified,
+            "updated": True, "mutation_status": "succeeded", "status": "verified" if verified else "verification_failed",
+            "reason": "" if verified else "comment was updated but body verification differed"}
+
+
 def workflow_dispatch(repo: str, workflow: str, *, ref: str, inputs: dict | None = None, write: bool = False,
                       client: Client | None = None) -> dict:
     """Trigger ``workflow_dispatch`` after confirming the workflow is active."""
@@ -972,34 +1101,122 @@ def pr_body_set(repo: str, number: int, *, new: str, write: bool = False, client
 _PR_EDIT_STATES = ("open", "closed")
 
 
-def pr_edit(repo: str, number: int, *, title: str | None = None, base: str | None = None,
-            state: str | None = None, write: bool = False, client: Client | None = None) -> dict:
-    """REST PATCH of a PR's ``title``, ``base`` branch, and/or open/closed ``state``.
+def _skip_one_break(text: str, index: int, step: int) -> int:
+    """Move across one CR, LF, or CRLF from a break character."""
+    if step < 0:
+        if text[index] == "\n":
+            index -= 1
+            if index >= 0 and text[index] == "\r":
+                index -= 1
+        else:
+            index -= 1
+        return index
+    if text[index] == "\r":
+        index += 1
+        if index < len(text) and text[index] == "\n":
+            index += 1
+    else:
+        index += 1
+    return index
 
-    At least one of ``title``, ``base``, ``state`` is required (else
-    ``GhOpsError``, CLI exit 2). Changing draft <-> ready for review is a
-    GraphQL-only operation (``markPullRequestReadyForReview`` /
-    ``convertPullRequestToDraft``) and is out of scope here. A dry run
-    reports current -> new for each requested field; with ``write=True``,
-    it PATCHes only those fields, then re-reads the PR to verify.
+
+def _block_boundary(text: str, index: int, before: bool) -> bool:
+    """True at a body edge or a blank line bordering this section."""
+    if before:
+        if index == 0:
+            return True
+        if text[index - 1] not in "\r\n":
+            return False
+        prev = _skip_one_break(text, index - 1, -1)
+        return prev < 0 or text[prev] in "\r\n"
+    if index == len(text):
+        return True
+    if text[index] not in "\r\n":
+        return False
+    nxt = _skip_one_break(text, index, 1)
+    return nxt >= len(text) or text[nxt] in "\r\n"
+
+
+def _block_already_appended(body: str, block: str) -> bool:
+    """True when the exact block is the whole body or a blank-line section.
+
+    A shorter overlap, including a match inside a longer line, does not count.
     """
-    fields = {key: value for key, value in (("title", title), ("base", base), ("state", state)) if value is not None}
-    if not fields:
-        raise GhOpsError("pass at least one of --title, --base, --state")
+    start = 0
+    while True:
+        found = body.find(block, start)
+        if found < 0:
+            return False
+        if _block_boundary(body, found, True) and _block_boundary(body, found + len(block), False):
+            return True
+        start = found + 1
+
+
+def pr_edit(repo: str, number: int, *, title: str | None = None, base: str | None = None,
+            state: str | None = None, body: str | None = None, append_body: str | None = None,
+            write: bool = False, client: Client | None = None) -> dict:
+    """Edit PR metadata together; append_body keeps existing text and skips exact repeats.
+
+    Appends re-read the snapshot immediately before PATCH and refuse observed
+    concurrent changes. GitHub's PR PATCH has no atomic compare-and-swap.
+    Mutation and verification outcomes are reported separately; never auto-retry.
+    """
+    fields = {key: value for key, value in (("title", title), ("base", base), ("state", state), ("body", body))
+              if value is not None}
+    if body is not None and append_body is not None:
+        raise GhOpsError("--body-file and --append-body-file are mutually exclusive")
+    if not fields and append_body is None:
+        raise GhOpsError("pass at least one of --title, --base, --state, --body-file, --append-body-file")
     if state is not None and state not in _PR_EDIT_STATES:
         raise GhOpsError(f"--state must be one of {', '.join(_PR_EDIT_STATES)}")
+    if any(value is not None and (not isinstance(value, str) or not value.strip()) for value in (title, base)):
+        raise GhOpsError("title and base must not be empty")
+    if body is not None and not isinstance(body, str):
+        raise GhOpsError("body must be text")
+    if append_body is not None and (not isinstance(append_body, str) or not append_body.strip()):
+        raise GhOpsError("append body must not be empty")
     client = _client(client)
     path = f"/repos/{_repo(repo)}/pulls/{int(number)}"
     pr = client.get(path)
-    current = {"title": pr.get("title"), "base": (pr.get("base") or {}).get("ref"), "state": pr.get("state")}
+
+    def snapshot(pr):
+        return {"title": pr.get("title"), "base": (pr.get("base") or {}).get("ref"),
+                "state": pr.get("state"), "body": pr.get("body") or ""}
+
+    current = snapshot(pr)
+    if append_body is not None:
+        block = append_body.strip("\r\n")
+        old = current["body"]
+        fields["body"] = old if _block_already_appended(old, block) else (old.rstrip() + "\n\n" if old.strip() else "") + block
     report = {key: {"from": current[key], "to": value} for key, value in fields.items()}
+    out = {"ok": True, "dry_run": not write, "changed": False, "fields": report,
+           "mutation_status": "not_attempted", "verification_status": "not_attempted"}
+    if all(current[key] == value for key, value in fields.items()):
+        return {**out, "status": "already_satisfied", "reason": "unchanged"}
     if not write:
-        return {"ok": True, "dry_run": True, "changed": False, "fields": report}
-    client.request("PATCH", path, fields)
-    updated = client.get(path)
-    now = {"title": updated.get("title"), "base": (updated.get("base") or {}).get("ref"), "state": updated.get("state")}
-    verified = all(now[key] == value for key, value in fields.items())
-    return {"ok": verified, "dry_run": False, "changed": True, "fields": report, "verified": verified,
+        return {**out, "status": "planned"}
+    if append_body is not None:
+        fresh = client.get(path)
+        if snapshot(fresh) != current or (fresh.get("head") or {}).get("sha") != (pr.get("head") or {}).get("sha"):
+            return {**out, "ok": False, "status": "stale", "reason": "PR changed before append; inspect and re-plan"}
+    try:
+        client.request("PATCH", path, fields)
+    except GhOpsError as error:
+        uncertain = error.http_status is None or error.http_status >= 500
+        return {**out, "ok": False, "changed": None if uncertain else False,
+                "status": "mutation_uncertain" if uncertain else "mutation_failed",
+                "mutation_status": "uncertain" if uncertain else "failed",
+                "reason": "PR PATCH failed; inspect before retrying", "http_status": error.http_status}
+    out.update(changed=True, mutation_status="succeeded")
+    try:
+        updated = snapshot(client.get(path))
+    except GhOpsError:
+        return {**out, "ok": False, "verified": False, "status": "verification_failed",
+                "verification_status": "failed", "reason": "PR updated but readback failed; inspect before retrying"}
+    verified = all(updated[key] == value for key, value in fields.items())
+    return {**out, "ok": verified, "verified": verified,
+            "status": "verified" if verified else "verification_mismatch",
+            "verification_status": "verified" if verified else "mismatch",
             "reason": "" if verified else "PR fields do not match the requested values after the update"}
 
 
@@ -1393,6 +1610,325 @@ def commit_files(repo: str, branch: str, files: dict, message: str, *, deletes: 
             **({} if verified else {"reason": "branch or tree does not match after the write"})}
 
 
+# --- coordinated multi-repository changes ----------------------------------------
+
+def _fleet_specs(manifest: dict, root: str = ".") -> list[dict]:
+    """Load every local input and group duplicate repositories before any I/O."""
+    if not isinstance(manifest, dict) or manifest.get("schema") != "gh-ops-fleet/1":
+        raise GhOpsError("expected schema gh-ops-fleet/1")
+    rows = manifest.get("repositories")
+    if not isinstance(rows, list) or not 1 <= len(rows) <= 100:
+        raise GhOpsError("repositories must contain 1..100 entries")
+    grouped = {}
+    allowed = {"repository", "branch", "base", "target_pr", "sources", "files", "deletes", "title", "append_body", "message"}
+    for row in rows:
+        if not isinstance(row, dict) or set(row) - allowed:
+            raise GhOpsError("invalid fleet entry fields")
+        if not isinstance(row.get("repository"), str):
+            raise GhOpsError("repository must be text")
+        repo = _repo(row["repository"])
+        group = grouped.setdefault(repo, {"repository": repo, "base": row.get("base", "main"),
+                                         "files": {}, "deletes": [], "sources": [], "append_blocks": []})
+        for key in ("branch", "base", "target_pr", "title", "message"):
+            if key not in row:
+                continue
+            value = row[key]
+            if key == "target_pr":
+                if type(value) is not int or value < 1:
+                    raise GhOpsError("target_pr must be a positive integer")
+            elif not isinstance(value, str) or not value.strip():
+                raise GhOpsError(f"{key} must be nonempty text")
+            if key in group and group[key] != value:
+                raise GhOpsError(f"conflicting {key} for {repo}")
+            group[key] = value
+        sources = row.get("sources", [])
+        deletes = row.get("deletes", [])
+        files = row.get("files", {})
+        if not isinstance(sources, list) or not isinstance(deletes, list) or not isinstance(files, dict):
+            raise GhOpsError("sources/deletes must be lists, files must be an object")
+        for number in sources:
+            if type(number) is not int or number < 1:
+                raise GhOpsError("source PR numbers must be positive integers")
+            if number not in group["sources"]:
+                group["sources"].append(number)
+        for path in deletes:
+            path = _commit_files_path(path)
+            if path not in group["deletes"]:
+                group["deletes"].append(path)
+        for path, content in files.items():
+            path = _commit_files_path(path)
+            if not isinstance(content, dict) or len(content) != 1:
+                raise GhOpsError("each file must specify exactly one of text or from")
+            if "text" in content and isinstance(content["text"], str):
+                data = content["text"].encode("utf-8")
+            elif "from" in content and isinstance(content["from"], str):
+                # Local inputs are resolved relative to the manifest, not cwd.
+                source = Path(root) / content["from"]
+                with source.open("rb") as stream:
+                    data = stream.read(_COMMIT_FILE_BYTES + 1)
+            else:
+                raise GhOpsError("file input must be text or from")
+            if len(data) > _COMMIT_FILE_BYTES:
+                raise GhOpsError("file input exceeds size limit")
+            if path in group["files"] and group["files"][path] != data:
+                raise GhOpsError(f"conflicting file changes for {repo}:{path}")
+            group["files"][path] = data
+        if "append_body" in row:
+            text = row["append_body"]
+            if not isinstance(text, str) or not text.strip():
+                raise GhOpsError("append_body must be nonempty text")
+            if text not in group["append_blocks"]:
+                group["append_blocks"].append(text)
+    for group in grouped.values():
+        _validate_branch_name(group["base"], field="base")
+        if group.get("branch") is not None:
+            _validate_branch_name(group["branch"], field="branch")
+        if set(group["files"]) & set(group["deletes"]):
+            raise GhOpsError("a path cannot be both written and deleted")
+        if len(group["files"]) + len(group["deletes"]) > _COMMIT_FILES_MAX:
+            raise GhOpsError("too many paths for one repository")
+        if len(group["sources"]) > 100:
+            raise GhOpsError("too many source PRs")
+        if group.get("target_pr") in group["sources"]:
+            raise GhOpsError("target PR cannot also be a source")
+    return list(grouped.values())
+
+
+def _fleet_pr(client: Client, repo: str, number: int, base: str, *, target: bool = False) -> dict:
+    pr = client.get(f"/repos/{repo}/pulls/{number}")
+    head = pr.get("head") or {}
+    if not isinstance(pr, dict):
+        raise GhOpsError("invalid PR response")
+    if (type(pr.get("number")) is not int or pr["number"] != number
+            or ((pr.get("base") or {}).get("repo") or {}).get("full_name") != repo
+            or (pr.get("base") or {}).get("ref") != base
+            or (head.get("repo") or {}).get("full_name") != repo
+            or not re.fullmatch(r"[0-9a-f]{40}", head.get("sha") or "")
+            or pr.get("state") not in ("open", "closed")):
+        raise GhOpsError("PR identity/base mismatch; fork sources require an explicit separate workflow")
+    _validate_branch_name(head.get("ref"), field="PR head branch")
+    if target and (pr["state"] != "open" or pr.get("merged")):
+        raise GhOpsError("target PR must be open and unmerged")
+    return pr
+
+
+def _fleet_contains(client: Client, repo: str, source: str, target: str) -> bool:
+    if source == target:
+        return True
+    data = client.get(f"/repos/{repo}/compare/{source}...{target}")
+    return (data.get("status") in ("ahead", "identical")
+            and (data.get("base_commit") or {}).get("sha") == source
+            and (data.get("merge_base_commit") or {}).get("sha") == source)
+
+
+def _fleet_ref(client: Client, repo: str, branch: str, *, optional: bool = False) -> str | None:
+    response = client.request("GET", f"/repos/{repo}/git/ref/heads/{urllib.parse.quote(branch, safe='')}",
+                              expect=(200, 404) if optional else (200,))
+    if response.status == 404:
+        return None
+    sha = ((response.data or {}).get("object") or {}).get("sha")
+    if not isinstance(sha, str) or not re.fullmatch(r"[0-9a-f]{40}", sha):
+        raise GhOpsError("invalid branch SHA")
+    return sha
+
+
+def _fleet_plan(spec: dict, client: Client) -> dict:
+    repo, base = spec["repository"], spec["base"]
+    default = client.get(f"/repos/{repo}")["default_branch"]
+    opens = client.paginate(f"/repos/{repo}/pulls", params={"state": "open", "base": base})
+    number = spec.get("target_pr")
+    if number is None:
+        # Exact requested branch wins; otherwise reuse the sole main-bound PR.
+        matches = [p for p in opens if (p.get("head") or {}).get("ref") == spec.get("branch")] if spec.get("branch") else []
+        candidates = matches or opens
+        if len(candidates) > 1:
+            raise GhOpsError("multiple open PRs; specify target_pr and explicit sources")
+        number = candidates[0]["number"] if candidates else None
+    target = _fleet_pr(client, repo, number, base, target=True) if number else None
+    branch = target["head"]["ref"] if target else spec.get("branch")
+    if not branch or branch == default or branch == base:
+        raise GhOpsError("a non-base, non-default work branch is required")
+    if target and spec.get("branch") and branch != spec["branch"]:
+        raise GhOpsError("requested branch differs from existing target PR")
+    if not target and not spec.get("title"):
+        raise GhOpsError("title is required when creating a PR")
+    # Refuse a work branch already attached to an open PR against another base.
+    attached = pr_for_branch(repo, branch, state="open", client=client)["pulls"]
+    if any(p["number"] != number for p in attached):
+        raise GhOpsError("work branch already has another open PR")
+    head = _fleet_ref(client, repo, branch, optional=True)
+    if target and head != target["head"]["sha"]:
+        raise GhOpsError("target PR head differs from its branch")
+    sources = [_fleet_pr(client, repo, n, base) for n in spec["sources"]]
+    if any(p["number"] == number or p["head"]["ref"] == branch for p in sources):
+        raise GhOpsError("source PR cannot be the target or share its branch")
+    return {"repository": repo, "base": base, "branch": branch, "target_pr": number,
+            "head": head, "create_branch": head is None,
+            "base_sha": _fleet_ref(client, repo, base), "sources": sources}
+
+
+def _fleet_apply_repo(spec: dict, plan: dict, client: Client) -> dict:
+    repo, branch, base = plan["repository"], plan["branch"], plan["base"]
+    out = {"repository": repo, "ok": False, "status": "in_progress", "steps": [],
+           "target_pr": plan["target_pr"], "closed": []}
+    stage = "preflight"
+    try:
+        # Detect PR/ref changes after the batch-wide planning pass.
+        head = _fleet_ref(client, repo, branch, optional=True)
+        if head != plan["head"]:
+            raise GhOpsError("branch changed since planning")
+        if plan["target_pr"]:
+            target = _fleet_pr(client, repo, plan["target_pr"], base, target=True)
+            if target["head"]["sha"] != head:
+                raise GhOpsError("target changed since planning")
+        for source in plan["sources"]:
+            current = _fleet_pr(client, repo, source["number"], base)
+            if current["head"]["sha"] != source["head"]["sha"]:
+                raise GhOpsError("source changed since planning")
+        if head is None:
+            stage = "create_branch"
+            client.request("POST", f"/repos/{repo}/git/refs",
+                           {"ref": "refs/heads/" + branch, "sha": plan["base_sha"]}, expect=(201,))
+            head = _fleet_ref(client, repo, branch)
+            if head != plan["base_sha"]:
+                raise GhOpsError("created branch identity mismatch")
+            out["steps"].append({"stage": stage, "status": "verified"})
+        for source in plan["sources"]:
+            stage = "merge_source"
+            sha = source["head"]["sha"]
+            if not _fleet_contains(client, repo, sha, head):
+                if _fleet_ref(client, repo, branch) != head:
+                    raise GhOpsError("target branch moved before source merge")
+                response = client.request("POST", f"/repos/{repo}/merges",
+                    {"base": branch, "head": sha, "commit_message": f"Consolidate PR #{source['number']}"},
+                    expect=(201, 204))
+                expected = head if response.status == 204 else (response.data or {}).get("sha")
+                head = _fleet_ref(client, repo, branch)
+                if head != expected or not _fleet_contains(client, repo, sha, head):
+                    raise GhOpsError("source merge not verified")
+            out["steps"].append({"stage": stage, "number": source["number"], "sha": sha, "status": "verified"})
+        if spec["files"] or spec["deletes"]:
+            stage = "commit_files"
+            receipt = commit_files(repo, branch, spec["files"], spec.get("message", "Apply coordinated changes"),
+                                   deletes=tuple(spec["deletes"]), expect_head=head, write=True, client=client)
+            out["steps"].append({"stage": stage, **receipt})
+            if not receipt["ok"]:
+                raise GhOpsError("file commit did not verify")
+            head = receipt.get("commit_sha", head)
+        stage = "ensure_pr"
+        # Re-query immediately before POST, so re-running a timed-out create
+        # normally discovers the PR instead of creating another one.
+        attached = pr_for_branch(repo, branch, state="open", client=client)["pulls"]
+        if len(attached) > 1:
+            raise GhOpsError("more than one PR attached to target branch")
+        number = attached[0]["number"] if attached else None
+        if plan["target_pr"] and number != plan["target_pr"]:
+            raise GhOpsError("target PR disappeared or was replaced")
+        if number is None:
+            created = client.request("POST", f"/repos/{repo}/pulls",
+                {"head": branch, "base": base, "title": spec["title"], "body": ""}, expect=(201,)).data
+            number = created.get("number")
+            if type(number) is not int or number < 1:
+                raise GhOpsError("PR creation returned no valid identity; inspect before retrying")
+        out["target_pr"] = number
+        target = _fleet_pr(client, repo, number, base, target=True)
+        if target["head"]["sha"] != head:
+            raise GhOpsError("target PR head differs from applied commit")
+        out["steps"].append({"stage": stage, "number": number, "status": "verified"})
+        blocks = list(spec["append_blocks"])
+        if plan["sources"]:
+            blocks.append("## Consolidated scope (ghops)\n" + "\n".join(
+                f"- Includes #{p['number']} at `{p['head']['sha']}`." for p in plan["sources"]))
+        if blocks or spec.get("title") is not None:
+            stage = "edit_target"
+            receipt = pr_edit(repo, number, title=spec.get("title"),
+                              append_body="\n\n".join(blocks) if blocks else None, write=True, client=client)
+            out["steps"].append({"stage": stage, **receipt})
+            if not receipt["ok"]:
+                raise GhOpsError("target metadata update did not verify")
+        stage = "verify_sources"
+        # Verify ALL sources before closing the first one. CI remains separate;
+        # this proves captured commit ancestry, not test success or main merge.
+        for source in plan["sources"]:
+            current = _fleet_pr(client, repo, source["number"], base)
+            if current["head"]["sha"] != source["head"]["sha"] or not _fleet_contains(client, repo, current["head"]["sha"], head):
+                raise GhOpsError("source changed or is not contained; no further PRs will be closed")
+        for source in plan["sources"]:
+            n = source["number"]
+            stage = "close_source"
+            target = _fleet_pr(client, repo, number, base, target=True)
+            current = _fleet_pr(client, repo, n, base)
+            if target["head"]["sha"] != head or current["head"]["sha"] != source["head"]["sha"]:
+                raise GhOpsError("PR head moved before closure")
+            if current["state"] == "closed":
+                out["closed"].append(n)
+                continue
+            marker = f"<!-- gh-ops:consolidate:{number}:{n}:{source['head']['sha']} -->"
+            body = f"{marker}\nIncluded in #{number} at `{source['head']['sha']}`. Closing this PR in favour of #{number}."
+            comments = client.paginate(f"/repos/{repo}/issues/{n}/comments")
+            if not any(c.get("body") == body for c in comments):
+                stage = "comment_source"
+                receipt = issue_comment_create(repo, n, body=body, write=True, client=client)
+                out["steps"].append({"stage": stage, "number": n, **receipt})
+                if not receipt["ok"]:
+                    raise GhOpsError("source comment did not verify; source left open")
+            # The comment request can take time: inspect heads again before PATCH.
+            stage = "close_source"
+            latest = _fleet_pr(client, repo, n, base)
+            target = _fleet_pr(client, repo, number, base, target=True)
+            if latest["head"]["sha"] != source["head"]["sha"] or target["head"]["sha"] != head:
+                raise GhOpsError("PR head moved after comment; source left open")
+            receipt = pr_edit(repo, n, state="closed", write=True, client=client)
+            out["steps"].append({"stage": stage, "number": n, **receipt})
+            if not receipt["ok"]:
+                raise GhOpsError("source closure did not verify")
+            out["closed"].append(n)
+        return {**out, "ok": True, "status": "verified", "head_sha": head}
+    except (GhOpsError, OSError, ValueError) as error:
+        return {**out, "status": "needs_inspection", "failed_stage": stage,
+                "reason": scrub(str(error)), "remaining_sources": [p["number"] for p in plan["sources"] if p["number"] not in out["closed"]]}
+
+
+def fleet_apply(manifest: dict, *, root: str = ".", write: bool = False, jobs: int = 1,
+                client: Client | None = None) -> dict:
+    """One coordinated run: group files per repo, reuse PRs, merge explicit sources.
+
+    Planning is batch-wide and read-only. Independent repositories may run in
+    parallel; a repository's dependent writes stay sequential. Partial results
+    are returned without rollback or blind write retries. No PR is merged to main.
+    """
+    if type(jobs) is not int or not 1 <= jobs <= 8:
+        raise GhOpsError("jobs must be in 1..8")
+    specs = _fleet_specs(manifest, root)
+    client = _client(client)
+    plans = []
+    for spec in specs:
+        try:
+            plan = _fleet_plan(spec, client)
+            plans.append((spec, {"ok": True, "status": "planned", **plan}))
+        except GhOpsError as error:
+            plans.append((spec, {"repository": spec["repository"], "ok": False, "status": "blocked", "reason": scrub(str(error))}))
+    if write:
+        def apply(pair):
+            spec, plan = pair
+            return _fleet_apply_repo(spec, plan, client) if plan["ok"] else plan
+        if jobs == 1:
+            rows = [apply(pair) for pair in plans]
+        else:
+            from concurrent.futures import ThreadPoolExecutor
+            with ThreadPoolExecutor(max_workers=jobs) as pool:
+                rows = list(pool.map(apply, plans))
+    else:
+        rows = [{"repository": spec["repository"], "files": sorted(spec["files"]), "deletes": spec["deletes"],
+                 "source_prs": spec["sources"], **plan} for spec, plan in plans]
+        # Avoid returning entire PR bodies, credentials or local input paths.
+        for row in rows:
+            if "sources" in row:
+                row["sources"] = [{"number": p["number"], "sha": p["head"]["sha"]} for p in row["sources"]]
+    return {"schema": "gh-ops-fleet-result/1", "ok": all(row["ok"] for row in rows), "dry_run": not write,
+            "repositories": rows, "total": len(rows), "succeeded": sum(row["ok"] for row in rows)}
+
+
 _GIT_COMMIT_NETWORK_HINTS = (
     "could not resolve host", "connection timed out", "connection refused", "network is unreachable",
     "temporary failure in name resolution", "could not read from remote repository",
@@ -1603,6 +2139,71 @@ def git_commit(message_file: str, files: list[str], *, trailers: list[str] | Non
             return {"ok": False, "sha": sha, "transcript": transcript, "reason": "git push failed"}
         pushed = True
     return {"ok": True, "sha": sha, "pushed": pushed, "transcript": transcript}
+
+
+def git_push(*, cwd: str = ".", remote: str = "origin", branch: str | None = None,
+             write: bool = False, timeout: float = 60) -> dict:
+    """Push the captured HEAD to one named remote branch, then verify its tip.
+
+    No new commit, force, retry, tag push or submodule push. A failed push may
+    have reached the server, so callers must inspect uncertainty before retrying.
+    Credentials/remote URLs and raw transport output never enter the receipt.
+    """
+    if not isinstance(remote, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", remote):
+        raise GhOpsError("remote must be a configured remote name")
+    if isinstance(timeout, bool) or not isinstance(timeout, (int, float)) or not 0 < timeout < float("inf"):
+        raise GhOpsError("timeout must be positive and finite")
+    deadline = time.monotonic() + timeout
+
+    def git(args, *, network=False, ok=(0,)):
+        left = deadline - time.monotonic()
+        if left <= 0:
+            raise gh_identity.GitInspectionError("git push operation timed out")
+        raw, truncated, code = gh_identity._git_run(cwd, args, timeout=left, max_bytes=65536,
+                                                   inherit_auth=network, ok=ok)
+        if truncated:
+            raise gh_identity.GitInspectionError("git output limit exceeded")
+        return raw.decode("utf-8", "strict").strip(), code
+
+    current, _ = git(["branch", "--show-current"])
+    target = branch if branch is not None else current
+    if not target or target.startswith("-"):
+        raise GhOpsError("detached HEAD requires an explicit --branch")
+    if git(["check-ref-format", "refs/heads/" + target], ok=(0, 1, 128))[1] != 0:
+        raise GhOpsError("invalid target branch")
+    sha, _ = git(["rev-parse", "--verify", "HEAD^{commit}"])
+    if not re.fullmatch(r"[0-9a-f]{40}|[0-9a-f]{64}", sha):
+        raise GhOpsError("invalid HEAD identity")
+    # A pushurl can differ from the fetch URL. Verify against the sole push URL,
+    # never against the remote name's potentially different fetch destination.
+    urls, _ = git(["remote", "get-url", "--push", "--all", remote])
+    if len(urls.splitlines()) != 1 or not urls or urls.startswith("-"):
+        raise GhOpsError("remote must have exactly one push URL")
+    ref = "refs/heads/" + target
+    out = {"ok": True, "dry_run": not write, "pushed": False, "remote": remote,
+           "branch": target, "head_sha": sha, "mutation_status": "not_attempted",
+           "verification_status": "not_attempted", "status": "planned"}
+    if not write:
+        return out
+    try:
+        _, code = git(["push", "--porcelain", "--no-force", "--no-follow-tags", "--recurse-submodules=no",
+                       "--", remote, sha + ":" + ref], network=True, ok=tuple(range(256)))
+    except (gh_identity.GitInspectionError, UnicodeError):
+        code = -1
+    if code != 0:
+        return {**out, "ok": False, "pushed": None, "status": "mutation_uncertain",
+                "mutation_status": "uncertain", "reason": "push failed or timed out; inspect remote before retrying"}
+    out.update(pushed=True, mutation_status="succeeded")
+    try:
+        tip, _ = git(["ls-remote", "--exit-code", "--refs", "--", urls, ref], network=True)
+    except (gh_identity.GitInspectionError, UnicodeError):
+        return {**out, "ok": False, "verified": False, "status": "verification_failed",
+                "verification_status": "failed", "reason": "push succeeded but readback failed; inspect before retrying"}
+    verified = tip.splitlines() == [sha + "\t" + ref]
+    return {**out, "ok": verified, "verified": verified,
+            "status": "verified" if verified else "verification_mismatch",
+            "verification_status": "verified" if verified else "mismatch",
+            "reason": "" if verified else "remote tip differs from pushed HEAD"}
 
 
 def sync_main(*, base: str = "main", remote: str = "origin", write: bool = False, push: bool = False,
@@ -2172,6 +2773,17 @@ def url_raw(repo: str, ref: str, path: str) -> dict:
 # --- CLI adapter ----------------------------------------------------------------
 
 def _render(command: str, result: dict) -> str:
+    if command == "fleet-apply":
+        mode = "plan" if result["dry_run"] else "apply"
+        lines = [f"{'OK' if result['ok'] else 'NG'} fleet-{mode}: {result['succeeded']}/{result['total']} repositories"]
+        for row in result["repositories"]:
+            target = f" #{row['target_pr']}" if row.get("target_pr") else ""
+            lines.append(f"{row['repository']}{target}: {row['status']} closed={row.get('closed', [])}")
+            if row.get("reason"):
+                lines.append(f"  {row.get('failed_stage', 'preflight')}: {row['reason']}")
+            if row.get("remaining_sources"):
+                lines.append(f"  remaining sources: {row['remaining_sources']}")
+        return "\n".join(lines)
     if command == "repo-counts":
         return "\n".join(["repo  open issues  open PRs  commits"] + [
             f"{row['repo']}  {row['open_issues']}  {row['open_prs']}  {row['commits']}"
@@ -2282,17 +2894,81 @@ def _render(command: str, result: dict) -> str:
     return f"{status} {command} ({mode}){extra}" + (f": {reason}" if reason else "")
 
 
+def _read_body_exact(path: str) -> str:
+    with open(path, encoding="utf-8", newline="") as stream:
+        return stream.read()
+
+
 def _read_text(path: str) -> str:
     text = Path(path).read_text(encoding="utf-8")
     return text[:-1] if text.endswith("\n") else text
 
 
-def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="gh_ops.py", description=__doc__.split("\n\n")[0])
+def _error_hint(message: str) -> str:
+    """One next step for an exit-2 message. Does not repeat secrets."""
+    bracket = re.search(r"\[([^\[\]]+)\]\s*$", message)
+    if bracket:
+        return bracket.group(1)
+    rules = (
+        ("repository must look like",
+         "Pass OWNER/REPO using only letters, numbers, dot, underscore, and hyphen."),
+        ("SHA must be", "Pass 4 to 40 hexadecimal characters."),
+        ("--push requires --write", "Add --write. A dry run never pushes."),
+        ("pagination",
+         "The GitHub listing was incomplete. Narrow the query or retry; do not treat a partial list as complete."),
+        ("not found", "Check the repository, number, and token visibility, then retry."),
+    )
+    for needle, hint in rules:
+        if needle in message:
+            return hint
+    return ("Exit 2 is an input or communication error. Exit 1 means a checked condition failed. "
+            "Run: python -S gh_ops.py COMMAND --help")
+
+
+def _error_payload(message: str, *, exit_code: int = 2) -> dict:
+    return {"ok": False, "error": message, "exit_code": exit_code, "hint": _error_hint(message)}
+
+
+class GhOpsParser(argparse.ArgumentParser):
+    """Argument parser that can emit a JSON error object without changing the default stderr line."""
+
+    def __init__(self, *args, source_argv: list[str] | None = None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.source_argv = list(source_argv or [])
+
+    def error(self, message: str):
+        if "--json-errors" not in self.source_argv:
+            super().error(message)
+        scrubbed = scrub(str(message))
+        self.print_usage(sys.stderr)
+        print(f"{self.prog}: error: {scrubbed}", file=sys.stderr)
+        print(json.dumps(_error_payload(scrubbed), ensure_ascii=False))
+        self.exit(2)
+
+
+def _command_parser(subparsers, *args, **kwargs):
+    kwargs.setdefault("allow_abbrev", False)
+    return subparsers.add_parser(*args, **kwargs)
+
+
+def build_parser(argv: list[str] | None = None) -> GhOpsParser:
+    source = list(sys.argv[1:] if argv is None else argv)
+    parser = GhOpsParser(
+        prog="gh_ops.py",
+        description=__doc__.split("\n\n")[0],
+        epilog=("Exit codes: 0 = ok, 1 = a checked condition was not met, "
+                "2 = input or communication error. Flags are not abbreviated. "
+                "--json prints the result on stdout. --json-errors prints "
+                "{ok:false, error, exit_code, hint} on stdout for exit 2 and keeps the stderr line."),
+        allow_abbrev=False,
+        source_argv=source,
+    )
     parser.add_argument("--json", action="store_true", help="print the full result as JSON")
+    parser.add_argument("--json-errors", action="store_true",
+                        help="on exit 2, also print {ok, error, exit_code, hint} as JSON on stdout")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    p = sub.add_parser("issue-comments", help="digest an issue/PR conversation (index, time, author, size, preview)")
+    p = _command_parser(sub, "issue-comments", help="digest an issue/PR conversation (index, time, author, size, preview)")
     p.add_argument("repo"); p.add_argument("number", type=int)
     p.add_argument("--since", help="ISO 8601; only comments updated at or after this time")
     p.add_argument("--last", type=int, help="keep only the last N rows")
@@ -2301,70 +2977,83 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--show", default="", help="comma-separated comment indexes to print in full")
     p.add_argument("--save", help="write the complete issue + comments JSON to this file")
 
-    p = sub.add_parser("comments-file", help="the same digest for comments already saved to a JSON file (offline)")
+    p = _command_parser(sub, "comments-file", help="the same digest for comments already saved to a JSON file (offline)")
     p.add_argument("path", help="JSON array of comments, or {\"comments\": [...]} from --save; - for stdin")
     p.add_argument("--last", type=int, help="keep only the last N rows")
     p.add_argument("--author", help="keep only comments by this login")
     p.add_argument("--preview", type=int, default=110, help="preview length in characters (default 110)")
     p.add_argument("--show", default="", help="comma-separated comment indexes to print in full")
 
-    p = sub.add_parser("open-prs", help="open PRs across all repositories of OWNER (none -> exit 1)")
+    p = _command_parser(sub, "open-prs", help="open PRs across all repositories of OWNER (none -> exit 1)")
     p.add_argument("owner"); p.add_argument("--org", action="store_true", help="OWNER is an organization")
     p.add_argument("--limit", type=int, default=50, help="rows to show (max 100)")
     p.add_argument("--repos", default="", help="comma-separated repository names: read each via /repos/OWNER/NAME/pulls instead of search")
 
     for command, help_text in (("repo-counts", "open Issue/PR counts and default-branch commit counts"),
                                ("open-issues", "all open Issues across repositories (excluding PRs)")):
-        p = sub.add_parser(command, help=help_text)
+        p = _command_parser(sub, command, help=help_text)
         p.add_argument("owner")
         p.add_argument("--org", action="store_true", help="OWNER is an organization")
         p.add_argument("--repos", default="", help="comma-separated repository names; bypass owner enumeration")
 
-    p = sub.add_parser("pr-for-branch", help="PRs whose head is BRANCH (none -> exit 1)")
+    p = _command_parser(sub, "pr-for-branch", help="PRs whose head is BRANCH (none -> exit 1)")
     p.add_argument("repo"); p.add_argument("branch", help="branch name, or owner:branch for a fork")
     p.add_argument("--state", choices=("open", "closed", "all"), default="all")
 
-    p = sub.add_parser("pr-status", help="one-line PR state")
+    p = _command_parser(sub, "pr-status", help="one-line PR state")
     p.add_argument("repo"); p.add_argument("number", type=int)
 
-    p = sub.add_parser("pr-observe", help="snapshot PR/head/check/review activity for later diffing")
+    p = _command_parser(sub, "pr-observe", help="snapshot PR/head/check/review activity for later diffing")
     p.add_argument("repo"); p.add_argument("number", type=int)
     p.add_argument("--min", type=int, default=1, dest="min_checks")
 
-    p = sub.add_parser("pr-diff", help="compare two saved pr-observe JSON snapshots offline")
+    p = _command_parser(sub, "pr-diff", help="compare two saved pr-observe JSON snapshots offline")
     p.add_argument("before"); p.add_argument("after")
 
-    p = sub.add_parser("checks-wait", help="wait for check runs on a SHA and report conclusions/annotations")
+    p = _command_parser(sub, "checks-wait", help="wait for check runs on a SHA and report conclusions/annotations")
     p.add_argument("repo"); p.add_argument("sha")
     p.add_argument("--min", type=int, default=1, dest="min_checks")
     p.add_argument("--timeout", type=float, default=600.0)
     p.add_argument("--interval", type=float, default=15.0)
 
-    p = sub.add_parser("runs", help="list workflow runs by head SHA or workflow file")
+    p = _command_parser(sub, "runs", help="list workflow runs by head SHA or workflow file")
     p.add_argument("repo")
     group = p.add_mutually_exclusive_group(required=True)
     group.add_argument("--sha"); group.add_argument("--workflow")
 
-    p = sub.add_parser("workflow-state", help="show a workflow's state (active, disabled_inactivity, ...)")
+    p = _command_parser(sub, "workflow-state", help="show a workflow's state (active, disabled_inactivity, ...)")
     p.add_argument("repo"); p.add_argument("workflow")
 
-    p = sub.add_parser("workflow-dispatch", help="trigger workflow_dispatch (needs --write)")
+    p = _command_parser(sub, "workflow-dispatch", help="trigger workflow_dispatch (needs --write)")
     p.add_argument("repo"); p.add_argument("workflow")
     p.add_argument("--ref", required=True)
     p.add_argument("--write", action="store_true")
 
-    p = sub.add_parser("issue-comment", help="create a top-level PR conversation comment (needs --write)")
+    p = _command_parser(sub, "issue-comment", help="create a top-level PR conversation comment (needs --write)")
     p.add_argument("repo"); p.add_argument("number", type=int)
     p.add_argument("--file", required=True, help="UTF-8 file containing the comment body (one trailing newline ignored)")
     p.add_argument("--write", action="store_true")
 
-    p = sub.add_parser("pr-body-replace", help="replace an anchor that occurs exactly once (needs --write)")
+    p = _command_parser(sub, "issue-comment-upsert",
+                       help="update AUTHOR's newest comment starting with MARKER, else create one (needs --write)")
+    p.add_argument("repo"); p.add_argument("number", type=int)
+    p.add_argument("--file", required=True, help="UTF-8 file with the comment body; it must start with --marker")
+    p.add_argument("--marker", required=True)
+    p.add_argument("--author", required=True, help="only this login's comments are updated, e.g. github-actions[bot]")
+    p.add_argument("--write", action="store_true")
+
+    p = _command_parser(sub, "variable-delete",
+                       help="delete one repository Actions variable; verify absence via complete scoped listing (needs --write)")
+    p.add_argument("repo"); p.add_argument("name")
+    p.add_argument("--write", action="store_true")
+
+    p = _command_parser(sub, "pr-body-replace", help="replace an anchor that occurs exactly once (needs --write)")
     p.add_argument("repo"); p.add_argument("number", type=int)
     p.add_argument("--old", required=True, help="file with the exact anchor text (one trailing newline ignored)")
     p.add_argument("--new", required=True, help="file with the replacement text (one trailing newline ignored)")
     p.add_argument("--write", action="store_true")
 
-    p = sub.add_parser("pr-merge", help="verify head/mergeability/checks, then merge (needs --write)")
+    p = _command_parser(sub, "pr-merge", help="verify head/mergeability/checks, then merge (needs --write)")
     p.add_argument("repo"); p.add_argument("number", type=int)
     p.add_argument("--sha", required=True)
     p.add_argument("--min-checks", type=int, default=1)
@@ -2375,7 +3064,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--message-file")
     p.add_argument("--write", action="store_true")
 
-    p = sub.add_parser("git-commit", help="git add FILE... and commit from --message-file (needs --write)")
+    p = _command_parser(sub, "git-commit", help="git add FILE... and commit from --message-file (needs --write)")
     p.add_argument("--message-file", required=True, metavar="FILE", help="path to the commit message")
     p.add_argument("files", nargs="+", metavar="FILE", help="paths to stage and commit")
     p.add_argument("--trailer", action="append", default=[], metavar="KEY: VALUE",
@@ -2385,7 +3074,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--push", action="store_true", help="git push origin HEAD after committing (needs --write)")
     p.add_argument("--write", action="store_true")
 
-    p = sub.add_parser("subtree-push", help="push the tree-verified subtree split of --prefix to a NEW remote "
+    p = _command_parser(sub, "subtree-push", help="push the tree-verified subtree split of --prefix to a NEW remote "
                        "branch as <sha>:refs/heads/<branch> (planned unless --write)")
     p.add_argument("--root", default=".", help="monorepo checkout (default: .)")
     p.add_argument("--prefix", required=True); p.add_argument("--remote", required=True)
@@ -2397,22 +3086,36 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--timeout", type=float, default=600.0, help="seconds per git command (default: 600)")
     p.add_argument("--write", action="store_true")
 
-    p = sub.add_parser("sync-main", help="merge origin/main into the checked-out PR branch (needs --write)")
+    p = _command_parser(sub, "git-push", help="push existing HEAD without a new commit; verify remote tip (needs --write)")
+    p.add_argument("--root", default="."); p.add_argument("--remote", default="origin")
+    p.add_argument("--branch", help="target branch (default: current local branch)")
+    p.add_argument("--timeout", type=float, default=60)
+    p.add_argument("--write", action="store_true")
+
+    p = _command_parser(sub, "sync-main", help="merge origin/main into the checked-out PR branch (needs --write)")
     p.add_argument("--base", default="main"); p.add_argument("--remote", default="origin")
     p.add_argument("--push", action="store_true"); p.add_argument("--write", action="store_true")
 
-    p = sub.add_parser("pr-body-set", help="replace the whole PR body with a file's text (needs --write)")
+    p = _command_parser(sub, "fleet-apply", help="coordinate multi-repository files/PR consolidation from a JSON manifest")
+    p.add_argument("--manifest", required=True)
+    p.add_argument("--jobs", type=int, default=1, help="independent repositories in parallel, 1..8")
+    p.add_argument("--write", action="store_true")
+
+    p = _command_parser(sub, "pr-body-set", help="replace the whole PR body with a file's text (needs --write)")
     p.add_argument("repo"); p.add_argument("number", type=int)
     p.add_argument("--file", required=True, help="file with the full replacement body (one trailing newline ignored)")
     p.add_argument("--write", action="store_true")
 
-    p = sub.add_parser("pr-edit", help="PATCH a PR's title/base/state (needs --write); draft/ready-for-review needs GraphQL, out of scope here")
+    p = _command_parser(sub, "pr-edit", help="edit PR title/base/state/body together; append preserves existing text (needs --write)")
     p.add_argument("repo"); p.add_argument("number", type=int)
     p.add_argument("--title"); p.add_argument("--base")
     p.add_argument("--state", choices=_PR_EDIT_STATES)
+    body_group = p.add_mutually_exclusive_group()
+    body_group.add_argument("--body-file", help="full replacement body, UTF-8")
+    body_group.add_argument("--append-body-file", help="append UTF-8 text once, preserving existing body")
     p.add_argument("--write", action="store_true")
 
-    p = sub.add_parser("pr-retarget", help="change a stacked PR's base (planned unless --write)")
+    p = _command_parser(sub, "pr-retarget", help="change a stacked PR's base (planned unless --write)")
     p.add_argument("repo"); p.add_argument("number", type=int)
     p.add_argument("--base", default="main", help="new base branch name (default: main)")
     p.add_argument("--allow-unmerged-commits", action="store_true",
@@ -2423,7 +3126,7 @@ def build_parser() -> argparse.ArgumentParser:
                    help="optional: refuse --write unless the PR head still matches this SHA before PATCH")
     p.add_argument("--write", action="store_true")
 
-    p = sub.add_parser("file-put", help="create or update one file via the contents API (needs --write)")
+    p = _command_parser(sub, "file-put", help="create or update one file via the contents API (needs --write)")
     p.add_argument("repo"); p.add_argument("path", help="path of the file inside the repository")
     p.add_argument("--from", dest="from_path", required=True, help="local file to read the new content from")
     p.add_argument("--branch", required=True)
@@ -2432,7 +3135,7 @@ def build_parser() -> argparse.ArgumentParser:
                    help="permit writing directly to the repository's default branch")
     p.add_argument("--write", action="store_true")
 
-    p = sub.add_parser("commit-files", help="ONE commit of several files via the Git Data API, no clone "
+    p = _command_parser(sub, "commit-files", help="ONE commit of several files via the Git Data API, no clone "
                                              "(planned unless --write; fast-forward only; verified)")
     p.add_argument("repo"); p.add_argument("--branch", required=True)
     p.add_argument("--file", action="append", default=[], metavar="PATH[=LOCAL]",
@@ -2444,33 +3147,33 @@ def build_parser() -> argparse.ArgumentParser:
                    help="permit writing directly to the repository's default branch")
     p.add_argument("--write", action="store_true")
 
-    p = sub.add_parser("url", help="build a github.com / api.github.com URL for something; no network access")
+    p = _command_parser(sub, "url", help="build a github.com / api.github.com URL for something; no network access")
     url_sub = p.add_subparsers(dest="url_kind", required=True)
 
-    up = url_sub.add_parser("pr", help="a pull request, or one of its checks/files/commits tabs")
+    up = _command_parser(url_sub, "pr", help="a pull request, or one of its checks/files/commits tabs")
     up.add_argument("repo"); up.add_argument("number", type=int)
     up.add_argument("--tab", choices=("checks", "files", "commits"))
 
-    up = url_sub.add_parser("compare", help="compare BASE...HEAD")
+    up = _command_parser(url_sub, "compare", help="compare BASE...HEAD")
     up.add_argument("repo"); up.add_argument("base"); up.add_argument("head")
 
-    up = url_sub.add_parser("blame", help="blame view of PATH at REF")
+    up = _command_parser(url_sub, "blame", help="blame view of PATH at REF")
     up.add_argument("repo"); up.add_argument("ref"); up.add_argument("path")
     up.add_argument("--line", type=int)
 
-    up = url_sub.add_parser("history", help="commit history of PATH at REF")
+    up = _command_parser(url_sub, "history", help="commit history of PATH at REF")
     up.add_argument("repo"); up.add_argument("ref"); up.add_argument("path")
 
-    up = url_sub.add_parser("runs", help="workflow run list, optionally filtered by branch/event/status")
+    up = _command_parser(url_sub, "runs", help="workflow run list, optionally filtered by branch/event/status")
     up.add_argument("repo")
     up.add_argument("--workflow", help="workflow file name, e.g. ci.yml")
     up.add_argument("--branch"); up.add_argument("--event"); up.add_argument("--status")
 
-    up = url_sub.add_parser("search", help="search results (pullrequests searches issues with is:pr added)")
+    up = _command_parser(url_sub, "search", help="search results (pullrequests searches issues with is:pr added)")
     up.add_argument("query")
     up.add_argument("--type", choices=tuple(_SEARCH_ENDPOINTS), default="code")
 
-    up = url_sub.add_parser("raw", help="raw file content of PATH at REF")
+    up = _command_parser(url_sub, "raw", help="raw file content of PATH at REF")
     up.add_argument("repo"); up.add_argument("ref"); up.add_argument("path")
     return parser
 
@@ -2511,6 +3214,11 @@ def run_command(args: argparse.Namespace, client: Client | None = None) -> dict:
     if command == "issue-comment":
         return issue_comment_create(args.repo, args.number, body=_read_text(args.file),
                                     write=args.write, client=client)
+    if command == "issue-comment-upsert":
+        return issue_comment_upsert(args.repo, args.number, body=_read_text(args.file), marker=args.marker,
+                                    author=args.author, write=args.write, client=client)
+    if command == "variable-delete":
+        return variable_delete(args.repo, args.name, write=args.write, client=client)
     if command == "pr-body-replace":
         return pr_body_replace(args.repo, args.number, old=_read_text(args.old), new=_read_text(args.new),
                                write=args.write, client=client)
@@ -2527,12 +3235,20 @@ def run_command(args: argparse.Namespace, client: Client | None = None) -> dict:
         return subtree_push(args.prefix, args.remote, args.branch, source=args.source, compare_ref=args.compare_ref,
                             child_only_paths=tuple(args.child_only_path), write=args.write, cwd=args.root,
                             timeout=args.timeout)
+    if command == "git-push":
+        return git_push(cwd=args.root, remote=args.remote, branch=args.branch, write=args.write, timeout=args.timeout)
     if command == "sync-main":
         return sync_main(base=args.base, remote=args.remote, write=args.write, push=args.push)
+    if command == "fleet-apply":
+        path = Path(args.manifest)
+        return fleet_apply(json.loads(path.read_text(encoding="utf-8")), root=str(path.parent),
+                           jobs=args.jobs, write=args.write, client=client)
     if command == "pr-body-set":
         return pr_body_set(args.repo, args.number, new=_read_text(args.file), write=args.write, client=client)
     if command == "pr-edit":
         return pr_edit(args.repo, args.number, title=args.title, base=args.base, state=args.state,
+                       body=_read_body_exact(args.body_file) if args.body_file else None,
+                       append_body=_read_body_exact(args.append_body_file) if args.append_body_file else None,
                        write=args.write, client=client)
     if command == "pr-retarget":
         return pr_retarget(args.repo, args.number, args.base, write=args.write,
@@ -2568,11 +3284,14 @@ def run_command(args: argparse.Namespace, client: Client | None = None) -> dict:
 
 
 def main(argv: list[str] | None = None, *, client: Client | None = None) -> int:
-    args = build_parser().parse_args(argv)
+    args = build_parser(argv).parse_args(argv)
     try:
         result = run_command(args, client)
-    except (GhOpsError, OSError, ValueError) as error:
-        print(scrub(f"error: {error}"), file=sys.stderr)
+    except (GhOpsError, gh_identity.GitInspectionError, OSError, ValueError) as error:
+        message = scrub(str(error))
+        print(f"error: {message}", file=sys.stderr)
+        if args.json_errors:
+            print(json.dumps(_error_payload(message), ensure_ascii=False))
         return 2
     text = json.dumps(result, ensure_ascii=False, indent=2) if args.json else _render(args.command, result)
     print(scrub(text))

@@ -577,3 +577,56 @@ Future scene work needs explicit part identities/correspondence, all tied
 alignments, independently transformed coordinate controls, mirror/symmetry and
 collision negatives, and separate measured retrieval/verification results.
 The scene proposal is not integrated into detection or frozen evidence here.
+
+## Symbolic global boundary prototype (stacked on #164)
+
+`scripts/boundary_synthesis.py` is an independent stdlib prototype; the local
+`audit_boundary_twins` API and external-oracle accounting are unchanged.
+` synthesize_boundary_twins ` accepts the same conjunction grammar as
+`evaluate_rule`, a mutable mask, and a fixed background. It returns **one witness
+per sensitive mutable bit**, not every edge and not a repair near an input board.
+Its completeness flag concerns existence per bit within that background only.
+
+| Constraint class | Construction | Interference / limitation |
+| --- | --- | --- |
+| Required AND / forbidden NOT | Set required ones and zeros | Intersection is empty if the masks overlap |
+| OR mask | Union of cubes requiring one selected bit | Empty mask is false; overlaps must be intersected |
+| Two-input LUT | Union of the allowed 00,01,10,11 cubes | Code 0 is false, 15 unconstrained; shared operands couple clauses |
+| Disjoint clauses | Compatible cubes combine directly | A constant-false clause makes the whole expression false |
+| Overlapping clauses | Intersect cubes and reject conflicting assignments | Independently OR-ing witnesses is unsound; AND b plus XOR(a,b) accepts b but rejects a\|b |
+
+A cube `(ones, zeros)` denotes all boards containing `ones` and excluding
+`zeros`. Clause intersections build an exact positive cover F, without visiting
+all boards. For each eligible bit i, swap its required-one/zero status to form
+F(x xor i). Subtract that cover from F by splitting only unconstrained bits.
+A surviving cube gives positive x and negative x xor i. All free mutable bits
+are deterministically zero; immutable bits retain the supplied background.
+Every returned pair is re-evaluated with the **complete original rule** and its
+Hamming distance checked. Surrogate verification is not external oracle agreement.
+
+This is exact symbolic synthesis for this grammar when it finishes, including
+overlaps, duplicates and contradictions. Arbitrary callable predicates, nested
+Boolean syntax and physical feasibility constraints are outside this API.
+NOT here means forbidden input bits, not arbitrary subexpression negation.
+There is no random search, multiplication or floating point in the prototype.
+Cover expansion and subtraction can be exponential: `max_steps` bounds counted
+intersection/split operations and raises on exhaustion, returning no partial
+completeness claim. It is not a hard memory/time bound: input materialization,
+mask width, cover sorting and full-rule verification have additional costs.
+Keep `audit_boundary_twins` as an explicit local fallback for unsupported rules
+or exhausted budgets; an empty local audit never proves global boundary absence.
+
+```python
+from scripts.boundary_synthesis import synthesize_boundary_twins
+report = synthesize_boundary_twins(3, must_and=2, pair_tables=((1, 2, 6),))
+assert {p['changed_bit'] for p in report['pairs']} == {1, 2}
+```
+
+Independent exhaustive board enumeration checks sensitive-bit existence for
+all 256 pairs of overlapping LUT clauses on three bits, every mutable mask and
+background, and all 64 combinations of two-bit AND/NOT/OR masks. Tests also cover
+multi-OR interference, duplicate clauses, constants, high immutable bits, budget
+errors and the distinction from local rescue. Run:
+`python -m pytest -q tests/test_boundary_synthesis.py tests/test_boundary_twins.py`.
+Macro-scene integration, practical acceleration and performance ratios remain
+unverified; no benchmark or detector integration is claimed.

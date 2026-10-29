@@ -62,3 +62,36 @@ def test_integer_bit_kernel():
     tree = ast.parse(inspect.getsource(module))
     assert not any(isinstance(n, (ast.Mult, ast.Div, ast.Pow)) for n in ast.walk(tree))
     assert not any(isinstance(n, ast.Constant) and isinstance(n.value, float) for n in ast.walk(tree))
+
+
+def test_high_support_fixed_bits_and_sparse_mutable_mask():
+    # Relabel three adjacent bits to sparse positions, including a high bit.
+    positions = (1, 1 << 65, 1 << 200)
+    def lift(board):
+        return sum(bit for i, bit in enumerate(positions) if board & (1 << i))
+    rule = dict(pair_tables=((positions[0], positions[1], 6),
+                             (positions[1], positions[2], 14)))
+    for mutable, fixed in itertools.product(range(8), repeat=2):
+        expected = {positions[i] for i in range(3) if mutable & (1 << i)
+                    for board in range(8)
+                    if board & ~mutable == fixed & ~mutable
+                    and evaluate_rule(lift(board), **rule) !=
+                    evaluate_rule(lift(board ^ (1 << i)), **rule)}
+        report = module.synthesize_boundary_twins(lift(mutable),
+                                                  fixed_board=lift(fixed), **rule)
+        assert {p['changed_bit'] for p in report['pairs']} == expected
+        for pair in report['pairs']:
+            assert pair['positive'] & ~lift(mutable) == lift(fixed) & ~lift(mutable)
+            assert pair['negative'] & ~lift(mutable) == lift(fixed) & ~lift(mutable)
+
+
+def test_subtraction_budget_exact_threshold_and_no_partial_report():
+    # No clauses: all counted work is in subtraction, after a witness exists.
+    kwargs = dict(mutable_mask=3, must_and=3)
+    report = module.synthesize_boundary_twins(**kwargs)
+    assert len(report['pairs']) == 2
+    steps = report['symbolic_steps']
+    assert steps == 2
+    assert module.synthesize_boundary_twins(**kwargs, max_steps=steps) == report
+    with pytest.raises(ValueError, match='budget exhausted'):
+        module.synthesize_boundary_twins(**kwargs, max_steps=steps - 1)

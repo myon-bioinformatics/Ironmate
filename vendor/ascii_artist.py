@@ -5,6 +5,7 @@ __all__ = [
     "generate_square",
     "generate_triangle",
     "generate_diamond",
+    "generate_box",
     "get_template",
     "list_templates",
     "render_prompt_ascii",
@@ -36,15 +37,18 @@ __all__ = [
     "inventory",
 ]
 
+import argparse
 import html
 import json
 import re
+import sys
+import unicodedata
 from dataclasses import dataclass
 from typing import Any, Callable, Iterable, Literal, Mapping, Protocol
 
 SUPPORTED = {
     "generation": [
-        "square / triangle / diamond text-art generation",
+        "square / triangle / diamond / box text-art generation",
         "non-empty single-line string tokens, including Unicode",
         "built-in text-art templates",
         "Diagram IR with deterministic flow / branch / tree rendering",
@@ -873,6 +877,66 @@ def generate_diamond(half_height: int, char: str = "*") -> str:
     return "\n".join(upper + lower)
 
 
+_BOX_STYLES = {
+    "single": {
+        "tl": "┌", "tr": "┐", "bl": "└", "br": "┘", "h": "─", "v": "│"
+    },
+    "double": {
+        "tl": "╔", "tr": "╗", "bl": "╚", "br": "╝", "h": "═", "v": "║"
+    },
+    "rounded": {
+        "tl": "╭", "tr": "╮", "bl": "╰", "br": "╯", "h": "─", "v": "│"
+    },
+    "ascii": {
+        "tl": "+", "tr": "+", "bl": "+", "br": "+", "h": "-", "v": "|"
+    },
+}
+
+
+def display_width(text: str) -> int:
+    """Terminal cell width: East Asian wide/fullwidth count 2, combining marks and zero-width count 0."""
+    width = 0
+    for ch in text:
+        if unicodedata.combining(ch) or unicodedata.category(ch) in ("Mn", "Me", "Cf"):
+            continue
+        width += 2 if unicodedata.east_asian_width(ch) in ("W", "F") else 1
+    return width
+
+
+def generate_box(
+    text: str,
+    *,
+    padding: int = 1,
+    style: Literal["single", "double", "rounded", "ascii"] = "single",
+) -> str:
+    """Generate a bordered text box around single or multi-line text."""
+    if not isinstance(text, str):
+        raise TypeError("text must be a string")
+    if not isinstance(padding, int) or isinstance(padding, bool) or padding < 0:
+        raise ValueError("padding must be a non-negative integer")
+    if not isinstance(style, str) or style not in _BOX_STYLES:
+        raise ValueError(f"style must be one of {sorted(_BOX_STYLES.keys())!r}")
+
+    chars = _BOX_STYLES[style]
+    lines = text.replace("\r\n", "\n").replace("\r", "\n").splitlines()
+    if not lines:
+        lines = [""]
+
+    max_len = max(display_width(line) for line in lines)
+    inner_width = max_len + 2 * padding
+    pad_str = " " * padding
+
+    top = chars["tl"] + chars["h"] * inner_width + chars["tr"]
+    bottom = chars["bl"] + chars["h"] * inner_width + chars["br"]
+
+    content_lines = [
+        f"{chars['v']}{pad_str}{line}{' ' * (max_len - display_width(line))}{pad_str}{chars['v']}"
+        for line in lines
+    ]
+
+    return "\n".join([top, *content_lines, bottom])
+
+
 def get_template(name: str) -> str:
     """Return a built-in ASCII art template by name."""
     return _ASCII_TEMPLATES.get(name.strip().lower(), "")
@@ -906,3 +970,119 @@ def render_prompt_ascii(
     )
 
     return _sanitize_ascii_output(_generated_text(generator, final_prompt))
+
+
+# --- command-line entry point -------------------------------------------------
+
+_CLI_READERS: dict[str, Callable[[str], Diagram]] = {
+    "json": from_json,
+    "mermaid": from_mermaid,
+    "dot": from_dot,
+    "outline": from_markdown_outline,
+}
+
+
+def _cli_read(path: str) -> str:
+    if path == "-":
+        return sys.stdin.read()
+    with open(path, encoding="utf-8") as handle:
+        return handle.read()
+
+
+def _cli_convert(args: argparse.Namespace) -> str:
+    value = _CLI_READERS[args.source_format](_cli_read(args.input))
+    if args.target_format == "render":
+        return render_diagram(value, charset=args.charset)
+    if args.target_format == "inventory":
+        return json.dumps(inventory(value), ensure_ascii=False, indent=2)
+    writers: dict[str, Callable[[Diagram], str]] = {
+        "json": to_json,
+        "mermaid": to_mermaid,
+        "dot": to_dot,
+        "outline": to_markdown_outline,
+    }
+    return writers[args.target_format](value)
+
+
+def _cli_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="ascii_artist.py",
+        description=(
+            "Generate text art and convert text diagrams (stdlib only).\n"
+            "exit 0: output written to stdout.\n"
+            "exit 1: input file could not be read.\n"
+            "exit 2: usage error or invalid input (one stderr error line)."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        allow_abbrev=False,
+    )
+    commands = parser.add_subparsers(dest="command", metavar="COMMAND")
+    for name, label in (("square", "SIZE"), ("triangle", "HEIGHT"), ("diamond", "HALF_HEIGHT")):
+        shape = commands.add_parser(name, help=f"generate a {name}", allow_abbrev=False)
+        shape.add_argument("size", type=int, metavar=label, help="token repetition count")
+        shape.add_argument("--char", default="*", help="non-empty single-line token (default: *)")
+    box = commands.add_parser("box", help="draw a box around text", allow_abbrev=False)
+    box.add_argument("input", nargs="?", default="-", metavar="FILE",
+                     help="UTF-8 text file; - or omitted reads stdin")
+    box.add_argument("--padding", type=int, default=1, help="non-negative padding (default: 1)")
+    box.add_argument("--style", choices=sorted(_BOX_STYLES), default="single",
+                     help="border style (default: single)")
+    for name, help_text in (("flow", "render a vertical flow"), ("tree", "render ITEMS as children of ROOT")):
+        sub = commands.add_parser(name, help=help_text, allow_abbrev=False)
+        if name == "tree":
+            sub.add_argument("root", metavar="ROOT", help="root label")
+        sub.add_argument("items", nargs="+", metavar="ITEM", help="single-line label")
+        sub.add_argument("--charset", choices=("unicode", "ascii"), default="unicode")
+    template = commands.add_parser("template", help="print a built-in template", allow_abbrev=False)
+    template.add_argument("name", metavar="NAME", help="template name (see: templates)")
+    commands.add_parser("templates", help="list built-in template names", allow_abbrev=False)
+    convert = commands.add_parser("convert", help="convert a text diagram", allow_abbrev=False)
+    convert.add_argument("input", nargs="?", default="-", metavar="FILE",
+                         help="UTF-8 diagram file; - or omitted reads stdin")
+    convert.add_argument("--from", dest="source_format", choices=sorted(_CLI_READERS), required=True)
+    convert.add_argument("--to", dest="target_format", required=True,
+                         choices=sorted([*_CLI_READERS, "render", "inventory"]))
+    convert.add_argument("--charset", choices=("unicode", "ascii"), default="unicode",
+                         help="charset for --to render (default: unicode)")
+    return parser
+
+
+def main(argv: Iterable[str] | None = None) -> int:
+    """Run the command-line interface; returns the process exit code."""
+    parser = _cli_parser()
+    args = parser.parse_args(None if argv is None else list(argv))
+    try:
+        if args.command is None:
+            parser.error("command required")
+        if args.command in ("square", "triangle", "diamond"):
+            generate = {"square": generate_square, "triangle": generate_triangle,
+                        "diamond": generate_diamond}[args.command]
+            text = generate(args.size, args.char)
+        elif args.command == "box":
+            text = generate_box(_cli_read(args.input), padding=args.padding, style=args.style)
+        elif args.command == "flow":
+            text = flow(args.items, charset=args.charset)
+        elif args.command == "tree":
+            if any(not item or "\n" in item or "\r" in item for item in args.items):
+                raise ValueError("tree items must be non-empty single-line strings")
+            text = tree(args.root, {item: {} for item in args.items}, charset=args.charset)
+        elif args.command == "template":
+            text = get_template(args.name)
+            if not text:
+                parser.error(f"unknown template: {args.name!r}")
+        elif args.command == "templates":
+            text = "\n".join(list_templates())
+        else:
+            text = _cli_convert(args)
+    except OSError as exc:
+        print(f"ascii_artist.py: error: {exc.strerror or exc}: {exc.filename}", file=sys.stderr)
+        return 1
+    except (ValueError, TypeError, KeyError) as exc:
+        print(f"ascii_artist.py: error: {exc}", file=sys.stderr)
+        return 2
+    sys.stdout.write(text if not text or text.endswith("\n") else text + "\n")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

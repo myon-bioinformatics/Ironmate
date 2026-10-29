@@ -26,7 +26,7 @@ _ANALYZE_LIMIT = 2048 * 2048     # pixel statistics above this are skipped (sign
 
 def base64_chars(nbytes, data_uri=False):
     """Exact Base64 length (with = padding) for ``nbytes`` bytes."""
-    return 4 * math.ceil(nbytes / 3) + (DATA_URI_PREFIX if data_uri else 0)
+    return 4 * ((nbytes + 2) // 3) + (DATA_URI_PREFIX if data_uri else 0)
 
 
 def bytes_for_chars(chars, data_uri=False):

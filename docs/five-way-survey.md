@@ -281,3 +281,299 @@ all 400 truth/prediction coordinate hashes, and the complete detector,
 counterfactual and rotation-pipeline digests. It still yielded 25/200 predicted
 topology matches and scenario mean IoU of 0–38.08%. These are research baselines,
 not 95% detection accuracy, a GPU substitute or a 0.3ms incremental-search result.
+
+## Complete two-input truth-table restriction
+
+`classify_pairwise_boolean_4bit_lut(base_board, bit_a, bit_b, oracle_fn)`
+queries 00, 01, 10, 11 exactly once each and returns all 16 possible operator
+names, including constants and projections. Inputs require distinct one-hot
+features and an actual bool-returning deterministic oracle. Errors propagate.
+The selected background is returned explicitly. Four calls classify only this
+restriction: changing another feature can change XOR into constant TRUE.
+This is not identification of a global clause, a causal rule, or evidence for
+NPB outcomes. No greedy feature consumption or automatic repair is performed.
+Python calls and tuple lookup are not a one-clock latency guarantee.
+
+Verification: `python -m unittest discover -s tests -p test_boolean_4bit_lut.py`.
+Independent Boolean operator functions cover every code; other controls cover
+background dependence, sparse feature positions, invalid input and oracle errors.
+The supplied crossing/fingerprint/repair benchmark percentages have not been
+reproduced by this addition. Junction separation remains a separate experiment.
+
+### Octal / hexadecimal interchange
+
+4 bits have 16 possible values; this is separate from an 8-bit width or base 8.
+Hex digits encode four bits each, octal digits three. Internal masks stay as
+integers, so inference never needs a string conversion. Python already provides
+`int(text, 8/16)`, `oct(value)` and `hex(value)`; the convenience entry below
+uses these builtins rather than a second arithmetic conversion implementation.
+Parsing/formatting cost grows with digit count; no speedup claim is made.
+
+```sh
+python -S scripts/littlebit_jev_5way_survey.py --convert 16 8 0xff
+# 0o377
+python -S scripts/littlebit_jev_5way_survey.py --convert 8 16 0o377
+# 0xff
+```
+
+The same `convert_bitboard_radix(text, from_base, to_base)` API handles LUT
+codes, 8-bit values and 64-bit masks without truncation. It accepts unsigned
+Python integer text (optional prefix/underscores/whitespace), rejects malformed
+or negative values, and normalizes prefixes/case/leading zeroes. Numeric value,
+not original spelling or width, survives the round trip. The CLI exits before
+benchmarking or writing reports. Conversion is opt-in, outside the hot path.
+
+
+### Signed exact numbers (separate from unsigned bitboards)
+
+The CLI now uses `convert_radix_number`, with exact `Fraction` intermediates;
+`convert_bitboard_radix` retains its unsigned integer contract. Supported inputs:
+signed integers, radix points, integer numerator/denominator pairs, and an
+optional `@` exponent. Examples:
+
+| Input | Meaning | Converted output |
+|---|---|---|
+| `-0x1.8` (base 16) | minus three halves | `-0o1.4` |
+| `0x1@-2` (base 16) | 1 times 16 to power -2 | `0o0.002` |
+| `0o1/0o3` (base 8) | one third | `0x1/0x3` |
+
+Exponent digits after `@` are signed **decimal integers**, while the exponent's
+base is the selected input radix (8 or 16). Hex `e` remains a digit, never an
+exponent marker. Decimal mantissa input/base 10 is not supported. For negative
+CLI input use e.g. `--convert 16 8 ' -0x1.8'` (leading space keeps argparse from
+interpreting it as an option; the parser strips whitespace).
+
+Finite expansions are rendered exactly with radix points; other rationals
+remain reduced fractions, avoiding recurring-digit loops and rounding. Output
+normalizes spelling and does not preserve trailing zeroes. No float is used.
+Input text is capped at 4096 characters and exponent magnitude at 4096 to avoid
+accidental huge allocations. Zero denominators and malformed values are errors.
+Integer builtins and shifts handle base conversion; general fraction reduction
+uses stdlib Fraction and has extra arithmetic/GCD cost. This is an optional
+interchange layer, not a multiplication-free fraction arithmetic engine or a
+measured speed optimization. Reuse parsed values rather than repeatedly
+formatting/parsing in inference loops.
+
+## Optional lossless representation adapters
+
+`scripts/bit_representation.py` is a standalone stdlib interchange layer, separate
+from the multiplication-free image kernel and its octal/hex CLI. No image
+threshold, detector, fingerprint algorithm, or inference path is changed.
+
+- `fingerprint64_to_bytes` / `fingerprint64_from_bytes`: a strict unsigned
+  64-bit value becomes exactly eight **big-endian** bytes. Leading zero bytes
+  are preserved; negative, oversized and wrong-length inputs are errors.
+  This is packing, not compression or a self-describing file format. Callers
+  must retain the fingerprint algorithm/version separately.
+- `integer_to_digits` / `digits_to_integer`: bases **2..256**, including
+  3, 7, 11, 13, 17, 23, 32, 64 and 128. The project-specific record is
+  `(sign, digits)` where sign is -1/0/+1 and digits are a most-significant-first
+  tuple. Zero is emitted as `(0, (0,))`. Decoding accepts leading zero
+  digits, but requires sign 0 exactly when the magnitude is zero; positive
+  and negative zero records raise `ValueError`, including inside rational
+  records. Nonzero magnitudes require sign -1 or +1. Base is external metadata; no universal alphabet or guessed radix.
+  Tuple storage is not compact binary packing and base 64 digits are not the
+  standardized Base64 transfer encoding. Base 256 digit values match byte
+  values, but only the explicit byte adapter packs them.
+- `integer_to_balanced_ternary` / `balanced_ternary_to_integer`: exact positional
+  signed trits -1/0/+1, most significant first. Example: 2 -> `(1, -1)` because
+  3 - 1 = 2. These are positional digits, not an image's spatial three-state
+  spin mask; changing notation does not change the detector.
+- `rational_to_digits` / `rational_from_digits`: reduced exact numerator and
+  denominator records in any supported base. No rounding or recurring expansion
+  is needed. This does not remove quantization/resampling error when mapping
+  rational coordinates onto image pixels.
+- `digits_to_tokens` / `tokens_to_digits`: optional custom symbol/emoji alphabet.
+  Token boundaries remain an explicit tuple, so multi-codepoint emoji and
+  overlapping token spellings are not concatenated ambiguously. The exact
+  alphabet/order must accompany the representation. No Unicode normalization
+  is implicit. For balanced trits, map -1/0/+1 to digit indices 0/1/2 first.
+
+```python
+from scripts.bit_representation import (
+    fingerprint64_to_bytes, fingerprint64_from_bytes,
+    integer_to_digits, digits_to_integer, integer_to_balanced_ternary,
+    rational_to_digits, rational_from_digits, digits_to_tokens,
+)
+raw = fingerprint64_to_bytes(0x0123456789abcdef)  # exactly 8 bytes
+assert fingerprint64_from_bytes(raw) == 0x0123456789abcdef
+sign, digits = integer_to_digits(255, 16)          # (1, (15, 15))
+assert digits_to_integer(sign, digits, 16) == 255
+assert integer_to_balanced_ternary(2) == (1, -1)
+n, d = rational_to_digits(1, 3, 7)
+assert rational_from_digits(n, d, 7).denominator == 3
+assert digits_to_tokens((0, 1, 2), ('➖', '⚪', '➕')) == ('➖', '⚪', '➕')
+```
+
+A symbol's information capacity is not its UTF-8 storage size: emoji can consume
+multiple bytes/codepoints. Substitution does not give smaller storage or faster
+arithmetic. Adapters use standard integer divmod/multiply and Fraction reduction;
+they are not a multiplication-free engine and no speed improvement is claimed.
+Keep masks/integers in the hot path, convert once at interchange boundaries,
+and use the eight-byte adapter for fingerprint storage. Generic base conversion
+cost grows with digit count; arbitrary precision does not mean constant time.
+
+Checks: `python -m pytest -q tests/test_bit_representation.py` covers every base
+2..256, independently reconstructed signed large integers, all balanced values
+-4096..4096, a byte-order known vector and 64-bit bounds, exact rationals, and
+multi-codepoint/overlapping custom tokens with invalid-input rejection.
+
+### 32-bit limbs, fingerprint batches and RGB8
+
+The representation adapter additionally exposes:
+
+| API | Contract |
+|---|---|
+| `integer_to_u32_limbs` / `u32_limbs_to_integer` | Unsigned base-2^32 digits, **least-significant first**; zero `(0,)` |
+| `add_u32_limbs` | Unsigned limb addition, carry propagated exactly, no overflow wrap; canonical leading-zero removal |
+| `fingerprints64_to_bytes` / `fingerprints64_from_bytes` | Concatenated big-endian 8-byte records, order/duplicates/zeroes preserved; empty batches allowed |
+| `rgb8_to_integer` / `integer_to_rgb8` | Raw RGB channels and `0xRRGGBB` unsigned 24-bit integer |
+| `rgb8_to_bytes` / `rgb8_from_bytes` | Exactly three bytes in R, G, B order |
+
+Limb order is deliberately distinct from the generic most-significant-first
+digit API: it allows addition to propagate carry from index zero. For example,
+`0x123456789abcdef0` becomes `(0x9abcdef0, 0x12345678)` and adding one to
+`(0xffffffff, 0xffffffff)` yields `(0, 0, 1)`. Negative limb values, bools and
+out-of-range values are rejected. Signed integer adapters remain available
+separately; limbs are not a two's-complement signed protocol. No new general
+big-integer multiplication/division engine replaces Python's integer runtime.
+This is an interchange/reference addition API, not a measured acceleration.
+
+Fingerprint batches are raw packed records, not compression or a self-describing
+archive: callers retain count (or infer byte length / 8), algorithm version and
+context separately. These are 64-bit masks only; larger spatial bitboards must
+not be truncated to fit. Batch decoding materializes a tuple; large streams can
+be split into chunks at eight-byte boundaries by the caller. A 10,000-mask test
+packs to exactly 80,000 bytes and restores every value. This length does not
+include Python object overhead or external metadata.
+
+RGB packing is exact storage only, without alpha, gamma/color-space conversion,
+resampling or channel-wise arithmetic. Do not add packed RGB integers to blend
+colors: carries can cross channel boundaries. Channels outside 0..255 raise an
+error rather than silently clipping or wrapping. Pixel layout/width/height,
+row stride, color space and alpha semantics are caller metadata.
+
+```python
+from scripts.bit_representation import (
+    integer_to_u32_limbs, add_u32_limbs, u32_limbs_to_integer,
+    fingerprints64_to_bytes, fingerprints64_from_bytes,
+    rgb8_to_integer, rgb8_to_bytes, rgb8_from_bytes,
+)
+assert u32_limbs_to_integer(add_u32_limbs((0xffffffff,), (1,))) == 1 << 32
+assert fingerprints64_from_bytes(fingerprints64_to_bytes((0, 7, 0))) == (0, 7, 0)
+assert rgb8_to_integer(18, 52, 86) == 0x123456
+assert rgb8_from_bytes(rgb8_to_bytes(18, 52, 86)) == (18, 52, 86)
+```
+
+Tests compare limb reconstruction/addition with independent Python big integers,
+including long carry chains and a 4097-bit value. Known byte vectors establish
+byte/channel ordering independently of round trips; every 8-bit channel value
+is exercised, and malformed widths/ranges/types are rejected.
+
+### Base64 transport budgets reuse the image facade
+
+Existing `ironmate_image.fit_to_limit` and `python -m grid_tools fit` already
+try candidate sizes (including 3/4), encode PNGs, and verify the actual Base64
+length. Reuse them rather than a second image-resize engine:
+
+```sh
+python -c "import ironmate_image as im; print(im.fit_to_limit('input.png', max_chars=20000).text)"
+python -m grid_tools fit input.png --limit-chars 20000 -o output.b64
+```
+
+Base64 of n bytes has exactly `4 * ((n + 2) // 3)` characters before wrappers.
+`size_estimate.base64_chars` now uses only integer arithmetic, avoiding float
+rounding/overflow even for large size metadata. `bytes_for_chars` provides the
+inverse byte budget; data URI mode includes the PNG prefix. JSON/envelope and
+newline overhead must be budgeted separately. These helpers measure size only,
+not allocate an image of the reported length.
+
+A 3/4 file-byte reduction approximately offsets 4/3 Base64 expansion, but
+scaling both dimensions by 3/4 retains about 9/16 as many pixels, not 3/4.
+PNG/JPEG byte size is not proportional to pixel area, so exact encoded output
+must be measured. Existing fitting selects among discrete candidates; its
+lossless preference refers to preserving dot-art cells, not arbitrary natural
+image fidelity or global optimality. Downsampling can lose information and
+metadata may be dropped with a warning; no silent universal compensation or
+fixed 3/4 shrink is added. Where binary transport is allowed, raw image bytes
+avoid Base64 expansion without altering image dimensions.
+
+### Repeated Base64/image interchange tests
+
+`tests/test_image_base64_cycles.py` exercises 16 seeded metadata/data-URI
+configurations for 25 PNG cycles each (400 cycles), alternating dict/JSON,
+binary bytes, filesystem paths, raw Base64 and data URI inputs. Every cycle
+compares dimensions and original RGBA colors, including RGB under transparent
+alpha, partial transparency, duplicate palette colors and unused palette entries.
+With metadata the palette is preserved, but duplicate RGBA palette entries
+canonicalize to their first index on restore: equal pixels do not imply identical
+original palette indices or all artifact fields. No JPEG re-encoding fidelity,
+resize reversibility, arbitrary external PNG codec coverage, or compressed-byte
+identity is inferred from these lossless PNG controls.
+
+Additional controls run four real stdlib-only Python stdin/stdout PNG/Base64
+cycles, all three padding-length residues over 12 transport cycles each,
+whitespace wrapping, exact decoded-byte budgets and one-byte-under limits,
+invalid alphabet/truncation/MIME mismatch rejection, and four repeated verified
+fit calls with a stable generous character budget. Invalid payloads are never
+fed forward as successful results. The padding test appends bytes after a PNG
+only to exercise transport; it does not assert image-container validity.
+Existing image-format tests supply separate JPEG/WebP input coverage.
+
+Reproduce: `python -m pytest -q tests/test_image_base64_cycles.py tests/test_studio_ingress.py tests/test_image_formats.py`.
+
+## Verified local distance-one boundary audit
+
+`scripts/boundary_twins.py` adds `evaluate_rule` for jointly evaluated AND,
+OR-mask, forbidden-bit and arbitrary 4-bit LUT clauses (including XOR/NAND).
+Overlapping clauses are allowed; impossible conjunctions remain impossible.
+`audit_boundary_twins(board, mutable_mask, predicate, oracle=...)` deterministically
+checks every allowed one-bit neighbor of the supplied board and returns only
+pairs whose full predicate values differ. Positive/negative endpoints and the
+changed bit are explicit. Two missing AND bits correctly yield no one-bit rescue.
+No positive board is fabricated by OR-ing clause fragments: that construction
+can violate overlapping XOR/NOT clauses before any boundary is tested.
+
+This is a **local audit**, not enumeration of all boundary edges of the Boolean
+hypercube, a constant-time algebraic solver, or a global minimal repair search.
+For k mutable bits it makes 1+k predicate calls. An optional independent oracle
+checks unique reported endpoints and records its labels/agreement separately;
+surrogate reversal alone is not oracle verification. Both categories count
+against max_queries (default 4096); exhaustion/errors raise without returning a
+complete report. Predicates/oracles must return bool and be deterministic.
+Runtime/memory grow with k, mask width and predicate cost; no microsecond claim.
+
+```python
+from scripts.boundary_twins import evaluate_rule, audit_boundary_twins
+rule = lambda b: evaluate_rule(b, must_and=2, pair_tables=((1, 2, 6),))
+report = audit_boundary_twins(3, 3, rule)
+assert [(p['positive'], p['negative']) for p in report['pairs']] == [(2, 3)]
+# No external oracle was checked: oracle_verified is None.
+```
+
+Independent exhaustive tests cover all 256 three-input Boolean functions at
+all eight inputs; expected neighbors are obtained by separately enumerating
+all boards and testing Hamming distance. Additional tests cover every two-input
+LUT, contradictory/overlapping clauses, immutable high bits, oracle mismatch,
+cache/call accounting, budget exhaustion, invalid masks and propagated errors.
+No inference about NPB outcomes or causally actionable interventions follows:
+real features can be correlated, impossible to toggle independently, or missing
+from a surrogate. The mutable mask alone is not a feasibility model.
+
+### Supplied macro-scene proposal: deferred, not verified
+
+The supplied seven-scenario percentages/timings have no executable trial dataset
+or measurement trace in this change and are not adopted as results. Its direction
+classifier maps west to sector 7 and east to 0, violating the intended eight-slot
+opposition. Existing `direction_slot` has tested cardinal/quarter-turn behavior
+and should be reused for a future experiment rather than restoring that formula.
+Mass-only ordering leaves equal-mass correspondence dependent on input order.
+OR-ing all pair vectors into 64 bits discards edge labels/multiplicity and admits
+collisions; symmetric or collinear scenes can be indistinguishable from mirrors.
+L1 radii/floored centroids and discrete bins do not ensure arbitrary-angle/scale
+invariance. Averaging macro and micro scores is not a proof of identity, nor is
+it a geometric mean. Pair construction is quadratic in part count, not O(1).
+Future scene work needs explicit part identities/correspondence, all tied
+alignments, independently transformed coordinate controls, mirror/symmetry and
+collision negatives, and separate measured retrieval/verification results.
+The scene proposal is not integrated into detection or frozen evidence here.

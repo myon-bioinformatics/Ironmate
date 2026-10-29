@@ -161,7 +161,12 @@ jobs:
         run: |
           npm ci
           npm install --no-save --ignore-scripts @marp-team/marp-cli@4.5.1 @mermaid-js/mermaid-cli@12.0.0 puppeteer@25.15.0 playwright@1.58.2
+      - name: Bound apt dependency setup
+        run: |
+          sudo python3 -S scripts/configure_ci_apt.py
+          sudo apt-config dump Acquire::Retries Acquire::http::Timeout Acquire::https::Timeout APT::Update::Error-Mode
       - name: Install Japanese fonts for diagram evidence
+        timeout-minutes: 5
         run: |
           sudo apt-get update
           sudo apt-get install --no-install-recommends -y fonts-noto-cjk
@@ -238,13 +243,12 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "26"
-      - name: Harden apt for slow Playwright system dependency installs
+      - name: Bound apt dependency setup
         run: |
-          sudo tee /etc/apt/apt.conf.d/80-retries <<'EOF'
-          Acquire::Retries "3";
-          Acquire::http::Timeout "30";
-          EOF
+          sudo python3 -S scripts/configure_ci_apt.py
+          sudo apt-config dump Acquire::Retries Acquire::http::Timeout Acquire::https::Timeout APT::Update::Error-Mode
       - name: Install isolated test-only Playwright and browser
+        timeout-minutes: 10
         run: |
           npm install --prefix build/clipboard-tools --no-save --ignore-scripts --package-lock=false playwright@1.64.1
           node build/clipboard-tools/node_modules/playwright/cli.js install --with-deps ${{ matrix.browser }}

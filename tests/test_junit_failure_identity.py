@@ -110,7 +110,7 @@ def test_workflow_keeps_suite_failure_and_exact_reports(tmp_path):
     assert all('python -m unittest ' not in s.get('run', '') for s in steps)
     assert suite['run'] == (
         'uv run --locked python -m pytest -q -m "not heavy and not network" '
-        '--junitxml=build/test-results/pytest-3.12.xml'
+        '--junitxml=build/test-results/pytest-3.15.xml'
     )
     # Run the actual workflow command; reject wrappers that hide pytest's rc=1.
     executable = tmp_path / 'uv'

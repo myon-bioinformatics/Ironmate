@@ -1,6 +1,6 @@
 # Python failure evidence (#58)
 
-The Python 3.12 non-heavy lane emits `junit-py3.12/pytest-3.12.xml`.
+The Python 3.15 non-heavy lane emits `junit-py3.15/pytest-3.15.xml`.
 The existing unittest step remains before pytest. Pytest runs after a unittest
 failure if compilation succeeded and the run was not cancelled; unittest failure
 still makes the job fail. Neither suite uses `continue-on-error` or a shell success
@@ -13,7 +13,7 @@ failures, one setup error, one pass and one skip. The outer regression succeeds
 only when return code, classifications and redaction match. The locked baseline
 runs the same regression without producing an additional collected artifact.
 
-In the normal lane, `junit-controlled-py3.12` holds `junit.xml`,
+In the normal lane, `junit-controlled-py3.15` holds `junit.xml`,
 `child-exit.json` and locally checked `failures.jsonl`. Raw XML contains synthetic
 message, setup, stdout/stderr and parameter sentinels. Compact identity retains
 only test/class and failure/error; pass/skip and sentinels are absent.

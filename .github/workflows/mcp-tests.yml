@@ -44,14 +44,12 @@ jobs:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: "3.12"
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           version: "0.13.1"
-          python-version: "3.12"
+          python-version: "3.15"
           enable-cache: false
+          activate-environment: true
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "26"
@@ -98,25 +96,25 @@ jobs:
         if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
         run: python -S pillow_min.py
       # The default pytest suite also collects the unittest-based vendor and
-      # repository hygiene cases; do not run them twice on Python 3.12.
+      # repository hygiene cases; do not run them twice on Python 3.15.
       - name: Run default pytest suite (exclude heavy tests)
         if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
         env:
           IRONMATE_FAILURE_EVIDENCE: build/controlled-failure
-        run: uv run --locked python -m pytest -q -m "not heavy and not network" --junitxml=build/test-results/pytest-3.12.xml
+        run: uv run --locked python -m pytest -q -m "not heavy and not network" --junitxml=build/test-results/pytest-3.15.xml
       - name: Preserve raw suite JUnit
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: junit-py3.12
-          path: build/test-results/pytest-3.12.xml
+          name: junit-py3.15
+          path: build/test-results/pytest-3.15.xml
           if-no-files-found: error
           retention-days: 14
       - name: Preserve controlled child evidence
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: junit-controlled-py3.12
+          name: junit-controlled-py3.15
           path: build/controlled-failure/
           if-no-files-found: error
           retention-days: 14
@@ -129,7 +127,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: vendor-lock-py3.12
+          name: vendor-lock-py3.15
           path: build/vendor-evidence-test
           if-no-files-found: error
           retention-days: 14
@@ -144,14 +142,12 @@ jobs:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: "3.12"
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           version: "0.13.1"
-          python-version: "3.12"
+          python-version: "3.15"
           enable-cache: false
+          activate-environment: true
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "26"
@@ -244,9 +240,12 @@ jobs:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
-          python-version: "3.12"
+          version: "0.13.3"
+          python-version: "3.15"
+          activate-environment: true
+          enable-cache: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "26"
@@ -282,6 +281,6 @@ jobs:
     uses: myon-bioinformatics/myon-bioinformatics/.github/workflows/reusable-junit-identity.yml@9e3da7ae1846e9604ebc24bb5178f7de094a4e77
     with:
       commit-sha: ${{ github.event.pull_request.head.sha || github.sha }}
-      expected-reports: '["junit-py3.12/pytest-3.12.xml","junit-controlled-py3.12/junit.xml","junit-marp/marp.xml"]'
+      expected-reports: '["junit-py3.15/pytest-3.15.xml","junit-controlled-py3.15/junit.xml","junit-marp/marp.xml"]'
       artifact-pattern: "junit-*"
       output-artifact: "failure-identity"

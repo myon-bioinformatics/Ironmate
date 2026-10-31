@@ -116,7 +116,7 @@ Text and shapes are redrawn from source data; embedded images are upscaled with 
 Interpolation does not mean recovering detail.
 
 JSON saved from the GUI and JSON prepared in Python can both be output from the CLI with the same renderer.
-SVG needs Node.js; PNG/Base64 need Node.js 22+ and an installed Chrome/Chromium.
+SVG needs Node.js; PNG/Base64 need Node.js 24+ and an installed Chrome/Chromium.
 No image-generation API, GPU or Playwright/Puppeteer runtime dependency is needed. Fonts come from the host OS.
 
 ```sh
@@ -229,8 +229,8 @@ then use this to re-save history from the current scene.
 It does not change the format to deduplicate images across history states, nor add automatic recovery after closing the browser.
 
 ```sh
-python -m pytest -q tests/test_image_studio.py
-python -m pytest -q tests/test_studio_workspace.py
+uv run pytest -q tests/test_image_studio.py
+uv run pytest -q tests/test_studio_workspace.py
 # Browser and PPTX evidence. Needs test-only Playwright and the existing pptxgenjs
 IRONMATE_CHROME=/path/to/chrome node tests/image_studio_browser.cjs
 ```

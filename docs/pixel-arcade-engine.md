@@ -99,5 +99,5 @@ The existing nearest-neighbor upscaling still works, but it does not reconstruct
 This prototype adds neither four-probe upscaling interpolation nor a mechanism that hides and keeps the pre-downscale image.
 
 ```bash
-python -m pytest -q tests/test_pixel_arcade_engine.py tests/test_grid_tools.py -m 'not heavy'
+uv run pytest -q tests/test_pixel_arcade_engine.py tests/test_grid_tools.py -m 'not heavy'
 ```

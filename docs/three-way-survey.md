@@ -10,7 +10,7 @@ Runs on Python 3.10+ with only the standard library. No I/O at import time.
 
 ```sh
 python -S scripts/littlebit_jev_3way_survey.py --trials 40 --train-trials 4 --large-raster
-python -m pytest -q tests/test_three_way_survey.py
+uv run pytest -q tests/test_three_way_survey.py
 ```
 
 Writes `report.md`, `results.json` for all trials and 6 SVGs to `build/three-way-survey/`.
@@ -147,7 +147,7 @@ Separately from Aoi's exact FWHT, the integer rounding of H8//2 here is kept.
 
 ```sh
 python -S scripts/survey_holdout.py --trials 3 --output build/survey-holdout
-python -m pytest -q tests/test_three_way_survey.py tests/test_survey_holdout.py
+uv run pytest -q tests/test_three_way_survey.py tests/test_survey_holdout.py
 ```
 
 - 3 new shape families: a comb with repeating notches, a plate with 9 holes, and a 1-point-wide meandering path that wraps at the image edge

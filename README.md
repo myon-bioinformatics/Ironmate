@@ -263,7 +263,7 @@ git -C build/shared checkout 7e7015b2df69ad446b968f6fa49711b5b1dbdd3f
 git clone https://github.com/myon-bioinformatics/myon-bioinformatics.git .vendor-sync-tools
 git -C .vendor-sync-tools checkout a9df23dec720f125772a24b77b413552d60060ba
 python -S .vendor-sync-tools/vendor_sync.py check --manifest vendor.lock.json
-uv run --locked python -m pytest -q -m 'not heavy'
+uv run --locked pytest -q -m 'not heavy'
 python -S ironmate_tests.py list
 ```
 

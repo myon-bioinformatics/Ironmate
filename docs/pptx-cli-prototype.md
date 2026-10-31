@@ -112,7 +112,7 @@ python pptx_pipeline.py tests/fixtures/mini_readme.md -o marp-sample.pptx
 Run the gated real conversion test only in an explicitly provisioned environment:
 
 ```sh
-IRONMATE_RUN_MARP_INTEGRATION=1 python -m pytest -q tests/test_marp_pptx.py
+IRONMATE_RUN_MARP_INTEGRATION=1 uv run pytest -q tests/test_marp_pptx.py
 ```
 
 This first proof checks actual output existence and PPTX readability, **not** that the output has editable text or that it is visually faithful. Standard Marp PPTX export can rasterize slide content; that must be measured before using python-pptx to edit generated text. Do not build the unified Markdown→Marp→PPTX→XML one-liner until this independent integration is green and the editability limitations are understood. The production PPTX editing CLI stays independent.
@@ -384,7 +384,7 @@ Integration tests stub the Marp boundary and run real native editing/inspection.
 Actual Marp rendering and final PowerPoint Web display remain unverified.
 
 ```sh
-python -m pytest -q tests/test_pptx_pipeline.py tests/test_markdown_pptx.py tests/test_pptx_replace.py tests/test_pptx_diagram_shapes.py
+uv run pytest -q tests/test_pptx_pipeline.py tests/test_markdown_pptx.py tests/test_pptx_replace.py tests/test_pptx_diagram_shapes.py
 ```
 
 Existing-shape spacing from merged PR #97 is available through `pptx_layout.py`,
@@ -515,7 +515,7 @@ silently breaking connected diagrams; automatic arrow routing remains future wor
 Sizes, text, style and IDs stay unchanged. Only selected slide XML is reserialized;
 all other ZIP member bytes (including relationships) are copied unchanged. Input
 and existing output paths are never overwritten. Output is reopened before atomic
-publication. Tests: `python -m pytest -q tests/test_pptx_layout.py`.
+publication. Tests: `uv run pytest -q tests/test_pptx_layout.py`.
 
 Reference-derived structural targets are cards in rows, vertical agenda rows,
 columns with headings and box/arrow flows. This first step implements spacing of

@@ -4,7 +4,7 @@ Run the entire experiment from one Python file with no installed dependencies:
 
 ```sh
 python -S scripts/littlebit_jev_5way_survey.py --trials 25
-python -m pytest -q tests/test_five_way_survey.py
+uv run pytest -q tests/test_five_way_survey.py
 ```
 
 The default output directory is `build/five-way-survey/`. `results.json` retains
@@ -413,7 +413,7 @@ Keep masks/integers in the hot path, convert once at interchange boundaries,
 and use the eight-byte adapter for fingerprint storage. Generic base conversion
 cost grows with digit count; arbitrary precision does not mean constant time.
 
-Checks: `python -m pytest -q tests/test_bit_representation.py` covers every base
+Checks: `uv run pytest -q tests/test_bit_representation.py` covers every base
 2..256, independently reconstructed signed large integers, all balanced values
 -4096..4096, a byte-order known vector and 64-bit bounds, exact rationals, and
 multi-codepoint/overlapping custom tokens with invalid-input rejection.
@@ -520,7 +520,7 @@ fed forward as successful results. The padding test appends bytes after a PNG
 only to exercise transport; it does not assert image-container validity.
 Existing image-format tests supply separate JPEG/WebP input coverage.
 
-Reproduce: `python -m pytest -q tests/test_image_base64_cycles.py tests/test_studio_ingress.py tests/test_image_formats.py`.
+Reproduce: `uv run pytest -q tests/test_image_base64_cycles.py tests/test_studio_ingress.py tests/test_image_formats.py`.
 
 ## Verified local distance-one boundary audit
 
@@ -627,6 +627,6 @@ all 256 pairs of overlapping LUT clauses on three bits, every mutable mask and
 background, and all 64 combinations of two-bit AND/NOT/OR masks. Tests also cover
 multi-OR interference, duplicate clauses, constants, high immutable bits, budget
 errors and the distinction from local rescue. Run:
-`python -m pytest -q tests/test_boundary_synthesis.py tests/test_boundary_twins.py`.
+`uv run pytest -q tests/test_boundary_synthesis.py tests/test_boundary_twins.py`.
 Macro-scene integration, practical acceleration and performance ratios remain
 unverified; no benchmark or detector integration is claimed.

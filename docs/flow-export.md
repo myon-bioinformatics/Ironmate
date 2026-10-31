@@ -14,7 +14,7 @@ This is not a general graph editor or an editable Studio scene importer.
 | --- | --- | --- |
 | `mermaid` | UTF-8 fenced Mermaid Markdown | Python 3.10+ standard library |
 | `svg` | SVG with explicit pixel size and intrinsic viewBox | Python, installed `mmdc` and its browser |
-| `png` | PNG | Above plus Node.js 22+ and Chrome/Chromium |
+| `png` | PNG | Above plus Node.js 24+ and Chrome/Chromium |
 | `base64` | Standard padded ASCII Base64 of PNG | Same as PNG |
 | `data-uri` | `data:image/png;base64,` followed by that Base64 | Same as PNG |
 
@@ -93,9 +93,9 @@ pixels across different operating systems/fonts/browser versions are not promise
 ## Reproducible verification
 
 ```sh
-python -m pytest -q tests/test_flow_export.py
+uv run pytest -q tests/test_flow_export.py
 IRONMATE_RUN_FLOW_INTEGRATION=1 IRONMATE_MMDC_BIN=node_modules/.bin/mmdc \
-  IRONMATE_CHROME=/path/to/chrome python -m pytest -q tests/test_flow_integration.py
+  IRONMATE_CHROME=/path/to/chrome uv run pytest -q tests/test_flow_integration.py
 IRONMATE_CHROME=/path/to/chrome node tests/flow_export_browser.cjs
 ```
 
@@ -189,4 +189,4 @@ also saves original/edited JSON, before/after PNG, edited SVG/Mermaid/Base64/dat
 and hashes under `build/test-results/flow-export/workspace/`. It checks changed
 pixels and exact Python/Node PNG and transport identity. These artifacts are
 included by the existing browser CI lane. Run with the same environment shown
-above plus `python -m pytest -q tests/test_flow_workspace.py`.
+above plus `uv run pytest -q tests/test_flow_workspace.py`.

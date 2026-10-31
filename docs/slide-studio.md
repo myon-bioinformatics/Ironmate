@@ -62,6 +62,6 @@ Only the generated XML, JS/CSS and editor screen are added to `image_studio.py -
 - Generated files were read with the test-only third-party library python-pptx and converted to PDF with LibreOffice for visual checks. Hands-on use in the Microsoft PowerPoint app has not been done.
 
 ```sh
-python -m pytest -q tests/test_browser_slides.py tests/test_pages_tools.py tests/test_studio_delivery.py
+uv run pytest -q tests/test_browser_slides.py tests/test_pages_tools.py tests/test_studio_delivery.py
 IRONMATE_PLAYWRIGHT_MODULE="$PWD/build/pages-test/node_modules/playwright" node tests/slides_browser.cjs
 ```

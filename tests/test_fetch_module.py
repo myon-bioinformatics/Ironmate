@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "vendor"))
 import fetch_module as fm  # noqa: E402
 
 
@@ -61,7 +61,7 @@ def test_rejects_bad_hash_compiled_and_runtime_deps(monkeypatch, tmp_path):
     with pytest.raises(SystemExit, match="pure-Python"):
         fm.resolve("cdnfake")
     _serve(monkeypatch, _wheel(), requires=["pluggy>=1"])
-    with pytest.raises(SystemExit, match="runtime dependencies"):
+    with pytest.raises(SystemExit, match="実行時の依存がある"):
         fm.resolve("cdnfake")
 
 
@@ -92,7 +92,7 @@ def test_python_3_9_is_below_3_11_as_a_version_not_as_text():
 
 def test_extra_or_marker_follows_the_environment(monkeypatch):
     _serve(monkeypatch, _wheel(), requires=['foo>=1; python_version >= "3.11" or extra == "dev"'])
-    with pytest.raises(SystemExit, match="runtime dependencies"):
+    with pytest.raises(SystemExit, match="実行時の依存がある"):
         fm.resolve("cdnfake")
     _serve(monkeypatch, _wheel(), requires=['foo>=1; python_version < "3.11" or extra == "dev"'])
     assert fm.resolve("cdnfake")["version"] == "1.0"
@@ -122,5 +122,5 @@ def test_release_comparison_and_fail_closed_complex_versions(monkeypatch):
     assert fm.marker_applies('"3.11" > python_version', fm.marker_environment({"python_version": "3.10"}))
     assert fm.marker_applies('extra == "Brotli_X"', fm.marker_environment({"extra": "brotli.x"}))
     _serve(monkeypatch, _wheel(), requires=['foo>=1; python_version >= "3.11a1"'])
-    with pytest.raises(SystemExit, match="runtime dependencies"):
+    with pytest.raises(SystemExit, match="実行時の依存がある"):
         fm.resolve("cdnfake")

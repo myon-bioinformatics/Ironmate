@@ -6,7 +6,7 @@ name: CDN pypdf pages
 on:
   pull_request:
     paths:
-      - scripts/fetch_module.py
+      - vendor/fetch_module.py
       - scripts/cdn_pypdf_pages.py
       - tests/test_fetch_module.py
       - tests/test_cdn_pypdf_pages.py
@@ -14,7 +14,7 @@ on:
   push:
     branches: [main]
     paths:
-      - scripts/fetch_module.py
+      - vendor/fetch_module.py
       - scripts/cdn_pypdf_pages.py
       - tests/test_fetch_module.py
       - tests/test_cdn_pypdf_pages.py

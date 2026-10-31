@@ -1,10 +1,14 @@
-"""Opt-in UNO check, run in the existing Marp/browser CI lane: an independent engine reads our PPTX.
+# test_uno_roundtrip.py
+# __all__: 0
+"""UNO readback smoke check, enabled automatically in the existing Marp/browser CI lane.
 
 LibreOffice is a test-lane dependency only (apt, minimal); it is not part of the product and the
 default pytest run skips this. UNO is LibreOffice's own API, so it cannot be had without LibreOffice.
 The client runs in the Python that ships `uno` (apt's python3-uno is for /usr/bin/python3);
 set IRONMATE_UNO_PYTHON to use another.
+This reads a freshly generated deck, not an edited or LibreOffice-saved round trip.
 """
+from collections import Counter
 import json
 import os
 import shutil
@@ -15,7 +19,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.fixture_pptx_layout import make_source
+__all__ = []
 
 # Opens the deck through UNO and reports what LibreOffice sees: pages, shape texts, positions (1/100 mm).
 CLIENT = r'''
@@ -39,7 +43,8 @@ try:
     page = doc.DrawPages.getByIndex(0)
     shapes = [page.getByIndex(i) for i in range(page.Count)]
     print(json.dumps({"pages": doc.DrawPages.Count,
-                      "origins": {s.String: [s.Position.X, s.Position.Y] for s in shapes if s.String}}))
+                      "shapes": [{"text": s.String, "origin": [s.Position.X, s.Position.Y]}
+                                 for s in shapes]}))
 finally:
     doc.close(True)
     try:
@@ -49,11 +54,25 @@ finally:
 '''
 
 
+def _assert_fixture_readback(seen):
+    assert seen['pages'] == 1
+    shapes = seen['shapes']
+    labels = ['Synthetic layout fixture: unchanged label', *[f'Box {i + 1}' for i in range(5)]]
+    # Check every record before building a lookup: duplicates and unlabelled extras must not disappear.
+    assert Counter(shape['text'] for shape in shapes) == Counter(labels), shapes
+    origins = {shape['text']: shape['origin'] for shape in shapes}
+    for i in range(5):  # make_source places Box n at (10 + .15 n, 8 + .1 n) inches
+        x, y = origins[f'Box {i + 1}']
+        assert abs(x - round((10 + i * .15) * 2540)) <= 5 and abs(y - round((8 + i * .1) * 2540)) <= 5, (i, x, y)
+
+
 def test_libreoffice_reads_the_fixture_deck_through_uno(tmp_path):
     if os.environ.get('IRONMATE_RUN_UNO_INTEGRATION') != '1':
         pytest.skip('optional UNO integration not enabled')
     soffice = shutil.which('soffice')
     assert soffice, 'soffice is not installed: the UNO lane installs python3-uno and libreoffice-impress'
+    from tests.fixture_pptx_layout import make_source
+
     deck = tmp_path / 'source.pptx'
     make_source(deck)
     with socket.socket() as probe:
@@ -74,9 +93,4 @@ def test_libreoffice_reads_the_fixture_deck_through_uno(tmp_path):
             server.wait(timeout=30)
         except subprocess.TimeoutExpired:
             server.kill()
-    seen = json.loads(done.stdout)
-    assert seen['pages'] == 1
-    assert 'Synthetic layout fixture: unchanged label' in seen['origins']
-    for i in range(5):  # make_source places Box n at (10 + .15 n, 8 + .1 n) inches
-        x, y = seen['origins'][f'Box {i + 1}']
-        assert abs(x - round((10 + i * .15) * 2540)) <= 5 and abs(y - round((8 + i * .1) * 2540)) <= 5, (i, x, y)
+    _assert_fixture_readback(json.loads(done.stdout))

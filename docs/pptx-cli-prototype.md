@@ -115,11 +115,17 @@ Run the gated real conversion test only in an explicitly provisioned environment
 IRONMATE_RUN_MARP_INTEGRATION=1 uv run pytest -q tests/test_marp_pptx.py
 ```
 
-The UNO check (`tests/test_uno_roundtrip.py`) is gated the same way and needs `soffice` plus `python3-uno` (about 70 MB to download, 200 MB on disk with Impress); it has LibreOffice open the fixture deck through UNO and compares page count, texts and shape positions with what the fixture placed:
+The UNO readback smoke check (`tests/test_uno_roundtrip.py`) needs `soffice` plus `python3-uno`. It has LibreOffice open a freshly generated fixture deck through UNO and compares the page count, exact shape-label multiplicity (including unexpected or unlabelled shapes), and the five box origins with what the fixture placed. It does not edit a deck or save/reopen it through LibreOffice, and does not check rendering fidelity.
+
+The real check is skipped by default pytest. The existing Marp CI job automatically installs the test-only packages and enables this check on the workflow's path-filtered pull requests and pushes to `main`; it is not a manually gated CI job. To opt in locally in an already provisioned environment:
 
 ```sh
 IRONMATE_RUN_UNO_INTEGRATION=1 uv run pytest -q tests/test_uno_roundtrip.py   # IRONMATE_UNO_PYTHON overrides /usr/bin/python3
 ```
+
+The original Ubuntu 24.04 estimate was about 70 MB to download and 200 MB installed. In [PR #175's Ubuntu 26.04 CI run](https://github.com/myon-bioinformatics/Ironmate/actions/runs/41182329884/job/124482093875), apt fetched 92.6 MB for 53 newly installed packages and forecast 307 MB additional disk usage (LibreOffice 26.2.6.3). The latter is apt's estimate, not a measured filesystem footprint or a portable dependency budget; preinstalled packages and runner versions affect it. These figures exclude the separate existing CJK-font installation. LibreOffice remains outside the production dependency set.
+
+`tests/test_uno_readback.py` checks duplicate, extra, missing and unlabelled shape rejection with fake data and a fake UNO client; it runs without LibreOffice.
 
 This first proof checks actual output existence and PPTX readability, **not** that the output has editable text or that it is visually faithful. Standard Marp PPTX export can rasterize slide content; that must be measured before using python-pptx to edit generated text. Do not build the unified Markdown→Marp→PPTX→XML one-liner until this independent integration is green and the editability limitations are understood. The production PPTX editing CLI stays independent.
 

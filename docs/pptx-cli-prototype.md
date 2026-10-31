@@ -115,12 +115,18 @@ Run the gated real conversion test only in an explicitly provisioned environment
 IRONMATE_RUN_MARP_INTEGRATION=1 uv run pytest -q tests/test_marp_pptx.py
 ```
 
+The UNO check (`tests/test_uno_roundtrip.py`) is gated the same way and needs `soffice` plus `python3-uno` (about 70 MB to download, 200 MB on disk with Impress); it has LibreOffice open the fixture deck through UNO and compares page count, texts and shape positions with what the fixture placed:
+
+```sh
+IRONMATE_RUN_UNO_INTEGRATION=1 uv run pytest -q tests/test_uno_roundtrip.py   # IRONMATE_UNO_PYTHON overrides /usr/bin/python3
+```
+
 This first proof checks actual output existence and PPTX readability, **not** that the output has editable text or that it is visually faithful. Standard Marp PPTX export can rasterize slide content; that must be measured before using python-pptx to edit generated text. Do not build the unified Markdown→Marp→PPTX→XML one-liner until this independent integration is green and the editability limitations are understood. The production PPTX editing CLI stays independent.
 
 
 ## Web-first validation boundary (user decision)
 
-For this prototype, **do not introduce LibreOffice** and do not require compatibility or visual equivalence with desktop PowerPoint. Prioritize Open XML structural correctness and browser-accessible inspection. Record separately whether the browser displays (a) Marp-generated HTML or (b) the actual generated/edited PPTX through a real PPTX-capable web viewer. HTML screenshots alone do **not** prove that the PPTX was opened in the browser. If a PPTX web viewer is unavailable, report that lane as unverified rather than substituting a claim about desktop compatibility.
+For this prototype, **do not introduce LibreOffice** into the product or the default test run, and do not require compatibility or visual equivalence with desktop PowerPoint. Test lane only (user decision, 2026-10-31): the CI Marp integration job may apt-install the minimal LibreOffice set (`python3-uno`, `libreoffice-impress`, `--no-install-recommends`) for one UNO check; production never installs it. Prioritize Open XML structural correctness and browser-accessible inspection. Record separately whether the browser displays (a) Marp-generated HTML or (b) the actual generated/edited PPTX through a real PPTX-capable web viewer. HTML screenshots alone do **not** prove that the PPTX was opened in the browser. If a PPTX web viewer is unavailable, report that lane as unverified rather than substituting a claim about desktop compatibility.
 
 Use existing browser-test-kit/web-ui/Playwright/Stagehand facilities where they actually apply, without introducing redundant browser automation. App-versus-web differences are explicitly out of scope for this phase and can be investigated as separate follow-ups if concrete issues arise. Keep the Markdown→Marp→PPTX→Open XML and JUnit validation work in the same Draft PR.
 

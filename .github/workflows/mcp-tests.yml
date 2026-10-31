@@ -171,6 +171,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install --no-install-recommends -y fonts-noto-cjk
           fc-match ':lang=ja'
+      # Test lane only: UNO is LibreOffice's own API, so this is the smallest set that has it.
+      - name: Install minimal LibreOffice for the UNO check
+        timeout-minutes: 5
+        run: |
+          sudo apt-get install --no-install-recommends -y python3-uno libreoffice-impress
+          soffice --version
       - name: Locate browser
         shell: bash
         run: |
@@ -178,10 +184,11 @@ jobs:
       - name: Run real Markdown to Marp to PPTX integration
         env:
           IRONMATE_RUN_MARP_INTEGRATION: "1"
+          IRONMATE_RUN_UNO_INTEGRATION: "1"
           IRONMATE_MARP_BIN: node_modules/.bin/marp
           IRONMATE_MMDC_BIN: node_modules/.bin/mmdc
           PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome
-        run: uv run --locked python -m pytest -q tests/test_marp_pptx.py --junitxml=build/test-results/marp.xml
+        run: uv run --locked python -m pytest -q tests/test_marp_pptx.py tests/test_uno_roundtrip.py --junitxml=build/test-results/marp.xml
       - name: Exercise common JSON flow formats and browser pixel parity
         env:
           IRONMATE_RUN_FLOW_INTEGRATION: "1"

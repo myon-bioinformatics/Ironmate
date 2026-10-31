@@ -1,5 +1,7 @@
 # The published payload contains only the explicit browser asset allowlist.
-FROM python:3.15-slim AS build
+# Pin the 3.15 series index without dropping architectures (amd64: 3.15.2; riscv64: 3.15.1).
+# Source: https://github.com/docker-library/repo-info/blob/813f8e2e84e96e1e63ecf69bd0fcddded5e7f611/repos/python/remote/3.15-slim.md
+FROM python:3.15-slim@sha256:94d3426f1def7db4a106a232ac121bfd975393e5dfd40a619b955fae45fe7913 AS build
 WORKDIR /src
 COPY image_studio.py grid_output.py pixel_grid.py ./
 COPY scripts/pages_catalog.py ./scripts/pages_catalog.py
@@ -13,7 +15,7 @@ RUN python -S image_studio.py --build-site /site/Ironmate
 FROM scratch AS artifact
 COPY --from=build /site/Ironmate/ /
 
-FROM python:3.15-slim AS runtime
+FROM python:3.15-slim@sha256:94d3426f1def7db4a106a232ac121bfd975393e5dfd40a619b955fae45fe7913 AS runtime
 COPY --from=build /site /site
 USER 65534:65534
 EXPOSE 8080

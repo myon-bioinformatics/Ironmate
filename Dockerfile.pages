@@ -1,5 +1,5 @@
 # The published payload contains only the explicit browser asset allowlist.
-FROM python:3.12-slim AS build
+FROM python:3.15-slim AS build
 WORKDIR /src
 COPY image_studio.py grid_output.py pixel_grid.py ./
 COPY scripts/pages_catalog.py ./scripts/pages_catalog.py
@@ -13,7 +13,7 @@ RUN python -S image_studio.py --build-site /site/Ironmate
 FROM scratch AS artifact
 COPY --from=build /site/Ironmate/ /
 
-FROM python:3.12-slim AS runtime
+FROM python:3.15-slim AS runtime
 COPY --from=build /site /site
 USER 65534:65534
 EXPOSE 8080

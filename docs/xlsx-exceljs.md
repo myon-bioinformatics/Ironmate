@@ -1,13 +1,13 @@
 # Excel workbooks
 
-CSV files become `.xlsx` workbooks. Ironmate detects the CSV encoding, then ExcelJS or SheetJS writes the package and Ironmate sets the cell styles in the workbook XML. openpyxl and pandas are not used.
+CSV files become `.xlsx` workbooks. Ironmate detects the CSV encoding, then ExcelJS writes the package and Ironmate sets the cell styles in the workbook XML. openpyxl and pandas are not used.
 
 ```sh
 python xlsx_csv.py -o book.xlsx --border --autofilter 売上=costs.csv メモ=notes.csv
 python xlsx_csv.py --spec book.json -o book.xlsx
 ```
 
-Node.js 24 and `npm ci` are required (pinned `exceljs@4.4.0` and SheetJS `xlsx@0.20.3` from the official CDN tarball). The same lockfile also pins `pptxgenjs@4.0.1` for the slide package. Ironmate does not install them. They are not in `vendor.lock.json`.
+Node.js 24 and `npm ci` are required (pinned `exceljs@4.4.0`). The same lockfile also pins `pptxgenjs@4.0.1` for the slide package. Ironmate does not install them. They are not in `vendor.lock.json`.
 
 `vendor/oci-cost-analysis.py` still imports pandas to print two columns from a CSV. That file is a locked vendor copy and is not part of this converter. PowerPoint tables still read CSV with the stdlib `csv` module.
 
@@ -62,7 +62,7 @@ Spec shape:
 ## Formula subset
 
 `xlsx_spec._check_formula` validates the complete expression before it reaches
-ExcelJS or SheetJS. At write time sheet qualifiers must match a sheet in this
+ExcelJS. At write time sheet qualifiers must match a sheet in this
 workbook (case-insensitively). `write_workbook` applies the same check to canonical specs,
 so constructing a cell with `f` directly does not bypass validation. Expressions
 are stored unchanged after stripping the optional leading `=` and outer spaces;
@@ -88,22 +88,23 @@ characters, unbalanced/unterminated expressions, more than 8192 characters, and
 nesting deeper than 64 are rejected. Function arity, types,
 and calculation results are left to Excel and may produce ordinary cell errors.
 
-Verification covers both input paths and both writer engines, inspecting the
+Verification covers both input paths and the ExcelJS writer, inspecting the
 resulting worksheet formulas and checking that literal URL cells introduce no
 external relationships or image parts. Excel desktop rendering, calculation,
 and network traffic have not been tested.
 
-## How the two libraries are checked
+## How ExcelJS output is checked
 
-Both engines write values, formulas, sheet names, and autofilter. Ironmate then rewrites `xl/styles.xml` and each cell's `s` attribute so borders, alignment, and number formats do not depend on which library wrote the package. SheetJS community does not write those styles, and its reader does not return them.
+ExcelJS writes values, formulas, sheet names, and autofilter. Ironmate then rewrites `xl/styles.xml` and each cell's `s` attribute, so borders, alignment, and number formats are set by Ironmate rather than by the library.
 
 Tests, with no Excel and no Google account:
 
 - Unzip the xlsx and require `autoFilter`, thin borders, `numFmt`, alignment, and both sheet names. A safe CSV formula such as `=B2*1.1` stays a formula in `<f>`. `=IMAGE(A2)` raises for both CSV input and explicit formula entries, including when A2 contains the URL.
-- XML → JSON equals the spec for a package from either engine.
-- ExcelJS write → SheetJS read matches values, formulas, number formats, sheet names, and autofilter.
-- SheetJS write → ExcelJS read matches the full spec, including borders and alignment. An empty bordered cell stays in the grid for that read. SheetJS's own reader keeps the width and autofilter and returns that cell as empty, because it does not return borders.
+- XML → JSON equals the spec for the written package.
+- ExcelJS write → ExcelJS read matches the full spec, including borders and alignment. An empty bordered cell stays in the grid for that read.
+
+ExcelJS is the only library that writes or reads these packages, so the tests no longer compare it with a second implementation. A mistake that ExcelJS's writer and reader make in the same way is caught only by the XML checks above.
 
 ## Not in this subset
 
-Merged cells, images, drawings, and conditional formatting are rejected. Also untouched: charts, pivot tables, VBA, comments, defined names, column widths, fonts, fills, and the calc chain. ZIP part order is whatever the writer produced. A second style pass does not try to make the two engines' packages byte-identical.
+Merged cells, images, drawings, and conditional formatting are rejected. Also untouched: charts, pivot tables, VBA, comments, defined names, column widths, fonts, fills, and the calc chain. ZIP part order is whatever the writer produced.

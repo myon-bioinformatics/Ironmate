@@ -122,7 +122,7 @@ def test_safe_formulas_remain_formulas(raw, source):
     assert cell == {'f': raw[1:]}
 
 
-@pytest.mark.parametrize('engine', ['exceljs', 'sheetjs'])
+@pytest.mark.parametrize('engine', ['exceljs'])
 @pytest.mark.parametrize('raw', ['IMAGE(A2)', 'SUM(IMAGE(A2))', 'WEBSERVICE(A2)',
                                  'INDIRECT(A2)', 'FUTUREFUNCTION(A2)', '', None])
 def test_canonical_spec_cannot_bypass_formula_policy(engine, raw, monkeypatch):
@@ -134,7 +134,7 @@ def test_canonical_spec_cannot_bypass_formula_policy(engine, raw, monkeypatch):
         write_workbook(spec, engine)
 
 
-@pytest.mark.parametrize('engine', ['exceljs', 'sheetjs'])
+@pytest.mark.parametrize('engine', ['exceljs'])
 @pytest.mark.parametrize('source', ['csv', 'explicit'])
 def test_url_cells_and_safe_formulas_write_without_external_relationships(engine, source):
     entry = {'name': 'S', 'rows': [
@@ -155,7 +155,7 @@ def test_url_cells_and_safe_formulas_write_without_external_relationships(engine
                 assert all(rel.get('TargetMode') != 'External' for rel in ET.fromstring(archive.read(name)))
 
 
-@pytest.mark.parametrize('engine', ['exceljs', 'sheetjs'])
+@pytest.mark.parametrize('engine', ['exceljs'])
 def test_sheet_qualifiers_must_resolve_inside_the_written_workbook(engine):
     spec = workbook_from_spec({'sheets': [
         {'name': 'S', 'rows': [["='売上 メモ'!A1+other!A1"]]},
@@ -185,7 +185,7 @@ def test_rejected_features_and_sheet_names():
         sheet_from_csv('bad:name', 'a\n')
 
 
-@pytest.mark.parametrize('engine', ['exceljs', 'sheetjs'])
+@pytest.mark.parametrize('engine', ['exceljs'])
 def test_workbook_xml_round_trip(engine):
     spec = _book()
     payload = write_workbook(spec, engine)
@@ -218,23 +218,18 @@ def test_workbook_xml_round_trip(engine):
 def test_empty_cells_keep_grid_borders():
     sheet = sheet_from_csv('S', 'a,b,\n1,2,\n', borders=True, autofilter=True)
     spec = workbook_from_sheets([sheet])
-    for name in ('exceljs', 'sheetjs'):
-        payload = write_workbook(spec, name)
-        assert read_spec(payload) == spec
-        root = ET.fromstring(archive_sheet(payload, 0))
-        empty = root.find('m:sheetData/m:row[@r="1"]/m:c[@r="C1"]', NS)
-        assert empty is not None and empty.find('m:v', NS) is None
-        with ZipFile(BytesIO(payload)) as archive:
-            styles = ET.fromstring(archive.read('xl/styles.xml'))
-        xf = styles.findall('m:cellXfs/m:xf', NS)[int(empty.get('s'))]
-        assert xf.get('borderId') == '1'
-        assert xf.get('applyBorder') == '1'
-    from_sheet = write_workbook(spec, 'sheetjs')
-    assert read_workbook(from_sheet, 'exceljs') == spec
-    sheetjs_view = read_workbook(write_workbook(spec, 'exceljs'), 'sheetjs')
-    assert [len(row) for row in sheetjs_view['sheets'][0]['rows']] == [3, 3]
-    assert sheetjs_view['sheets'][0]['autofilter'] == 'A1:C2'
-    assert sheetjs_view['sheets'][0]['rows'][0][2] is None
+    payload = write_workbook(spec, 'exceljs')
+    assert read_spec(payload) == spec
+    root = ET.fromstring(archive_sheet(payload, 0))
+    empty = root.find('m:sheetData/m:row[@r="1"]/m:c[@r="C1"]', NS)
+    assert empty is not None and empty.find('m:v', NS) is None
+    with ZipFile(BytesIO(payload)) as archive:
+        styles = ET.fromstring(archive.read('xl/styles.xml'))
+    xf = styles.findall('m:cellXfs/m:xf', NS)[int(empty.get('s'))]
+    assert xf.get('borderId') == '1'
+    assert xf.get('applyBorder') == '1'
+    # ExcelJS reads the empty bordered cell back as part of the grid.
+    assert read_workbook(payload, 'exceljs') == spec
 
 
 def archive_sheet(payload, index):
@@ -242,40 +237,17 @@ def archive_sheet(payload, index):
         return archive.read(f'xl/worksheets/sheet{index + 1}.xml')
 
 
-def test_engines_read_each_others_packages():
+def test_exceljs_reads_the_written_package():
     spec = _book()
-    from_excel = write_workbook(spec, 'exceljs')
-    from_sheet = write_workbook(spec, 'sheetjs')
-    assert _data(read_workbook(from_excel, 'sheetjs')) == _data(spec)
-    excel_view = read_workbook(from_sheet, 'exceljs')
-    assert excel_view == spec
+    assert read_workbook(write_workbook(spec, 'exceljs'), 'exceljs') == spec
 
 
-def _data(spec):
-    """Fields SheetJS community returns: values, formulas, number formats, autofilter."""
-    sheets = []
-    for sheet in spec['sheets']:
-        rows = []
-        for row in sheet['rows']:
-            line = []
-            for cell in row:
-                if not cell:
-                    line.append(None)
-                    continue
-                item = {}
-                if 'f' in cell:
-                    item['f'] = cell['f']
-                elif 'v' in cell:
-                    item['v'] = cell['v']
-                if cell.get('z'):
-                    item['z'] = cell['z']
-                line.append(item or None)
-            rows.append(line)
-        item = {'name': sheet['name'], 'rows': rows}
-        if sheet.get('autofilter'):
-            item['autofilter'] = sheet['autofilter']
-        sheets.append(item)
-    return {'sheets': sheets}
+def test_exceljs_is_the_only_engine():
+    spec = _book()
+    with pytest.raises(ValueError, match='engine must be exceljs'):
+        write_workbook(spec, 'sheetjs')
+    with pytest.raises(ValueError, match='engine must be exceljs'):
+        read_workbook(b'', 'sheetjs')
 
 
 def test_cli_writes_shift_jis_csv(tmp_path):

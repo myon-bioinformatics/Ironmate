@@ -1,4 +1,4 @@
-"""Write a workbook with ExcelJS or SheetJS, then apply Ironmate's style XML."""
+"""Write a workbook with ExcelJS, then apply Ironmate's style XML."""
 import json
 import shutil
 import subprocess
@@ -17,9 +17,8 @@ def _tool():
     relative = script.relative_to(ROOT).as_posix()
     if relative not in allow.get('scripts', []) or not script.is_file():
         raise RuntimeError('xlsx renderer is not allowlisted')
-    for package in ('exceljs', 'xlsx'):
-        if not (ROOT / 'node_modules' / package / 'package.json').is_file():
-            raise RuntimeError('pinned exceljs and xlsx are not installed; run npm ci from the repository root')
+    if not (ROOT / 'node_modules' / 'exceljs' / 'package.json').is_file():
+        raise RuntimeError('pinned exceljs is not installed; run npm ci from the repository root')
     node = shutil.which('node')
     if node is None:
         raise RuntimeError('Node.js is required to write xlsx; install Node.js 22 and run npm ci. Ironmate does not auto-install it.')
@@ -38,9 +37,9 @@ def _run(engine, mode, source, dest):
 
 
 def write_workbook(spec, engine='exceljs'):
-    """Return xlsx bytes. ``engine`` is ``exceljs`` or ``sheetjs``."""
-    if engine not in ('exceljs', 'sheetjs'):
-        raise ValueError('engine must be exceljs or sheetjs')
+    """Return xlsx bytes. ``engine`` must be ``exceljs``, the only writer."""
+    if engine != 'exceljs':
+        raise ValueError('engine must be exceljs')
     assert_formulas_allowed(spec)
     with tempfile.TemporaryDirectory(prefix='xlsx-') as directory:
         directory = Path(directory)
@@ -52,9 +51,9 @@ def write_workbook(spec, engine='exceljs'):
 
 
 def read_workbook(payload, engine):
-    """Read a workbook back through ExcelJS or SheetJS."""
-    if engine not in ('exceljs', 'sheetjs'):
-        raise ValueError('engine must be exceljs or sheetjs')
+    """Read a workbook back through ExcelJS."""
+    if engine != 'exceljs':
+        raise ValueError('engine must be exceljs')
     with tempfile.TemporaryDirectory(prefix='xlsx-') as directory:
         directory = Path(directory)
         package = directory / 'book.xlsx'

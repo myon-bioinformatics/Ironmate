@@ -20,7 +20,7 @@ def test_catalog_enrollment_is_explicit_and_complete():
     catalog = json.loads((ROOT / "vendor-catalog.json").read_text(encoding="utf-8"))
     lock = json.loads((ROOT / "vendor.lock.json").read_text(encoding="utf-8"))
     assert lock["schema"] == "vendor-lock/1"
-    assert len(lock["files"]) == 59
+    assert len(lock["files"]) == 61
     locked = {(entry["repository"], entry["source"]) for entry in lock["files"]}
     for item in catalog["tools"]:
         if item.get("default_enrollment", {}).get("enrollment") == "skipped":
@@ -28,4 +28,6 @@ def test_catalog_enrollment_is_explicit_and_complete():
         source = item.get("source", item["repository"].split("/")[1] + ".py")
         assert (item["repository"], source) in locked
     assert ("myon-bioinformatics/cli_args", "cli_args.py") in locked
-    assert len({entry["destination"] for entry in lock["files"]}) == 59
+    assert len({entry["destination"] for entry in lock["files"]}) == 61
+    assert ("myon-bioinformatics/Aoi", "scripts/fetch_module.py") in locked
+    assert ("myon-bioinformatics/Aoi", "LICENSE") in locked

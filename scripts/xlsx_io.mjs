@@ -1,4 +1,4 @@
-// Allowlisted ExcelJS / SheetJS workbook IO.
+// Allowlisted ExcelJS workbook IO.
 // Ironmate decides encodings, the cell spec, and the style XML.
 // This script only writes or reads values, formulas, sheet names, and autofilter.
 import { createRequire } from 'node:module'
@@ -8,11 +8,10 @@ import { fileURLToPath } from 'node:url'
 
 const require = createRequire(join(dirname(fileURLToPath(import.meta.url)), '../package.json'))
 const ExcelJS = require('exceljs')
-const XLSX = require('xlsx')
 
 const [engine, mode, input, output] = process.argv.slice(2)
-if (!['exceljs', 'sheetjs'].includes(engine) || !['write', 'read'].includes(mode) || !input || !output) {
-  throw new Error('usage: xlsx_io.mjs exceljs|sheetjs write|read INPUT OUTPUT')
+if (engine !== 'exceljs' || !['write', 'read'].includes(mode) || !input || !output) {
+  throw new Error('usage: xlsx_io.mjs exceljs write|read INPUT OUTPUT')
 }
 
 function columnName(index) {
@@ -46,31 +45,6 @@ async function writeExcel(spec, outPath) {
     if (sheet.autofilter) ws.autoFilter = sheet.autofilter
   }
   await wb.xlsx.writeFile(outPath)
-}
-
-function writeSheet(spec, outPath) {
-  const book = XLSX.utils.book_new()
-  for (const sheet of spec.sheets) {
-    const ws = {}
-    const height = sheet.rows.length
-    const width = height ? sheet.rows[0].length : 0
-    sheet.rows.forEach((row, r) => {
-      row.forEach((cell, c) => {
-        const value = cellOrNull(cell)
-        if (!value) return
-        const ref = XLSX.utils.encode_cell({ r, c })
-        if (value.f) ws[ref] = { t: 'n', f: value.f }
-        else if (typeof value.v === 'number') ws[ref] = { t: 'n', v: value.v }
-        else ws[ref] = { t: 's', v: String(value.v) }
-      })
-    })
-    if (height && width) {
-      ws['!ref'] = `A1:${columnName(width)}${height}`
-    }
-    if (sheet.autofilter) ws['!autofilter'] = { ref: sheet.autofilter }
-    XLSX.utils.book_append_sheet(book, ws, sheet.name)
-  }
-  XLSX.writeFile(book, outPath)
 }
 
 function publicCell(raw) {
@@ -135,40 +109,8 @@ function readExcel(path) {
   })()
 }
 
-function readSheet(path) {
-  const book = XLSX.readFile(path, { cellNF: true, cellFormula: true, cellStyles: true })
-  const sheets = book.SheetNames.map((name) => {
-    const ws = book.Sheets[name]
-    const ref = ws['!ref'] ? XLSX.utils.decode_range(ws['!ref']) : { s: { r: 0, c: 0 }, e: { r: -1, c: -1 } }
-    const rows = []
-    for (let r = ref.s.r; r <= ref.e.r; r += 1) {
-      const line = []
-      for (let c = ref.s.c; c <= ref.e.c; c += 1) {
-        const item = ws[XLSX.utils.encode_cell({ r, c })]
-        if (!item) {
-          line.push(null)
-          continue
-        }
-        const raw = {}
-        if (item.f) raw.f = item.f
-        else if (item.v != null && item.v !== '') raw.v = item.v
-        if (item.z) raw.z = item.z
-        line.push(publicCell(raw))
-      }
-      rows.push(line)
-    }
-    const sheet = { name, rows }
-    if (ws['!autofilter'] && ws['!autofilter'].ref) sheet.autofilter = ws['!autofilter'].ref
-    return sheet
-  })
-  return { sheets }
-}
-
 if (mode === 'write') {
-  const spec = JSON.parse(readFileSync(input, 'utf8'))
-  if (engine === 'exceljs') await writeExcel(spec, output)
-  else writeSheet(spec, output)
+  await writeExcel(JSON.parse(readFileSync(input, 'utf8')), output)
 } else {
-  const spec = engine === 'exceljs' ? await readExcel(input) : readSheet(input)
-  writeFileSync(output, JSON.stringify(spec))
+  writeFileSync(output, JSON.stringify(await readExcel(input)))
 }

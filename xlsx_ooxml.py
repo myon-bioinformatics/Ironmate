@@ -1,7 +1,6 @@
 """Apply and read the supported workbook subset in xlsx XML.
 
-ExcelJS and SheetJS both write values, formulas, sheet names, and autofilter.
-SheetJS community does not write borders or alignment. After either writer,
+ExcelJS writes values, formulas, sheet names, and autofilter. After the writer,
 this module sets ``xl/styles.xml`` and each cell's style index so the package
 carries 罫線, number formats, and alignment. Reading the XML back is the check
 that does not need Excel or a browser.
@@ -35,7 +34,7 @@ def _q(tag):
 
 
 def _serialize(root):
-    """Write default spreadsheet tags so SheetJS's single-letter prefix regex matches."""
+    """Write default spreadsheet tags, without a namespace prefix on every element."""
     saved = dict(ET._namespace_map)
     try:
         ET.register_namespace('', NS)

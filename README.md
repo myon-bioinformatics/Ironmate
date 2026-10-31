@@ -271,7 +271,7 @@ python -S ironmate_tests.py list
 
 xprobe and the parent's vendor tools are separate checkouts for testing. They are not fetched automatically as runtime dependencies.
 New PPTX packages need Node.js 24+ and `npm ci` (pinned `pptxgenjs@4.0.1`). Ironmate does not install dependencies automatically. The source of truth for slide shapes is the [JSON ↔ OOXML mapping](docs/pptx-ooxml-mapping.md). A separately installed Marp CLI is needed only for Marp conversion.
-To turn CSV into xlsx, use the [Excel workbook](docs/xlsx-exceljs.md). Encoding detection covers UTF-8 / BOM / Shift_JIS / CP932. openpyxl and pandas are not used. The same `npm ci` also installs `exceljs@4.4.0` and SheetJS `xlsx@0.20.3`.
+To turn CSV into xlsx, use the [Excel workbook](docs/xlsx-exceljs.md). Encoding detection covers UTF-8 / BOM / Shift_JIS / CP932. openpyxl and pandas are not used. The same `npm ci` also installs `exceljs@4.4.0`.
 
 ## Comparing screenshots across browsers
 

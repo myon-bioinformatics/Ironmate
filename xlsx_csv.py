@@ -28,13 +28,13 @@ def convert_paths(sheets, *, borders=False, autofilter=False, encoding='auto'):
     return workbook_from_sheets(built), report
 
 
-def write_csv_workbook(path, spec, *, engine='exceljs'):
+def write_csv_workbook(path, spec):
     path = Path(path)
     if path.suffix.lower() != '.xlsx':
         raise ValueError('output must be a .xlsx file')
     if os.path.lexists(path):
         raise ValueError('output must be a new file')
-    path.write_bytes(write_workbook(spec, engine))
+    path.write_bytes(write_workbook(spec))
     return path
 
 

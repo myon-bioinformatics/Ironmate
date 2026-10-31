@@ -73,7 +73,7 @@ jobs:
           PY
           python -S .vendor-sync-tools/vendor_sync.py materialize --manifest vendor.lock.json
           python -S .vendor-sync-tools/vendor_sync.py check --manifest vendor.lock.json
-      - name: Install pinned pptxgenjs, ExcelJS, and SheetJS
+      - name: Install pinned pptxgenjs and ExcelJS
         run: npm ci
       - name: Type-check the .d.cts declarations (TypeScript is fetched here only, not a repo dependency)
         run: |

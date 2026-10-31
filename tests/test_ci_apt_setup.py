@@ -97,6 +97,14 @@ def test_workflow_keeps_coverage_budgets_and_setup_failure_visibility():
     assert "sudo apt-config dump" in setup_runs[0]
     marp_steps = jobs["marp-integration"]["steps"]
     assert any("fonts-noto-cjk" in s.get("run", "") for s in marp_steps)
+    # LibreOffice (for UNO) is a test-lane dependency only: minimal apt set, bounded, after the apt setup.
+    uno_index = next(i for i, s in enumerate(marp_steps) if s.get("name") == "Install minimal LibreOffice for the UNO check")
+    uno_install = marp_steps[uno_index]
+    assert uno_index > next(i for i, s in enumerate(marp_steps) if s.get("name") == "Bound apt dependency setup")
+    assert uno_install["timeout-minutes"] == 5
+    assert "--no-install-recommends" in uno_install["run"] and "python3-uno" in uno_install["run"]
+    assert any(s.get("env", {}).get("IRONMATE_RUN_UNO_INTEGRATION") == "1"
+               and "tests/test_uno_roundtrip.py" in s.get("run", "") for s in marp_steps)
     assert any(s.get("env", {}).get("IRONMATE_FLOW_REQUIRE_CJK") == "1" for s in marp_steps)
     clipboard = jobs["studio-clipboard"]
     assert clipboard["strategy"]["matrix"]["browser"] == ["chromium", "firefox", "webkit"]

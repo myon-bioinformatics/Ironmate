@@ -53,6 +53,12 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "26"
+      # `uv run --locked` below would sync the environment on its first call and hide the cost
+      # inside the pytest step. Doing it here, once, puts the install time and the sizes in the log.
+      - name: Install the locked Python environment
+        run: |
+          time uv sync --locked
+          du -sk .venv "$(uv cache dir)"
       - name: Fetch pinned shared vendor tool
         uses: actions/checkout@v7
         with:

@@ -62,7 +62,7 @@ def test_skip(): pass
     result = subprocess.run(command, cwd=tmp_path, env=env, capture_output=True,
                             text=True, timeout=30)
     directory = None
-    destination = os.environ.get("IRONMATE_FAILURE_EVIDENCE") if junit else None
+    destination = os.environ.get("FAILURE_EVIDENCE_DIR") if junit else None
     if destination:
         directory = ROOT / destination
         directory.mkdir(parents=True)  # Reject reuse rather than mix old evidence.

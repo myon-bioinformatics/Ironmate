@@ -43,7 +43,7 @@ cp build/xprobe.py build/shared/xprobe.py
 uv run --locked pytest -q tests/test_junit_failure_identity.py
 ```
 
-For artifact reproduction set `IRONMATE_FAILURE_EVIDENCE=build/controlled-failure`
+For artifact reproduction set `FAILURE_EVIDENCE_DIR=build/controlled-failure`
 and run the normal pytest command from the workflow. The destination must not
 already exist: prior evidence is rejected rather than mixed.
 

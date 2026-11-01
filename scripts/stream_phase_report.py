@@ -210,6 +210,19 @@ def main(argv=None):
                 engine = ObservableChoice([Prototype(c['name'], c.get('must_and', 0),
                                           c.get('forbid_not', 0), tuple(c.get('or_masks', [])))
                                           for c in spec['classes']], len(args.columns) << 1)
+            if args.ladder_spec:
+                ladder_spec = json.loads(args.ladder_spec.read_text(encoding='utf-8'))
+                def choose(board):
+                    for cls in ladder_spec['classes']:
+                        required = cls.get('must_and', 0)
+                        if (board & required == required and not board & cls.get('forbid_not', 0)
+                                and all(board & mask for mask in cls.get('or_masks', []))):
+                            return cls['name']
+                    return 'Unknown'
+                def valid(board):
+                    return all((board >> (i << 1)) & 3 != 3 for i in range(len(args.columns)))
+                names = {i << 1: c + '_High' for i, c in enumerate(args.columns)}
+                names.update({(i << 1) + 1: c + '_Low' for i, c in enumerate(args.columns)})
             with args.csv.open(encoding='utf-8-sig', newline='') as stream:
                 for row in csv_spins(stream, args.id_col, args.columns, args.allow_missing):
                     print(json.dumps(row, ensure_ascii=False))
@@ -218,22 +231,10 @@ def main(argv=None):
                     if args.ladder_spec:
                         if row['obs_mask'] != (1 << (len(args.columns) << 1))-1:
                             parser.error('ladder requires complete observations')
-                        spec = json.loads(args.ladder_spec.read_text(encoding='utf-8'))
-                        def choose(board):
-                            for cls in spec['classes']:
-                                required = cls.get('must_and', 0)
-                                if (board & required == required and not board & cls.get('forbid_not', 0)
-                                        and all(board & mask for mask in cls.get('or_masks', []))):
-                                    return cls['name']
-                            return 'Unknown'
-                        def valid(board):
-                            return all((board >> (i << 1)) & 3 != 3 for i in range(len(args.columns)))
-                        result = shortest_ladder(row['spin_board'], spec['target'], choose,
+                        result = shortest_ladder(row['spin_board'], ladder_spec['target'], choose,
                                                  len(args.columns) << 1, valid=valid)
                         print(json.dumps(result))
                         if result['path'] is not None:
-                            names = {i << 1: c + '_High' for i, c in enumerate(args.columns)}
-                            names.update({(i << 1) + 1: c + '_Low' for i, c in enumerate(args.columns)})
                             print(render_ladder(result['path'], choose, names))
         else:
             buffer = args.image.read_bytes()

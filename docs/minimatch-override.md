@@ -11,14 +11,16 @@ Upgrading the parent package cannot fix this: `exceljs@4.4.0` is the latest rele
 
 | Path | Broken API |
 | --- | --- |
-| `exceljs` → `archiver@5.3.2` → `archiver-utils@2.1.0` | `file.expand` (archiver glob / directory expansion) |
-| `exceljs` → `archiver` → `zip-stream@4.1.1` → `archiver-utils@3.0.4` | same `file.expand` |
+| `exceljs` → `archiver@5.3.2` → `archiver-utils@2.1.0` | `file.expand` (only when called directly) |
+| `exceljs` → `archiver` → `zip-stream@4.1.1` → `archiver-utils@3.0.4` | same `file.expand` (only when called directly) |
 | `exceljs` → `unzipper@0.10.14` → `fstream@1.0.12` → `rimraf@2.7.1` | `rimraf` / `rimraf.sync` (throws TypeError) |
 
 ExcelJS itself only uses `archiver` append/finalize and `unzipper.Parse`, so it never calls these.
-`readdir-glob@1.1.3` works with minimatch 11.
+`archiver@5.3.2`'s own `glob()` and `directory()` APIs use `readdir-glob@1.1.3`, not `archiver-utils`
+`file.expand`, and `readdir-glob` works with minimatch 11 (checked: `directory()` + `glob()` produced entries).
 
-Do not call archiver's glob/directory APIs or unzipper `Extract`/fstream directly.
+Only these break: calling `archiver-utils` `file.expand` directly, and `rimraf` / `rimraf.sync`
+(for example through unzipper `Extract` / fstream).
 CI job `ExcelJS smoke` (`.github/workflows/exceljs-smoke.yml`, script `scripts/exceljs_smoke.cjs`) checks the following: the xlsx write/read
 round-trip, the streaming WorkbookWriter/WorkbookReader, and CSV.
 

@@ -1,0 +1,186 @@
+# Opt-in PPTX nano environment
+
+This recipe prepares the real PptxGenJS/OOXML rendering slice without ExcelJS,
+Marp, browsers, LibreOffice/UNO or Docker. It is **not** the Markdown-to-Marp
+pipeline, all Ironmate features, visual/Office validation, or the full test suite.
+It changes neither this repository's dependencies nor existing tests or CI.
+
+## Fixed source and current-main boundary
+
+The common helper is pinned to the [merged parent source](https://github.com/myon-bioinformatics/myon-bioinformatics/blob/3128b4019b9949a6ccc80c686cd84c93f04af119/tools/nano_node.py).
+The runnable source is deliberately the measured Ironmate snapshot
+[`af846ee7b1fd440b8379e2a682dfc7d40365b30e`](https://github.com/myon-bioinformatics/Ironmate/tree/af846ee7b1fd440b8379e2a682dfc7d40365b30e),
+not an implicit current checkout. Its 198 non-root lock records project to 18;
+all retained records, versions, integrity values and paths remain unchanged.
+The image-size 2.0.4 and uuid 14.0.3 overrides are preserved.
+
+A read-only comparison with current
+[`91622da39bffd2af636af60ee193e10a00dab09a`](https://github.com/myon-bioinformatics/Ironmate/tree/91622da39bffd2af636af60ee193e10a00dab09a)
+found all nine non-package source/test/license blobs and all 18 retained PPTX
+records unchanged. Current main adds a minimatch `^11.0.1` override and unrelated
+lock changes (196 full records, root engine metadata and lock name). The current
+package files therefore **fail the historical helper's checks by design**.
+This recipe does not weaken that guard, remove the override, refresh a helper
+pin, or claim current-main installation measurements. A future current-snapshot
+contract needs separate review; use the exact historical source below meanwhile.
+
+## 1. Verify and prepare outside the checkout (no installation)
+
+Use an existing Python 3.12+, Node 24+ and npm 11.9.0. Nothing here installs or
+upgrades those tools. Run the shell blocks in order in the same POSIX shell.
+Choose a TMPDIR outside the checkout. Source download needs GitHub access; lock-only preparation is offline. The
+helper is downloaded at the merged parent commit, SHA-256 checked **before
+execution**, and then all 11 required child files are downloaded at their immutable
+commit and checked against its Git-blob allowlist. No clone, vendor enrollment,
+branch switch or write inside this checkout is required.
+
+```sh
+set -eu
+WORK=$(mktemp -d "${TMPDIR:-/tmp}/nano-ironmate-XXXXXXXX")
+WORK=$(python3 -I -B -S -c 'from pathlib import Path; import sys; print(Path(sys.argv[1]).resolve())' "$WORK")
+python3 -I -B -S - "$WORK" <<'PY'
+import hashlib, importlib.util, sys, urllib.request
+from pathlib import Path
+work = Path(sys.argv[1])
+parent = '3128b4019b9949a6ccc80c686cd84c93f04af119'
+child = 'af846ee7b1fd440b8379e2a682dfc7d40365b30e'
+def fetch(url):
+    with urllib.request.urlopen(url, timeout=60) as response:
+        data = response.read(2 * 1024 * 1024 + 1)
+    if len(data) > 2 * 1024 * 1024:
+        raise ValueError('download exceeds the bounded input size')
+    return data
+data = fetch(f'https://raw.githubusercontent.com/myon-bioinformatics/myon-bioinformatics/{parent}/tools/nano_node.py')
+if hashlib.sha256(data).hexdigest() != '9e042eb70a80c75f99aafb1956386b3f5e27ee795ec501d3bcece3a369d09777':
+    raise ValueError('parent helper SHA-256 mismatch')
+tool = work / 'nano_node.py'
+tool.write_bytes(data)
+spec = importlib.util.spec_from_file_location('nano_node', tool)
+nano = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(nano)
+source = work / 'source'
+for name, expected in nano.SOURCE_BLOBS.items():
+    data = fetch(f'https://raw.githubusercontent.com/myon-bioinformatics/Ironmate/{child}/{name}')
+    if nano.git_blob(data) != expected:
+        raise ValueError(f'child Git-blob mismatch: {name}')
+    path = source / name
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(data)
+nano.read_snapshot(source, blobs=nano.SOURCE_BLOBS)
+PY
+python3 -I -B -S "$WORK/nano_node.py" --feature ironmate-pptx \
+  --source "$WORK/source" --output-dir "$WORK/prepared" > "$WORK/prepared-path.txt"
+PREPARED=$(cat "$WORK/prepared-path.txt")
+PROJECT="$PREPARED/Ironmate"
+```
+
+Every required source, fixture and license file is staged; the helper records
+source identities and projected manifest/lock hashes in `$PREPARED/receipt.json`.
+Its source check concerns exact file bytes, not checkout HEAD or ancestry.
+Official npm uses `--package-lock-only --offline --ignore-scripts` with empty
+configuration and a private cache. Unknown graphs or changed retained records
+fail closed. If download or preparation fails, stop and inspect the error;
+do not bypass a hash check, weaken the guard, or use an unpinned fallback.
+
+## 2. Optional explicit installation
+
+This separate step downloads the locked packages from the official npm registry.
+It is not run by preparation or by importing a module. Review it before running.
+Fresh HOME/config/tmp/cache and disabled lifecycle scripts avoid using a broad
+developer environment; downloads still require network access. First recheck the
+helper and prepared manifest/lock digests to catch accidental intervening edits.
+
+```sh
+python3 -I -B -S - "$WORK" "$PREPARED" <<'PY'
+import hashlib, importlib.util, json, sys
+from pathlib import Path
+work, prepared = map(Path, sys.argv[1:])
+if hashlib.sha256((work / 'nano_node.py').read_bytes()).hexdigest() != '9e042eb70a80c75f99aafb1956386b3f5e27ee795ec501d3bcece3a369d09777':
+    raise ValueError('helper changed after preparation')
+spec = importlib.util.spec_from_file_location('nano_node', work / 'nano_node.py')
+nano = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(nano)
+snapshot = nano.read_snapshot(work / 'source', blobs=nano.SOURCE_BLOBS)
+original = json.loads(snapshot['package-lock.json'])
+manifest = json.loads(snapshot['package.json'])
+nano.validate_original(manifest, original, feature='ironmate-pptx')
+project = prepared / 'Ironmate'
+nano.validate_projection(original, json.loads((project / 'package-lock.json').read_bytes()),
+                         feature='ironmate-pptx')
+manifest['dependencies'] = {'pptxgenjs': '4.0.1'}
+if json.loads((project / 'package.json').read_bytes()) != manifest:
+    raise ValueError('projected manifest differs from the fixed contract')
+for name, data in snapshot.items():
+    if name not in ('package.json', 'package-lock.json') and (project / name).read_bytes() != data:
+        raise ValueError(f'prepared source changed: {name}')
+receipt = json.loads((prepared / 'receipt.json').read_bytes())
+if receipt['feature'] != 'ironmate-pptx' or receipt['source_commit'] != 'af846ee7b1fd440b8379e2a682dfc7d40365b30e':
+    raise ValueError('wrong feature receipt')
+for name, field in [('package.json', 'projected_manifest_sha256'),
+                    ('package-lock.json', 'projected_lock_sha256')]:
+    if hashlib.sha256((prepared / 'Ironmate' / name).read_bytes()).hexdigest() != receipt[field]:
+        raise ValueError(f'prepared input changed: {name}')
+PY
+mkdir -p "$WORK/install-home" "$WORK/install-config" "$WORK/install-tmp" "$WORK/install-cache"
+: > "$WORK/user.npmrc"
+: > "$WORK/global.npmrc"
+(cd "$PROJECT" && env -i PATH="$PATH" HOME="$WORK/install-home" \
+  XDG_CONFIG_HOME="$WORK/install-config" TMPDIR="$WORK/install-tmp" \
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
+  npm ci --ignore-scripts --no-audit --no-fund --no-update-notifier \
+  --registry https://registry.npmjs.org/ --fetch-retries=0 --fetch-timeout=30000 \
+  --userconfig "$WORK/user.npmrc" --globalconfig "$WORK/global.npmrc" \
+  --cache "$WORK/install-cache")
+```
+
+Stop on installation failure; keep the partial work directory for diagnosis.
+This does not install Docker, browsers, Office, Python test tools or model data.
+Do not run `npm install` or add packages to this projected environment to make
+unrelated tests pass; use the unchanged full environment for those tests.
+
+## 3. Run the real render/read-back path
+
+This synthetic sample uses the existing source API and standard-library Python;
+it produces an editable PPTX and checks its canonical JSON round trip. It does
+not open the deck in a browser or Office. Each invocation gets a private output
+and temporary directory; share the installed dependencies read-only, not outputs.
+
+```sh
+JOB=$(mktemp -d "$WORK/job-XXXXXXXX")
+mkdir -p "$JOB/home" "$JOB/tmp" "$JOB/cache"
+(cd "$PROJECT" && env -i PATH="$PATH" HOME="$JOB/home" TMPDIR="$JOB/tmp" \
+  XDG_CACHE_HOME="$JOB/cache" python3 -B -S - "$JOB/example.pptx" <<'PY'
+import sys
+from pathlib import Path
+from pptx_mapping import canonical_spec
+from pptx_render import read_package_spec, write_new_package
+from pptx_spec import sample_deck_spec
+expected = canonical_spec(sample_deck_spec())
+output = write_new_package(Path(sys.argv[1]), expected)
+if canonical_spec(read_package_spec(output)) != expected:
+    raise ValueError('PPTX canonical round trip differs')
+print(output)
+PY
+)
+```
+
+For parallel jobs, allocate a new `JOB` for every invocation and never share the
+output filename or TMPDIR. The prior comparison used one/two workers; it does
+not establish an optimal worker count or general rendering speed improvement.
+
+## Evidence and preserved tests
+
+The [bounded historical results](https://github.com/myon-bioinformatics/myon-bioinformatics/blob/3128b4019b9949a6ccc80c686cd84c93f04af119/docs/nano-feature-environments.md)
+include all installation samples, output checks and their limitations. The
+[historical reproducer](https://github.com/myon-bioinformatics/myon-bioinformatics/blob/3128b4019b9949a6ccc80c686cd84c93f04af119/docs/evidence/nano-features/2026-11-01-ironmate/REPRODUCE.md)
+pins its **older measured parent helper** for exact benchmark reproduction;
+do not substitute this adoption helper and label it as that measured binary.
+The original package-round-trip and image-size tests remain unchanged and are
+included in the staged snapshot. Running them requires a separate pytest tool
+environment as documented there; this runtime install does not provide pytest.
+All other tests and the full browser/UNO/Marp lanes remain in their original
+environments. Neither package counts nor installation bytes are Docker-image
+sizes or build-time measurements. This documentation update runs no benchmark
+and changes no workflow, Pages configuration, source/vendor registration or CI
+permission. README/docs-only changes match no current Ironmate push/PR workflow;
+Draft status is not what suppresses jobs.

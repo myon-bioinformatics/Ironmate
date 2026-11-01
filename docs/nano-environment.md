@@ -327,7 +327,39 @@ The rule that follows: fill the cache with one install first, then start the
 parallel jobs. When ten installs start on an empty cache they do not corrupt each
 other (all succeeded), but uv unpacked every wheel ten times into its cache and both
 uv and Bun were much slower than a single install. Whether that is contention or
-this machine's network was not separated. The same idea applies on CI only where a
-cache or a built environment is carried between jobs; `node-tests.yml` and the other
-workflows set `enable-cache: false` for uv, and this repository does not change that
-here.
+this machine's network was not separated.
+
+### On CI
+
+The same idea applies on CI only where a cache or a built environment is carried
+between jobs. The `test` job of `mcp-tests.yml` (Python 3.15, the `dev` group, 13
+packages) was measured on a GitHub-hosted runner with the uv cache off and on. It
+now has its own `uv sync --locked` step, so the install time shows in the log.
+Seconds, from the `setup-uv` step (which restores the cache), the sync step and the
+post step (which saves it):
+
+| uv cache | run | `setup-uv` | `uv sync` | save | whole job |
+| --- | --- | --- | --- | --- | --- |
+| off | first | 2 | 10 | 0 | 213 |
+| off | re-run | 2 | 9 | 0 | 204 |
+| on, not pruned (74 MB) | empty | 2 | 10 | 2 | 204 |
+| on, not pruned | restored | 4 | 0 | 0 | 208 |
+| on, pruned (1.3 MB) | empty | 3 | 10 | 1 | 215 |
+| on, pruned | restored | 3 | 1 | 0 | 200 |
+
+A restored cache turns about 11 s of setup and install into 4 s, a saving of about
+7 s. The whole job differs by several seconds between identical runs (204 s and 213 s
+with the cache off), so that saving does not show in the job total. The install is
+slow for one reason: PyYAML 6.0.3 has no wheel for Python 3.15, so uv builds it from
+source (`Building pyyaml==6.0.3`); uv's prepare phase takes 9.7 s with an empty cache
+and 0.8 s once the built wheel is restored, while numpy, Pillow and Playwright (46 MiB)
+download in under a second. That is why the pruned cache, which keeps only built
+wheels, saves as much as the unpruned one at 1/50 of the size. When a PyYAML release
+ships a Python 3.15 wheel there is little left for the cache to save in this job.
+
+The job therefore uses `enable-cache: true` and `prune-cache: true`, and sets
+`save-cache` to true only on `main`: pull requests restore the cache and never write
+it. The runs above wrote the cache from the pull request itself, which is the only
+way to see a restored run before the first merge; a restore from main's cache is not
+measured yet. The other workflows keep `enable-cache: false` until their numbers are
+in.

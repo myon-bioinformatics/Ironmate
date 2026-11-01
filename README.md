@@ -308,3 +308,7 @@ python -S browser_matrix.py app-results --page 'flutter-*' --env '*-chromium-*' 
 ```
 
 Select page/environment families in the existing screenshot comparison pipeline; use `--list` for paths only. [Discovery usage and optional source inspection](docs/convention-discovery.md).
+
+## Optional nano environment
+
+[Opt-in PPTX-only nano environment](docs/nano-environment.md): pinned source, isolated setup and real rendering without browsers, Office or Docker; full test environments stay unchanged.

@@ -295,3 +295,39 @@ a disposable environment that starts from nothing keeps npm. For a Docker-free s
 (`libc`, `libm`, `libdl`, `libpthread`; highest `GLIBC` symbol version 2.17, not
 run on an older glibc), while Node 26 links `libatomic1`, `libc6`, `libgcc-s1` and
 `libstdc++6`. `ldd` does not show libraries opened at run time.
+
+## Cache first: seed once, then fan out
+
+`uv sync` already works the way Bun does: wheels are unpacked once into uv's cache
+and each environment hardlinks them (`numpy/__init__.py` has 2 links in a uv
+environment and 1 in a pip one). With the cache filled, installing is a linking step,
+and an environment that is already in sync is skipped in about 0.03 s. Measured on
+the same 2-core machine as above (Python 3.13.18, uv 0.11.32, pip 26.2.1; `pip` used
+the requirements exported from `uv.lock`, so the versions are the same):
+
+| `dev` group | cold cache | warm cache | already installed | environment + cache |
+| --- | --- | --- | --- | --- |
+| `uv sync --frozen --no-install-project --only-group dev` | 4.4 s | 0.04 s | 0.03 s | 229 MiB |
+| `pip install -r` (exported from `uv.lock`) | 12.7 s | 5.6 s | 0.43 s | 315 MiB |
+| `uv sync ... --only-group test --only-group codecs` | - | 0.06 s | - | 87 MiB |
+
+Ten environments installed at the same time from one shared cache (every
+environment imported its packages afterwards, and the existing tests pass in both
+the uv and the pip environment: 165 passed in
+`test_xlsx_csv.py`, `test_pptxgenjs_image.py`, `test_pptx_mapping.py` and `test_apng_input.py`):
+
+| 10 at once | cache warm | cache empty (all start together) |
+| --- | --- | --- |
+| uv, `dev` | 0.71 s, 308 MiB in total | 292 s, cache grew to 2.2 GiB (one copy is 228 MiB) |
+| pip, `dev` | 26.1 s, 2.5 GiB in total | - |
+| Bun | 0.44 s, 85 MiB in total | 155 s, cache 59 MiB |
+| npm ci | 21.5 s, 604 MiB in total | 22.5 s |
+
+The rule that follows: fill the cache with one install first, then start the
+parallel jobs. When ten installs start on an empty cache they do not corrupt each
+other (all succeeded), but uv unpacked every wheel ten times into its cache and both
+uv and Bun were much slower than a single install. Whether that is contention or
+this machine's network was not separated. The same idea applies on CI only where a
+cache or a built environment is carried between jobs; `node-tests.yml` and the other
+workflows set `enable-cache: false` for uv, and this repository does not change that
+here.

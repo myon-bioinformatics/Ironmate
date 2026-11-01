@@ -1,11 +1,16 @@
-"""Write a workbook with ExcelJS, then apply Ironmate's style XML."""
+"""Write a workbook, then apply Ironmate's style XML.
+
+``min`` is the writer: ``xlsx_ooxml.write_package``, standard library only, so it
+needs neither Node.js nor npm packages. ``exceljs`` writes and reads the same subset
+through Node and ExcelJS and is the independent oracle for the tests.
+"""
 import json
 import shutil
 import subprocess
 import tempfile
 from pathlib import Path
 
-from xlsx_ooxml import canonicalize
+from xlsx_ooxml import canonicalize, write_package
 from xlsx_spec import assert_formulas_allowed
 
 ROOT = Path(__file__).resolve().parent
@@ -21,7 +26,7 @@ def _tool():
         raise RuntimeError('pinned exceljs is not installed; run npm ci from the repository root')
     node = shutil.which('node')
     if node is None:
-        raise RuntimeError('Node.js is required to write xlsx; install Node.js 22 and run npm ci. Ironmate does not auto-install it.')
+        raise RuntimeError('Node.js is required for the ExcelJS oracle; install Node.js 24 or newer and run npm ci. Ironmate does not auto-install it.')
     return node, script
 
 
@@ -36,11 +41,13 @@ def _run(engine, mode, source, dest):
         raise RuntimeError(f'{engine} {mode} failed (exit {result.returncode}): {detail}')
 
 
-def write_workbook(spec, engine='exceljs'):
-    """Return xlsx bytes. ``engine`` must be ``exceljs``, the only writer."""
-    if engine != 'exceljs':
-        raise ValueError('engine must be exceljs')
+def write_workbook(spec, engine='min'):
+    """Return xlsx bytes. ``engine`` is ``min`` (default) or ``exceljs`` (test oracle)."""
+    if engine not in ('min', 'exceljs'):
+        raise ValueError('engine must be min or exceljs')
     assert_formulas_allowed(spec)
+    if engine == 'min':
+        return canonicalize(write_package(spec), spec)
     with tempfile.TemporaryDirectory(prefix='xlsx-') as directory:
         directory = Path(directory)
         spec_path = directory / 'spec.json'
@@ -51,9 +58,9 @@ def write_workbook(spec, engine='exceljs'):
 
 
 def read_workbook(payload, engine):
-    """Read a workbook back through ExcelJS."""
+    """Read a workbook back through ExcelJS. The stdlib reader is ``xlsx_ooxml.read_spec``."""
     if engine != 'exceljs':
-        raise ValueError('engine must be exceljs')
+        raise ValueError('only exceljs reads through Node; use xlsx_ooxml.read_spec for the stdlib reader')
     with tempfile.TemporaryDirectory(prefix='xlsx-') as directory:
         directory = Path(directory)
         package = directory / 'book.xlsx'

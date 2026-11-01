@@ -26,3 +26,33 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npm ls minimatch --all
       - run: node scripts/exceljs_smoke.cjs
+
+  # The same locked tree, installed by Bun instead of npm. package-lock.json stays the only
+  # lockfile: `bun install --frozen-lockfile` reads it, does not write it, and fails when
+  # package.json has drifted, like `npm ci`. Node 26 runs the smoke; Bun runs it a second time.
+  # The log records what the install costs (Bun version, binary size, linked libraries, time,
+  # node_modules size) so a Docker-free setup knows what Bun adds. See docs/nano-environment.md.
+  exceljs-smoke-bun:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26"
+      - name: Install Bun (pinned, from the npm registry)
+        run: |
+          time npm install --global bun@1.4.4
+          bun --revision
+          ls -laL "$(command -v bun)"
+          ldd "$(command -v bun)"
+      - name: Install the locked tree with Bun
+        run: |
+          time bun install --frozen-lockfile --ignore-scripts
+          du -sk node_modules
+          git diff --exit-code -- package-lock.json
+      - run: npm ls minimatch --all
+      - run: node scripts/exceljs_smoke.cjs
+      - run: bun scripts/exceljs_smoke.cjs

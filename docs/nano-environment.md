@@ -233,3 +233,101 @@ renderer works in that tree; the tests that need the ExcelJS oracle do not, and
 report that ExcelJS is missing. This uses the unchanged lock and npm's own `dev`
 flags, not the parent's lock projection (which rejects `dev` markers), so the
 pinned historical recipe above is unaffected.
+
+## Optional: install with Bun, run with Node
+
+Bun can install the same locked tree and Node.js 26 still runs everything. The
+lock stays `package-lock.json`; there is no `bun.lock` to keep:
+
+```sh
+bun install --frozen-lockfile --ignore-scripts          # dev included, like npm ci
+bun install --frozen-lockfile --ignore-scripts --production   # like npm ci --omit=dev
+```
+
+`--frozen-lockfile` reads `package-lock.json`, does not write it, and fails when
+`package.json` has drifted from it, as `npm ci` does. The `exceljs-smoke-bun` job
+in `.github/workflows/exceljs-smoke.yml` runs this install and the smoke under
+Node 26 and under Bun on every change to the lock, and logs the cost of Bun.
+
+Measured on one Linux x64 machine (Node 26.13.0, Bun 1.4.4, npm 10.9.9), the
+locked tree of 196 records with `dev` included; "warm" means the package cache is
+filled and `node_modules` was deleted (median of 3 runs; cold is 2 runs):
+
+| Install | cold cache | warm cache | `node_modules` | cache + `node_modules` |
+| --- | --- | --- | --- | --- |
+| `npm ci` | 4.1 s | 3.3 s | 59 MiB | 71 MiB |
+| `bun install --frozen-lockfile` | 5.2 s | 0.06 s | 58 MiB (hardlinks) | 65 MiB |
+| `npm ci --omit=dev` | n/a | 0.59 s | 8.0 MiB | n/a |
+| `bun install --production` | n/a | 0.01 s | 8.0 MiB | n/a |
+
+Bun's `--linker isolated` with `BUN_INSTALL_GLOBAL_STORE=1` keeps one copy of each
+package in the cache and links it: a warm install took 0.01 s and `node_modules`
+was 0.9 MiB of symlinks (cache 64 MiB). It is not the default and is not used in
+CI. These are timings from one machine and network, not CI or Docker numbers.
+
+What was checked, and what differs:
+
+- Same packages: 180 distinct `name@version` in both trees, every dependency
+  resolves to the same `name@version` as under npm, and all 180 `integrity`
+  values in `bun.lock` (generated once from the npm lock) equal the npm lock's.
+- Same behavior: the 163 tests in `test_xlsx_csv.py`, `test_pptxgenjs_image.py` and
+  `test_pptx_mapping.py`, the ExcelJS smoke and the 41 `node --test` tests (40
+  pass, 1 skipped, as on npm's tree) pass under Node 26 on the Bun-installed tree.
+  The smoke also passes under Bun (`bun scripts/exceljs_smoke.cjs`). A PPTX built
+  from npm's tree with Node, from Bun's tree with Node and from Bun's tree with Bun
+  has the same 40 package members; only the creation time in `docProps/core.xml` differs.
+- Different layout: Bun hoists differently, so 4 of the 18 paths the parent's pinned
+  recipe expects sit elsewhere (for example `safe-buffer` at the top level). Module
+  resolution is unaffected; a check that compares installed paths with npm's must
+  keep using npm, as the parent's lock projection does.
+- Bun is not a drop-in `node` on `PATH`: with Bun 1.4.4 behind a symlink named
+  `node`, `node -e CODE a b` loses its first extra argument (`process.argv.slice(1)`
+  is `[b]`, Node gives `[a, b]`). `bun -e` itself and scripts run from a file give
+  the same `process.argv` as Node. `test_pptxgenjs_image.py` runs `node -e` with
+  arguments, so it is the one of the 163 tests that fails (162 pass) with such a
+  symlink. Keep Node as `node`, and call `bun` by its own name.
+
+Bun is worth it where its cache persists. Fetching Bun into an empty environment
+cost 11 s through npm on that machine (2.0 s on a GitHub-hosted runner) and a
+102 MiB binary (Node's is 143 MiB). On the runner, `exceljs-smoke-bun` spent 2.0 s
+getting Bun plus 0.35 s on a cold `bun install`, against about 1 s for `npm ci`, so
+a disposable environment that starts from nothing keeps npm. For a Docker-free setup, `ldd` shows Bun linking only `libc6`
+(`libc`, `libm`, `libdl`, `libpthread`; highest `GLIBC` symbol version 2.17, not
+run on an older glibc), while Node 26 links `libatomic1`, `libc6`, `libgcc-s1` and
+`libstdc++6`. `ldd` does not show libraries opened at run time.
+
+## Cache first: seed once, then fan out
+
+`uv sync` already works the way Bun does: wheels are unpacked once into uv's cache
+and each environment hardlinks them (`numpy/__init__.py` has 2 links in a uv
+environment and 1 in a pip one). With the cache filled, installing is a linking step,
+and an environment that is already in sync is skipped in about 0.03 s. Measured on
+the same 2-core machine as above (Python 3.13.18, uv 0.11.32, pip 26.2.1; `pip` used
+the requirements exported from `uv.lock`, so the versions are the same):
+
+| `dev` group | cold cache | warm cache | already installed | environment + cache |
+| --- | --- | --- | --- | --- |
+| `uv sync --frozen --no-install-project --only-group dev` | 4.4 s | 0.04 s | 0.03 s | 229 MiB |
+| `pip install -r` (exported from `uv.lock`) | 12.7 s | 5.6 s | 0.43 s | 315 MiB |
+| `uv sync ... --only-group test --only-group codecs` | - | 0.06 s | - | 87 MiB |
+
+Ten environments installed at the same time from one shared cache (every
+environment imported its packages afterwards, and the existing tests pass in both
+the uv and the pip environment: 165 passed in
+`test_xlsx_csv.py`, `test_pptxgenjs_image.py`, `test_pptx_mapping.py` and `test_apng_input.py`):
+
+| 10 at once | cache warm | cache empty (all start together) |
+| --- | --- | --- |
+| uv, `dev` | 0.71 s, 308 MiB in total | 292 s, cache grew to 2.2 GiB (one copy is 228 MiB) |
+| pip, `dev` | 26.1 s, 2.5 GiB in total | - |
+| Bun | 0.44 s, 85 MiB in total | 155 s, cache 59 MiB |
+| npm ci | 21.5 s, 604 MiB in total | 22.5 s |
+
+The rule that follows: fill the cache with one install first, then start the
+parallel jobs. When ten installs start on an empty cache they do not corrupt each
+other (all succeeded), but uv unpacked every wheel ten times into its cache and both
+uv and Bun were much slower than a single install. Whether that is contention or
+this machine's network was not separated. The same idea applies on CI only where a
+cache or a built environment is carried between jobs; `node-tests.yml` and the other
+workflows set `enable-cache: false` for uv, and this repository does not change that
+here.

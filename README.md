@@ -311,4 +311,4 @@ Select page/environment families in the existing screenshot comparison pipeline;
 
 ## Optional nano environment
 
-[Opt-in PPTX-only nano environment](docs/nano-environment.md): pinned source, isolated setup and real rendering without browsers, Office or Docker; full test environments stay unchanged.
+[Opt-in PPTX-only nano environment](docs/nano-environment.md): pinned source, isolated setup and real rendering without browsers, Office or Docker; full test environments stay unchanged. The Python test tools and the optional image (`codecs`) and preview (`preview`) features are separate [dependency groups](docs/nano-environment.md#optional-python-feature-groups); `dev` still installs all of them.

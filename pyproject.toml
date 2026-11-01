@@ -1,5 +1,6 @@
 # Runtime adapters stay on the standard library.
-# Test tools are the dev group and resolve through uv.lock.
+# Test tools and optional features are dependency groups; `dev` installs all of them.
+# Everything resolves through uv.lock.
 
 [project]
 name = "ironmate"
@@ -8,13 +9,24 @@ description = "Document and image conversion checks"
 requires-python = ">=3.11"
 
 [dependency-groups]
-dev = [
-    "numpy>=1.26",
-    "pillow>=10",
-    "playwright>=1.63.0",
-    "pypdf>=6",
+# Feature groups for opt-in installs. `dev` includes all of them, so
+# `uv run --locked` (CI) installs the same set as before.
+test = [
     "pytest>=8",
     "pyyaml>=6",
+]
+codecs = [
+    "numpy>=1.26",
+    "pillow>=10",
+]
+preview = [
+    "playwright>=1.63.0",
+    "pypdf>=6",
+]
+dev = [
+    { include-group = "test" },
+    { include-group = "codecs" },
+    { include-group = "preview" },
 ]
 
 [tool.uv]

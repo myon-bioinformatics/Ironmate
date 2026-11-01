@@ -3,7 +3,9 @@
 This recipe prepares the real PptxGenJS/OOXML rendering slice without ExcelJS,
 Marp, browsers, LibreOffice/UNO or Docker. It is **not** the Markdown-to-Marp
 pipeline, all Ironmate features, visual/Office validation, or the full test suite.
-It changes neither this repository's dependencies nor existing tests or CI.
+The recipe itself changes neither this repository's dependencies nor existing
+tests or CI. The Python side is covered separately in
+[Optional Python feature groups](#optional-python-feature-groups).
 
 ## Fixed source and current-main boundary
 
@@ -184,3 +186,32 @@ sizes or build-time measurements. This documentation update runs no benchmark
 and changes no workflow, Pages configuration, source/vendor registration or CI
 permission. README/docs-only changes match no current Ironmate push/PR workflow;
 Draft status is not what suppresses jobs.
+
+## Optional Python feature groups
+
+The Python test tools and the optional image and preview features are separate
+uv dependency groups in `pyproject.toml`. `dev` includes all three groups, so
+the default `uv run --locked` (CI) installs exactly the package set it installed
+before: `uv export --locked` is byte-identical before and after, and no locked
+version changed. Every test stays in its original lane; none is removed or
+skipped by this split.
+
+| Group | Packages | What uses them |
+|---|---|---|
+| `test` | pytest, PyYAML | The test runner. PyYAML is used only by the vendor and CI tests. |
+| `codecs` | NumPy, Pillow | The optional NumPy backend of `grid_tools.py` and `svg_raster.py` (the standard-library backend stays the fallback), the optional Pillow decoders for JPEG, WebP and PNG variants in `photo_grid.py`, and the oracle for the `pillow_min` parity tests. |
+| `preview` | Playwright, pypdf | The `pptx_preview.py` review lane and `scripts/cdn_pypdf_pages.py`. Playwright's browsers are downloaded separately and are not part of this group. |
+
+To work on one feature, install it with the test tools in its own environment.
+The shared `dev` environment is unchanged:
+
+```sh
+uv sync --locked --no-install-project --only-group test --only-group codecs
+uv sync --locked --no-install-project --only-group test --only-group preview
+```
+
+Run a feature's tests only in an environment that has its group: tests of an
+uninstalled group are not expected to pass, and the full suite needs `dev`.
+The split selects existing locked packages. It does not replace a library, add
+an implementation, or change Docker or CI. Package counts and sizes depend on
+the platform and Python version, and are not Docker-image sizes or build times.

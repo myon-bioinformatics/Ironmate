@@ -233,3 +233,64 @@ renderer works in that tree; the tests that need the ExcelJS oracle do not, and
 report that ExcelJS is missing. This uses the unchanged lock and npm's own `dev`
 flags, not the parent's lock projection (which rejects `dev` markers), so the
 pinned historical recipe above is unaffected.
+
+## Optional: install with Bun, run with Node
+
+Bun can install the same locked tree and Node.js 26 still runs everything. The
+lock stays `package-lock.json`; there is no `bun.lock` to keep:
+
+```sh
+bun install --frozen-lockfile --ignore-scripts          # dev included, like npm ci
+bun install --frozen-lockfile --ignore-scripts --production   # like npm ci --omit=dev
+```
+
+`--frozen-lockfile` reads `package-lock.json`, does not write it, and fails when
+`package.json` has drifted from it, as `npm ci` does. The `exceljs-smoke-bun` job
+in `.github/workflows/exceljs-smoke.yml` runs this install and the smoke under
+Node 26 and under Bun on every change to the lock, and logs the cost of Bun.
+
+Measured on one Linux x64 machine (Node 26.13.0, Bun 1.4.4, npm 10.9.9), the
+locked tree of 196 records with `dev` included; "warm" means the package cache is
+filled and `node_modules` was deleted (median of 3 runs; cold is 2 runs):
+
+| Install | cold cache | warm cache | `node_modules` | cache + `node_modules` |
+| --- | --- | --- | --- | --- |
+| `npm ci` | 4.1 s | 3.3 s | 59 MiB | 71 MiB |
+| `bun install --frozen-lockfile` | 5.2 s | 0.06 s | 58 MiB (hardlinks) | 65 MiB |
+| `npm ci --omit=dev` | n/a | 0.59 s | 8.0 MiB | n/a |
+| `bun install --production` | n/a | 0.01 s | 8.0 MiB | n/a |
+
+Bun's `--linker isolated` with `BUN_INSTALL_GLOBAL_STORE=1` keeps one copy of each
+package in the cache and links it: a warm install took 0.01 s and `node_modules`
+was 0.9 MiB of symlinks (cache 64 MiB). It is not the default and is not used in
+CI. These are timings from one machine and network, not CI or Docker numbers.
+
+What was checked, and what differs:
+
+- Same packages: 180 distinct `name@version` in both trees, every dependency
+  resolves to the same `name@version` as under npm, and all 180 `integrity`
+  values in `bun.lock` (generated once from the npm lock) equal the npm lock's.
+- Same behavior: the 163 tests in `test_xlsx_csv.py`, `test_pptxgenjs_image.py` and
+  `test_pptx_mapping.py`, the ExcelJS smoke and the 41 `node --test` tests (40
+  pass, 1 skipped, as on npm's tree) pass under Node 26 on the Bun-installed tree.
+  The smoke also passes under Bun (`bun scripts/exceljs_smoke.cjs`). A PPTX built
+  from npm's tree with Node, from Bun's tree with Node and from Bun's tree with Bun
+  has the same 40 package members; only the creation time in `docProps/core.xml` differs.
+- Different layout: Bun hoists differently, so 4 of the 18 paths the parent's pinned
+  recipe expects sit elsewhere (for example `safe-buffer` at the top level). Module
+  resolution is unaffected; a check that compares installed paths with npm's must
+  keep using npm, as the parent's lock projection does.
+- Bun is not a drop-in `node` on `PATH`: with Bun 1.4.4 behind a symlink named
+  `node`, `node -e CODE a b` loses its first extra argument (`process.argv.slice(1)`
+  is `[b]`, Node gives `[a, b]`). `bun -e` itself and scripts run from a file give
+  the same `process.argv` as Node. `test_pptxgenjs_image.py` runs `node -e` with
+  arguments, so it is the one of the 163 tests that fails (162 pass) with such a
+  symlink. Keep Node as `node`, and call `bun` by its own name.
+
+Bun is worth it where its cache persists. Fetching Bun into an empty environment
+cost 11 s through npm and a 102 MiB binary (Node's is 143 MiB), more than the 3-4 s
+that `npm ci` takes for this tree, so a disposable environment that starts from
+nothing keeps npm. For a Docker-free setup, `ldd` shows Bun linking only `libc6`
+(`libc`, `libm`, `libdl`, `libpthread`; highest `GLIBC` symbol version 2.17, not
+run on an older glibc), while Node 26 links `libatomic1`, `libc6`, `libgcc-s1` and
+`libstdc++6`. `ldd` does not show libraries opened at run time.

@@ -1,13 +1,13 @@
 # Excel workbooks
 
-CSV files become `.xlsx` workbooks. Ironmate detects the CSV encoding, then a small writer in `scripts/xlsx_io.mjs` (Node built-ins only) writes the package and Ironmate sets the cell styles in the workbook XML. openpyxl and pandas are not used.
+CSV files become `.xlsx` workbooks. Ironmate detects the CSV encoding, then a small writer in `xlsx_ooxml.py` (Python standard library only) writes the package and Ironmate sets the cell styles in the workbook XML. openpyxl and pandas are not used.
 
 ```sh
 python xlsx_csv.py -o book.xlsx --border --autofilter 売上=costs.csv メモ=notes.csv
 python xlsx_csv.py --spec book.json -o book.xlsx
 ```
 
-Node.js 24 is required. Writing a workbook needs no npm package. `npm ci` installs `pptxgenjs@4.0.1` for the slide package, and `exceljs@4.4.0` as a dev dependency: it is the independent oracle for the tests and is not used to write workbooks. `npm ci --omit=dev` leaves ExcelJS out. Ironmate does not install them. They are not in `vendor.lock.json`.
+Writing a workbook needs Python only: no Node.js and no npm package. Node.js 24 and `npm ci` are needed for the slide package (`pptxgenjs@4.0.1`) and for the xlsx tests, which compare the writer with `exceljs@4.4.0`. ExcelJS is a dev dependency that serves as the independent oracle and never writes a workbook for you; `npm ci --omit=dev` leaves it out. Ironmate does not install them. They are not in `vendor.lock.json`.
 
 `vendor/oci-cost-analysis.py` still imports pandas to print two columns from a CSV. That file is a locked vendor copy and is not part of this converter. PowerPoint tables still read CSV with the stdlib `csv` module.
 
@@ -97,7 +97,7 @@ and network traffic have not been tested.
 
 ## How the writer is checked
 
-`scripts/xlsx_io.mjs` has two engines. `min` is the writer: it uses only Node built-ins (`zlib`) to write the package parts, values, formulas, sheet names, and autofilter. `exceljs` writes and reads the same subset with ExcelJS and is the independent oracle for the tests. Ironmate then rewrites `xl/styles.xml` and each cell's `s` attribute for both, so borders, alignment, and number formats are set by Ironmate rather than by a library.
+There are two engines. `min` is the writer: `xlsx_ooxml.write_package` uses only the Python standard library to write the package parts, values, formulas, and sheet names. `exceljs` (`scripts/xlsx_io.mjs`, run with Node) writes and reads the same subset with ExcelJS and is the independent oracle for the tests. Ironmate then sets the autofilter and rewrites `xl/styles.xml` and each cell's `s` attribute for both, so borders, alignment, and number formats are set by Ironmate rather than by a library.
 
 Tests, with no Excel and no Google account, run for both engines:
 
@@ -105,8 +105,8 @@ Tests, with no Excel and no Google account, run for both engines:
 - XML → JSON equals the spec for the written package.
 - The `min` and ExcelJS writers give the same workbook content for the same spec: escaping, whitespace, line breaks, Unicode, dropped characters, numbers, formulas, and sheet names with markup characters. The stdlib reader and the ExcelJS reader both compare them.
 - ExcelJS reads the package each writer wrote and matches the full spec, including borders and alignment. An empty bordered cell stays in the grid for that read.
-- The bytes `min` writes are a valid, deterministic ZIP whose local headers match the central directory, and every text carries `xml:space="preserve"`.
-- `min` needs no npm package: a tree without `node_modules` still writes a workbook, and only the `exceljs` engine reports that ExcelJS is missing.
+- The bytes `min` writes are a deterministic ZIP of well-formed parts with a fixed timestamp, every text carries `xml:space="preserve"`, and values it cannot write (booleans, NaN, infinity, a book without sheets) raise.
+- `min` needs neither Node.js nor npm packages: with no `node` on PATH and no `node_modules`, it still writes a workbook, and only the `exceljs` engine reports that ExcelJS is missing.
 
 Outside the tests, only the stdlib reader (`xlsx_ooxml.read_spec`) reads these packages. LibreOffice and openpyxl opened a `min` package during development, but that check is not part of the suite.
 

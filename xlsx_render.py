@@ -1,7 +1,8 @@
 """Write a workbook, then apply Ironmate's style XML.
 
-``min`` is the writer: it needs Node.js only, no npm packages. ``exceljs`` writes and
-reads the same subset through ExcelJS and is the independent oracle for tests.
+``min`` is the writer: ``xlsx_ooxml.write_package``, standard library only, so it
+needs neither Node.js nor npm packages. ``exceljs`` writes and reads the same subset
+through Node and ExcelJS and is the independent oracle for the tests.
 """
 import json
 import shutil
@@ -9,28 +10,28 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from xlsx_ooxml import canonicalize
+from xlsx_ooxml import canonicalize, write_package
 from xlsx_spec import assert_formulas_allowed
 
 ROOT = Path(__file__).resolve().parent
 
 
-def _tool(engine):
+def _tool():
     script = (ROOT / 'scripts' / 'xlsx_io.mjs').resolve()
     allow = json.loads((ROOT / 'scripts' / 'xlsx_allowlist.json').read_text(encoding='utf-8'))
     relative = script.relative_to(ROOT).as_posix()
     if relative not in allow.get('scripts', []) or not script.is_file():
         raise RuntimeError('xlsx renderer is not allowlisted')
-    if engine == 'exceljs' and not (ROOT / 'node_modules' / 'exceljs' / 'package.json').is_file():
+    if not (ROOT / 'node_modules' / 'exceljs' / 'package.json').is_file():
         raise RuntimeError('pinned exceljs is not installed; run npm ci from the repository root')
     node = shutil.which('node')
     if node is None:
-        raise RuntimeError('Node.js is required to write xlsx; install Node.js 24 or newer. Ironmate does not auto-install it.')
+        raise RuntimeError('Node.js is required for the ExcelJS oracle; install Node.js 24 or newer and run npm ci. Ironmate does not auto-install it.')
     return node, script
 
 
 def _run(engine, mode, source, dest):
-    node, script = _tool(engine)
+    node, script = _tool()
     result = subprocess.run(
         [node, str(script), engine, mode, str(source), str(dest)],
         cwd=ROOT, capture_output=True, text=True, check=False, timeout=60,
@@ -45,6 +46,8 @@ def write_workbook(spec, engine='min'):
     if engine not in ('min', 'exceljs'):
         raise ValueError('engine must be min or exceljs')
     assert_formulas_allowed(spec)
+    if engine == 'min':
+        return canonicalize(write_package(spec), spec)
     with tempfile.TemporaryDirectory(prefix='xlsx-') as directory:
         directory = Path(directory)
         spec_path = directory / 'spec.json'

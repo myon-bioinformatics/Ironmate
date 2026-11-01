@@ -1,14 +1,16 @@
-"""Apply and read the supported workbook subset in xlsx XML.
+"""Write, apply, and read the supported workbook subset in xlsx XML.
 
-ExcelJS writes values, formulas, sheet names, and autofilter. After the writer,
-this module sets ``xl/styles.xml`` and each cell's style index so the package
-carries 罫線, number formats, and alignment. Reading the XML back is the check
-that does not need Excel or a browser.
+``write_package`` writes values, formulas, and sheet names with the standard
+library only. The ExcelJS oracle used by the tests writes the same subset. After
+either writer, ``canonicalize`` sets the autofilter, ``xl/styles.xml``, and each
+cell's style index so the package carries 罫線, number formats, and alignment.
+Reading the XML back is the check that does not need Excel or a browser.
 """
 import io
+import math
 import re
 from xml.etree import ElementTree as ET
-from zipfile import ZipFile
+from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 from xlsx_spec import column_name
 
@@ -201,6 +203,90 @@ def _rewrite_sheet(payload, sheet):
                 root.insert(position + 1, filter_el)
                 break
     return _serialize(root), keys
+
+
+# Characters XML 1.0 cannot hold are dropped (ExcelJS did the same for control characters).
+_XML_INVALID = re.compile('[^\t\n\x20-\x7e\x80-퟿-�\U00010000-\U0010ffff]')
+_REL = 'http://schemas.openxmlformats.org/package/2006/relationships'
+_CT = 'application/vnd.openxmlformats-officedocument.spreadsheetml'
+_DECLARATION = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+
+
+def _text(value):
+    """CR and CRLF become LF, invalid characters are dropped, markup is escaped."""
+    return _escape(_XML_INVALID.sub('', re.sub(r'\r\n?', '\n', str(value))))
+
+
+def _has_content(cell):
+    return bool(cell) and (bool(cell.get('f')) or cell.get('v') is not None)
+
+
+def _cell_xml(ref, cell):
+    if cell.get('f'):
+        return f'<c r="{ref}"><f>{_text(cell["f"])}</f></c>'
+    value = cell['v']
+    if isinstance(value, str):
+        return f'<c r="{ref}" t="inlineStr"><is><t xml:space="preserve">{_text(value)}</t></is></c>'
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError(f'{ref} has an unsupported value')
+    if isinstance(value, float) and not math.isfinite(value):
+        raise ValueError(f'{ref} is not a finite number')
+    return f'<c r="{ref}"><v>{value!r}</v></c>'
+
+
+def _sheet_xml(sheet):
+    rows = []
+    for number, row in enumerate(sheet['rows'], 1):
+        cells = [_cell_xml(f'{column_name(column)}{number}', cell)
+                 for column, cell in enumerate(row, 1) if _has_content(cell)]
+        if cells:
+            rows.append(f'<row r="{number}">{"".join(cells)}</row>')
+    return f'{_DECLARATION}<worksheet xmlns="{NS}"><sheetData>{"".join(rows)}</sheetData></worksheet>'
+
+
+def write_package(spec):
+    """Return the smallest xlsx package Excel opens, using only the standard library.
+
+    ``xl/styles.xml`` is a placeholder that ``canonicalize`` rewrites. The ZIP is
+    deflated with a fixed timestamp, so the same spec gives the same bytes.
+    """
+    sheets = spec['sheets']
+    if not sheets:
+        raise ValueError('a workbook needs at least one sheet')
+    count = len(sheets)
+    parts = [
+        ('[Content_Types].xml', f'{_DECLARATION}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+         '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+         '<Default Extension="xml" ContentType="application/xml"/>'
+         f'<Override PartName="/xl/workbook.xml" ContentType="{_CT}.sheet.main+xml"/>'
+         + ''.join(f'<Override PartName="/xl/worksheets/sheet{n}.xml" ContentType="{_CT}.worksheet+xml"/>'
+                   for n in range(1, count + 1))
+         + f'<Override PartName="/xl/styles.xml" ContentType="{_CT}.styles+xml"/></Types>'),
+        ('_rels/.rels', f'{_DECLARATION}<Relationships xmlns="{_REL}"><Relationship Id="rId1" '
+         f'Type="{RNS}/officeDocument" Target="xl/workbook.xml"/></Relationships>'),
+        ('xl/workbook.xml', f'{_DECLARATION}<workbook xmlns="{NS}" xmlns:r="{RNS}"><sheets>'
+         + ''.join(f'<sheet name="{_text(sheet["name"])}" sheetId="{n}" r:id="rId{n}"/>'
+                   for n, sheet in enumerate(sheets, 1))
+         + '</sheets><calcPr calcId="171027"/></workbook>'),
+        ('xl/_rels/workbook.xml.rels', f'{_DECLARATION}<Relationships xmlns="{_REL}">'
+         + ''.join(f'<Relationship Id="rId{n}" Type="{RNS}/worksheet" Target="worksheets/sheet{n}.xml"/>'
+                   for n in range(1, count + 1))
+         + f'<Relationship Id="rId{count + 1}" Type="{RNS}/styles" Target="styles.xml"/></Relationships>'),
+        ('xl/styles.xml', f'{_DECLARATION}<styleSheet xmlns="{NS}"><fonts count="1"><font/></fonts>'
+         '<fills count="2"><fill><patternFill patternType="none"/></fill>'
+         '<fill><patternFill patternType="gray125"/></fill></fills>'
+         '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>'
+         '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
+         '<cellXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/></cellXfs></styleSheet>'),
+        *((f'xl/worksheets/sheet{n}.xml', _sheet_xml(sheet)) for n, sheet in enumerate(sheets, 1)),
+    ]
+    buffer = io.BytesIO()
+    with ZipFile(buffer, 'w') as archive:
+        for name, text in parts:
+            info = ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
+            info.compress_type = ZIP_DEFLATED
+            archive.writestr(info, text.encode('utf-8'))
+    return buffer.getvalue()
 
 
 def canonicalize(payload, spec):

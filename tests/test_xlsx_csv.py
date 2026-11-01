@@ -3,7 +3,6 @@ import csv
 import io
 import json
 import shutil
-import struct
 import subprocess
 import sys
 from io import BytesIO
@@ -14,7 +13,7 @@ from zipfile import ZipFile
 import pytest
 
 from xlsx_csv import convert_paths, main, write_csv_workbook
-from xlsx_ooxml import read_spec
+from xlsx_ooxml import read_spec, write_package
 import xlsx_render
 from xlsx_render import read_workbook, write_workbook
 import xlsx_spec
@@ -285,15 +284,11 @@ def test_min_writer_text_rules():
     assert read_spec(write_workbook(spec, 'min'))['sheets'][0]['rows'][0][0] == {'v': 'a\nb\ncd\t&<>"'}
 
 
-def test_min_writer_package_is_a_small_deterministic_zip(tmp_path):
-    # Inspect the bytes Node wrote: write_workbook() re-zips them afterwards.
+def test_min_writer_package_is_a_small_deterministic_zip():
+    # Inspect the bytes write_package produced: write_workbook() re-zips them afterwards.
     spec = _book()
-    spec_path = tmp_path / 'spec.json'
-    spec_path.write_text(json.dumps(spec), encoding='utf-8')
-    xlsx_render._run('min', 'write', spec_path, tmp_path / 'first.xlsx')
-    xlsx_render._run('min', 'write', spec_path, tmp_path / 'second.xlsx')
-    first = (tmp_path / 'first.xlsx').read_bytes()
-    assert (tmp_path / 'second.xlsx').read_bytes() == first
+    first = write_package(spec)
+    assert write_package(spec) == first
     assert write_workbook(spec, 'min') == write_workbook(spec, 'min')
     with ZipFile(BytesIO(first)) as archive:
         assert archive.testzip() is None
@@ -304,12 +299,7 @@ def test_min_writer_package_is_a_small_deterministic_zip(tmp_path):
             'xl/styles.xml', 'xl/worksheets/sheet1.xml', 'xl/worksheets/sheet2.xml'])
         for name in names:
             ET.fromstring(archive.read(name))
-        # The local headers agree with the central directory (CRC and sizes).
-        for info in archive.infolist():
-            archive.fp.seek(info.header_offset)
-            _sig, _ver, _flags, _method, _time, _date, crc, packed, size, *_rest = struct.unpack(
-                '<4s5H3L2H', archive.fp.read(30))
-            assert (crc, packed, size) == (info.CRC, info.compress_size, info.file_size)
+        assert {info.date_time for info in archive.infolist()} == {(1980, 1, 1, 0, 0, 0)}
         # Excel trims leading and trailing spaces in <t> unless xml:space="preserve" is set.
         xml_space = '{http://www.w3.org/XML/1998/namespace}space'
         for sheet_name in ('xl/worksheets/sheet1.xml', 'xl/worksheets/sheet2.xml'):
@@ -317,13 +307,29 @@ def test_min_writer_package_is_a_small_deterministic_zip(tmp_path):
             assert texts and all(text.get(xml_space) == 'preserve' for text in texts)
 
 
-def test_min_writer_needs_node_only(tmp_path, monkeypatch):
-    # An install without dev dependencies (npm ci --omit=dev) has no ExcelJS on disk.
+def test_min_writer_rejects_what_it_cannot_write():
+    for bad in (True, False, float('nan'), float('inf'), b'x', [1]):
+        with pytest.raises(ValueError, match='unsupported value|not a finite number'):
+            write_package({'sheets': [{'name': 'S', 'rows': [[{'v': bad}]]}]})
+    with pytest.raises(ValueError, match='at least one sheet'):
+        write_package({'sheets': []})
+    # Cells without a value or formula are omitted, not written as empty strings.
+    xml = ZipFile(BytesIO(write_package({'sheets': [{'name': 'S', 'rows': [[None, {'z': '0'}, {'f': ''}, {'v': 1}]]}]}))
+                  ).read('xl/worksheets/sheet1.xml').decode('utf-8')
+    assert xml.count('<c ') == 1 and 'r="D1"' in xml
+
+
+def test_min_writer_needs_neither_node_nor_npm_packages(tmp_path, monkeypatch):
+    # Writing is Python only: no Node.js on PATH, no node_modules (npm ci --omit=dev has no ExcelJS).
     (tmp_path / 'scripts').mkdir()
     for name in ('xlsx_io.mjs', 'xlsx_allowlist.json'):
         shutil.copy(Path(xlsx_render.ROOT) / 'scripts' / name, tmp_path / 'scripts' / name)
-    shutil.copy(Path(xlsx_render.ROOT) / 'package.json', tmp_path / 'package.json')
     monkeypatch.setattr(xlsx_render, 'ROOT', tmp_path)
+    monkeypatch.setattr(xlsx_render.shutil, 'which', lambda *_args, **_kwargs: None)
+
+    def unexpected_node(*_args, **_kwargs):
+        pytest.fail('the min writer started a Node process')
+    monkeypatch.setattr(xlsx_render.subprocess, 'run', unexpected_node)
     spec = _book()
     assert read_spec(write_workbook(spec)) == spec
     with pytest.raises(RuntimeError, match='exceljs is not installed'):

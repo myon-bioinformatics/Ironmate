@@ -218,17 +218,18 @@ the platform and Python version, and are not Docker-image sizes or build times.
 
 ## Optional npm: runtime without the ExcelJS oracle
 
-`scripts/xlsx_io.mjs` writes xlsx with Node built-ins only, so ExcelJS is a dev
+`xlsx_ooxml.write_package` writes xlsx with the Python standard library, so
+`python xlsx_csv.py` needs neither Node.js nor npm packages. ExcelJS is a dev
 dependency: the independent oracle that the xlsx tests compare against. The
 plain `npm ci` (CI) still installs it and every test still runs. To install only
-what writes slides and workbooks:
+what the slide renderer needs:
 
 ```sh
 npm ci --omit=dev --ignore-scripts
 ```
 
-That installs the locked PptxGenJS closure and not ExcelJS. `python xlsx_csv.py`
-and the PPTX renderer work in that tree; the tests that need the ExcelJS oracle
-do not, and report that ExcelJS is missing. This uses the unchanged lock and
-npm's own `dev` flags, not the parent's lock projection, so the pinned
-historical recipe above is unaffected.
+That installs the locked PptxGenJS closure (18 records) and not ExcelJS. The PPTX
+renderer works in that tree; the tests that need the ExcelJS oracle do not, and
+report that ExcelJS is missing. This uses the unchanged lock and npm's own `dev`
+flags, not the parent's lock projection (which rejects `dev` markers), so the
+pinned historical recipe above is unaffected.

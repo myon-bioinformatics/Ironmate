@@ -7,7 +7,7 @@ python xlsx_csv.py -o book.xlsx --border --autofilter 売上=costs.csv メモ=no
 python xlsx_csv.py --spec book.json -o book.xlsx
 ```
 
-Writing a workbook needs Python only: no Node.js and no npm package. Node.js 24 and `npm ci` are needed for the slide package (`pptxgenjs@4.0.1`) and for the xlsx tests, which compare the writer with `exceljs@4.4.0`. ExcelJS is a dev dependency that serves as the independent oracle and never writes a workbook for you; `npm ci --omit=dev` leaves it out. Ironmate does not install them. They are not in `vendor.lock.json`.
+Writing a workbook needs Python only: no Node.js and no npm package. Node.js 26 and `npm ci` are needed for the slide package (`pptxgenjs@4.0.1`) and for the xlsx tests, which compare the writer with `exceljs@4.4.0`. ExcelJS is a dev dependency that serves as the independent oracle and never writes a workbook for you; `npm ci --omit=dev` leaves it out. Ironmate does not install them. They are not in `vendor.lock.json`.
 
 `vendor/oci-cost-analysis.py` still imports pandas to print two columns from a CSV. That file is a locked vendor copy and is not part of this converter. PowerPoint tables still read CSV with the stdlib `csv` module.
 

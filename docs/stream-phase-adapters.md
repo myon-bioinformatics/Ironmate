@@ -43,3 +43,54 @@ pipeline modification is included. Layer 1–9 completion, reported classificati
 percentages, timing claims and arbitrary rotation invariance remain unverified.
 
 Verification: `python -m pytest -q tests/test_stream_phase_report.py tests/test_five_way_survey.py`.
+
+## Observability and active sensing extension
+
+Use `--allow-missing --observable-spec classes.json` with CSV input. Empty cells
+and literal `NULL` become unobserved; malformed numeric text still fails.
+Each measured column marks both interleaved sign bits observed, including a
+measured neutral value. Entirely missing columns have no fitted bounds and stay
+unobserved. Default missing-value rejection is preserved. Masked records cannot
+enter the existing complete-data ladder. The class JSON uses the same `classes`,
+`name`, `must_and`, `forbid_not`, `or_masks` fields; width comes from CSV columns.
+
+The new ObservableChoice API returns every compatible class and its strong
+Kleene truth value. `unique` means one compatible class, not a proved real-world
+label; its predicate may still be unknown. Unobserved active bits are ignored.
+No inferred values are inserted into the observation mask or emitted as truth.
+An explicit conflict rejects a candidate; insufficient evidence stays unknown.
+Contradictory masks, impossible positive OR clauses, duplicate names and
+out-of-width masks are rejected. The API accepts feature masks, not pixel
+occlusion maps; projecting an occlusion map through FWHT remains future work.
+
+A bounded bit decision index prunes only observed mandatory/prohibited
+contradictions. Don't-care candidates go to both branches. Unknown pivots visit
+both branches and leaf candidates are deduplicated and fully checked, including
+OR clauses. Node budget exhaustion falls back to exact linear leaf evaluation.
+This is not an ROBDD and has no universal log(K) depth/time bound. Unobserved
+inputs may visit the whole tree. Next probe uses exact one-step branch survivor
+counts, including don't-care and OR constraints, with a greedy minimax choice.
+No guaranteed halving or globally minimal interrogation depth is claimed.
+No recommendation means no single bit guarantees progress for both outcomes;
+overlapping classes may remain indistinguishable even after full observation.
+
+Local synthetic check (Python 3.12, 2026-11-01, one 256-query batch per mask,
+including candidate evaluation and next-probe calculation; not a speedup claim):
+
+| Observed bits out of 8 | Tree tests | Compatible classes | Mean query ns |
+|---|---:|---:|---:|
+| 8 | 8 | 1 | 3895 |
+| 4 (low bits) | 19 | 16 | 49276 |
+| 0 | 255 | 256 | 1142428 |
+
+Dictionary: exact signatures 0..255, must=i, forbid=255 XOR i, leaf_size=1.
+This exposes the cost of missing information rather than assuming it disappears.
+Tests exhaust all 256 active/observed pairs for a four-bit overlapping dictionary,
+compare indexed results with linear Kleene evaluation under three node budgets,
+check all 256 complete signatures, full blindness, don't-care XOR counterexamples,
+and missing-versus-neutral CSV handling. Combined relevant suite: 47 passed.
+
+Layer 13's approximate angular bins, adaptive refinement and three-offset
+alignment are not added here: the claimed arbitrary-angle guarantee and unique
+coarse alignment need separate validation. Layers 14/15's supplied performance,
+reconstruction and universal log-depth claims are not used as evidence.

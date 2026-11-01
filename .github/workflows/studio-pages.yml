@@ -110,24 +110,22 @@ jobs:
       - uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
         id: deployment
       - name: Verify the published editor is available
-        env:
-          SITE_URL: ${{ steps.deployment.outputs.page_url }}
         run: |
-          curl --fail --location --retry 6 --retry-delay 3 --retry-all-errors "$SITE_URL" --output /tmp/studio-index.html
+          curl --fail --location --retry 6 --retry-delay 3 --retry-all-errors "${{ steps.deployment.outputs.page_url }}" --output /tmp/studio-index.html
           python -S - <<'PY'
           from pathlib import Path
           text = Path('/tmp/studio-index.html').read_text()
           assert 'Base64 / 渡す' in text and 'core.js' in text
           print('Published Image Studio HTML verified')
           PY
-          curl --fail --location --retry 6 --retry-delay 3 --retry-all-errors "${SITE_URL}tools/" --output /tmp/tools.html
+          curl --fail --location --retry 6 --retry-delay 3 --retry-all-errors "${{ steps.deployment.outputs.page_url }}tools/" --output /tmp/tools.html
           python -S - <<'PY'
           from pathlib import Path
           text = Path('/tmp/tools.html').read_text()
           assert 'PIXEL GRID' in text and 'tools-core.js' in text and 'catalog.js' in text
           print('Published browser tools HTML verified')
           PY
-          curl --fail --location --retry 6 --retry-delay 3 --retry-all-errors "${SITE_URL}slides/" --output /tmp/slides.html
+          curl --fail --location --retry 6 --retry-delay 3 --retry-all-errors "${{ steps.deployment.outputs.page_url }}slides/" --output /tmp/slides.html
           python -S - <<'PY'
           from pathlib import Path
           assert 'deck-pptx' in Path('/tmp/slides.html').read_text()

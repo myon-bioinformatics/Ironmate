@@ -100,7 +100,7 @@ jobs:
       - name: Run default pytest suite (exclude heavy tests)
         if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
         env:
-          IRONMATE_FAILURE_EVIDENCE: build/controlled-failure
+          FAILURE_EVIDENCE_DIR: build/controlled-failure
         run: uv run --locked python -m pytest -q -m "not heavy and not network" --junitxml=build/test-results/pytest-3.15.xml
       - name: Preserve raw suite JUnit
         if: always()

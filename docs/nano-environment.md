@@ -288,9 +288,10 @@ What was checked, and what differs:
   symlink. Keep Node as `node`, and call `bun` by its own name.
 
 Bun is worth it where its cache persists. Fetching Bun into an empty environment
-cost 11 s through npm and a 102 MiB binary (Node's is 143 MiB), more than the 3-4 s
-that `npm ci` takes for this tree, so a disposable environment that starts from
-nothing keeps npm. For a Docker-free setup, `ldd` shows Bun linking only `libc6`
+cost 11 s through npm on that machine (2.0 s on a GitHub-hosted runner) and a
+102 MiB binary (Node's is 143 MiB). On the runner, `exceljs-smoke-bun` spent 2.0 s
+getting Bun plus 0.35 s on a cold `bun install`, against about 1 s for `npm ci`, so
+a disposable environment that starts from nothing keeps npm. For a Docker-free setup, `ldd` shows Bun linking only `libc6`
 (`libc`, `libm`, `libdl`, `libpthread`; highest `GLIBC` symbol version 2.17, not
 run on an older glibc), while Node 26 links `libatomic1`, `libc6`, `libgcc-s1` and
 `libstdc++6`. `ldd` does not show libraries opened at run time.

@@ -107,6 +107,11 @@ version = "0.0.0"
 source = { virtual = "." }
 
 [package.dev-dependencies]
+codecs = [
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
+    { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "pillow" },
+]
 dev = [
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "numpy", version = "2.5.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
@@ -116,15 +121,35 @@ dev = [
     { name = "pytest" },
     { name = "pyyaml" },
 ]
+preview = [
+    { name = "playwright" },
+    { name = "pypdf" },
+]
+test = [
+    { name = "pytest" },
+    { name = "pyyaml" },
+]
 
 [package.metadata]
 
 [package.metadata.requires-dev]
+codecs = [
+    { name = "numpy", specifier = ">=1.26" },
+    { name = "pillow", specifier = ">=10" },
+]
 dev = [
     { name = "numpy", specifier = ">=1.26" },
     { name = "pillow", specifier = ">=10" },
     { name = "playwright", specifier = ">=1.63.0" },
     { name = "pypdf", specifier = ">=6" },
+    { name = "pytest", specifier = ">=8" },
+    { name = "pyyaml", specifier = ">=6" },
+]
+preview = [
+    { name = "playwright", specifier = ">=1.63.0" },
+    { name = "pypdf", specifier = ">=6" },
+]
+test = [
     { name = "pytest", specifier = ">=8" },
     { name = "pyyaml", specifier = ">=6" },
 ]

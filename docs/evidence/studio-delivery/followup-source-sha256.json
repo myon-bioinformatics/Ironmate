@@ -12,6 +12,6 @@
   "tests/image_studio_browser.cjs": "bd63daf2bc8f2c443ca1d3eb8fdcde68f497334faef72200b5b42eddf17348b1",
   "tests/studio_scale_browser.cjs": "34410f7e4fa08a7f828c95b6efce286923018b1ac6c49712544a8a712c4db52e",
   "tests/test_studio_delivery.py": "f332a0da95da9086eeba86e7be35ed67234d84de2b456a24889e9d28add21225",
-  ".github/workflows/studio-pages.yml": "d7cee34bc288cc8c52e859d321227d99c4deeed2002e0fc825e81d2898d8685b",
+  ".github/workflows/studio-pages.yml": "445e604b4a5b0c049b16bf214e0706407d94c678d16c87174ac29e8a0d018d1e",
   ".github/workflows/mcp-tests.yml": "73dc715ada8fd06623444480cf570eb1b8c9798787488f649df58cad788cb358"
 }

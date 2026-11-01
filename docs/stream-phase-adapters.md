@@ -35,6 +35,33 @@ changes or causal interventions. Overlapping predicates and OR clauses are
 checked through the actual choice function; no greedy minimality claim is made.
 The Python API accepts a deterministic router callback and domain validator.
 
+The ladder JSON, router/validator callbacks and bit-name mapping are initialized
+once per CSV invocation, before reading rows. Invalid JSON is a CLI error even
+for a header-only CSV, with no partial report. Missing observations still reject
+ladder generation; the candidate router retains its existing three-valued policy.
+
+Local setup-hoisting comparison (2026-11-01, CPython 3.12.14, Linux x86_64;
+baseline `f1238392`, same process and warm filesystem cache):
+
+| CSV rows | Baseline ms | Hoisted ms | Baseline / hoisted |
+|---|---:|---:|---:|
+| 1 | 0.272 | 0.351 | 0.78 |
+| 100 | 3.111 | 1.962 | 1.59 |
+| 1,000 | 28.995 | 18.103 | 1.60 |
+| 10,000 | 290.102 | 167.622 | 1.73 |
+
+Each cell is the median of seven full `main()` calls, alternating version order;
+stdout is captured in StringIO (JSON plus ladder Markdown), not written to disk.
+Input is `id,x` with `x = row_index % 3 - 1`; spec is
+`{"target":"high","classes":[{"name":"high","must_and":1},{"name":"other"}]}`.
+CLI arguments are `--csv rows.csv --id-col id --columns x --ladder-spec ladder.json`.
+Both modules were loaded before timing. All output strings matched byte for byte
+at every size. These small synthetic timings include CSV calibration, BFS and
+rendering, exclude process startup, and are not a general throughput guarantee.
+Regression tests separately count one spec read/parse and check callback/mapping
+identity across rows, complete-row output, NULL/empty candidate truth values and
+ladder rejection, and malformed JSON for empty and populated CSVs.
+
 Redirect stdout to a Markdown report or append it to "$GITHUB_STEP_SUMMARY".
 Mermaid rendering depends on the viewer; fenced ASCII is always included as a
 fallback. No GitHub workflow, permissions or existing production pipeline is

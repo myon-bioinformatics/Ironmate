@@ -13,15 +13,19 @@ Upgrading the parent package cannot fix this: `exceljs@4.4.0` is the latest rele
 | --- | --- |
 | `exceljs` → `archiver@5.3.2` → `archiver-utils@2.1.0` | `file.expand` (only when called directly) |
 | `exceljs` → `archiver` → `zip-stream@4.1.1` → `archiver-utils@3.0.4` | same `file.expand` (only when called directly) |
-| `exceljs` → `unzipper@0.10.14` → `fstream@1.0.12` → `rimraf@2.7.1` | `rimraf` / `rimraf.sync` (throws TypeError) |
+| `exceljs` → `unzipper@0.10.14` → `fstream@1.0.12` → `rimraf@2.7.1` | `rimraf` / `rimraf.sync` only when the path contains glob characters (`*`, `?`, `[`, `{`, ...); throws TypeError |
 
 ExcelJS itself only uses `archiver` append/finalize and `unzipper.Parse`, so it never calls these.
 `archiver@5.3.2`'s own `glob()` and `directory()` APIs use `readdir-glob@1.1.3`, not `archiver-utils`
 `file.expand`, and `readdir-glob` works with minimatch 11 (checked: `directory()` + `glob()` produced entries).
 
-Only these break: calling `archiver-utils` `file.expand` directly, and `rimraf` / `rimraf.sync`
+Only these break: calling `archiver-utils` `file.expand` directly, and `rimraf` / `rimraf.sync` with a path that contains glob characters
 (for example through unzipper `Extract` / fstream).
 CI job `ExcelJS smoke` (`.github/workflows/exceljs-smoke.yml`, script `scripts/exceljs_smoke.cjs`) checks the following: the xlsx write/read
 round-trip, the streaming WorkbookWriter/WorkbookReader, and CSV.
 
 Remove the override once exceljs ships a release whose dependency tree resolves to minimatch >= 11.0.1.
+
+rimraf with a plain path (no glob characters), or with `{ glob: false }`, does not call glob and works
+(checked locally: `rimraf.sync('/tmp/rr/a')`, `rimraf.sync(p, { glob: false })` and async `rimraf(p)` succeed;
+`rimraf.sync('/tmp/rr/*')` throws `TypeError: Cannot read properties of undefined (reading 'charAt')`).

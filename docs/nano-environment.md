@@ -215,3 +215,20 @@ uninstalled group are not expected to pass, and the full suite needs `dev`.
 The split selects existing locked packages. It does not replace a library, add
 an implementation, or change Docker or CI. Package counts and sizes depend on
 the platform and Python version, and are not Docker-image sizes or build times.
+
+## Optional npm: runtime without the ExcelJS oracle
+
+`scripts/xlsx_io.mjs` writes xlsx with Node built-ins only, so ExcelJS is a dev
+dependency: the independent oracle that the xlsx tests compare against. The
+plain `npm ci` (CI) still installs it and every test still runs. To install only
+what writes slides and workbooks:
+
+```sh
+npm ci --omit=dev --ignore-scripts
+```
+
+That installs the locked PptxGenJS closure and not ExcelJS. `python xlsx_csv.py`
+and the PPTX renderer work in that tree; the tests that need the ExcelJS oracle
+do not, and report that ExcelJS is missing. This uses the unchanged lock and
+npm's own `dev` flags, not the parent's lock projection, so the pinned
+historical recipe above is unaffected.

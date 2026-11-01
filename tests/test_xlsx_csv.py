@@ -2,6 +2,8 @@
 import csv
 import io
 import json
+import shutil
+import struct
 import subprocess
 import sys
 from io import BytesIO
@@ -13,6 +15,7 @@ import pytest
 
 from xlsx_csv import convert_paths, main, write_csv_workbook
 from xlsx_ooxml import read_spec
+import xlsx_render
 from xlsx_render import read_workbook, write_workbook
 import xlsx_spec
 from xlsx_spec import decode_csv_bytes, sheet_from_csv, workbook_from_sheets, workbook_from_spec
@@ -122,7 +125,7 @@ def test_safe_formulas_remain_formulas(raw, source):
     assert cell == {'f': raw[1:]}
 
 
-@pytest.mark.parametrize('engine', ['exceljs'])
+@pytest.mark.parametrize('engine', ['min', 'exceljs'])
 @pytest.mark.parametrize('raw', ['IMAGE(A2)', 'SUM(IMAGE(A2))', 'WEBSERVICE(A2)',
                                  'INDIRECT(A2)', 'FUTUREFUNCTION(A2)', '', None])
 def test_canonical_spec_cannot_bypass_formula_policy(engine, raw, monkeypatch):
@@ -134,7 +137,7 @@ def test_canonical_spec_cannot_bypass_formula_policy(engine, raw, monkeypatch):
         write_workbook(spec, engine)
 
 
-@pytest.mark.parametrize('engine', ['exceljs'])
+@pytest.mark.parametrize('engine', ['min', 'exceljs'])
 @pytest.mark.parametrize('source', ['csv', 'explicit'])
 def test_url_cells_and_safe_formulas_write_without_external_relationships(engine, source):
     entry = {'name': 'S', 'rows': [
@@ -155,7 +158,7 @@ def test_url_cells_and_safe_formulas_write_without_external_relationships(engine
                 assert all(rel.get('TargetMode') != 'External' for rel in ET.fromstring(archive.read(name)))
 
 
-@pytest.mark.parametrize('engine', ['exceljs'])
+@pytest.mark.parametrize('engine', ['min', 'exceljs'])
 def test_sheet_qualifiers_must_resolve_inside_the_written_workbook(engine):
     spec = workbook_from_spec({'sheets': [
         {'name': 'S', 'rows': [["='売上 メモ'!A1+other!A1"]]},
@@ -185,7 +188,7 @@ def test_rejected_features_and_sheet_names():
         sheet_from_csv('bad:name', 'a\n')
 
 
-@pytest.mark.parametrize('engine', ['exceljs'])
+@pytest.mark.parametrize('engine', ['min', 'exceljs'])
 def test_workbook_xml_round_trip(engine):
     spec = _book()
     payload = write_workbook(spec, engine)
@@ -218,18 +221,19 @@ def test_workbook_xml_round_trip(engine):
 def test_empty_cells_keep_grid_borders():
     sheet = sheet_from_csv('S', 'a,b,\n1,2,\n', borders=True, autofilter=True)
     spec = workbook_from_sheets([sheet])
-    payload = write_workbook(spec, 'exceljs')
-    assert read_spec(payload) == spec
-    root = ET.fromstring(archive_sheet(payload, 0))
-    empty = root.find('m:sheetData/m:row[@r="1"]/m:c[@r="C1"]', NS)
-    assert empty is not None and empty.find('m:v', NS) is None
-    with ZipFile(BytesIO(payload)) as archive:
-        styles = ET.fromstring(archive.read('xl/styles.xml'))
-    xf = styles.findall('m:cellXfs/m:xf', NS)[int(empty.get('s'))]
-    assert xf.get('borderId') == '1'
-    assert xf.get('applyBorder') == '1'
-    # ExcelJS reads the empty bordered cell back as part of the grid.
-    assert read_workbook(payload, 'exceljs') == spec
+    for name in ('min', 'exceljs'):
+        payload = write_workbook(spec, name)
+        assert read_spec(payload) == spec
+        root = ET.fromstring(archive_sheet(payload, 0))
+        empty = root.find('m:sheetData/m:row[@r="1"]/m:c[@r="C1"]', NS)
+        assert empty is not None and empty.find('m:v', NS) is None
+        with ZipFile(BytesIO(payload)) as archive:
+            styles = ET.fromstring(archive.read('xl/styles.xml'))
+        xf = styles.findall('m:cellXfs/m:xf', NS)[int(empty.get('s'))]
+        assert xf.get('borderId') == '1'
+        assert xf.get('applyBorder') == '1'
+        # The independent reader sees the empty bordered cell as part of the grid.
+        assert read_workbook(payload, 'exceljs') == spec
 
 
 def archive_sheet(payload, index):
@@ -237,17 +241,101 @@ def archive_sheet(payload, index):
         return archive.read(f'xl/worksheets/sheet{index + 1}.xml')
 
 
-def test_exceljs_reads_the_written_package():
+@pytest.mark.parametrize('engine', ['min', 'exceljs'])
+def test_exceljs_reads_the_package_each_writer_wrote(engine):
+    # ExcelJS is the independent oracle: it must read the full spec back, including
+    # borders and alignment, from the package the min writer produced.
     spec = _book()
-    assert read_workbook(write_workbook(spec, 'exceljs'), 'exceljs') == spec
+    assert read_workbook(write_workbook(spec, engine), 'exceljs') == spec
 
 
-def test_exceljs_is_the_only_engine():
+# Text that exercises escaping, whitespace, line breaks, Unicode, and characters XML 1.0 cannot hold.
+_TRICKY_TEXT = [
+    'a&b <c> "q" \'s\'', '  lead and trail  ', 'a    b', 'l1\nl2', 'l1\r\nl2', 'x\ry', 'a\tb',
+    'emoji 😀 𠮷', '売上 メモ ｱｲｳ', '<![CDATA[x]]>', ']]>', '&amp;', '001', '1e3',
+    'a\x01b', 'a\x0bb', 'a\x00b', 'a\x7fb', 'a\x85b', 'a b', '퟿�', 'x' * 40000,
+]
+
+
+def test_min_and_exceljs_write_the_same_workbook_content():
+    rows = [[{'v': text}] for text in _TRICKY_TEXT]
+    rows += [[{'v': number}, {'f': 'A1+1'}] for number in (0, 1, -7, 1200, 2.5, -0.125, 1e-7, 12345678901234, 1e21)]
+    spec = {'sheets': [{'name': 'S', 'rows': [row + [None] * (2 - len(row)) for row in rows]},
+                       {'name': '売上 メモ', 'rows': [[{'v': 1}]]},
+                       {'name': 'R&D <x> "q"', 'rows': [[{'v': 2}]]}]}
+    from_min = write_workbook(spec, 'min')
+    from_exceljs = write_workbook(spec, 'exceljs')
+    assert read_spec(from_min) == read_spec(from_exceljs)
+    # The independent reader agrees on both packages, not only the stdlib reader.
+    assert read_workbook(from_min, 'exceljs') == read_workbook(from_exceljs, 'exceljs')
+
+
+def test_both_writers_leave_underscore_x_sequences_unescaped():
+    # Known gap, unchanged by the min writer: OOXML reads _xHHHH_ as an escaped character and
+    # expects a literal one as _x005F_xHHHH_. ExcelJS never escaped it, and its own reader
+    # decodes it, so this text is not compared through the ExcelJS reader.
+    spec = {'sheets': [{'name': 'S', 'rows': [[{'v': '_x0041_ and _x005F_'}]]}]}
+    assert read_spec(write_workbook(spec, 'min')) == spec == read_spec(write_workbook(spec, 'exceljs'))
+
+
+def test_min_writer_text_rules():
+    # CR and CRLF become LF; control characters, DEL and U+FFFE/U+FFFF are dropped, as ExcelJS does.
+    text = 'a\r\nb\rc\x01\x7f￾￿d\t&<>"'
+    spec = {'sheets': [{'name': 'S', 'rows': [[{'v': text}]]}]}
+    assert read_spec(write_workbook(spec, 'min'))['sheets'][0]['rows'][0][0] == {'v': 'a\nb\ncd\t&<>"'}
+
+
+def test_min_writer_package_is_a_small_deterministic_zip(tmp_path):
+    # Inspect the bytes Node wrote: write_workbook() re-zips them afterwards.
     spec = _book()
-    with pytest.raises(ValueError, match='engine must be exceljs'):
+    spec_path = tmp_path / 'spec.json'
+    spec_path.write_text(json.dumps(spec), encoding='utf-8')
+    xlsx_render._run('min', 'write', spec_path, tmp_path / 'first.xlsx')
+    xlsx_render._run('min', 'write', spec_path, tmp_path / 'second.xlsx')
+    first = (tmp_path / 'first.xlsx').read_bytes()
+    assert (tmp_path / 'second.xlsx').read_bytes() == first
+    assert write_workbook(spec, 'min') == write_workbook(spec, 'min')
+    with ZipFile(BytesIO(first)) as archive:
+        assert archive.testzip() is None
+        names = archive.namelist()
+        assert names[0] == '[Content_Types].xml'
+        assert sorted(names) == sorted([
+            '[Content_Types].xml', '_rels/.rels', 'xl/workbook.xml', 'xl/_rels/workbook.xml.rels',
+            'xl/styles.xml', 'xl/worksheets/sheet1.xml', 'xl/worksheets/sheet2.xml'])
+        for name in names:
+            ET.fromstring(archive.read(name))
+        # The local headers agree with the central directory (CRC and sizes).
+        for info in archive.infolist():
+            archive.fp.seek(info.header_offset)
+            _sig, _ver, _flags, _method, _time, _date, crc, packed, size, *_rest = struct.unpack(
+                '<4s5H3L2H', archive.fp.read(30))
+            assert (crc, packed, size) == (info.CRC, info.compress_size, info.file_size)
+        # Excel trims leading and trailing spaces in <t> unless xml:space="preserve" is set.
+        xml_space = '{http://www.w3.org/XML/1998/namespace}space'
+        for sheet_name in ('xl/worksheets/sheet1.xml', 'xl/worksheets/sheet2.xml'):
+            texts = ET.fromstring(archive.read(sheet_name)).findall('.//m:is/m:t', NS)
+            assert texts and all(text.get(xml_space) == 'preserve' for text in texts)
+
+
+def test_min_writer_needs_node_only(tmp_path, monkeypatch):
+    # An install without dev dependencies (npm ci --omit=dev) has no ExcelJS on disk.
+    (tmp_path / 'scripts').mkdir()
+    for name in ('xlsx_io.mjs', 'xlsx_allowlist.json'):
+        shutil.copy(Path(xlsx_render.ROOT) / 'scripts' / name, tmp_path / 'scripts' / name)
+    shutil.copy(Path(xlsx_render.ROOT) / 'package.json', tmp_path / 'package.json')
+    monkeypatch.setattr(xlsx_render, 'ROOT', tmp_path)
+    spec = _book()
+    assert read_spec(write_workbook(spec)) == spec
+    with pytest.raises(RuntimeError, match='exceljs is not installed'):
+        write_workbook(spec, 'exceljs')
+
+
+def test_unknown_engines_are_rejected():
+    spec = _book()
+    with pytest.raises(ValueError, match='engine must be min or exceljs'):
         write_workbook(spec, 'sheetjs')
-    with pytest.raises(ValueError, match='engine must be exceljs'):
-        read_workbook(b'', 'sheetjs')
+    with pytest.raises(ValueError, match='only exceljs reads'):
+        read_workbook(b'', 'min')
 
 
 def test_cli_writes_shift_jis_csv(tmp_path):

@@ -1,13 +1,13 @@
 # Excel workbooks
 
-CSV files become `.xlsx` workbooks. Ironmate detects the CSV encoding, then ExcelJS writes the package and Ironmate sets the cell styles in the workbook XML. openpyxl and pandas are not used.
+CSV files become `.xlsx` workbooks. Ironmate detects the CSV encoding, then a small writer in `scripts/xlsx_io.mjs` (Node built-ins only) writes the package and Ironmate sets the cell styles in the workbook XML. openpyxl and pandas are not used.
 
 ```sh
 python xlsx_csv.py -o book.xlsx --border --autofilter 売上=costs.csv メモ=notes.csv
 python xlsx_csv.py --spec book.json -o book.xlsx
 ```
 
-Node.js 24 and `npm ci` are required (pinned `exceljs@4.4.0`). The same lockfile also pins `pptxgenjs@4.0.1` for the slide package. Ironmate does not install them. They are not in `vendor.lock.json`.
+Node.js 24 is required. Writing a workbook needs no npm package. `npm ci` installs `pptxgenjs@4.0.1` for the slide package, and `exceljs@4.4.0` as a dev dependency: it is the independent oracle for the tests and is not used to write workbooks. `npm ci --omit=dev` leaves ExcelJS out. Ironmate does not install them. They are not in `vendor.lock.json`.
 
 `vendor/oci-cost-analysis.py` still imports pandas to print two columns from a CSV. That file is a locked vendor copy and is not part of this converter. PowerPoint tables still read CSV with the stdlib `csv` module.
 
@@ -41,6 +41,8 @@ A sheet has a name, a rectangular `rows` grid, and an optional `autofilter` ref 
 
 `--border` draws that thin border on every cell, including empty ones, so the grid lines stay continuous. A column with `"clear": true` opts out of the border, number format, and alignment. Column `numFmt` and `align` apply to values and formulas in that column.
 
+Text is written as inline strings. CR and CRLF become LF, and characters that XML 1.0 cannot hold (control characters other than tab and newline, DEL, U+FFFE, U+FFFF) are dropped, as ExcelJS already did for control characters. A literal `_x0041_` is written unchanged; OOXML defines `_xHHHH_` as an escape, so a reader may decode it. That gap predates the `min` writer and is not changed here.
+
 Spec shape:
 
 ```json
@@ -62,7 +64,7 @@ Spec shape:
 ## Formula subset
 
 `xlsx_spec._check_formula` validates the complete expression before it reaches
-ExcelJS. At write time sheet qualifiers must match a sheet in this
+the writer. At write time sheet qualifiers must match a sheet in this
 workbook (case-insensitively). `write_workbook` applies the same check to canonical specs,
 so constructing a cell with `f` directly does not bypass validation. Expressions
 are stored unchanged after stripping the optional leading `=` and outer spaces;
@@ -88,22 +90,25 @@ characters, unbalanced/unterminated expressions, more than 8192 characters, and
 nesting deeper than 64 are rejected. Function arity, types,
 and calculation results are left to Excel and may produce ordinary cell errors.
 
-Verification covers both input paths and the ExcelJS writer, inspecting the
+Verification covers both input paths and both writers, inspecting the
 resulting worksheet formulas and checking that literal URL cells introduce no
 external relationships or image parts. Excel desktop rendering, calculation,
 and network traffic have not been tested.
 
-## How ExcelJS output is checked
+## How the writer is checked
 
-ExcelJS writes values, formulas, sheet names, and autofilter. Ironmate then rewrites `xl/styles.xml` and each cell's `s` attribute, so borders, alignment, and number formats are set by Ironmate rather than by the library.
+`scripts/xlsx_io.mjs` has two engines. `min` is the writer: it uses only Node built-ins (`zlib`) to write the package parts, values, formulas, sheet names, and autofilter. `exceljs` writes and reads the same subset with ExcelJS and is the independent oracle for the tests. Ironmate then rewrites `xl/styles.xml` and each cell's `s` attribute for both, so borders, alignment, and number formats are set by Ironmate rather than by a library.
 
-Tests, with no Excel and no Google account:
+Tests, with no Excel and no Google account, run for both engines:
 
 - Unzip the xlsx and require `autoFilter`, thin borders, `numFmt`, alignment, and both sheet names. A safe CSV formula such as `=B2*1.1` stays a formula in `<f>`. `=IMAGE(A2)` raises for both CSV input and explicit formula entries, including when A2 contains the URL.
 - XML → JSON equals the spec for the written package.
-- ExcelJS write → ExcelJS read matches the full spec, including borders and alignment. An empty bordered cell stays in the grid for that read.
+- The `min` and ExcelJS writers give the same workbook content for the same spec: escaping, whitespace, line breaks, Unicode, dropped characters, numbers, formulas, and sheet names with markup characters. The stdlib reader and the ExcelJS reader both compare them.
+- ExcelJS reads the package each writer wrote and matches the full spec, including borders and alignment. An empty bordered cell stays in the grid for that read.
+- The bytes `min` writes are a valid, deterministic ZIP whose local headers match the central directory, and every text carries `xml:space="preserve"`.
+- `min` needs no npm package: a tree without `node_modules` still writes a workbook, and only the `exceljs` engine reports that ExcelJS is missing.
 
-ExcelJS is the only library that writes or reads these packages, so the tests no longer compare it with a second implementation. A mistake that ExcelJS's writer and reader make in the same way is caught only by the XML checks above.
+Outside the tests, only the stdlib reader (`xlsx_ooxml.read_spec`) reads these packages. LibreOffice and openpyxl opened a `min` package during development, but that check is not part of the suite.
 
 ## Not in this subset
 

@@ -3,10 +3,12 @@
   "engines": {
     "node": ">=24"
   },
-  "description": "Pinned Node packages for Ironmate. PptxGenJS writes the slide package shell; ExcelJS writes xlsx values. Ironmate owns the Open XML for both and does not auto-install these packages.",
+  "description": "Pinned Node packages for Ironmate. PptxGenJS writes the slide package shell; scripts/xlsx_io.mjs writes xlsx values with Node built-ins only. ExcelJS is the independent test oracle for xlsx, so it is a dev dependency. Ironmate owns the Open XML for both and does not auto-install these packages.",
   "dependencies": {
-    "exceljs": "4.4.0",
     "pptxgenjs": "4.0.1"
+  },
+  "devDependencies": {
+    "exceljs": "4.4.0"
   },
   "overrides": {
     "image-size": "2.0.4",

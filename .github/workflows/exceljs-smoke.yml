@@ -1,0 +1,28 @@
+name: ExcelJS smoke
+
+# minimatch is overridden to ^11 (GHSA-g3hv-75wg-m249). Under it, glob@7 is broken.
+# This job checks that ExcelJS xlsx/CSV still works with the locked tree.
+on:
+  pull_request:
+    paths: ["package.json", "package-lock.json", "scripts/exceljs_smoke.cjs", ".github/workflows/exceljs-smoke.yml"]
+  push:
+    branches: [main]
+    paths: ["package.json", "package-lock.json", "scripts/exceljs_smoke.cjs", ".github/workflows/exceljs-smoke.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  exceljs-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+      - run: npm ci --ignore-scripts
+      - run: npm ls minimatch --all
+      - run: node scripts/exceljs_smoke.cjs

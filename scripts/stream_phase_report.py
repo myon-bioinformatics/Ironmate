@@ -85,7 +85,7 @@ def fixed100(text):
     return -value if negative else value
 
 
-def csv_spins(stream, id_col, columns):
+def csv_spins(stream, id_col, columns, allow_missing=False):
     """Two passes, O(columns) calibration storage; yields separate spin masks.
 
     Thresholds partition numeric range, not population quantiles. Constant
@@ -103,16 +103,21 @@ def csv_spins(stream, id_col, columns):
         for row in reader:
             if None in row or any(row.get(c) is None for c in [id_col, *columns]):
                 raise ValueError('malformed CSV row')
-            yield row, [fixed100(row[c]) for c in columns]
+            yield row, [None if allow_missing and row[c].strip() in ('', 'NULL') else fixed100(row[c]) for c in columns]
     bounds = [None for _ in columns]
     for _, values in rows():
         for i, value in enumerate(values):
+            if value is None:
+                continue
             old = bounds[i]
             bounds[i] = (value, value) if old is None else (min(old[0], value), max(old[1], value))
     stream.seek(start)
     for row, values in rows():
-        pos = neg = 0
+        pos = neg = observed = 0
         for i, value in enumerate(values):
+            if value is None:
+                continue
+            observed |= 3 << (i << 1)
             lo, hi = bounds[i]
             if lo == hi:
                 continue
@@ -122,7 +127,7 @@ def csv_spins(stream, id_col, columns):
             elif value <= lo + quarter:
                 neg |= 1 << i
         yield dict(id=row[id_col], pos_mask=pos, neg_mask=neg,
-                   spin_board=interleave(pos, neg, len(columns)))
+                   spin_board=interleave(pos, neg, len(columns)), obs_mask=observed)
 
 
 def interleave(pos, neg, count):
@@ -188,15 +193,31 @@ def main(argv=None):
     parser.add_argument('--height', type=int)
     parser.add_argument('--channels', type=int, default=1)
     parser.add_argument('--ladder-spec', type=Path, help='JSON ordered class predicates and target')
+    parser.add_argument('--allow-missing', action='store_true', help='treat empty/NULL CSV cells as unknown')
+    parser.add_argument('--observable-spec', type=Path, help='JSON width/classes for masked candidate routing')
     args = parser.parse_args(argv)
     try:
         if args.csv:
             if not args.columns:
                 parser.error('--columns required with --csv')
+            engine = None
+            if args.observable_spec:
+                try:
+                    from .observable_choice import ObservableChoice, Prototype
+                except ImportError:
+                    from observable_choice import ObservableChoice, Prototype
+                spec = json.loads(args.observable_spec.read_text(encoding='utf-8'))
+                engine = ObservableChoice([Prototype(c['name'], c.get('must_and', 0),
+                                          c.get('forbid_not', 0), tuple(c.get('or_masks', [])))
+                                          for c in spec['classes']], len(args.columns) << 1)
             with args.csv.open(encoding='utf-8-sig', newline='') as stream:
-                for row in csv_spins(stream, args.id_col, args.columns):
+                for row in csv_spins(stream, args.id_col, args.columns, args.allow_missing):
                     print(json.dumps(row, ensure_ascii=False))
+                    if engine is not None:
+                        print(json.dumps(engine.query(row['spin_board'], row['obs_mask'])))
                     if args.ladder_spec:
+                        if row['obs_mask'] != (1 << (len(args.columns) << 1))-1:
+                            parser.error('ladder requires complete observations')
                         spec = json.loads(args.ladder_spec.read_text(encoding='utf-8'))
                         def choose(board):
                             for cls in spec['classes']:

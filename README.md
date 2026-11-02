@@ -286,7 +286,7 @@ a Markdown summary from a rows × columns set of images and pass/fail results. T
 ## Python from Node (`py_launch`)
 
 `flow_export.cjs`, `flow_workspace.cjs` and `image_digest.cjs` leave the processing to Python and delegate only the launch
-to `vendor/py_launch.cjs` from the parent repository (Node.js 24+). When the API's `python` is omitted, each call briefly checks
+to `vendor/py_launch.cjs` from the parent repository (Node.js 26+). When the API's `python` is omitted, each call briefly checks
 for 3.9+ and tries `IRONMATE_PYTHON` → `PYTHON` → `python3` → `python` (`py -3` on Windows)
 in that order. If `IRONMATE_PYTHON` or the API's `python` is given explicitly, only that is used, with no
 fallback if it is not found. `flow_workspace.cjs` uses `isolated` (CPython `-I`) to ignore the child process's `PYTHON*` environment,

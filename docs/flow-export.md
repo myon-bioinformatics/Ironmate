@@ -14,7 +14,7 @@ This is not a general graph editor or an editable Studio scene importer.
 | --- | --- | --- |
 | `mermaid` | UTF-8 fenced Mermaid Markdown | Python 3.10+ standard library |
 | `svg` | SVG with explicit pixel size and intrinsic viewBox | Python, installed `mmdc` and its browser |
-| `png` | PNG | Above plus Node.js 24+ and Chrome/Chromium |
+| `png` | PNG | Above plus Node.js 26+ and Chrome/Chromium |
 | `base64` | Standard padded ASCII Base64 of PNG | Same as PNG |
 | `data-uri` | `data:image/png;base64,` followed by that Base64 | Same as PNG |
 
@@ -73,7 +73,7 @@ second implementation. It delegates process launch to the vendored parent
 version probe before spawning the tool. The launcher is pinned to parent commit
 `1116d5c4f55d25af4d21cfe9b3c88f49d3a476fa`. The probe honors the same
 `noSite` / `isolated` flags as the tool: ambient `sitecustomize` cannot run during
-discovery when either flag is enabled. Node remains 24 or later, with no upper bound.
+discovery when either flag is enabled. Node remains 26 or later, with no upper bound.
 The shared launcher's asynchronous `main` also forwards every SIGINT / SIGTERM
 while its child is alive,
 including SIGTERM after an ignored SIGINT. Wrapper behavior is unchanged.

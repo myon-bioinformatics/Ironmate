@@ -63,7 +63,7 @@ def render_flow(spec, format='svg', *, scale=1, background=None, mmdc='mmdc',
     """Return bytes. None background means transparent; otherwise #RRGGBB.
 
     Mermaid needs Python only. SVG additionally needs local mmdc and its browser;
-    PNG/Base64/data-uri additionally need Node 22+ and local Chrome/Chromium.
+    PNG/Base64/data-uri additionally need Node 26+ and local Chrome/Chromium.
     Fonts are host supplied. No fallback produces a different format on failure.
     """
     if format not in FORMATS:

@@ -1731,7 +1731,7 @@ def _node_backend_error(exc, package, node):
     if node is not None and "node executable not found: " in message:
         path = os.fspath(node)
         raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), path) from exc
-    version = re.search(r"must be 24 or newer \(found (\d+)\)", message)
+    version = re.search(r"must be \d+ or newer \(found (\d+)\)", message)
     if version is not None:
         raise RuntimeError(
             f"needs Node 26+ with {package} (npm i --no-save {package}); "

@@ -95,10 +95,10 @@
       "repository": "myon-bioinformatics/xprobe",
       "source": "xprobe.py",
       "destination": "vendor/xprobe.py",
-      "ref": "ca03a165db2d675513b69e6980821de193c120c9",
-      "commit": "ca03a165db2d675513b69e6980821de193c120c9",
-      "blob_sha": "583d6b6ef7e27104d1409b81034f1883d86141a2",
-      "sha256": "c52a81e564e690e97779a9beca794ec5032c975f2bd0ddb88035fa4372c637b1"
+      "ref": "745b3e55f4a9bc2c1e6c3a3187c57c20cd1a49a1",
+      "commit": "745b3e55f4a9bc2c1e6c3a3187c57c20cd1a49a1",
+      "blob_sha": "ccd4bb514df2539b6d0669940e81265b42b59667",
+      "sha256": "e88dbd56eac2afef938e4bc9ee199ce749ae869f5553ecb0087e5b5a711f8f01"
     },
     {
       "repository": "myon-bioinformatics/xprobe",
@@ -527,10 +527,10 @@
       "repository": "myon-bioinformatics/myon-bioinformatics",
       "source": "py_launch.cjs",
       "destination": "vendor/py_launch.cjs",
-      "ref": "1116d5c4f55d25af4d21cfe9b3c88f49d3a476fa",
-      "commit": "1116d5c4f55d25af4d21cfe9b3c88f49d3a476fa",
-      "blob_sha": "2c6cbfef3da3a9f060fb93bd61ad1a2b137cb99a",
-      "sha256": "f2f3cb721e8489dd8e4f49571da568ad6e6dce5f67501a5af25bf5b04b9746dc"
+      "ref": "1f6f1e345f640827703e2872151a73b4cbdfd382",
+      "commit": "1f6f1e345f640827703e2872151a73b4cbdfd382",
+      "blob_sha": "4a35b158b4a4cbd3a5d672ded1337a138a44bbd2",
+      "sha256": "f900e2662e7065a087897f4b927815d34a81f0e9ca811c0412151b38a218a501"
     },
     {
       "repository": "myon-bioinformatics/Aoi",

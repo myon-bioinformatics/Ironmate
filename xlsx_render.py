@@ -21,7 +21,7 @@ def _tool():
         raise RuntimeError('pinned exceljs is not installed; run npm ci from the repository root')
     node = shutil.which('node')
     if node is None:
-        raise RuntimeError('Node.js is required to write xlsx; install Node.js 22 and run npm ci. Ironmate does not auto-install it.')
+        raise RuntimeError('Node.js is required to write xlsx; install Node.js 26 and run npm ci. Ironmate does not auto-install it.')
     return node, script
 
 

@@ -116,7 +116,7 @@ Text and shapes are redrawn from source data; embedded images are upscaled with 
 Interpolation does not mean recovering detail.
 
 JSON saved from the GUI and JSON prepared in Python can both be output from the CLI with the same renderer.
-SVG needs Node.js; PNG/Base64 need Node.js 24+ and an installed Chrome/Chromium.
+SVG needs Node.js; PNG/Base64 need Node.js 26+ and an installed Chrome/Chromium.
 No image-generation API, GPU or Playwright/Puppeteer runtime dependency is needed. Fonts come from the host OS.
 
 ```sh

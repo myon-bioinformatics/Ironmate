@@ -28,7 +28,7 @@ contract needs separate review; use the exact historical source below meanwhile.
 
 ## 1. Verify and prepare outside the checkout (no installation)
 
-Use an existing Python 3.12+, Node 24+ and npm 11.9.0. Nothing here installs or
+Use an existing Python 3.12+, Node 26+ and npm 11.9.0. Nothing here installs or
 upgrades those tools. Run the shell blocks in order in the same POSIX shell.
 Choose a TMPDIR outside the checkout. Source download needs GitHub access; lock-only preparation is offline. The
 helper is downloaded at the merged parent commit, SHA-256 checked **before
@@ -357,9 +357,18 @@ download in under a second. That is why the pruned cache, which keeps only built
 wheels, saves as much as the unpruned one at 1/50 of the size. When a PyYAML release
 ships a Python 3.15 wheel there is little left for the cache to save in this job.
 
-The job therefore uses `enable-cache: true` and `prune-cache: true`, and sets
-`save-cache` to true only on `main`: pull requests restore the cache and never write
-it. The runs above wrote the cache from the pull request itself, which is the only
-way to see a restored run before the first merge; a restore from main's cache is not
-measured yet. The other workflows keep `enable-cache: false` until their numbers are
-in.
+The jobs that install through uv (`test` and `marp-integration` in `mcp-tests.yml`,
+`chromium-review` in `pptx-review.yml`, `audit` in `vendor-catalog-audit.yml`)
+therefore use `enable-cache: true` and `prune-cache: true`, and set `save-cache` to
+true only on `main`: pull requests restore the cache and never write it. The runs in
+the table wrote the cache from the pull request itself, the only way to see a
+restored run before the first merge. After the merge, a pull request restored the
+cache that `main` had saved: the key matched exactly (`Cache hit`, 1.3 MB), the log
+said `save-cache is false. Skipping save cache step.`, and `uv sync --locked` took 1 s
+in `test`, `marp-integration` and `audit` and 2 s in `chromium-review`. `audit` as a
+whole went from 25-27 s to 13 s; the longer jobs vary by more than the saving.
+
+Jobs that use `setup-uv` only to provide Python (`cdn-pypdf.yml`, `node-tests.yml`,
+`studio-pages.yml`, `verify_3way_survey.yml` and `studio-clipboard`) keep
+`enable-cache: false`: they install nothing through uv, so there is nothing to
+cache, and `setup-uv`'s `ignore-nothing-to-cache` defaults to false.

@@ -46,7 +46,7 @@ test("vendored py_launch.cjs matches vendor.lock.json", () => {
   assert.equal(crypto.createHash("sha1").update(Buffer.concat([
     Buffer.from(`blob ${data.length}\0`), data,
   ])).digest("hex"), entry.blob_sha);
-  assert.equal(entry.commit, "1116d5c4f55d25af4d21cfe9b3c88f49d3a476fa");
+  assert.equal(entry.commit, "1f6f1e345f640827703e2872151a73b4cbdfd382");
 });
 
 const PYTHON =
@@ -260,11 +260,11 @@ test("IRONMATE_PYTHON interpreter choice is unaffected by isolated child PYTHONP
 const LAUNCHER = path.join(ROOT, "vendor/py_launch.cjs");
 const {spawn} = require("node:child_process");
 
-test("launcher keeps Node 24 minimum without an upper bound", () => {
+test("launcher keeps Node 26 minimum without an upper bound", () => {
   const {assertNodeVersion} = require(LAUNCHER);
-  for (const version of ["24.0.0", "26.0.0", "99.0.0"]) assertNodeVersion(version);
+  for (const version of ["26.0.0", "26.1.0", "99.0.0"]) assertNodeVersion(version);
   assert.throws(() => assertNodeVersion("22.0.0"),
-    (error) => error.code === "ENODEVERSION" && /Node 24\+/.test(error.message));
+    (error) => error.code === "ENODEVERSION" && /Node 26\+/.test(error.message));
 });
 
 test("launcher main reports missing interpreter as one JSON error", () => {

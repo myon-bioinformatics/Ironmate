@@ -87,7 +87,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: "22"
+          node-version: "26"
 
       - name: Clear prior capture evidence
         run: rm -rf screenshot-evidence ironmate-mcp-stub-desktop-1440x900.png ironmate-mcp-stub-mobile-390x844.png ironmate-consumer-v1-index-desktop-1440x900.png ironmate-consumer-v1-markdown-mobile-390x844.png ironmate-consumer-v1-ascii-mobile-390x844.png ironmate-repository-diagnostics-desktop-1440x900.png

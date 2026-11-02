@@ -1,4 +1,4 @@
-// CPU rasterization through installed Chrome and Node 22's built-in WebSocket.
+// CPU rasterization through installed Chrome and Node 26's built-in WebSocket.
 // No Playwright/Puppeteer runtime dependency; input HTML comes from core.svg only.
 "use strict";
 const { spawn } = require("node:child_process");
@@ -7,7 +7,7 @@ const [chrome, html, profile, widthText, heightText] = process.argv.slice(2);
 const width = Number(widthText),
   height = Number(heightText);
 if (typeof WebSocket === "undefined")
-  throw new Error("PNG export requires Node.js 22 or newer");
+  throw new Error("PNG export requires Node.js 26 or newer");
 let child, socket, timer;
 const pending = new Map(),
   events = new Map();

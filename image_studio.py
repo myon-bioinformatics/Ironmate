@@ -9,7 +9,7 @@ The server serves only four fixed UI assets on loopback; it never accepts upload
 or writes files. Browser exports are explicit downloads. Existing grid tools own
 PNG encoding; numeric source data is kept separate from its display colors.
 The web editor runs without Python. Scene CLI rendering uses Node.js; PNG/Base64
-also use installed Chrome through Node 22 built-in WebSocket (no runtime npm package).
+also use installed Chrome through Node 26 built-in WebSocket (no runtime npm package).
 """
 from __future__ import annotations
 

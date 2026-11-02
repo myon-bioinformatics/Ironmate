@@ -65,7 +65,7 @@ Flutter上の実操作を今回再実行したという意味ではない。既�
 補間が細部を取り戻すという意味ではない。
 
 GUIで保存したJSONも、Pythonで用意したJSONも同じレンダラーでCLI出力できる。
-SVGにはNode.js、PNG/Base64にはNode.js 22以降とインストール済みChrome/Chromiumが必要。
+SVGにはNode.js、PNG/Base64にはNode.js 26以降とインストール済みChrome/Chromiumが必要。
 画像生成API、GPU、Playwright/Puppeteerの実行時依存は不要。フォントはホストOSのものを使う。
 
 ```sh

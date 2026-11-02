@@ -270,7 +270,7 @@ python -S ironmate_tests.py list
 `ironmate_tests.py list` outputs JSON by default. Run fast Node tests by id, like `python -S ironmate_tests.py run studio-ingress`; the child process's exit code is returned as-is. Each tool's `--help` and fixable errors (exit code 2, JSON on stderr with `--json`) follow the `ironmate_cli.py` contract. `-o` / `--output` / `--out` are the same output destination for the image digest and comparison sheet.
 
 xprobe and the parent's vendor tools are separate checkouts for testing. They are not fetched automatically as runtime dependencies.
-New PPTX packages need Node.js 24+ and `npm ci` (pinned `pptxgenjs@4.0.1`). Ironmate does not install dependencies automatically. The source of truth for slide shapes is the [JSON ↔ OOXML mapping](docs/pptx-ooxml-mapping.md). A separately installed Marp CLI is needed only for Marp conversion.
+New PPTX packages need Node.js 26+ and `npm ci` (pinned `pptxgenjs@4.0.1`). Ironmate does not install dependencies automatically. The source of truth for slide shapes is the [JSON ↔ OOXML mapping](docs/pptx-ooxml-mapping.md). A separately installed Marp CLI is needed only for Marp conversion.
 To turn CSV into xlsx, use the [Excel workbook](docs/xlsx-exceljs.md). Encoding detection covers UTF-8 / BOM / Shift_JIS / CP932. openpyxl and pandas are not used. The same `npm ci` also installs `exceljs@4.4.0` and SheetJS `xlsx@0.20.3`.
 
 ## Comparing screenshots across browsers
@@ -286,7 +286,7 @@ a Markdown summary from a rows × columns set of images and pass/fail results. T
 ## Python from Node (`py_launch`)
 
 `flow_export.cjs`, `flow_workspace.cjs` and `image_digest.cjs` leave the processing to Python and delegate only the launch
-to `vendor/py_launch.cjs` from the parent repository (Node.js 24+). When the API's `python` is omitted, each call briefly checks
+to `vendor/py_launch.cjs` from the parent repository (Node.js 26+). When the API's `python` is omitted, each call briefly checks
 for 3.9+ and tries `IRONMATE_PYTHON` → `PYTHON` → `python3` → `python` (`py -3` on Windows)
 in that order. If `IRONMATE_PYTHON` or the API's `python` is given explicitly, only that is used, with no
 fallback if it is not found. `flow_workspace.cjs` uses `isolated` (CPython `-I`) to ignore the child process's `PYTHON*` environment,

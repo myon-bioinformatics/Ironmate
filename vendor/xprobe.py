@@ -1414,7 +1414,7 @@ def cases_from_junit(text, *, max_cases=1000, max_bytes=1_000_000,
 
 # --- structured config loading (TOML / YAML) -------------------------------
 # tomllib when the interpreter has it (3.11+); otherwise, and always for YAML,
-# Node 24+ with smol-toml / js-yaml resolved through NODE_PATH or the current
+# Node 26+ with smol-toml / js-yaml resolved through NODE_PATH or the current
 # directory. A sibling ``vendor/node_launch.py`` is used when that file is
 # present; a copied ``xprobe.py`` falls back to the stdlib launcher below.
 # Text goes through stdin; the script is fixed; no input is evaluated.
@@ -1479,7 +1479,7 @@ def _from_node_toml(value):
 
 
 _NODE_LAUNCH = None
-_MIN_NODE_MAJOR = 24
+_MIN_NODE_MAJOR = 26
 
 
 def _sibling_node_launch_path():
@@ -1506,7 +1506,7 @@ def _node_launch_module():
 
 
 def _stdlib_node_launch():
-    """Minimal Node 24+ spawn used when ``vendor/node_launch.py`` is absent.
+    """Minimal Node 26+ spawn used when ``vendor/node_launch.py`` is absent.
 
     Resolves like the vendored helper with ``env_var=None`` (PATH via
     ``shutil.which``, not the ``NODE`` environment variable). Version misses
@@ -1734,11 +1734,11 @@ def _node_backend_error(exc, package, node):
     version = re.search(r"must be 24 or newer \(found (\d+)\)", message)
     if version is not None:
         raise RuntimeError(
-            f"needs Node 24+ with {package} (npm i --no-save {package}); "
+            f"needs Node 26+ with {package} (npm i --no-save {package}); "
             f"found Node {version.group(1)}"
         ) from exc
     raise RuntimeError(
-        f"needs Node 24+ with {package} (npm i --no-save {package}); node not found"
+        f"needs Node 26+ with {package} (npm i --no-save {package}); node not found"
     ) from exc
 
 
@@ -1798,7 +1798,7 @@ def _node_load(kind, text, node, timeout):
         reason = _decode_node_process_bytes(done.stderr).strip()
         if reason.startswith("missing:"):
             raise RuntimeError(
-                f"needs Node 24+ with {package} (npm i --no-save {package}): {reason[8:][:200]}"
+                f"needs Node 26+ with {package} (npm i --no-save {package}): {reason[8:][:200]}"
             )
         raise ValueError(
             f"invalid {kind.split('-')[0].upper()}: {reason.removeprefix('parse:')[:300]}"
@@ -1807,7 +1807,7 @@ def _node_load(kind, text, node, timeout):
 
 
 def load_toml(text, *, node=None, timeout=30):
-    """Parse TOML: ``tomllib`` on Python 3.11+, else Node 24+ + ``smol-toml``.
+    """Parse TOML: ``tomllib`` on Python 3.11+, else Node 26+ + ``smol-toml``.
 
     Integers are lossless, including signed 64-bit values. Dates and times
     come back as ``datetime`` objects either way. Raises
@@ -1826,7 +1826,7 @@ def load_toml(text, *, node=None, timeout=30):
 
 
 def load_yaml(text, *, schema="failsafe", node=None, timeout=30):
-    """Parse YAML with Node 24+ + ``js-yaml`` (no PyYAML needed).
+    """Parse YAML with Node 26+ + ``js-yaml`` (no PyYAML needed).
 
     ``schema="failsafe"`` returns only strings, lists and dicts, like PyYAML's
     ``BaseLoader`` (keys such as ``on`` stay ``"on"``); ``schema="core"`` types
@@ -2744,7 +2744,7 @@ def main(argv=None):
     parser.add_argument("--windows-locale", action="store_true",
                         help="With --portability, also list I/O without encoding= and non-cp1252 bytes (hints; exit unaffected)")
     modes.add_argument("--load", nargs=2, metavar=("KIND", "FILE"),
-                       help="Print a toml|yaml|yaml-core file as JSON (tomllib, else Node 24+ smol-toml/js-yaml)")
+                       help="Print a toml|yaml|yaml-core file as JSON (tomllib, else Node 26+ smol-toml/js-yaml)")
     modes.add_argument("--explain", metavar="FILE", help="Rank conditions explaining --target in a JSON array/JSONL file ('-' = stdin)")
     parser.add_argument("--target", metavar="FIELD=VALUE", help="Outcome for --explain; VALUE is a JSON literal")
     parser.add_argument("--target-differs", metavar="A,B", help="Outcome for --explain: fields A and B differ")

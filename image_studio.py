@@ -9,7 +9,7 @@ The server serves only fixed public UI assets on loopback; it never accepts uplo
 or writes files. Browser exports are explicit downloads. Existing grid tools own
 PNG encoding; numeric source data is kept separate from its display colors.
 The web editor runs without Python. Scene CLI rendering uses Node.js; PNG/Base64
-also use installed Chrome through Node 22 built-in WebSocket (no runtime npm package).
+also use installed Chrome through Node 26 built-in WebSocket (no runtime npm package).
 """
 from __future__ import annotations
 
@@ -256,7 +256,7 @@ def raster_svg(svg, *, chrome=None):
         raise ValueError('output must be each side <=8192px and <=16MP')
     node = shutil.which('node')
     if not node:
-        raise RuntimeError('PNG export requires Node.js 22 or newer')
+        raise RuntimeError('PNG export requires Node.js 26 or newer')
     with tempfile.TemporaryDirectory(prefix='ironmate-studio-render-') as temp:
         directory = Path(temp)
         html = directory / 'render.html'

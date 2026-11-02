@@ -26,7 +26,7 @@ if (args.includes("--help") || args.includes("-h")) {
   if (!Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1) {
     fail("studio/raster.cjs", "WIDTH and HEIGHT must be positive integers", "example: 640 480", false);
   } else if (typeof WebSocket === "undefined") {
-    fail("studio/raster.cjs", "PNG export requires Node.js 22 or newer", "use a Node.js build that provides a global WebSocket", false);
+    fail("studio/raster.cjs", "PNG export requires Node.js 26 or newer", "use a Node.js build that provides a global WebSocket", false);
   } else {
     startRaster(chrome, html, profile, width, height);
   }

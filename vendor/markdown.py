@@ -2995,7 +2995,7 @@ def _toml_node_run(
 def toml_reader() -> str | None:
     """Which TOML reader ``toml_to_markdown`` uses: ``"tomllib"``, ``"node"`` or None.
 
-    Python 3.11+ uses ``tomllib``. Older interpreters fall back to Node 24+ with
+    Python 3.11+ uses ``tomllib``. Older interpreters fall back to Node 26+ with
     the npm ``smol-toml`` package (resolved via ``NODE_PATH`` or the current
     directory), probed once on first use; None means neither is available.
     """
@@ -3038,7 +3038,7 @@ def _toml_loads(content: str) -> Any:
             raise ValueError(f"Invalid TOML: {exc}") from exc
     if reader is None:
         raise RuntimeError(
-            "toml_to_markdown requires Python 3.11+ (tomllib) or Node 24+ with smol-toml"
+            "toml_to_markdown requires Python 3.11+ (tomllib) or Node 26+ with smol-toml"
             " (npm i --no-save smol-toml)"
         )
     done = _toml_node_run("-e", _TOML_NODE_SCRIPT, input=content, timeout=30, check=False)
@@ -3059,7 +3059,7 @@ def toml_to_markdown(content: str, title: str = "TOML") -> str:
     The reversible subset is the JSON-compatible TOML value space. TOML
     datetime/date/time values and non-finite floats are rejected rather than
     silently stringified. Reads with ``tomllib`` (3.11+) or, on older Python,
-    Node 24+ + ``smol-toml`` (see :func:`toml_reader`).
+    Node 26+ + ``smol-toml`` (see :func:`toml_reader`).
     """
     value = _toml_loads(content)
     try:

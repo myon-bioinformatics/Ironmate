@@ -46,7 +46,7 @@ test("vendored py_launch.cjs matches vendor.lock.json", () => {
   assert.equal(crypto.createHash("sha1").update(Buffer.concat([
     Buffer.from(`blob ${data.length}\0`), data,
   ])).digest("hex"), entry.blob_sha);
-  assert.equal(entry.commit, "1116d5c4f55d25af4d21cfe9b3c88f49d3a476fa");
+  assert.equal(entry.commit, "384f5dd532076062f7833038764e9a62322c387c");
 });
 
 const PYTHON =

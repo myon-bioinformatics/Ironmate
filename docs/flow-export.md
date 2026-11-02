@@ -71,7 +71,7 @@ second implementation. It delegates process launch to the vendored parent
 
 **Interpreter resolution (Node wrappers):** each call runs a short Python 3.9+
 version probe before spawning the tool. The launcher is pinned to parent commit
-`1116d5c4f55d25af4d21cfe9b3c88f49d3a476fa`. The probe honors the same
+`1f6f1e345f640827703e2872151a73b4cbdfd382`. The probe honors the same
 `noSite` / `isolated` flags as the tool: ambient `sitecustomize` cannot run during
 discovery when either flag is enabled. Node remains 26 or later, with no upper bound.
 The shared launcher's asynchronous `main` also forwards every SIGINT / SIGTERM

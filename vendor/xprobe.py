@@ -1499,6 +1499,10 @@ def _node_launch_module():
             spec = importlib.util.spec_from_file_location("_vendored_node_launch", path)
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
+            # The vendored copy still floors at its parent's older default.
+            # xprobe's product floor is _MIN_NODE_MAJOR; enforce it here so
+            # the vendored path cannot run on a Node version below it.
+            module.MIN_NODE_MAJOR = max(module.MIN_NODE_MAJOR, _MIN_NODE_MAJOR)
             _NODE_LAUNCH = module
         else:
             _NODE_LAUNCH = _stdlib_node_launch()
@@ -1731,6 +1735,17 @@ def _node_backend_error(exc, package, node):
     if node is not None and "node executable not found: " in message:
         path = os.fspath(node)
         raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), path) from exc
+    # The shared launcher collapses rejected PATH candidates into not-found.
+    # Probe that same candidate explicitly to retain the useful version error.
+    if node is None and "node executable not found" in message:
+        import shutil
+        discovered = shutil.which("node")
+        if discovered:
+            launcher = _node_launch_module()
+            try:
+                launcher.resolve_node(node=discovered, env_var=None)
+            except launcher.NodeNotFoundError as probe_exc:
+                message = str(probe_exc)
     version = re.search(r"must be \d+ or newer \(found (\d+)\)", message)
     if version is not None:
         raise RuntimeError(

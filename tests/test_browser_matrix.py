@@ -225,9 +225,26 @@ def test_exclude_globs_drop_after_include_and_before_duplicate_detection(tmp_pat
     assert list(result) == [('detail', 'Linux-chromium-desktop'), ('home', 'Linux-chromium-desktop')]
     assert list(bm.find_shots(tmp_path, exclude_pages=('home',))) == [('detail', 'Linux-chromium-desktop')]
     assert bm.find_shots(tmp_path, pages=('detail',), exclude_pages=('d*',)) == {}
-    with pytest.raises(TypeError):
+    with pytest.raises(TypeError, match='exclude_pages and exclude_environments'):
         bm.find_shots(tmp_path, exclude_pages='home')
-    with pytest.raises(ValueError, match='non-empty'):
+    with pytest.raises(TypeError, match='exclude_pages and exclude_environments'):
+        bm.find_shots(tmp_path, exclude_environments='Windows-*')
+    with pytest.raises(ValueError, match='exclude_pages/exclude_environments'):
         bm.find_shots(tmp_path, exclude_environments=('',))
+    with pytest.raises(ValueError, match='exclude_pages/exclude_environments'):
+        bm.find_shots(tmp_path, exclude_pages=('',))
     assert bm.main([str(tmp_path), '--list', '--exclude-env', 'Windows-*', '--exclude-page', 'detail']) == 0
     assert [row['page'] for row in json.loads(capsys.readouterr().out)['shots']] == ['home']
+
+
+def test_exclude_globs_match_whole_names_not_substrings(tmp_path):
+    tree(tmp_path, {
+        ('home', 'Linux-chromium', 'width-384'): (16, 16, (1, 2, 3, 255)),
+        ('home', 'Linux-chromium-desktop', 'width-384'): (16, 16, (1, 2, 3, 255)),
+        ('homepage', 'Linux-chromium', 'width-384'): (16, 16, (1, 2, 3, 255)),
+        ('homepage', 'Linux-chromium-desktop', 'width-384'): (16, 16, (1, 2, 3, 255)),
+    })
+    assert list(bm.find_shots(tmp_path, exclude_pages=('home',))) == [
+        ('homepage', 'Linux-chromium'), ('homepage', 'Linux-chromium-desktop')]
+    assert list(bm.find_shots(tmp_path, exclude_environments=('Linux-chromium',))) == [
+        ('home', 'Linux-chromium-desktop'), ('homepage', 'Linux-chromium-desktop')]

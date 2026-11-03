@@ -52,13 +52,16 @@ def find_shots(root, shot='width-384', *, pages=('*',), environments=('*',),
     """
     if not _NAME.fullmatch(shot):
         raise ValueError('shot must be a plain file stem such as width-384')
-    groups = (pages, environments, exclude_pages, exclude_environments)
-    if any(isinstance(group, str) for group in groups):
+    if isinstance(pages, str) or isinstance(environments, str):
         raise TypeError('pages and environments must be sequences')
-    pages, environments, exclude_pages, exclude_environments = map(tuple, groups)
-    if any(not isinstance(rule, str) or not rule
-           for rule in pages + environments + exclude_pages + exclude_environments):
+    if isinstance(exclude_pages, str) or isinstance(exclude_environments, str):
+        raise TypeError('exclude_pages and exclude_environments must be sequences')
+    pages, environments = tuple(pages), tuple(environments)
+    exclude_pages, exclude_environments = tuple(exclude_pages), tuple(exclude_environments)
+    if any(not isinstance(rule, str) or not rule for rule in pages + environments):
         raise ValueError('page/environment patterns must be non-empty strings')
+    if any(not isinstance(rule, str) or not rule for rule in exclude_pages + exclude_environments):
+        raise ValueError('exclude_pages/exclude_environments patterns must be non-empty strings')
     if not Path(root).is_dir():
         raise ValueError('screenshot root must be a directory')
     found = {}
@@ -226,8 +229,8 @@ def main(argv=None):
     parser.add_argument('--out', '-o', '--output', type=Path, dest='out')
     parser.add_argument('--page', action='append', help='page-name glob; repeat for OR')
     parser.add_argument('--env', action='append', help='environment-name glob; repeat for OR')
-    parser.add_argument('--exclude-page', action='append', help='exclude page-name glob')
-    parser.add_argument('--exclude-env', action='append', help='exclude environment-name glob')
+    parser.add_argument('--exclude-page', action='append', help='exclude page-name glob; repeat for OR')
+    parser.add_argument('--exclude-env', action='append', help='exclude environment-name glob; repeat for OR')
     parser.add_argument('--list', action='store_true', help='list selected paths as JSON without decoding or writing images')
     parser.add_argument('--shot', default='width-384', help='screenshot stem (initial, width-320, width-384, ...)')
     parser.add_argument('--reference', help='environment id to compare against (default Linux-chromium-desktop)')

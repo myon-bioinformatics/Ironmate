@@ -32,7 +32,7 @@ jobs:
           activate-environment: true
       - name: Install the locked Python environment
         run: |
-          time uv sync --locked
+          time uv sync --locked --only-group test
           du -sk .venv "$(uv cache dir)"
       - name: Resolve parent main for shared catalog audit tools
         id: parent-vendor-tools
@@ -56,7 +56,7 @@ jobs:
       - name: Network enrollment audit regressions
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: uv run --locked python -m pytest -q -m network tests/test_vendor_enrollment_audit.py
+        run: uv run --locked --only-group test python -m pytest -q -m network tests/test_vendor_enrollment_audit.py
       - name: Audit all recommended source and license identities
         env:
           PYTHONPATH: .vendor-audit-tools

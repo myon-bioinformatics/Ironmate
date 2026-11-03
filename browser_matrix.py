@@ -40,8 +40,12 @@ _NAME = re.compile(r'[A-Za-z0-9][A-Za-z0-9._-]{0,80}')
 GAP, BACKGROUND, EMPTY = 8, (255, 255, 255, 255), (224, 224, 224, 255)
 
 
-def find_shots(root, shot='width-384', *, pages=('*',), environments=('*',)):
+def find_shots(root, shot='width-384', *, pages=('*',), environments=('*',),
+               exclude_pages=(), exclude_environments=()):
     """Selected ``{(page, env): path}``; page/env globs are case-sensitive ORs.
+
+    ``exclude_pages`` / ``exclude_environments`` drop matches after inclusion,
+    like ``converter_cases.select_keys`` ``exclude``.
 
     The page and environment groups intersect. Filtering precedes duplicate
     detection; excluded screenshots do not affect the selected comparison.
@@ -50,9 +54,14 @@ def find_shots(root, shot='width-384', *, pages=('*',), environments=('*',)):
         raise ValueError('shot must be a plain file stem such as width-384')
     if isinstance(pages, str) or isinstance(environments, str):
         raise TypeError('pages and environments must be sequences')
+    if isinstance(exclude_pages, str) or isinstance(exclude_environments, str):
+        raise TypeError('exclude_pages and exclude_environments must be sequences')
     pages, environments = tuple(pages), tuple(environments)
+    exclude_pages, exclude_environments = tuple(exclude_pages), tuple(exclude_environments)
     if any(not isinstance(rule, str) or not rule for rule in pages + environments):
         raise ValueError('page/environment patterns must be non-empty strings')
+    if any(not isinstance(rule, str) or not rule for rule in exclude_pages + exclude_environments):
+        raise ValueError('exclude_pages/exclude_environments patterns must be non-empty strings')
     if not Path(root).is_dir():
         raise ValueError('screenshot root must be a directory')
     found = {}
@@ -63,6 +72,9 @@ def find_shots(root, shot='width-384', *, pages=('*',), environments=('*',)):
         if not any(fnmatch.fnmatchcase(page, rule) for rule in pages):
             continue
         if not any(fnmatch.fnmatchcase(env, rule) for rule in environments):
+            continue
+        if any(fnmatch.fnmatchcase(page, rule) for rule in exclude_pages) or \
+                any(fnmatch.fnmatchcase(env, rule) for rule in exclude_environments):
             continue
         if (page, env) in found:
             raise ValueError(f'two screenshots for {page} / {env}: {found[page, env]} and {path}')
@@ -217,6 +229,8 @@ def main(argv=None):
     parser.add_argument('--out', '-o', '--output', type=Path, dest='out')
     parser.add_argument('--page', action='append', help='page-name glob; repeat for OR')
     parser.add_argument('--env', action='append', help='environment-name glob; repeat for OR')
+    parser.add_argument('--exclude-page', action='append', help='exclude page-name glob; repeat for OR')
+    parser.add_argument('--exclude-env', action='append', help='exclude environment-name glob; repeat for OR')
     parser.add_argument('--list', action='store_true', help='list selected paths as JSON without decoding or writing images')
     parser.add_argument('--shot', default='width-384', help='screenshot stem (initial, width-320, width-384, ...)')
     parser.add_argument('--reference', help='environment id to compare against (default Linux-chromium-desktop)')
@@ -228,7 +242,8 @@ def main(argv=None):
     if args.list and args.out is not None:
         parser.error('--list cannot be combined with --out')
     try:
-        shots = find_shots(args.root, args.shot, pages=args.page or ('*',), environments=args.env or ('*',))
+        shots = find_shots(args.root, args.shot, pages=args.page or ('*',), environments=args.env or ('*',),
+                           exclude_pages=args.exclude_page or (), exclude_environments=args.exclude_env or ())
         if args.list:
             print(json.dumps({'shots': [{'page': page, 'env': env, 'path': str(path)}
                                        for (page, env), path in shots.items()]}, ensure_ascii=True))

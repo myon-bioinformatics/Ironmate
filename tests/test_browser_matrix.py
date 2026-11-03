@@ -210,3 +210,24 @@ def test_bad_library_cell_names_fail_before_any_output(tmp_path):
     with pytest.raises(ValueError, match='plain path'):
         bm.write(tmp_path / 'out', {}, (16, 16, bytes(16*16*4)), {('../escape', 'env'): None})
     assert not (tmp_path / 'out').exists()
+
+
+def test_exclude_globs_drop_after_include_and_before_duplicate_detection(tmp_path, capsys):
+    tree(tmp_path, {
+        ('home', 'Linux-chromium-desktop', 'width-384'): (16, 16, (1, 2, 3, 255)),
+        ('home', 'Windows-firefox-desktop', 'width-384'): (16, 16, (4, 5, 6, 255)),
+        ('detail', 'Linux-chromium-desktop', 'width-384'): (16, 16, (1, 2, 3, 255)),
+    })
+    duplicate = tmp_path / 'duplicate' / 'home' / 'Windows-firefox-desktop' / 'width-384.png'
+    duplicate.parent.mkdir(parents=True)
+    duplicate.write_bytes(b'bad png, must not decode')
+    result = bm.find_shots(tmp_path, exclude_environments=('Windows-*',))
+    assert list(result) == [('detail', 'Linux-chromium-desktop'), ('home', 'Linux-chromium-desktop')]
+    assert list(bm.find_shots(tmp_path, exclude_pages=('home',))) == [('detail', 'Linux-chromium-desktop')]
+    assert bm.find_shots(tmp_path, pages=('detail',), exclude_pages=('d*',)) == {}
+    with pytest.raises(TypeError):
+        bm.find_shots(tmp_path, exclude_pages='home')
+    with pytest.raises(ValueError, match='non-empty'):
+        bm.find_shots(tmp_path, exclude_environments=('',))
+    assert bm.main([str(tmp_path), '--list', '--exclude-env', 'Windows-*', '--exclude-page', 'detail']) == 0
+    assert [row['page'] for row in json.loads(capsys.readouterr().out)['shots']] == ['home']

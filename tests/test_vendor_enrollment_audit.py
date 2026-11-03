@@ -82,7 +82,12 @@ def test_workflow_compares_adopted_lock_before_candidate_enrollment():
     assert "parent_vendor_tools_resolve.py" in workflow_text
     assert "steps.parent-vendor-tools.outputs.sha" in workflow_text
     network_step = next(s for s in steps if s.get('name') == 'Network enrollment audit regressions')
-    assert "uv run --locked python -m pytest -q -m network" in network_step['run']
+    assert network_step["run"] == "uv run --locked --only-group test python -m pytest -q -m network tests/test_vendor_enrollment_audit.py"
+    install_step = next(s for s in steps if s.get("name") == "Install the locked Python environment")
+    assert install_step["run"].splitlines() == [
+        "time uv sync --locked --only-group test",
+        'du -sk .venv "$(uv cache dir)"',
+    ]
 
 
 def _project_ironmate_registry(registry):

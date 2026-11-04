@@ -1,0 +1,308 @@
+{
+  "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+  "platform": "Linux-6.18.57-x86_64-with-glibc2.39",
+  "repeats": 7,
+  "palette": "C02",
+  "effect": "shadow",
+  "scale": 1,
+  "dependencies_added": 0,
+  "records": [
+    {
+      "size": 16,
+      "mask": "circle",
+      "rgba_pixels_sha256": "7b07e2e6cbfe54e5b3749cbea3023e37f85a2e68e173aa18395cee0429b9838f",
+      "rgba": {
+        "bytes": 121,
+        "samples_ns": [
+          161283,
+          58308,
+          55353,
+          52970,
+          52109,
+          51778,
+          52259
+        ],
+        "median_ns": 52970,
+        "sha256": "2ad9540e89543ddb2ddd0181f84307c024e80336be60c9f7efffde025e26f98c"
+      },
+      "indexed": {
+        "bytes": 152,
+        "samples_ns": [
+          74222,
+          61793,
+          60051,
+          59460,
+          58758,
+          58087,
+          57917
+        ],
+        "median_ns": 59460,
+        "sha256": "7a73612c5482291c93354f6c461c0fcb1294d431b12b0e613cebf89a249fee3c"
+      }
+    },
+    {
+      "size": 16,
+      "mask": "cloud",
+      "rgba_pixels_sha256": "6db1b5ee4bc7d4b470a1d61f3452d28b2047cc42454957abbf75ed31a62e6124",
+      "rgba": {
+        "bytes": 108,
+        "samples_ns": [
+          59370,
+          54703,
+          53871,
+          53591,
+          52349,
+          68443,
+          53370
+        ],
+        "median_ns": 53871,
+        "sha256": "5e543f69a0991473900cc03e888cad5680bb80bd37ed9a503921165696604142"
+      },
+      "indexed": {
+        "bytes": 143,
+        "samples_ns": [
+          191859,
+          69124,
+          61843,
+          59700,
+          58499,
+          59710,
+          57877
+        ],
+        "median_ns": 59710,
+        "sha256": "9c2e8106e4acd16daf0102e00aa970abb646036032fd0f8ed3e31bcbc222ded6"
+      }
+    },
+    {
+      "size": 16,
+      "mask": "rock",
+      "rgba_pixels_sha256": "b9b051ffe498f0417c02905c5169c411308b1c3b8803885601f66d4c4a91c532",
+      "rgba": {
+        "bytes": 98,
+        "samples_ns": [
+          53010,
+          50256,
+          50155,
+          49144,
+          101062,
+          51208,
+          49645
+        ],
+        "median_ns": 50256,
+        "sha256": "0bc623afcb8062b8fc483751a2997e15a62cabb97551abd02c21a826a48ee20b"
+      },
+      "indexed": {
+        "bytes": 134,
+        "samples_ns": [
+          60772,
+          59319,
+          292841,
+          64397,
+          188184,
+          61613,
+          58018
+        ],
+        "median_ns": 61613,
+        "sha256": "a94acb5f1a0822e5f48f279fcf39a37378a42ece187203a81a0d1cb44a0e79cd"
+      }
+    },
+    {
+      "size": 64,
+      "mask": "circle",
+      "rgba_pixels_sha256": "039bb20ed23062e592669ace0c12fda471f03aaf0bbb698b1cbe32ffde6ee7d9",
+      "rgba": {
+        "bytes": 293,
+        "samples_ns": [
+          1408483,
+          1137795,
+          1121240,
+          1266980,
+          1203303,
+          1116101,
+          1149142
+        ],
+        "median_ns": 1149142,
+        "sha256": "8859c595140ba0f37ad45a426a4af1fbfcdb168b5f02217ac1969a6314968bac"
+      },
+      "indexed": {
+        "bytes": 262,
+        "samples_ns": [
+          1313860,
+          812684,
+          928269,
+          807988,
+          876952,
+          799685,
+          720126
+        ],
+        "median_ns": 812684,
+        "sha256": "8eb820d87d5fa0347df888e5028d93beb3ea6156a65eec7358e9f4b47f12ee65"
+      }
+    },
+    {
+      "size": 64,
+      "mask": "cloud",
+      "rgba_pixels_sha256": "41aaa4c34f723a7a5308e43a32c2c66d907383514c4fb5b77742be7a58e89980",
+      "rgba": {
+        "bytes": 230,
+        "samples_ns": [
+          1411677,
+          807346,
+          1028570,
+          873766,
+          863391,
+          812133,
+          756259
+        ],
+        "median_ns": 863391,
+        "sha256": "76ab4953edb2d61a0546e3de7c9765cb118548d6717dfe832d1c38aef5b0a646"
+      },
+      "indexed": {
+        "bytes": 221,
+        "samples_ns": [
+          1194820,
+          701777,
+          788217,
+          899536,
+          789210,
+          913587,
+          713365
+        ],
+        "median_ns": 789210,
+        "sha256": "040e5475d4316c043c9b5da7f088c3bd169b872bc3d3fd153f278d81aa8e450b"
+      }
+    },
+    {
+      "size": 64,
+      "mask": "rock",
+      "rgba_pixels_sha256": "b04d666b97868188356c2ce742a4e28ce9f83b579a960bf01275c04a2fd87c8b",
+      "rgba": {
+        "bytes": 192,
+        "samples_ns": [
+          944854,
+          826125,
+          814928,
+          1039547,
+          741768,
+          709900,
+          697762
+        ],
+        "median_ns": 814928,
+        "sha256": "e2aabaa713e95f6224dc4f275854d50d6d4bc2918b544a7960aaddfdbecdc7a1"
+      },
+      "indexed": {
+        "bytes": 188,
+        "samples_ns": [
+          1016712,
+          746105,
+          837352,
+          849620,
+          732664,
+          775349,
+          1083864
+        ],
+        "median_ns": 837352,
+        "sha256": "ea772a021c78f7bebd4809a4b61c1fb54380d474fabaf133a77d7b970333131a"
+      }
+    },
+    {
+      "size": 256,
+      "mask": "circle",
+      "rgba_pixels_sha256": "dcfc90941842de145bbe5b7eb3a267429e1ee8220310af5c693a3c78e310469f",
+      "rgba": {
+        "bytes": 1048,
+        "samples_ns": [
+          11767103,
+          16897786,
+          10701697,
+          10726446,
+          10952086,
+          11772231,
+          11970441
+        ],
+        "median_ns": 11767103,
+        "sha256": "05193213fe983b3ad07c48d72aac328c1169546f5e7bafb3c802b599d26c0a87"
+      },
+      "indexed": {
+        "bytes": 776,
+        "samples_ns": [
+          13647618,
+          14967722,
+          15581652,
+          14932364,
+          30572485,
+          28084765,
+          16067384
+        ],
+        "median_ns": 15581652,
+        "sha256": "b8cfc2402a307a37682d1050679ef532168c047defe39ef32aa616f554fb0ef5"
+      }
+    },
+    {
+      "size": 256,
+      "mask": "cloud",
+      "rgba_pixels_sha256": "37352943fbbf6fe3b9033ca186b1e4ae4e43ea5f599009b2435988ab91710a8a",
+      "rgba": {
+        "bytes": 816,
+        "samples_ns": [
+          10585033,
+          14091906,
+          11948838,
+          10295435,
+          9600749,
+          10719885,
+          10015884
+        ],
+        "median_ns": 10585033,
+        "sha256": "7d09b97efd82774612b810aeecad41b5e13ad06f840ad4f64e5fccb8aabad293"
+      },
+      "indexed": {
+        "bytes": 580,
+        "samples_ns": [
+          12326176,
+          12537956,
+          15465246,
+          19051476,
+          12999822,
+          11333139,
+          12190132
+        ],
+        "median_ns": 12537956,
+        "sha256": "3785eff765b35af93fdcf446eeed468a827319fa4c58610b391dd9678281a78e"
+      }
+    },
+    {
+      "size": 256,
+      "mask": "rock",
+      "rgba_pixels_sha256": "a6d98bcd53aab57cc0280425d90ed90ffd5c104560f9476f7b92d923bdd33701",
+      "rgba": {
+        "bytes": 738,
+        "samples_ns": [
+          14047381,
+          18269363,
+          17497447,
+          11160094,
+          12037161,
+          9481353,
+          10926750
+        ],
+        "median_ns": 12037161,
+        "sha256": "f96f551a70083bf59ebac5cc898b06caa32626bd773ebfff86e45f2dbe24ee57"
+      },
+      "indexed": {
+        "bytes": 436,
+        "samples_ns": [
+          11834243,
+          13217478,
+          12840467,
+          18347463,
+          13984699,
+          12358998,
+          12144654
+        ],
+        "median_ns": 12840467,
+        "sha256": "6cad980adf0fae72e4e39544063fcb9ad858398c9a83db96ea6b1e1a60a1bbe8"
+      }
+    }
+  ]
+}

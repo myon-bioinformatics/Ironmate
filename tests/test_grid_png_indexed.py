@@ -72,6 +72,15 @@ class IndexedPngTests(unittest.TestCase):
                 data = grid_png.to_png(art, scale, meta=True, indexed=True)
                 self.assertEqual(grid_tools.restore(data, backend='stdlib'), art)
 
+    def test_indexed_restore_rejects_corrupted_chunk(self):
+        import grid_tools
+        art = pixel_grid.render('circle', size=8)
+        data = bytearray(grid_png.to_png(art, meta=True, indexed=True))
+        offset = data.index(b'PLTE') + 4
+        data[offset] ^= 1  # palette bytes no longer match the chunk CRC
+        with self.assertRaises(ValueError):
+            grid_tools.restore(bytes(data), backend='stdlib')
+
     def test_cli_without_site_packages(self):
         art = pixel_grid.render('circle', size=8)
         r = subprocess.run([sys.executable, '-S', str(Path(grid_png.__file__)), '-', '--indexed'],

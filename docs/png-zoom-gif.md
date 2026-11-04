@@ -13,6 +13,22 @@ uv run --no-sync python png_zoom_gif.py input.png zoom.gif --zoom 3 --steps 16
 pauses at the start, zoom peak and end. Times must be multiples of 10 ms.
 The output repeats forever and existing output files are refused.
 
+Named focuses: `bottom-left`, `bottom-right`, `top-left`, `top-right`, `center`.
+Use `--focus top-right` for one focus, or choose any order:
+
+```sh
+python png_zoom_gif.py input.png zoom.gif --sequence bottom-left bottom-right top-left top-right
+```
+
+Each focus zooms in and reverses back to the full view before the next focus.
+`--focus`, `--sequence` and `--anchor` are mutually exclusive. The default remains
+bottom-left first. A sequence can repeat focuses and contains 1–16 entries.
+The Python API accepts `anchor='top-left'` or
+`anchors=['bottom-left', 'top-right', (0.25, 0.75)]`, allowing mixed named and
+custom coordinates. Timing and zoom settings apply to all focuses; every peak
+and return to full view receives one pause. Frame memory bounds cover the whole
+sequence, so long sequences may require smaller input or fewer steps.
+
 Python API: `png_zoom_gif.to_gif(png_bytes, zoom=3, steps=16,
 anchor=(0, 1), background=(255, 255, 255), duration_ms=60, hold_ms=400)`.
 `zoom_frames` exposes the RGB frames for later video export.

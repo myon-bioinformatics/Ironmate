@@ -46,6 +46,42 @@ class ZoomGifTests(unittest.TestCase):
         frame = png_zoom_gif.zoom_frames(buf.getvalue(), background=(0, 0, 0))[0]
         self.assertEqual(frame.getpixel((0, 0)), (128, 0, 0))
 
+    def test_named_corners_and_ordered_route(self):
+        image = Image.new('RGB', (40, 40))
+        corners = [('bottom-left', (0, 20, 20, 40), (255, 0, 0)),
+                   ('top-right', (20, 0, 40, 20), (0, 255, 0)),
+                   ('bottom-right', (20, 20, 40, 40), (0, 0, 255)),
+                   ('top-left', (0, 0, 20, 20), (255, 255, 0))]
+        for _, box, color in corners:
+            image.paste(color, box)
+        buf = io.BytesIO()
+        image.save(buf, format='PNG')
+        png = buf.getvalue()
+        names = [name for name, _, _ in corners]
+        frames = png_zoom_gif.zoom_frames(png, zoom=2, steps=4, anchors=names)
+        self.assertEqual(len(frames), 33)
+        for i, (name, _, color) in enumerate(corners):
+            self.assertEqual(frames[i * 8 + 4].getpixel((20, 20)), color)
+            self.assertEqual(frames[i * 8 + 8].tobytes(), frames[0].tobytes())
+            single = png_zoom_gif.zoom_frames(png, zoom=2, steps=4, anchor=name)
+            numeric = png_zoom_gif.zoom_frames(png, zoom=2, steps=4,
+                                             anchor=png_zoom_gif.ANCHORS[name])
+            self.assertEqual(single[4].tobytes(), numeric[4].tobytes())
+        gif = Image.open(io.BytesIO(png_zoom_gif.to_gif(png, zoom=2, steps=4, anchors=names)))
+        duration = 0
+        for i in range(gif.n_frames):
+            gif.seek(i)
+            duration += gif.info['duration']
+        self.assertEqual(duration, 33 * 60 + 9 * 400)
+        self.assertEqual(gif.convert('RGB').tobytes(), image.tobytes())
+
+    def test_invalid_routes(self):
+        for options in ({'anchor': 'unknown'}, {'anchor': None}, {'anchors': []},
+                        {'anchors': 'top-left'}, {'anchors': ['center'] * 17},
+                        {'anchors': ['top-left', (2, 0)]}):
+            with self.subTest(options=options), self.assertRaises(ValueError):
+                png_zoom_gif.zoom_frames(self.png(), **options)
+
     def test_invalid_options_and_input(self):
         for options in ({'zoom': float('nan')}, {'steps': 0}, {'anchor': (0, 2)},
                         {'duration_ms': 1}, {'hold_ms': -10}, {'loop': True}):

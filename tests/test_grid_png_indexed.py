@@ -64,6 +64,14 @@ class IndexedPngTests(unittest.TestCase):
             self.assertEqual(pillow_min.open_bytes(data).tobytes(),
                              b''.join(bytes.fromhex(c[1:]) for c in colors))
 
+    def test_indexed_metadata_restore_without_optional_dependencies(self):
+        import grid_tools
+        for mask in pixel_grid.MASKS:
+            art = pixel_grid.render(mask, 'C02', 'shadow', 16)
+            for scale in (1, 3):
+                data = grid_png.to_png(art, scale, meta=True, indexed=True)
+                self.assertEqual(grid_tools.restore(data, backend='stdlib'), art)
+
     def test_cli_without_site_packages(self):
         art = pixel_grid.render('circle', size=8)
         r = subprocess.run([sys.executable, '-S', str(Path(grid_png.__file__)), '-', '--indexed'],

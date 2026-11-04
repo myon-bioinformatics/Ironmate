@@ -1,4 +1,8 @@
 import io
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
 import unittest
 
 try:
@@ -81,6 +85,32 @@ class ZoomGifTests(unittest.TestCase):
                         {'anchors': ['top-left', (2, 0)]}):
             with self.subTest(options=options), self.assertRaises(ValueError):
                 png_zoom_gif.zoom_frames(self.png(), **options)
+
+    def test_arrow_aliases_and_presentation_selectors(self):
+        png = self.png()
+        for arrow, name in png_zoom_gif.ARROW_ANCHORS.items():
+            expected = png_zoom_gif.zoom_frames(png, steps=2, anchor=name)
+            for suffix in ('', '\ufe0e', '\ufe0f'):
+                with self.subTest(arrow=arrow, suffix=suffix):
+                    actual = png_zoom_gif.zoom_frames(png, steps=2, anchor=arrow + suffix)
+                    self.assertEqual([f.tobytes() for f in actual],
+                                     [f.tobytes() for f in expected])
+        with self.assertRaises(ValueError):
+            png_zoom_gif.zoom_frames(png, anchor='↙️oops')
+
+    def test_arrow_cli_sequence_and_single_focus(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / 'input.png'
+            source.write_bytes(self.png())
+            for i, args in enumerate((['--focus', '↗️'],
+                                      ['--sequence', '↙️', '↘', 'top-left', '↗︎'])):
+                target = Path(directory) / f'output{i}.gif'
+                result = subprocess.run([sys.executable, str(Path(png_zoom_gif.__file__)),
+                                         str(source), str(target), '--steps', '2', *args],
+                                        capture_output=True)
+                self.assertEqual(result.returncode, 0, result.stderr.decode())
+                with Image.open(target) as gif:
+                    self.assertGreater(gif.n_frames, 1)
 
     def test_invalid_options_and_input(self):
         for options in ({'zoom': float('nan')}, {'steps': 0}, {'anchor': (0, 2)},

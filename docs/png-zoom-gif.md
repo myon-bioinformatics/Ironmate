@@ -21,6 +21,30 @@ python png_zoom_gif.py input.png zoom.gif --sequence bottom-left bottom-right to
 ```
 
 Each focus zooms in and reverses back to the full view before the next focus.
+
+Arrow characters and emoji work in both the CLI and Python API. Text/emoji
+presentation variants (for example `↙`, `↙︎`, `↙️`) mean the same focus.
+
+| Input | Focus |
+|---|---|
+| ↙️ | bottom-left |
+| ↘️ | bottom-right |
+| ↖️ | top-left |
+| ↗️ | top-right |
+| ← / ⬅️ | left (middle of edge) |
+| → / ➡️ | right (middle of edge) |
+| ↑ / ⬆️ | top (middle of edge) |
+| ↓ / ⬇️ | bottom (middle of edge) |
+| 🎯 | center |
+
+```sh
+python png_zoom_gif.py input.png zoom.gif --sequence '↙️' '↘️' '↖️' '↗️'
+python png_zoom_gif.py input.png zoom.gif --focus '↗️'
+```
+
+Python: `to_gif(png_bytes, anchors=['↙️', '↘️', '↖️', '↗️'])`.
+Names, arrows and coordinate pairs can be mixed in the API sequence.
+
 `--focus`, `--sequence` and `--anchor` are mutually exclusive. The default remains
 bottom-left first. A sequence can repeat focuses and contains 1–16 entries.
 The Python API accepts `anchor='top-left'` or

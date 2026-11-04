@@ -12,14 +12,30 @@ from pillow_min import decode_png_rgba
 ANCHORS = {
     'bottom-left': (0.0, 1.0), 'bottom-right': (1.0, 1.0),
     'top-left': (0.0, 0.0), 'top-right': (1.0, 0.0), 'center': (0.5, 0.5),
+    'left': (0.0, 0.5), 'right': (1.0, 0.5),
+    'top': (0.5, 0.0), 'bottom': (0.5, 1.0),
 }
+ARROW_ANCHORS = {
+    '↙': 'bottom-left', '↘': 'bottom-right', '↖': 'top-left', '↗': 'top-right',
+    '←': 'left', '⬅': 'left', '→': 'right', '➡': 'right',
+    '↑': 'top', '⬆': 'top', '↓': 'bottom', '⬇': 'bottom',
+    '🎯': 'center',
+}
+
+
+def _focus_name(value):
+    # Unicode text/emoji presentation selectors do not change the direction.
+    if value.endswith(('\ufe0e', '\ufe0f')):
+        value = value[:-1]
+    name = ARROW_ANCHORS.get(value, value)
+    if name not in ANCHORS:
+        raise ValueError('unknown anchor: ' + value)
+    return name
 
 
 def _anchor(value):
     if isinstance(value, str):
-        if value not in ANCHORS:
-            raise ValueError('unknown anchor: ' + value)
-        return ANCHORS[value]
+        return ANCHORS[_focus_name(value)]
     if not isinstance(value, (tuple, list)) or len(value) != 2 or any(
         isinstance(v, bool) or not isinstance(v, (int, float)) or
         not math.isfinite(v) or not 0 <= v <= 1 for v in value
@@ -107,9 +123,10 @@ def main(argv=None):
     parser.add_argument('--steps', type=int, default=16)
     focus = parser.add_mutually_exclusive_group()
     focus.add_argument('--anchor', nargs=2, type=float, metavar=('X', 'Y'))
-    focus.add_argument('--focus', choices=tuple(ANCHORS), default='bottom-left')
-    focus.add_argument('--sequence', nargs='+', choices=tuple(ANCHORS),
-                       help='ordered focuses; return to full view between each')
+    focus.add_argument('--focus', type=_focus_name, choices=tuple(ANCHORS), default='bottom-left',
+                       help='focus name or arrow, e.g. ↙️, ↗️, ⬅️, 🎯')
+    focus.add_argument('--sequence', nargs='+', type=_focus_name, choices=tuple(ANCHORS),
+                       help='ordered names/arrows; return to full view between each')
     parser.add_argument('--duration-ms', type=int, default=60)
     parser.add_argument('--hold-ms', type=int, default=400)
     args = parser.parse_args(argv)

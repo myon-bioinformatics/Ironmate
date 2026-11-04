@@ -67,14 +67,14 @@ jobs:
           node-version: "26"
       - name: Install the locked Python environment
         run: |
-          time uv sync --locked
+          time uv sync --locked --only-group test --only-group preview
           du -sk .venv "$(uv cache dir)"
       - name: Install pinned pptxgenjs
         run: npm ci
       - name: Install pinned Marp CLI
         run: npm install --prefix build/preview-tools --no-save --ignore-scripts @marp-team/marp-cli@4.5.1
       - name: Install matching Chromium
-        run: uv run --locked python -m playwright install --with-deps --only-shell chromium
+        run: uv run --locked --only-group test --only-group preview python -m playwright install --with-deps --only-shell chromium
       - name: Test actual Marp HTML PDF PNG and final PPTX inspection
         env:
           IRONMATE_RUN_REVIEW: "1"
@@ -82,7 +82,7 @@ jobs:
           PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome
           IRONMATE_REVIEW_EVIDENCE: build/pptx-review
           IRONMATE_TEST_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: uv run --locked python -m pytest -q tests/test_pptx_preview.py tests/test_pptx_pipeline.py --junitxml=build/pptx-review-junit.xml
+        run: uv run --locked --only-group test --only-group preview python -m pytest -q tests/test_pptx_preview.py tests/test_pptx_pipeline.py --junitxml=build/pptx-review-junit.xml
       - name: Preserve synthetic preview PDF and screenshot evidence
         if: always()
         uses: actions/upload-artifact@v7

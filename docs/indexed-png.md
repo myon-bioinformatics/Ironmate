@@ -26,13 +26,13 @@ Decoded RGBA bytes match exactly. Raw timings and SHA-256 values are in
 
 | Size | Circle RGBA / indexed bytes | Cloud | Rock |
 |---|---:|---:|---:|
-| 16 | 121 / 152 | 108 / 143 | 98 / 134 |
-| 64 | 293 / 262 | 230 / 221 | 192 / 188 |
-| 256 | 1048 / 776 | 816 / 580 | 738 / 436 |
+| 16 | 121 / 148 | 108 / 139 | 98 / 130 |
+| 64 | 293 / 258 | 230 / 217 | 192 / 184 |
+| 256 | 1048 / 772 | 816 / 576 | 738 / 432 |
 
 The palette overhead increases tiny files. At 256, output decreases about 26–41%,
-but Python packing is slower in these samples (circle: 11.77 → 15.58 ms;
-cloud: 10.59 → 12.54 ms; rock: 12.04 → 12.84 ms).
+but generation-time results vary by image. The current raw samples supersede the
+initial measurements taken before trailing opaque alpha entries were removed.
 This is an opt-in storage/transfer tradeoff, not a general speed optimization.
 No build-time or dependency-environment reduction is claimed.
 
@@ -40,3 +40,7 @@ Tests cover all four depths, odd row widths and padding, scale 1/3, transparency
 all procedural masks, malformed arguments, Base64, and CLI under `python -S`.
 The default output was also compared directly with the previous git version
 across all masks, scale 1/3 and metadata on/off: byte-identical.
+
+Indexed PNG now also restores through `grid_tools.restore(..., backend="stdlib")` using
+the bounded pillow_min decoder. Tests cover metadata roundtrips and rejection of a
+corrupted palette CRC; the narrow photo_grid.decode_png API remains unchanged.

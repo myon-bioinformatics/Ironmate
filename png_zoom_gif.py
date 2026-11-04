@@ -109,6 +109,16 @@ def to_gif(png, *, duration_ms=60, hold_ms=400, loop=0, **options):
     # Every zoom peak and every return to the full view gets one pause.
     for index in range(0, len(encoded), steps):
         durations[index] += hold_ms
+    # Pillow coalesces consecutive identical frames, including their durations.
+    # Validate the resulting delay too, rather than leaking an OverflowError.
+    previous = None
+    combined = 0
+    for frame, duration in zip(encoded, durations):
+        pixels = frame.tobytes()
+        combined = combined + duration if pixels == previous else duration
+        if combined > 655350:
+            raise ValueError('merged identical frame duration exceeds GIF limit; reduce timing')
+        previous = pixels
     result = io.BytesIO()
     encoded[0].save(result, format='GIF', save_all=True, append_images=encoded[1:],
                     duration=durations, loop=loop, optimize=False, disposal=2)

@@ -119,3 +119,15 @@ class ZoomGifTests(unittest.TestCase):
                 png_zoom_gif.to_gif(self.png(), **options)
         with self.assertRaises(ValueError):
             png_zoom_gif.to_gif(b'not a PNG')
+
+    def test_identical_frames_validate_merged_duration(self):
+        image = Image.new('RGB', (2, 2), 'red')
+        buf = io.BytesIO()
+        image.save(buf, format='PNG')
+        with self.assertRaisesRegex(ValueError, 'merged identical frame duration'):
+            png_zoom_gif.to_gif(buf.getvalue(), steps=2,
+                                duration_ms=400000, hold_ms=0)
+        gif = Image.open(io.BytesIO(png_zoom_gif.to_gif(
+            buf.getvalue(), steps=2, duration_ms=131070, hold_ms=0)))
+        self.assertEqual(gif.n_frames, 1)
+        self.assertEqual(gif.info['duration'], 655350)

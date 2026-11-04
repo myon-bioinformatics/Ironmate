@@ -12,6 +12,8 @@ uv run --no-sync python png_zoom_gif.py input.png zoom.gif --zoom 3 --steps 16
 `1 0` top-right. `--duration-ms 60` controls each frame and `--hold-ms 400` adds
 pauses at the start, zoom peak and end. Times must be multiples of 10 ms.
 The output repeats forever and existing output files are refused.
+Consecutive identical frames may be merged by the GIF encoder. Their combined
+delay must also fit the GIF limit of 655350 ms; excessive timing is rejected.
 
 Named focuses: `bottom-left`, `bottom-right`, `top-left`, `top-right`, `center`.
 Use `--focus top-right` for one focus, or choose any order:

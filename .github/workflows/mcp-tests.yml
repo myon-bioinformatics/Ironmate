@@ -180,17 +180,21 @@ jobs:
         run: |
           sudo python3 -S scripts/configure_ci_apt.py
           sudo apt-config dump Acquire::Retries Acquire::http::Timeout Acquire::https::Timeout APT::Update::Error-Mode
+      # Package names live in scripts/apt-ci-*.txt; shell: bash adds pipefail so a
+      # missing or empty list fails the step instead of installing nothing.
       - name: Install Japanese fonts for diagram evidence
         timeout-minutes: 5
+        shell: bash
         run: |
           sudo apt-get update
-          sudo apt-get install --no-install-recommends -y fonts-noto-cjk
+          grep -v '^#' scripts/apt-ci-fonts.txt | xargs sudo apt-get install --no-install-recommends -y
           fc-match ':lang=ja'
-      # Test lane only: UNO is LibreOffice's own API, so this is the smallest set that has it.
+      # Test lane only: UNO is LibreOffice's own API (see scripts/apt-ci-uno.txt).
       - name: Install minimal LibreOffice for the UNO check
         timeout-minutes: 5
+        shell: bash
         run: |
-          sudo apt-get install --no-install-recommends -y python3-uno libreoffice-impress
+          grep -v '^#' scripts/apt-ci-uno.txt | xargs sudo apt-get install --no-install-recommends -y
           soffice --version
       - name: Locate browser
         shell: bash

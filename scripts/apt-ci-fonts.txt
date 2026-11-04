@@ -1,0 +1,3 @@
+# apt packages for the Japanese fonts used by diagram evidence (marp-integration job).
+# One package per line (name or name=version); whole-line comments only.
+fonts-noto-cjk

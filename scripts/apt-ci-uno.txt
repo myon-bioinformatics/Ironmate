@@ -1,0 +1,5 @@
+# apt packages for the UNO check (test lane only).
+# UNO is LibreOffice's own API, so this is the smallest set that has it.
+# One package per line (name or name=version); whole-line comments only.
+python3-uno
+libreoffice-impress

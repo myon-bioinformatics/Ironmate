@@ -44,3 +44,8 @@ across all masks, scale 1/3 and metadata on/off: byte-identical.
 Indexed PNG now also restores through `grid_tools.restore(..., backend="stdlib")` using
 the bounded pillow_min decoder. Tests cover metadata roundtrips and rejection of a
 corrupted palette CRC; the narrow photo_grid.decode_png API remains unchanged.
+
+Without metadata, explicit `size` restoration preserves RGBA pixels; the original
+palette order and generation parameters cannot be recovered. With metadata, the
+full artifact roundtrip is tested. Indexed restoration also enforces the shared
+MAX_PIXELS limit before decoding.

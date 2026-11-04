@@ -1,8 +1,9 @@
 # Focused standard-library test discovery
 
 Run from this repository root with Python 3.11 or newer. These commands use
-Python’s built-in test runner; no pip, uv sync, pytest or browser installation
-is needed for the listed checks. `-S` keeps site-packages out of the interpreter.
+Python’s built-in test runner; the listed checks need no third-party Python
+package or browser installation. `-S` disables automatic `site` initialization
+and its usual site-packages path additions; it is not a complete isolation boundary.
 
 ```sh
 python -S -m unittest discover -s tests -p test_adaptive_fingerprint.py -v

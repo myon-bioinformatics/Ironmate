@@ -48,6 +48,22 @@ class IndexedPngTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             grid_png.to_png(art, indexed=True)
 
+    def test_transparency_omits_only_trailing_opaque_entries(self):
+        for colors, alpha in ((['#00000000', '#FFFFFFFF'], b'\x00'),
+                              (['#000000FF', '#FFFFFF80'], b'\xff\x80'),
+                              (['#000000FF', '#FFFFFFFF'], None)):
+            art = {'width': 2, 'height': 1, 'colors': colors, 'pixels': [[0, 1]]}
+            data = grid_png.to_png(art, indexed=True)
+            chunks = {}
+            offset = 8
+            while offset < len(data):
+                length = struct.unpack('>I', data[offset:offset+4])[0]
+                chunks[data[offset+4:offset+8]] = data[offset+8:offset+8+length]
+                offset += length + 12
+            self.assertEqual(chunks.get(b'tRNS'), alpha)
+            self.assertEqual(pillow_min.open_bytes(data).tobytes(),
+                             b''.join(bytes.fromhex(c[1:]) for c in colors))
+
     def test_cli_without_site_packages(self):
         art = pixel_grid.render('circle', size=8)
         r = subprocess.run([sys.executable, '-S', str(Path(grid_png.__file__)), '-', '--indexed'],

@@ -318,3 +318,9 @@ Select page/environment families in the existing screenshot comparison pipeline;
 See [standard-library discovery commands](docs/unittest-discovery.md) for
 validated `python -S -m unittest discover` recipes, filename/name filtering,
 and the boundary with the full pytest suite.
+
+## PNG zoom animation
+
+Create a bottom-left zoom and reverse-return GIF from one PNG with
+`python png_zoom_gif.py input.png zoom.gif` (optional Pillow codec).
+See [controls and format limits](docs/png-zoom-gif.md).

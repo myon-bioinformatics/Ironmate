@@ -66,7 +66,7 @@ def to_png(artifact, scale=1, meta=False, *, indexed=False):
     if indexed:
         palette = _chunk(b'PLTE', b''.join(c[:3] for c in rgba))
         if any(c[3] != 255 for c in rgba):
-            palette += _chunk(b'tRNS', bytes(c[3] for c in rgba))
+            palette += _chunk(b'tRNS', bytes(c[3] for c in rgba).rstrip(b'\xff'))
     raw = bytearray()
     for row in pixels:
         if any(type(v) is not int or not 0 <= v < len(rgba) for v in row):

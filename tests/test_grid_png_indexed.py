@@ -81,6 +81,23 @@ class IndexedPngTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             grid_tools.restore(bytes(data), backend='stdlib')
 
+    def test_no_metadata_restore_preserves_pixels(self):
+        import grid_tools
+        for mask in pixel_grid.MASKS:
+            art = pixel_grid.render(mask, 'C02', 'shadow', 16)
+            data = grid_png.to_png(art, 3, indexed=True)
+            restored = grid_tools.restore(data, size=16, backend='stdlib')
+            self.assertEqual(pillow_min.open_bytes(grid_png.to_png(restored)).tobytes(),
+                             pillow_min.open_bytes(grid_png.to_png(art)).tobytes())
+
+    def test_indexed_decoder_enforces_pixel_limit(self):
+        import grid_tools
+        from unittest.mock import patch
+        data = grid_png.to_png(pixel_grid.render('circle', size=8), indexed=True)
+        with patch.object(grid_tools.photo_grid, 'MAX_PIXELS', 63):
+            with self.assertRaises((ValueError, OSError)):
+                grid_tools.restore(data, backend='stdlib')
+
     def test_cli_without_site_packages(self):
         art = pixel_grid.render('circle', size=8)
         r = subprocess.run([sys.executable, '-S', str(Path(grid_png.__file__)), '-', '--indexed'],

@@ -1,6 +1,6 @@
 """Write an ``ironmate-pixel-grid/1`` artifact as PNG (stdlib zlib+struct, no I/O on import).
 
-8-bit RGBA, non-interlaced, filter 0, fixed zlib level 9 and no time/text chunks, so the
+Default 8-bit RGBA, optional indexed palette, non-interlaced, filter 0, fixed zlib level 9, so the
 same grid and scale always give the same bytes. ``scale`` is integer nearest-neighbour.
 """
 from __future__ import annotations
@@ -37,12 +37,17 @@ def _chunk(kind, body):
     return struct.pack('>I', len(body)) + kind + body + struct.pack('>I', zlib.crc32(kind + body))
 
 
-def to_png(artifact, scale=1, meta=False):
+def to_png(artifact, scale=1, meta=False, *, indexed=False):
     """Return deterministic PNG bytes; index 0 is written as its RGBA (normally transparent).
+
+    ``indexed=True`` uses lossless palette indexes at 1/2/4/8 bits per pixel.
+    The default remains byte-identical RGBA; palette headers can cost more for tiny images.
 
     ``meta=True`` adds a ``tEXt`` chunk (keyword ``ironmate``) with the artifact minus ``pixels``,
     so ``grid_tools.restore`` can recover palette order, unused colors and the grid size exactly.
     """
+    if type(indexed) is not bool:
+        raise ValueError('indexed must be boolean')
     if type(scale) is not int or not 1 <= scale <= 64:
         raise ValueError('scale must be an integer from 1 to 64')
     width, height, pixels, colors = (artifact['width'], artifact['height'],
@@ -53,26 +58,48 @@ def to_png(artifact, scale=1, meta=False):
         raise ValueError(f'output exceeds {MAX_PIXELS} pixels')
     if any(not isinstance(c, str) or not _RGBA.fullmatch(c) for c in colors):
         raise ValueError('colors must be #RRGGBBAA')
+    if indexed and not 1 <= len(colors) <= 256:
+        raise ValueError('indexed PNG requires 1 to 256 colors')
     rgba = [bytes.fromhex(c[1:]) for c in colors]
+    depth = next(d for d in (1, 2, 4, 8) if len(colors) <= (1 << d)) if indexed else 8
+    palette = b''
+    if indexed:
+        palette = _chunk(b'PLTE', b''.join(c[:3] for c in rgba))
+        if any(c[3] != 255 for c in rgba):
+            palette += _chunk(b'tRNS', bytes(c[3] for c in rgba).rstrip(b'\xff'))
     raw = bytearray()
     for row in pixels:
         if any(type(v) is not int or not 0 <= v < len(rgba) for v in row):
             raise ValueError('color index out of range')
-        line = b'\x00' + b''.join(rgba[v] * scale for v in row)
+        if indexed:
+            packed = bytearray()
+            value = used = 0
+            for pixel in row:
+                for _ in range(scale):
+                    value = (value << depth) | pixel
+                    used += depth
+                    if used == 8:
+                        packed.append(value)
+                        value = used = 0
+            if used:
+                packed.append(value << (8 - used))
+            line = b'\x00' + bytes(packed)
+        else:
+            line = b'\x00' + b''.join(rgba[v] * scale for v in row)
         raw += line * scale
-    header = struct.pack('>IIBBBBB', width * scale, height * scale, 8, 6, 0, 0, 0)
+    header = struct.pack('>IIBBBBB', width * scale, height * scale, depth, 3 if indexed else 6, 0, 0, 0)
     text = b''
     if meta:
         info = header_info(artifact)
         text = _chunk(b'tEXt', b'ironmate\x00' + json.dumps(info, sort_keys=True, separators=(',', ':'),
                                                             ensure_ascii=True).encode('ascii'))
-    return (b'\x89PNG\r\n\x1a\n' + _chunk(b'IHDR', header) + text
+    return (b'\x89PNG\r\n\x1a\n' + _chunk(b'IHDR', header) + palette + text
             + _chunk(b'IDAT', zlib.compress(bytes(raw), 9)) + _chunk(b'IEND', b''))
 
 
-def to_base64(artifact, scale=1, data_uri=False, meta=False):
-    """Base64 of ``to_png`` bytes (optionally ``data:image/png;base64,...``); readable by photo_grid."""
-    text = base64.b64encode(to_png(artifact, scale, meta)).decode('ascii')
+def to_base64(artifact, scale=1, data_uri=False, meta=False, *, indexed=False):
+    """Base64 of ``to_png`` bytes; indexed output needs a palette-capable decoder."""
+    text = base64.b64encode(to_png(artifact, scale, meta, indexed=indexed)).decode('ascii')
     return 'data:image/png;base64,' + text if data_uri else text
 
 
@@ -80,6 +107,7 @@ def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument('input', help="pixel-grid JSON file ('-' = stdin)")
     p.add_argument('-o', '--output', help='write PNG here instead of stdout')
+    p.add_argument('--indexed', action='store_true', help='lossless palette PNG; 1-256 colors')
     p.add_argument('--force', action='store_true', help='replace an existing -o file')
     p.add_argument('--scale', type=int, default=1, help='pixels per cell, 1-64 (default 1)')
     args = p.parse_args(argv)
@@ -89,7 +117,7 @@ def main(argv=None):
         else:
             with open(args.input, encoding='utf-8') as handle:
                 artifact = json.load(handle)
-        data = to_png(artifact, args.scale)
+        data = to_png(artifact, args.scale, indexed=args.indexed)
         if args.output:
             from grid_output import write_output
             write_output(args.output, data, args.force)

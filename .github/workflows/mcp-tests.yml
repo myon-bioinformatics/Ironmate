@@ -65,11 +65,18 @@ jobs:
         run: |
           time uv sync --locked
           du -sk .venv "$(uv cache dir)"
-      - name: Fetch pinned shared vendor tool
+      - name: Resolve parent main for shared vendor tools
+        id: parent-vendor-tools
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -S scripts/parent_vendor_tools_resolve.py --emit-github-actions
+      - name: Fetch shared vendor tool at resolved parent main
         uses: actions/checkout@v7
         with:
           repository: myon-bioinformatics/myon-bioinformatics
-          ref: 9e3da7ae1846e9604ebc24bb5178f7de094a4e77
+          ref: ${{ steps.parent-vendor-tools.outputs.sha }}
           path: .vendor-sync-tools
           persist-credentials: false
       - name: Verify checked-in vendor copies

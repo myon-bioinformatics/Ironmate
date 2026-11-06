@@ -260,8 +260,7 @@ For details, see [cleanup and vendor survey](docs/cleanup-stage-two.md) and [ven
 ```sh
 git clone https://github.com/myon-bioinformatics/xprobe.git build/shared
 git -C build/shared checkout 7e7015b2df69ad446b968f6fa49711b5b1dbdd3f
-git clone https://github.com/myon-bioinformatics/myon-bioinformatics.git .vendor-sync-tools
-git -C .vendor-sync-tools checkout a9df23dec720f125772a24b77b413552d60060ba
+git clone --depth 1 https://github.com/myon-bioinformatics/myon-bioinformatics.git .vendor-sync-tools
 python -S .vendor-sync-tools/vendor_sync.py check --manifest vendor.lock.json
 uv run --locked pytest -q -m 'not heavy'
 python -S ironmate_tests.py list
@@ -269,7 +268,7 @@ python -S ironmate_tests.py list
 
 `ironmate_tests.py list` outputs JSON by default. Run fast Node tests by id, like `python -S ironmate_tests.py run studio-ingress`; the child process's exit code is returned as-is. Each tool's `--help` and fixable errors (exit code 2, JSON on stderr with `--json`) follow the `ironmate_cli.py` contract. `-o` / `--output` / `--out` are the same output destination for the image digest and comparison sheet.
 
-xprobe and the parent's vendor tools are separate checkouts for testing. They are not fetched automatically as runtime dependencies.
+xprobe and the parent's vendor tools are separate checkouts for testing (the parent's is its current `main`, the same as CI resolves). They are not fetched automatically as runtime dependencies.
 New PPTX packages need Node.js 26+ and `npm ci` (pinned `pptxgenjs@4.0.1`). Ironmate does not install dependencies automatically. The source of truth for slide shapes is the [JSON ↔ OOXML mapping](docs/pptx-ooxml-mapping.md). A separately installed Marp CLI is needed only for Marp conversion.
 To turn CSV into xlsx, use the [Excel workbook](docs/xlsx-exceljs.md). Encoding detection covers UTF-8 / BOM / Shift_JIS / CP932. openpyxl and pandas are not used. Writing needs Python only (no Node.js, no npm package); `npm ci` installs ExcelJS as a dev dependency, the test oracle (`npm ci --omit=dev` leaves it out).
 

@@ -1,4 +1,0 @@
-# Optional HTML/PDF preview lane. CI installs the locked set with `uv run --locked`.
-playwright>=1.63.0
-pytest>=8
-pypdf>=6

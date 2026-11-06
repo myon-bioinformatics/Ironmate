@@ -31,3 +31,18 @@ dev = [
 
 [tool.uv]
 package = false
+
+[tool.pytest.ini_options]
+addopts = [
+    "-ra",
+    "--tb=short",
+    "--durations=10",
+    "--strict-markers",
+    "--strict-config",
+]
+pythonpath = ["."]
+testpaths = ["tests"]
+markers = [
+    "heavy: resource-intensive or long-running tests excluded from the default fast suite",
+    "network: tests that call GitHub or other live network services (opt-in only)",
+]

@@ -1,5 +1,0 @@
-# Test tools. CI installs the locked set with `uv run --locked`.
-pytest>=8
-PyYAML>=6
-Pillow>=10
-numpy>=1.26

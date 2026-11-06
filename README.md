@@ -275,7 +275,7 @@ To turn CSV into xlsx, use the [Excel workbook](docs/xlsx-exceljs.md). Encoding 
 
 ## Comparing screenshots across browsers
 
-`browser_matrix.py` collects screenshots of the same page taken by browser-test-kit on Linux, macOS and Windows × Chromium, Firefox and WebKit
+`browser_matrix.py` collects screenshots of the same page taken by BrowserTestKit on Linux, macOS and Windows × Chromium, Firefox and WebKit
 into a "page × environment" comparison sheet (PNG, table, JSON). See the [comparison sheet](docs/browser-matrix.md) for details.
 
 ## Image digest page
@@ -297,7 +297,7 @@ interpreter on the Node side and is not subject to `-I`. For details see
 
 ## Common JSON flow diagrams
 
-[web-ui flow export](docs/flow-export.md) connects a single bounded JSON input to Mermaid Markdown, SVG, PNG, standard Base64 and PNG data URI, through Python/Node APIs and CLIs. It reuses the upstream contract and Image Studio raster output.
+[PySaiyanWeBoo flow export](docs/flow-export.md) connects a single bounded JSON input to Mermaid Markdown, SVG, PNG, standard Base64 and PNG data URI, through Python/Node APIs and CLIs. It reuses the upstream contract and Image Studio raster output.
 
 Retain, edit and regenerate flow JSON with the [flow workspace CLI and Python/Node APIs](docs/flow-export.md#retained-json-workspace-import--patch--regenerate), while preserving the original UTF-8 source.
 

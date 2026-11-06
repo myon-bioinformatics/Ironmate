@@ -149,7 +149,7 @@ catch(e){if(JSON.stringify(v)!==before)process.exit(1)}'''
 def test_vendor_runtime_is_one_merged_commit_and_license_is_exact():
     import hashlib
     lock=json.loads((ROOT/'vendor.lock.json').read_text())
-    files=[x for x in lock['files'] if x['repository'].endswith('/web-ui')]
+    files=[x for x in lock['files'] if x['repository'].endswith('/PySaiyanWeBoo')]
     assert {x['commit'] for x in files} == {'95dcfc6f3fa764249566bf2f9df90dcead7c64db'}
     assert len(files) == 7
     for entry in files:

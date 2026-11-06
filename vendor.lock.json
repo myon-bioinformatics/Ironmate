@@ -12,8 +12,8 @@
     },
     {
       "repository": "myon-bioinformatics/markdown",
-      "ref": "be468a648747fa18e385bb2828cb8716170b7c57",
-      "commit": "be468a648747fa18e385bb2828cb8716170b7c57",
+      "ref": "2af2b6646af5663aa1761be08ee7e0c048c3f680",
+      "commit": "2af2b6646af5663aa1761be08ee7e0c048c3f680",
       "source": "markdown.py",
       "destination": "vendor/markdown.py",
       "blob_sha": "3fc9edd43008e14e9b22eb07b83cf489816b82b0",

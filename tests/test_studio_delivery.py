@@ -1,13 +1,6 @@
 """Pages allowlist, Flutter transport and independent arrow geometry checks."""
-import base64
-import copy
-import json
-import math
-import random
-import subprocess
-import sys
-from pathlib import Path
-from xml.etree import ElementTree as ET
+import base64, copy, json, math, random, subprocess, sys
+from pathlib import Path; from xml.etree import ElementTree as ET
 
 import pytest
 

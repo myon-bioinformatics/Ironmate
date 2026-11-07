@@ -20,15 +20,7 @@ differently", not a pixel-exact regression gate. Standard library only.
 """
 from __future__ import annotations
 
-import argparse
-import fnmatch
-import hashlib
-import html
-import json
-import re
-import struct
-import sys
-import zlib
+import argparse, fnmatch, hashlib, html, json, re, struct, sys, zlib
 from pathlib import Path
 
 from image_compare import metrics

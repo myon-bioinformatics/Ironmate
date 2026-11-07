@@ -1,10 +1,6 @@
 """PPTX ZIP, relationship, native-object and serialization contracts."""
-import json
-import posixpath
-import subprocess
-from pathlib import Path
-from xml.etree import ElementTree as ET
-from zipfile import ZipFile
+import json, posixpath, subprocess
+from pathlib import Path; from xml.etree import ElementTree as ET; from zipfile import ZipFile
 
 import pytest
 from pptx_ooxml import require_package, ordered_slide_members

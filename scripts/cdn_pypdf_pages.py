@@ -8,14 +8,7 @@ call again, and compares the two results. Playwright is not imported.
 """
 from __future__ import annotations
 
-import argparse
-import hashlib
-import importlib.util
-import json
-import os
-import subprocess
-import sys
-import tempfile
+import argparse, hashlib, importlib.util, json, os, subprocess, sys, tempfile
 from pathlib import Path
 
 PAGE_OUTPUT_FIELDS = ("pages", "mediabox", "version", "pdf_sha256")

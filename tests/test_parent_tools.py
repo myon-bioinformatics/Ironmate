@@ -3,11 +3,8 @@
 """Offline compatibility of canonical parent tools with adjacent vendored GHI."""
 __all__ = []
 
-import hashlib
-import json
+import hashlib, json, subprocess, sys
 from pathlib import Path
-import subprocess
-import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 VENDOR = ROOT / "vendor"

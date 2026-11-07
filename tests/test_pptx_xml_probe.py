@@ -1,6 +1,5 @@
 """Open XML metadata mutation must preserve unrelated ZIP parts and reopen."""
-from zipfile import ZipFile
-from xml.etree import ElementTree as ET
+from xml.etree import ElementTree as ET; from zipfile import ZipFile
 from pptx import Presentation
 from pptx_xml import set_slide_name
 import pytest

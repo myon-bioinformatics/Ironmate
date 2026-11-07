@@ -1,9 +1,5 @@
-import io
+import io, subprocess, sys, tempfile, unittest
 from pathlib import Path
-import subprocess
-import sys
-import tempfile
-import unittest
 
 try:
     from PIL import Image

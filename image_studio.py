@@ -13,19 +13,8 @@ also use installed Chrome through Node 26 built-in WebSocket (no runtime npm pac
 """
 from __future__ import annotations
 
-import argparse
-import base64
-import os
-import shutil
-import struct
-import subprocess
-import sys
-import tempfile
-import json
-import math
-from functools import lru_cache
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from pathlib import Path
+import argparse, base64, json, math, os, shutil, struct, subprocess, sys, tempfile
+from functools import lru_cache; from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer; from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 SCHEMA = 'ironmate-image-studio/1'

@@ -1,11 +1,6 @@
 """Arcade engine invariants, reference target vectors, and existing export integration."""
-from collections import Counter
-from copy import deepcopy
-import json
-from pathlib import Path
-import random
-import subprocess
-import sys
+import json, random, subprocess, sys
+from collections import Counter; from copy import deepcopy; from pathlib import Path
 
 import pytest
 

@@ -3,7 +3,7 @@
 Creating a blank deck uses the pinned Node renderer. Enrichment itself only
 appends canonical slide XML.
 """
-from pathlib import Path
+from pathlib import Path; from zipfile import ZipFile
 import pytest
 import pptx_pipeline
 
@@ -113,7 +113,6 @@ def test_missing_live_markdown_body_is_rejected(tmp_path,content):
 
 
 # Native patterns and preservation contracts (same pipeline).
-from zipfile import ZipFile
 import pytest
 from pptx import Presentation
 from pptx.enum.shapes import MSO_SHAPE

@@ -1,11 +1,6 @@
 """Reproducible RGBA/indexed PNG comparison; emits JSON to stdout."""
-import hashlib
-import json
+import hashlib, json, platform, statistics, sys, time
 from pathlib import Path
-import platform
-import statistics
-import sys
-import time
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import grid_png

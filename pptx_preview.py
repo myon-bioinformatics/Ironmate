@@ -1,8 +1,5 @@
 """Chromium HTML/PDF preview adapter; this does not render edited PPTX files."""
-import hashlib
-import importlib.metadata
-import math
-import sys
+import hashlib, importlib.metadata, math, sys
 from pathlib import Path
 
 

@@ -1,6 +1,5 @@
 """Check every retained source and license against the consumer lock."""
-import hashlib
-import json
+import hashlib, json
 from pathlib import Path
 
 

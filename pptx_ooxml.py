@@ -1,7 +1,5 @@
 """Tolerant PPTX package helpers. Surgical edits copy every untouched member."""
-from pathlib import PurePosixPath
-from xml.etree import ElementTree as ET
-from zipfile import ZipFile
+from pathlib import PurePosixPath; from xml.etree import ElementTree as ET; from zipfile import ZipFile
 
 from pptx_mapping import ANS, PNS, RNS, _q
 

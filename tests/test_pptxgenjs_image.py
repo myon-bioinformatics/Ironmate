@@ -1,8 +1,5 @@
 """PptxGenJS image embedding (exercises the pinned image-size override)."""
-import base64
-import shutil
-import subprocess
-import zipfile
+import base64, shutil, subprocess, zipfile
 from pathlib import Path
 
 import pytest

@@ -1,12 +1,7 @@
 """Repository-wide source hygiene checks."""
 
-import py_compile
-import re
-import subprocess
-import tempfile
-import unittest
-from pathlib import Path
-from unittest import mock
+import py_compile, re, subprocess, tempfile, unittest
+from pathlib import Path; from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]

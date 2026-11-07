@@ -4,16 +4,10 @@ This is structural JSON editing, independent of Image Studio pixel operations.
 """
 from __future__ import annotations
 
-import argparse
-import json
-import os
-from pathlib import Path
-import subprocess
-import sys
+import argparse, json, os, subprocess, sys
+from pathlib import Path; from xml.etree import ElementTree as ET
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
-from xml.etree import ElementTree as ET
 
 from flow_export import FORMATS, MAX_INPUT, read_spec, render_flow
 from grid_output import write_output

@@ -1,5 +1,4 @@
-import base64
-import unittest
+import base64, unittest
 from unittest.mock import patch
 
 import studio_ingress as ingress

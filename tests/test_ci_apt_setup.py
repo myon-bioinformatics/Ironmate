@@ -204,7 +204,8 @@ def test_workflow_restores_apt_downloads_everywhere_but_saves_them_only_from_mai
         assert restore["uses"].startswith("actions/cache/restore@") and "if" not in restore
         assert '--archives "$RUNNER_TEMP/apt-archives"' in steps[setup]["run"]
         assert finish_step["if"] == "github.event_name == 'push' && github.ref == 'refs/heads/main'"
-        assert '--finish "$RUNNER_TEMP/apt-archives" >> "$GITHUB_OUTPUT"' in finish_step["run"]
+        assert '--finish "$RUNNER_TEMP/apt-archives" | tee -a "$GITHUB_OUTPUT"' in finish_step["run"]
+        assert finish_step["shell"] == "bash"  # pipefail, so tee cannot hide a failure
         assert save["uses"].startswith("actions/cache/save@")
         assert save["if"] == "steps.apt_cache.outputs.changed == 'true'"
         assert save["with"]["key"] == restore["with"]["key"]

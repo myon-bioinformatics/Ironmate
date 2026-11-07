@@ -208,7 +208,8 @@ jobs:
       - name: Make apt downloads cacheable (main only)
         id: apt_cache
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: sudo python3 -S scripts/configure_ci_apt.py --finish "$RUNNER_TEMP/apt-archives" >> "$GITHUB_OUTPUT"
+        shell: bash  # pipefail: a failed --finish must fail the step, not be hidden by tee
+        run: sudo python3 -S scripts/configure_ci_apt.py --finish "$RUNNER_TEMP/apt-archives" | tee -a "$GITHUB_OUTPUT"
       - name: Save apt downloads (main only, when they changed)
         if: steps.apt_cache.outputs.changed == 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -312,7 +313,8 @@ jobs:
       - name: Make apt downloads cacheable (main only)
         id: apt_cache
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: sudo python3 -S scripts/configure_ci_apt.py --finish "$RUNNER_TEMP/apt-archives" >> "$GITHUB_OUTPUT"
+        shell: bash  # pipefail: a failed --finish must fail the step, not be hidden by tee
+        run: sudo python3 -S scripts/configure_ci_apt.py --finish "$RUNNER_TEMP/apt-archives" | tee -a "$GITHUB_OUTPUT"
       - name: Save apt downloads (main only, when they changed)
         if: steps.apt_cache.outputs.changed == 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0

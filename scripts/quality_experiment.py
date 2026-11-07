@@ -163,9 +163,9 @@ def run(fixtures, out, repeats=3):
     return report
 
 
-def main():
+def main(argv=None):
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--fixtures',required=True);p.add_argument('--out',required=True)
-    args=p.parse_args();run(args.fixtures,args.out)
+    args=p.parse_args(argv);run(args.fixtures,args.out)
 
 
 if __name__=='__main__': main()

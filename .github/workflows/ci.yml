@@ -1,4 +1,4 @@
-name: Python tests and vendor verification
+name: CI
 
 on:
   pull_request:
@@ -14,7 +14,7 @@ on:
       - "package-lock.json"
       - "pyproject.toml"
       - "uv.lock"
-      - ".github/workflows/mcp-tests.yml"
+      - ".github/workflows/ci.yml"
   push:
     branches: [main]
     paths:
@@ -29,7 +29,7 @@ on:
       - "package-lock.json"
       - "pyproject.toml"
       - "uv.lock"
-      - ".github/workflows/mcp-tests.yml"
+      - ".github/workflows/ci.yml"
 
 permissions:
   contents: read

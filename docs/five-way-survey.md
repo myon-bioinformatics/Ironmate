@@ -251,7 +251,7 @@ The following useful #156 concepts are retained in this implementation:
 - Eight synthetic scenario families, IoU and energy-weighted Dice, spatial
   sensitivity controls, three-condition Venn counts and temporal XOR diagnostics.
 - A dependency-free CLI and daily benchmark artifact, using the existing
-  `.github/workflows/verify_3way_survey.yml` schedule at 23:00 UTC (08:00 JST).
+  `.github/workflows/verify-3way-survey.yml` schedule at 23:00 UTC (08:00 JST).
   Do not also add #156's `verify_5way_survey.yml`: that would duplicate the run.
 
 The original unsafe rough-support temporal gate, three-pass stopping rule,

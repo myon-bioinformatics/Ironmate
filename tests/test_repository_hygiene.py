@@ -108,7 +108,7 @@ class RepositoryHygieneTest(unittest.TestCase):
                 failures.append(f"{path.relative_to(ROOT)}: pip install")
         self.assertEqual(failures, [], "\n".join(failures))
         for relative in (
-            ".github/workflows/mcp-tests.yml",
+            ".github/workflows/ci.yml",
             ".github/workflows/pptx-review.yml",
         ):
             text = (ROOT / relative).read_text(encoding="utf-8")

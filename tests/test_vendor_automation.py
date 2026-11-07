@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-WORKFLOW = ".github/workflows/mcp-tests.yml"
+WORKFLOW = ".github/workflows/ci.yml"
 PIN = "9e3da7ae1846e9604ebc24bb5178f7de094a4e77"
 
 

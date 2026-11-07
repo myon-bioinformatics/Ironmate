@@ -96,7 +96,7 @@ def test_skip(): pass
 def test_workflow_keeps_suite_failure_and_exact_reports(tmp_path):
     import yaml
 
-    jobs = yaml.load((ROOT / '.github/workflows/mcp-tests.yml').read_text(),
+    jobs = yaml.load((ROOT / '.github/workflows/ci.yml').read_text(),
                      Loader=yaml.BaseLoader)['jobs']
     steps = jobs['test']['steps']
     suite = next(s for s in steps if s.get('name') == 'Run default pytest suite (exclude heavy tests)')

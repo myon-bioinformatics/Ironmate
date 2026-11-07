@@ -4,9 +4,9 @@ from xml.etree import ElementTree as ET
 
 import pytest
 
-from pptx_mapping import NOT_REVERSIBLE, canonical_spec, normalized_xml, public_slide, read_slide_xml, write_slide_xml, xml_round_trip
-from pptx_render import read_package_spec, render_bytes
-from pptx_spec import arrow_geometry, expand_connector, sample_deck_spec
+from ironlib.pptx_mapping import NOT_REVERSIBLE, canonical_spec, normalized_xml, public_slide, read_slide_xml, write_slide_xml, xml_round_trip
+from ironlib.pptx_render import read_package_spec, render_bytes
+from ironlib.pptx_spec import arrow_geometry, expand_connector, sample_deck_spec
 
 
 def _slide(**kwargs):

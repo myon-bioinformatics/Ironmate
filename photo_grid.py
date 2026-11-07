@@ -424,13 +424,13 @@ def main(argv=None):
         else:
             result = (json.dumps(artifact, ensure_ascii=False) + '\n').encode('utf-8')
         if args.output:
-            from grid_output import write_output
+            from ironlib.grid_output import write_output
             write_output(args.output, result, args.force)
         else:
             sys.stdout.buffer.write(result)
             sys.stdout.flush()
     except (OSError, UnicodeDecodeError, ValueError) as exc:
-        from ironmate_cli import emit_error, hint_for
+        from ironlib.ironmate_cli import emit_error, hint_for
         if args.json:
             return emit_error('photo_grid.py', exc, json_mode=True)
         print(f'error: {exc}', file=sys.stderr)

@@ -73,7 +73,7 @@ def main(argv=None):
                 artifact = json.load(handle)
         svg = to_svg(artifact, args.scale, not args.no_merge)
         if args.output:
-            from grid_output import write_output
+            from ironlib.grid_output import write_output
             write_output(args.output, svg.encode('utf-8'), args.force)
         else:
             sys.stdout.write(svg)

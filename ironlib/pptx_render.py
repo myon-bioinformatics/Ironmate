@@ -11,10 +11,10 @@ import tempfile
 from pathlib import Path
 from zipfile import ZipFile
 
-from pptx_mapping import EMU_PER_INCH, canonical_spec, public_slide, read_slide_xml, write_slide_xml
-from pptx_ooxml import copy_with_replacements, ordered_slide_members, reorder_sld_id_lst, set_sld_sz
+from ironlib.pptx_mapping import EMU_PER_INCH, canonical_spec, public_slide, read_slide_xml, write_slide_xml
+from ironlib.pptx_ooxml import copy_with_replacements, ordered_slide_members, reorder_sld_id_lst, set_sld_sz
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 
 
 def _renderer():
@@ -88,7 +88,7 @@ def write_new_package(path, spec, *, display=None):
 def read_package_spec(path):
     """Read a deck back into the public slide spec (display order, no shape ids)."""
     with ZipFile(path) as package:
-        from pptx_ooxml import slide_size
+        from ironlib.pptx_ooxml import slide_size
         cx, cy = slide_size(package)
         slides = [public_slide(read_slide_xml(package.read(member))) for member in ordered_slide_members(package)]
     return {'width': cx / EMU_PER_INCH, 'height': cy / EMU_PER_INCH, 'slides': slides}

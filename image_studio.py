@@ -162,7 +162,7 @@ def build_site(directory):
     if directory.is_symlink() or (directory.exists() and (not directory.is_dir() or any(directory.iterdir()))):
         raise FileExistsError('site output must be a new or empty directory')
     directory.mkdir(parents=True, exist_ok=True)
-    from grid_output import write_output
+    from ironlib.grid_output import write_output
     for name, payload in payloads.items():
         (directory / name).parent.mkdir(parents=True, exist_ok=True)
         write_output(str(directory / name), payload)
@@ -323,7 +323,7 @@ def main(argv=None):
     try:
         return _run_studio(p, args)
     except (OSError, ValueError, RuntimeError, subprocess.TimeoutExpired) as exc:
-        from ironmate_cli import emit_error
+        from ironlib.ironmate_cli import emit_error
         return emit_error('image_studio.py', exc, json_mode=args.json)
 
 
@@ -334,7 +334,7 @@ def _run_studio(p, args):
     if args.render:
         data = render_scene(json.loads(args.render.read_text(encoding='utf-8')), args.format, args.scale, args.chrome, args.data_uri)
         if args.output:
-            from grid_output import write_output
+            from ironlib.grid_output import write_output
             write_output(str(args.output), data, args.force)
         else:
             sys.stdout.buffer.write(data)
@@ -342,7 +342,7 @@ def _run_studio(p, args):
     if args.heatmap:
         if not args.output:
             p.error('--heatmap needs -o scene.json')
-        from grid_output import write_output
+        from ironlib.grid_output import write_output
         write_output(str(args.output), json.dumps(heatmap_scene(json.loads(args.heatmap.read_text(encoding='utf-8'))), ensure_ascii=False, allow_nan=False).encode(), args.force)
         return 0
     if not 0 <= args.port <= 65535:

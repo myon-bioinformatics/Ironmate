@@ -237,11 +237,11 @@ def main(argv=None):
         page, summary, info = build(spec, base, max_bytes=args.max_bytes, tile=(int(match[1]), int(match[2])))
         write(args.out, page, summary, info)
     except (OSError, ValueError, UnicodeError) as error:
-        from ironmate_cli import emit_error
+        from ironlib.ironmate_cli import emit_error
         if args.json:
             return emit_error('image_digest.py', error, json_mode=True)
         print(f'error: {error}', file=sys.stderr)
-        from ironmate_cli import hint_for
+        from ironlib.ironmate_cli import hint_for
         hint = hint_for(error)
         if hint:
             print(f'hint: {hint}', file=sys.stderr)

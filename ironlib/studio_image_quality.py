@@ -3,7 +3,7 @@
 Input pixels are flat RGBA tuples; no external images or dependencies required.
 """
 from __future__ import annotations
-from studio_shape_metrics import metrics
+from ironlib.studio_shape_metrics import metrics
 
 
 def _validate_pixels(width, height, pixels):

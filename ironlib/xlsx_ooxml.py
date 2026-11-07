@@ -12,7 +12,7 @@ import re
 from xml.etree import ElementTree as ET
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
-from xlsx_spec import column_name
+from ironlib.xlsx_spec import column_name
 
 NS = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'
 RNS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'

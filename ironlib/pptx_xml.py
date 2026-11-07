@@ -5,7 +5,7 @@ from pathlib import Path
 from xml.etree import ElementTree as ET
 from zipfile import ZipFile
 
-from pptx_ooxml import require_package
+from ironlib.pptx_ooxml import require_package
 
 P = "{http://schemas.openxmlformats.org/presentationml/2006/main}"
 
@@ -109,7 +109,7 @@ def set_run_style(source, destination, *, slide=1, rgb=None, points=None, bold=N
 from pathlib import Path
 from zipfile import ZipFile
 from xml.etree import ElementTree as ET
-from pptx_ooxml import require_package
+from ironlib.pptx_ooxml import require_package
 
 A = "{http://schemas.openxmlformats.org/drawingml/2006/main}"
 P = "{http://schemas.openxmlformats.org/presentationml/2006/main}"
@@ -188,7 +188,7 @@ from pathlib import Path, PurePosixPath
 from zipfile import ZipFile
 from xml.etree import ElementTree as ET
 
-from pptx_ooxml import require_package
+from ironlib.pptx_ooxml import require_package
 
 A = "{http://schemas.openxmlformats.org/drawingml/2006/main}"
 P = "{http://schemas.openxmlformats.org/presentationml/2006/main}"

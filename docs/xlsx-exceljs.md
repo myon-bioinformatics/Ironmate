@@ -1,6 +1,6 @@
 # Excel workbooks
 
-CSV files become `.xlsx` workbooks. Ironmate detects the CSV encoding, then a small writer in `xlsx_ooxml.py` (Python standard library only) writes the package and Ironmate sets the cell styles in the workbook XML. openpyxl and pandas are not used.
+CSV files become `.xlsx` workbooks. Ironmate detects the CSV encoding, then a small writer in `ironlib/xlsx_ooxml.py` (Python standard library only) writes the package and Ironmate sets the cell styles in the workbook XML. openpyxl and pandas are not used.
 
 ```sh
 python xlsx_csv.py -o book.xlsx --border --autofilter 売上=costs.csv メモ=notes.csv

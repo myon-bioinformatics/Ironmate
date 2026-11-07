@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 import grid_tools as g
-import size_estimate as s
+from ironlib import size_estimate as s
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -102,7 +102,7 @@ def test_cli_one_liners(tmp_path):
                          cwd=ROOT, capture_output=True, timeout=60)
     r = json.loads(out.stdout)
     assert r['confidence'] == 'verified' and r['input']['cell_scale'] == 4
-    one = subprocess.run([sys.executable, '-c', "import size_estimate as s;print(s.estimate(width=64,height=64,"
+    one = subprocess.run([sys.executable, '-c', "from ironlib import size_estimate as s;print(s.estimate(width=64,height=64,"
                           "nbytes=3000,limit_chars=2000)['recommended']['ratio'])"], cwd=ROOT, capture_output=True)
     assert one.returncode == 0 and Fraction(one.stdout.decode().strip()) < 1
     bad = subprocess.run([sys.executable, '-m', 'grid_tools', 'estimate', '--width', '5'], cwd=ROOT, capture_output=True)

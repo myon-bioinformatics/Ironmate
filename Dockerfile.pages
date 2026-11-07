@@ -3,7 +3,8 @@
 # Source: https://github.com/docker-library/repo-info/blob/813f8e2e84e96e1e63ecf69bd0fcddded5e7f611/repos/python/remote/3.15-slim.md
 FROM python:3.15-slim@sha256:94d3426f1def7db4a106a232ac121bfd975393e5dfd40a619b955fae45fe7913 AS build
 WORKDIR /src
-COPY image_studio.py grid_output.py pixel_grid.py ./
+COPY image_studio.py pixel_grid.py ./
+COPY ironlib/__init__.py ironlib/grid_output.py ./ironlib/
 COPY scripts/pages_catalog.py ./scripts/pages_catalog.py
 COPY studio/index.html studio/core.js studio/studio.js studio/style.css ./studio/
 COPY studio/brand/ ./studio/brand/

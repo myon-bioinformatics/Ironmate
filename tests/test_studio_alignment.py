@@ -1,5 +1,5 @@
 import unittest
-from studio_alignment import translate_rgba, invert_translation
+from ironlib.studio_alignment import translate_rgba, invert_translation
 
 CLEAR = (0, 0, 0, 0)
 RED = (255, 0, 0, 255)

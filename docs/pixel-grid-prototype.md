@@ -306,7 +306,7 @@ output is JSON/SVG/PNG (no WebP output), no background removal or semantic corre
 The standard version is pure Python, so large images are slow (roughly 1 second for 1000×1000).
 Visual quality has not been evaluated.
 
-#### Round-trip tools (`grid_tools.py`) and the SVG input subset (`svg_raster.py`)
+#### Round-trip tools (`grid_tools.py`) and the SVG input subset (`ironlib/svg_raster.py`)
 
 - `restore`: PNGs with meta are fully restored to the original JSON. Without meta, the scale is determined by `--size` or the GCD of run lengths, and it errors unless each block is a single color.
 - `resize`: nearest neighbor at cell centers (`(2i+1)*old // (2*new)`). Upscaling → original size always matches; downscaling loses information.

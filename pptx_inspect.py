@@ -4,7 +4,7 @@ from pathlib import Path
 from zipfile import ZipFile
 from xml.etree import ElementTree as ET
 
-from pptx_ooxml import ordered_slide_members
+from ironlib.pptx_ooxml import ordered_slide_members
 
 A = "{http://schemas.openxmlformats.org/drawingml/2006/main}"
 P = "{http://schemas.openxmlformats.org/presentationml/2006/main}"
@@ -43,7 +43,7 @@ def inspect(path):
 
 
 def main(argv=None):
-    from ironmate_cli import ToolParser, guard
+    from ironlib.ironmate_cli import ToolParser, guard
     parser = ToolParser(description=__doc__, tool="pptx_inspect.py")
     parser.add_argument("source", type=Path)
     parser.add_argument("-o", "--output", type=Path)

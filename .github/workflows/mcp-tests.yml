@@ -170,16 +170,25 @@ jobs:
         run: |
           time uv sync --locked
           du -sk .venv "$(uv cache dir)"
-      # Pin Mermaid's Puppeteer peer too: a floating peer can select a newly
-      # published puppeteer before its exact puppeteer-core release is available.
-      - name: Install pinned Node packages and pinned Marp CLI
+      # The test-only CLIs (Marp, Mermaid with its pinned Puppeteer peer, Playwright) and all
+      # their transitive packages come from scripts/marp-tools/package-lock.json, not a live
+      # resolution: a floating peer once selected a puppeteer before its puppeteer-core existed.
+      - name: Install pinned Node packages and the locked Marp CLI tools
         run: |
           npm ci
-          npm install --no-save --ignore-scripts @marp-team/marp-cli@4.5.1 @mermaid-js/mermaid-cli@12.0.0 puppeteer@25.15.0 playwright@1.58.2
+          npm ci --prefix scripts/marp-tools --ignore-scripts --no-audit --no-fund
+      # apt downloads (fonts/LibreOffice/browser libraries) are restored from a cache that only
+      # main writes; apt still checks each .deb against the signed indexes.
+      - name: Restore apt downloads (written only by main)
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/apt-archives
+          key: apt-${{ runner.os }}-marp-${{ github.run_id }}
+          restore-keys: apt-${{ runner.os }}-marp-
       - name: Bound apt dependency setup
         run: |
-          sudo python3 -S scripts/configure_ci_apt.py
-          sudo apt-config dump Acquire::Retries Acquire::http::Timeout Acquire::https::Timeout APT::Update::Error-Mode
+          sudo python3 -S scripts/configure_ci_apt.py --archives "$RUNNER_TEMP/apt-archives"
+          sudo apt-config dump Acquire::Retries Acquire::http::Timeout Acquire::https::Timeout APT::Update::Error-Mode Dir::Cache::Archives
       # Package names live in scripts/apt-ci-*.txt; shell: bash adds pipefail so a
       # missing or empty list fails the step instead of installing nothing.
       - name: Install Japanese fonts for diagram evidence
@@ -196,6 +205,17 @@ jobs:
         run: |
           grep -v '^#' scripts/apt-ci-uno.txt | xargs sudo apt-get install --no-install-recommends -y
           soffice --version
+      - name: Make apt downloads cacheable (main only)
+        id: apt_cache
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: bash  # pipefail: a failed --finish must fail the step, not be hidden by tee
+        run: sudo python3 -S scripts/configure_ci_apt.py --finish "$RUNNER_TEMP/apt-archives" | tee -a "$GITHUB_OUTPUT"
+      - name: Save apt downloads (main only, when they changed)
+        if: steps.apt_cache.outputs.changed == 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/apt-archives
+          key: apt-${{ runner.os }}-marp-${{ github.run_id }}
       - name: Locate browser
         shell: bash
         run: |
@@ -204,16 +224,17 @@ jobs:
         env:
           IRONMATE_RUN_MARP_INTEGRATION: "1"
           IRONMATE_RUN_UNO_INTEGRATION: "1"
-          IRONMATE_MARP_BIN: node_modules/.bin/marp
-          IRONMATE_MMDC_BIN: node_modules/.bin/mmdc
+          IRONMATE_MARP_BIN: scripts/marp-tools/node_modules/.bin/marp
+          IRONMATE_MMDC_BIN: scripts/marp-tools/node_modules/.bin/mmdc
           PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome
         run: uv run --locked python -m pytest -q tests/test_marp_pptx.py tests/test_uno_roundtrip.py --junitxml=build/test-results/marp.xml
       - name: Exercise common JSON flow formats and browser pixel parity
         env:
           IRONMATE_RUN_FLOW_INTEGRATION: "1"
           IRONMATE_FLOW_REQUIRE_CJK: "1"
-          IRONMATE_MMDC_BIN: node_modules/.bin/mmdc
+          IRONMATE_MMDC_BIN: scripts/marp-tools/node_modules/.bin/mmdc
           IRONMATE_CHROME: /usr/bin/google-chrome
+          IRONMATE_PLAYWRIGHT_MODULE: ${{ github.workspace }}/scripts/marp-tools/node_modules/playwright
           PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome
         run: |
           uv run --locked python -m pytest -q tests/test_flow_integration.py --junitxml=build/test-results/flow.xml
@@ -226,7 +247,7 @@ jobs:
         run: |
           IRONMATE_CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
           export IRONMATE_CHROME
-          IRONMATE_STUDIO_STATIC=1 node tests/image_studio_browser.cjs
+          IRONMATE_PLAYWRIGHT_MODULE="$PWD/scripts/marp-tools/node_modules/playwright" IRONMATE_STUDIO_STATIC=1 node tests/image_studio_browser.cjs
       - name: Preserve Marp JUnit
         if: always()
         uses: actions/upload-artifact@v7
@@ -272,15 +293,34 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "26"
+      # apt downloads (fonts/LibreOffice/browser libraries) are restored from a cache that only
+      # main writes; apt still checks each .deb against the signed indexes.
+      - name: Restore apt downloads (written only by main)
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/apt-archives
+          key: apt-${{ runner.os }}-clipboard-${{ matrix.browser }}-${{ github.run_id }}
+          restore-keys: apt-${{ runner.os }}-clipboard-${{ matrix.browser }}-
       - name: Bound apt dependency setup
         run: |
-          sudo python3 -S scripts/configure_ci_apt.py
-          sudo apt-config dump Acquire::Retries Acquire::http::Timeout Acquire::https::Timeout APT::Update::Error-Mode
+          sudo python3 -S scripts/configure_ci_apt.py --archives "$RUNNER_TEMP/apt-archives"
+          sudo apt-config dump Acquire::Retries Acquire::http::Timeout Acquire::https::Timeout APT::Update::Error-Mode Dir::Cache::Archives
       - name: Install isolated test-only Playwright and browser
         timeout-minutes: 10
         run: |
           npm install --prefix build/clipboard-tools --no-save --ignore-scripts --package-lock=false playwright@1.64.1
           node build/clipboard-tools/node_modules/playwright/cli.js install --with-deps ${{ matrix.browser }}
+      - name: Make apt downloads cacheable (main only)
+        id: apt_cache
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        shell: bash  # pipefail: a failed --finish must fail the step, not be hidden by tee
+        run: sudo python3 -S scripts/configure_ci_apt.py --finish "$RUNNER_TEMP/apt-archives" | tee -a "$GITHUB_OUTPUT"
+      - name: Save apt downloads (main only, when they changed)
+        if: steps.apt_cache.outputs.changed == 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/apt-archives
+          key: apt-${{ runner.os }}-clipboard-${{ matrix.browser }}-${{ github.run_id }}
       - name: Verify clipboard ingress in the static Pages build
         env:
           IRONMATE_BROWSERS: ${{ matrix.browser }}

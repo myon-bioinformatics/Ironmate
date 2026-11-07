@@ -134,9 +134,14 @@ def test_workflow_keeps_suite_failure_and_exact_reports(tmp_path):
     assert collector['if'] == 'always()'
     assert collector['uses'].endswith('@9e3da7ae1846e9604ebc24bb5178f7de094a4e77')
     marp_steps = jobs['marp-integration']['steps']
-    install = next(s for s in marp_steps if s.get('name') == 'Install pinned Node packages and pinned Marp CLI')
-    assert '--ignore-scripts' in install['run']
-    assert 'puppeteer@25.15.0' in install['run']  # Do not resolve Mermaid's peer to a floating latest release.
+    install = next(s for s in marp_steps if s.get('name') == 'Install pinned Node packages and the locked Marp CLI tools')
+    assert 'npm ci --prefix scripts/marp-tools --ignore-scripts' in install['run']
+    # Do not resolve Mermaid's Puppeteer peer (or anything else) to a floating latest release.
+    tools = json.loads((ROOT / 'scripts/marp-tools/package.json').read_text())
+    assert tools['dependencies']['puppeteer'] == '25.15.0'
+    lock = json.loads((ROOT / 'scripts/marp-tools/package-lock.json').read_text())
+    assert lock['packages']['']['dependencies'] == tools['dependencies']
+    assert lock['packages']['node_modules/puppeteer']['version'] == '25.15.0'
     marp_upload = next(s for s in marp_steps if s.get('name') == 'Preserve Marp JUnit')
     assert marp_upload['if'] == 'always()'
     assert marp_upload['with']['if-no-files-found'] == 'error'

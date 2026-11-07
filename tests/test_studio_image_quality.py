@@ -1,5 +1,5 @@
 import unittest
-from studio_image_quality import compare_rgba
+from ironlib.studio_image_quality import compare_rgba
 
 
 def grid(coords, width=8, height=8, color=(255, 0, 0, 255)):

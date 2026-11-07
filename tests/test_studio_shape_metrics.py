@@ -1,5 +1,5 @@
 import unittest
-from studio_shape_metrics import metrics
+from ironlib.studio_shape_metrics import metrics
 
 
 class ShapeMetricTests(unittest.TestCase):

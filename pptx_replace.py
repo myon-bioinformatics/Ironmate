@@ -116,7 +116,7 @@ def transform(source, rules, *, dry_run=False, destination=None):
 
 
 def main(argv=None):
-    from ironmate_cli import ToolParser, guard
+    from ironlib.ironmate_cli import ToolParser, guard
     parser = ToolParser(description=__doc__, tool="pptx_replace.py")
     parser.add_argument("source", type=Path)
     parser.add_argument("--rules", type=Path)

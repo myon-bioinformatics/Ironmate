@@ -146,7 +146,7 @@ def test_real_svg_diagram_xml_edit_when_enabled(tmp_path, kind, diagram):
     import shutil
     import zipfile
     from pptx_pipeline import run
-    from pptx_xml import set_slide_name
+    from ironlib.pptx_xml import set_slide_name
     if os.environ.get("IRONMATE_RUN_MARP_INTEGRATION") != "1":
         pytest.skip("optional Marp integration not enabled")
     marp = os.environ.get("IRONMATE_MARP_BIN", "marp")
@@ -179,7 +179,7 @@ def test_real_svg_visual_preview_when_enabled(tmp_path, kind, diagram):
     import shutil
     import struct
     import subprocess
-    from mermaid_svg import render_mermaid
+    from ironlib.mermaid_svg import render_mermaid
     if os.environ.get("IRONMATE_RUN_MARP_INTEGRATION") != "1":
         pytest.skip("optional Marp integration not enabled")
     marp = os.environ.get("IRONMATE_MARP_BIN", "marp")
@@ -226,7 +226,7 @@ def test_inline_markdown_theme_variants_and_svg_source_when_enabled(tmp_path, ki
     import subprocess
     import zipfile
     from pptx_pipeline import run
-    from mermaid_svg import render_mermaid
+    from ironlib.mermaid_svg import render_mermaid
     if os.environ.get("IRONMATE_RUN_MARP_INTEGRATION") != "1":
         pytest.skip("optional Marp integration not enabled")
     marp = os.environ.get("IRONMATE_MARP_BIN", "marp")

@@ -344,7 +344,7 @@ def main(argv=None):
     args.format = 'json' if args.json else (args.format or 'emoji')
 
     def fail(exc):
-        from ironmate_cli import emit_error, hint_for
+        from ironlib.ironmate_cli import emit_error, hint_for
         if args.json:
             return emit_error('pixel_grid.py', exc, json_mode=True)
         print(f'error: {exc}', file=sys.stderr)
@@ -370,7 +370,7 @@ def main(argv=None):
         text = emoji(artifact) if args.format == 'emoji' else json.dumps(artifact, ensure_ascii=False)
         data = (text + '\n').encode('utf-8')
     if args.output:
-        from grid_output import write_output
+        from ironlib.grid_output import write_output
         try:
             write_output(args.output, data, args.force)
         except OSError as exc:

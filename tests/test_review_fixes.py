@@ -6,7 +6,7 @@ import pytest
 
 import grid_tools as g
 import photo_grid
-from grid_output import write_output
+from ironlib.grid_output import write_output
 
 ROOT = Path(__file__).resolve().parents[1]
 SIG = b'\x89PNG\r\n\x1a\n'

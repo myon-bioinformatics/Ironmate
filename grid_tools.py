@@ -178,7 +178,7 @@ def restore(source, size=None, backend='auto'):
         meta = _png_meta(data)
         width, height, rows = _decode_png(data, 'stdlib' if backend == 'numpy' else backend)
     elif kind == 'svg':
-        from svg_raster import rasterize
+        from ironlib.svg_raster import rasterize
         width, height, rows = rasterize(data, backend='numpy' if backend == 'numpy' else
                                         'stdlib' if backend in ('stdlib', 'PIL') else 'auto')
     elif kind in ('jpeg', 'webp'):
@@ -216,13 +216,13 @@ def restore(source, size=None, backend='auto'):
 
 def sparse(artifact, quota_per_frame=1):
     """Owned reversible grid + scanner. Export via scanner.grid.to_artifact()."""
-    from pixel_arcade_engine import InvaderSparseScanner, ReversiblePixelGrid
+    from ironlib.pixel_arcade_engine import InvaderSparseScanner, ReversiblePixelGrid
     return InvaderSparseScanner(ReversiblePixelGrid.from_artifact(artifact), quota_per_frame)
 
 
 def downscale_2x(artifact):
     """Opt-in lossy Pacman probe filter; even source dimensions only, stdlib backend."""
-    from pixel_arcade_engine import PacmanGhostProbes, ReversiblePixelGrid
+    from ironlib.pixel_arcade_engine import PacmanGhostProbes, ReversiblePixelGrid
     return PacmanGhostProbes().adaptive_downscale_2x(ReversiblePixelGrid.from_artifact(artifact)).to_artifact()
 
 
@@ -329,7 +329,7 @@ def main(argv=None):
     json_mode = getattr(args, 'json', False)
 
     def fail(exc):
-        from ironmate_cli import emit_error, hint_for
+        from ironlib.ironmate_cli import emit_error, hint_for
         if json_mode:
             return emit_error('grid_tools', exc, json_mode=True)
         print(f'error: {exc}', file=sys.stderr)
@@ -345,7 +345,7 @@ def main(argv=None):
             return 2
         args.to = 'json' if json_mode else (args.to or ('base64' if args.command == 'make' else 'json'))
     if args.command == 'estimate':
-        from size_estimate import estimate
+        from ironlib.size_estimate import estimate
         try:
             result = estimate(_read(args.input) if args.input else None, width=args.width, height=args.height,
                               nbytes=args.nbytes, chars=args.chars, limit_bytes=args.limit_bytes,
@@ -366,7 +366,7 @@ def main(argv=None):
         print(json.dumps(info, ensure_ascii=False), file=sys.stderr)
         data = res.data if args.to == 'png' else (res.text + '\n').encode()
         if args.output:
-            from grid_output import write_output
+            from ironlib.grid_output import write_output
             try:
                 write_output(args.output, data, args.force)
             except OSError as exc:
@@ -393,7 +393,7 @@ def main(argv=None):
         return fail(exc)
     data = result if isinstance(result, bytes) else (result + ('' if result.endswith('\n') else '\n')).encode()
     if args.output:
-        from grid_output import write_output
+        from ironlib.grid_output import write_output
         try:
             write_output(args.output, data, args.force)
         except OSError as exc:

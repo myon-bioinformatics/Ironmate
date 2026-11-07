@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from xml.etree import ElementTree as ET
 
 from flow_export import FORMATS, MAX_INPUT, read_spec, render_flow
-from grid_output import write_output
+from ironlib.grid_output import write_output
 
 ROOT = Path(__file__).resolve().parent
 UPSTREAM = ROOT / 'vendor/web_ui'

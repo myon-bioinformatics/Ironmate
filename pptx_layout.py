@@ -8,7 +8,7 @@ import tomllib
 from zipfile import ZipFile
 from xml.etree import ElementTree as ET
 
-from pptx_ooxml import ordered_slide_members, require_package, slide_size
+from ironlib.pptx_ooxml import ordered_slide_members, require_package, slide_size
 
 P = '{http://schemas.openxmlformats.org/presentationml/2006/main}'
 A = '{http://schemas.openxmlformats.org/drawingml/2006/main}'
@@ -112,7 +112,7 @@ def arrange(source, rules, *, destination=None, dry_run=False):
 
 
 def main(argv=None):
-    from ironmate_cli import ToolParser, guard
+    from ironlib.ironmate_cli import ToolParser, guard
     parser = ToolParser(description=__doc__, tool='pptx_layout.py')
     parser.add_argument('source', type=Path)
     parser.add_argument('--rules', type=Path, required=True)

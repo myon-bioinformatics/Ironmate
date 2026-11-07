@@ -1,6 +1,6 @@
 # Prototype: sparse scanning and four-probe downscaling
 
-Connects `pixel_arcade_engine.py` (standard library, Python 3.11+) to the existing
+Connects `ironlib/pixel_arcade_engine.py` (standard library, Python 3.11+) to the existing
 `ironmate-pixel-grid/1` and `grid_tools`. The default nearest-neighbor conversion is unchanged.
 
 ## Reversible operations and frames

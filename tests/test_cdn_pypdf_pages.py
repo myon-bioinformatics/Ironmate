@@ -24,7 +24,7 @@ def test_page_output_ignores_import_origin():
 
 
 def test_preview_keeps_playwright_and_the_pypdf_page_call():
-    text = (ROOT / "pptx_preview.py").read_text(encoding="utf-8")
+    text = (ROOT / "ironlib/pptx_preview.py").read_text(encoding="utf-8")
     lines = text.splitlines()
     playwright = next(i for i, line in enumerate(lines) if "sync_playwright" in line)
     pypdf = next(i for i, line in enumerate(lines) if line.strip() == "from pypdf import PdfReader")

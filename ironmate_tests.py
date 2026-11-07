@@ -15,7 +15,7 @@ import shutil
 import subprocess
 import sys
 
-from ironmate_cli import ToolParser, guard
+from ironlib.ironmate_cli import ToolParser, guard
 from vendor.cli_args import pytest_command
 
 PYTHON_MARK = 'not heavy and not network'

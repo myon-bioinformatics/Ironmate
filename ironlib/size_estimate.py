@@ -1,6 +1,6 @@
 """Downscale / size estimator for PNG and Base64 payloads (stdlib; Pillow optional). Python 3.11+.
 
-    python -c "import size_estimate as s; print(s.estimate(width=1024, height=768, nbytes=900000, limit_chars=200000))"
+    python -c "from ironlib import size_estimate as s; print(s.estimate(width=1024, height=768, nbytes=900000, limit_chars=200000))"
     python -m grid_tools estimate photo.png --limit-chars 100000 --data-uri --verify
 
 Output PNGs are modelled as 8-bit RGBA written by grid_png (filter 0, zlib level 9), the format

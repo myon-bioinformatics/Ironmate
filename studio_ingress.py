@@ -146,7 +146,7 @@ def main(argv=None):
     import sys
     from pathlib import Path
 
-    from ironmate_cli import ToolParser, guard
+    from ironlib.ironmate_cli import ToolParser, guard
 
     parser = ToolParser(prog='studio_ingress.py', description=__doc__.splitlines()[0])
     parser.add_json_flag()

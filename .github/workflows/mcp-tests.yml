@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "*.py"
+      - "ironlib/**"
       - "vendor.lock.json"
       - "vendor/**"
       - "scripts/**"
@@ -18,6 +19,7 @@ on:
     branches: [main]
     paths:
       - "*.py"
+      - "ironlib/**"
       - "vendor.lock.json"
       - "vendor/**"
       - "scripts/**"

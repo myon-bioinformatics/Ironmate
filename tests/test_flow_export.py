@@ -13,7 +13,7 @@ import pytest
 
 import flow_export as f
 import image_studio
-import mermaid_svg
+from ironlib import mermaid_svg
 from vendor.web_ui_flow import flow_html, flow_mermaid, MAX_INPUT
 
 ROOT = Path(__file__).resolve().parents[1]

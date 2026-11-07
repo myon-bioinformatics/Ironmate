@@ -3,8 +3,8 @@ import pytest
 
 import grid_svg
 import pixel_grid
-import svg_raster as sr
-from svg_raster import SvgError, rasterize
+from ironlib import svg_raster as sr
+from ironlib.svg_raster import SvgError, rasterize
 
 NS = 'xmlns="http://www.w3.org/2000/svg"'
 

@@ -13,11 +13,11 @@ from zipfile import ZipFile
 import pytest
 
 from xlsx_csv import convert_paths, main, write_csv_workbook
-from xlsx_ooxml import read_spec, write_package
-import xlsx_render
-from xlsx_render import read_workbook, write_workbook
-import xlsx_spec
-from xlsx_spec import decode_csv_bytes, sheet_from_csv, workbook_from_sheets, workbook_from_spec
+from ironlib.xlsx_ooxml import read_spec, write_package
+from ironlib import xlsx_render
+from ironlib.xlsx_render import read_workbook, write_workbook
+from ironlib import xlsx_spec
+from ironlib.xlsx_spec import decode_csv_bytes, sheet_from_csv, workbook_from_sheets, workbook_from_spec
 
 NS = {'m': 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'}
 
@@ -131,7 +131,7 @@ def test_canonical_spec_cannot_bypass_formula_policy(engine, raw, monkeypatch):
     spec = {'sheets': [{'name': 'S', 'rows': [[{'v': 'https://example.invalid/pixel.png'}, {'f': raw}]]}]}
     def unexpected_writer(*args):
         pytest.fail('rejected formula reached the Node writer')
-    monkeypatch.setattr('xlsx_render._run', unexpected_writer)
+    monkeypatch.setattr('ironlib.xlsx_render._run', unexpected_writer)
     with pytest.raises(ValueError, match='formula is outside'):
         write_workbook(spec, engine)
 

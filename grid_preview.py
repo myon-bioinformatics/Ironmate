@@ -98,7 +98,7 @@ def main(argv=None):
     p.add_argument('-o', '--output', required=True)
     p.add_argument('--force', action='store_true', help='replace an existing file')
     args = p.parse_args(argv)
-    from grid_output import write_output
+    from ironlib.grid_output import write_output
     try:
         write_output(args.output, png(), args.force)
     except (OSError, ValueError) as exc:

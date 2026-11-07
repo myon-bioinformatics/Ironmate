@@ -8,8 +8,8 @@ from pathlib import Path
 import pytest
 
 from scripts import quality_experiment as q
-from studio_alignment import invert_translation
-from studio_shape_metrics import metrics
+from ironlib.studio_alignment import invert_translation
+from ironlib.studio_shape_metrics import metrics
 
 ROOT = Path(__file__).resolve().parents[1]
 

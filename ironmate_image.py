@@ -13,7 +13,7 @@ from fractions import Fraction
 
 import grid_tools
 import photo_grid
-import size_estimate
+from ironlib import size_estimate
 import studio_ingress
 
 __all__ = ['FitError', 'FitResult', 'fit_to_limit', 'load', 'to_base64', 'from_base64', 'to_png', 'resize', 'parse_shelf']
@@ -147,7 +147,7 @@ def _read_input(path):
 
 def _emit(data, output, force):
     if output:
-        from grid_output import write_output
+        from ironlib.grid_output import write_output
         write_output(output, data if isinstance(data, bytes) else data.encode('utf-8'), force)
     elif isinstance(data, bytes):
         sys.stdout.buffer.write(data)
@@ -165,7 +165,7 @@ def _output_flags(command, *, data_uri=False):
 
 def main(argv=None):
     """CLI for load / to-png / to-base64 / resize. Size fitting stays ``python -m grid_tools fit``."""
-    from ironmate_cli import ToolParser, guard
+    from ironlib.ironmate_cli import ToolParser, guard
 
     parser = ToolParser(prog='ironmate_image.py', description=__doc__.splitlines()[0])
     parser.add_json_flag()

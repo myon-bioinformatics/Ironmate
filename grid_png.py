@@ -119,7 +119,7 @@ def main(argv=None):
                 artifact = json.load(handle)
         data = to_png(artifact, args.scale, indexed=args.indexed)
         if args.output:
-            from grid_output import write_output
+            from ironlib.grid_output import write_output
             write_output(args.output, data, args.force)
         else:
             sys.stdout.buffer.write(data)

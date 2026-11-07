@@ -300,7 +300,7 @@ def test_default_table_is_neutral_grayscale(deck,tmp_path):
 
 @pytest.fixture
 def review_stubs(monkeypatch):
-    import pptx_preview
+    from ironlib import pptx_preview
     real_which = pptx_pipeline.shutil.which
     def which(command):
         if command == 'marp':
@@ -356,7 +356,7 @@ def test_review_bundle_keeps_preview_and_native_structure_separate(tmp_path, rev
 
 def test_failed_preview_never_publishes_final_pptx(tmp_path, monkeypatch, review_stubs):
     import json
-    import pptx_preview
+    from ironlib import pptx_preview
     def fail(*a, **kw):
         raise ValueError('preview failed')
     monkeypatch.setattr(pptx_preview, 'render_preview_html', fail)

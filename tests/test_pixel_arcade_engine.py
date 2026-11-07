@@ -10,7 +10,7 @@ import sys
 import pytest
 
 import grid_tools as g
-from pixel_arcade_engine import InvaderSparseScanner, PacmanGhostProbes, ReversiblePixelGrid
+from ironlib.pixel_arcade_engine import InvaderSparseScanner, PacmanGhostProbes, ReversiblePixelGrid
 
 ROOT = Path(__file__).resolve().parents[1]
 

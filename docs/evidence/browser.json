@@ -1,0 +1,117 @@
+{
+  "schema": "btk-evidence-gif/1",
+  "gif": "browser.gif",
+  "bytes": 254093,
+  "sha256": "d3aebf88414860831ca77589be7fccba615bc0990de0c5d03e3c2f6b1f695096",
+  "frames": 7,
+  "canvas": "720x512",
+  "browser": "chromium 153.0.8010.12",
+  "recorded": "2026-11-08",
+  "commit": "3759429eae7138c952093c1e596b2c6414a58d0f",
+  "mapped": [],
+  "summary": {
+    "pass": 6,
+    "fail": 0
+  },
+  "shots": [
+    {
+      "label": "🎨 Image Studio",
+      "url": "/Ironmate/",
+      "viewport": "1280x800",
+      "steps": [],
+      "status": "pass",
+      "errors": [],
+      "allowed": [],
+      "external": []
+    },
+    {
+      "label": "📱 Image Studio",
+      "url": "/Ironmate/",
+      "viewport": "392x848",
+      "steps": [],
+      "status": "pass",
+      "errors": [],
+      "allowed": [],
+      "external": []
+    },
+    {
+      "label": "🧰 Pixel tools",
+      "url": "/Ironmate/tools/",
+      "viewport": "1280x800",
+      "steps": [
+        "click #generate"
+      ],
+      "status": "pass",
+      "errors": [],
+      "allowed": [],
+      "external": []
+    },
+    {
+      "label": "📱 Pixel tools",
+      "url": "/Ironmate/tools/",
+      "viewport": "392x848",
+      "steps": [],
+      "status": "pass",
+      "errors": [],
+      "allowed": [],
+      "external": []
+    },
+    {
+      "label": "🖼️ Slide Studio",
+      "url": "/Ironmate/slides/",
+      "viewport": "1280x800",
+      "steps": [],
+      "status": "pass",
+      "errors": [],
+      "allowed": [],
+      "external": []
+    },
+    {
+      "label": "📱 Slide Studio",
+      "url": "/Ironmate/slides/",
+      "viewport": "392x848",
+      "steps": [],
+      "status": "pass",
+      "errors": [],
+      "allowed": [],
+      "external": []
+    }
+  ],
+  "plan": [
+    {
+      "label": "🎨 Image Studio",
+      "url": "/Ironmate/",
+      "viewport": "1280x800"
+    },
+    {
+      "label": "📱 Image Studio",
+      "url": "/Ironmate/",
+      "viewport": "392x848"
+    },
+    {
+      "label": "🧰 Pixel tools",
+      "url": "/Ironmate/tools/",
+      "viewport": "1280x800",
+      "steps": [
+        {
+          "click": "#generate"
+        }
+      ]
+    },
+    {
+      "label": "📱 Pixel tools",
+      "url": "/Ironmate/tools/",
+      "viewport": "392x848"
+    },
+    {
+      "label": "🖼️ Slide Studio",
+      "url": "/Ironmate/slides/",
+      "viewport": "1280x800"
+    },
+    {
+      "label": "📱 Slide Studio",
+      "url": "/Ironmate/slides/",
+      "viewport": "392x848"
+    }
+  ]
+}

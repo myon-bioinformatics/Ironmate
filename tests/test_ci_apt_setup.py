@@ -5,7 +5,8 @@ import subprocess
 import pytest
 import yaml
 
-from scripts.configure_ci_apt import APT_CONFIG, CONFIG_NAME, configure, prefer_existing_archive
+from scripts.configure_ci_apt import (APT_CONFIG, ARCHIVES_CONFIG, CONFIG_NAME, configure, finish, main,
+                                      prefer_existing_archive)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -146,3 +147,66 @@ def test_missing_or_empty_list_fails_instead_of_installing_nothing(tmp_path, con
     if content is not None:
         path.write_text(content, encoding="utf-8")
     assert run_list_reader(path).returncode != 0
+
+
+def test_archives_option_points_apt_at_the_cache_directory_and_records_what_was_restored(tmp_path):
+    (tmp_path / "etc" / "apt.conf.d").mkdir(parents=True)
+    archives = tmp_path / "apt-archives"
+    archives.mkdir()
+    (archives / "b_1_amd64.deb").write_bytes(b"b")
+    (archives / "a_1_amd64.deb").write_bytes(b"a")
+    configure(tmp_path / "etc", archives)
+    config = (tmp_path / "etc" / "apt.conf.d" / CONFIG_NAME).read_text()
+    assert config == APT_CONFIG + ARCHIVES_CONFIG.format(archives.resolve())
+    assert (archives / "partial").is_dir()
+    assert (tmp_path / "apt-archives.restored").read_text() == "a_1_amd64.deb\nb_1_amd64.deb\n"
+
+
+@pytest.mark.parametrize("added, expected", [(False, False), (True, True)])
+def test_finish_cleans_up_and_reports_only_a_changed_deb_set(tmp_path, added, expected):
+    (tmp_path / "etc" / "apt.conf.d").mkdir(parents=True)
+    archives = tmp_path / "apt-archives"
+    archives.mkdir()
+    (archives / "a_1_amd64.deb").write_bytes(b"a")
+    configure(tmp_path / "etc", archives)
+    (archives / "lock").write_text("")
+    (archives / "partial" / "half.deb").write_bytes(b"")
+    if added:
+        (archives / "b_1_amd64.deb").write_bytes(b"b")
+    calls = []
+    assert finish(archives, run=lambda cmd, **kw: calls.append((cmd, kw))) is expected
+    assert calls == [(["apt-get", "autoclean", "-qq"], {"check": True, "timeout": 120})]
+    assert sorted(p.name for p in archives.iterdir()) == ["a_1_amd64.deb"] + (["b_1_amd64.deb"] if added else [])
+
+
+def test_finish_without_a_restore_record_reports_a_change(tmp_path):
+    archives = tmp_path / "apt-archives"
+    archives.mkdir()
+    assert finish(archives, run=lambda cmd, **kw: None) is True
+
+
+def test_cli_rejects_unknown_arguments():
+    with pytest.raises(SystemExit) as error:
+        main(["--archives"])
+    assert "usage" in str(error.value)
+
+
+def test_workflow_restores_apt_downloads_everywhere_but_saves_them_only_from_main():
+    jobs = yaml.safe_load((ROOT / ".github/workflows/mcp-tests.yml").read_text())["jobs"]
+    for job_id in ("marp-integration", "studio-clipboard"):
+        steps = jobs[job_id]["steps"]
+        names = [s.get("name") for s in steps]
+        restore = steps[names.index("Restore apt downloads (written only by main)")]
+        setup = names.index("Bound apt dependency setup")
+        finish_step = steps[names.index("Make apt downloads cacheable (main only)")]
+        save = steps[names.index("Save apt downloads (main only, when they changed)")]
+        assert names.index("Restore apt downloads (written only by main)") < setup < names.index(finish_step["name"])
+        assert restore["uses"].startswith("actions/cache/restore@") and "if" not in restore
+        assert '--archives "$RUNNER_TEMP/apt-archives"' in steps[setup]["run"]
+        assert finish_step["if"] == "github.event_name == 'push' && github.ref == 'refs/heads/main'"
+        assert '--finish "$RUNNER_TEMP/apt-archives" >> "$GITHUB_OUTPUT"' in finish_step["run"]
+        assert save["uses"].startswith("actions/cache/save@")
+        assert save["if"] == "steps.apt_cache.outputs.changed == 'true'"
+        assert save["with"]["key"] == restore["with"]["key"]
+        assert restore["with"]["key"].startswith(restore["with"]["restore-keys"])
+

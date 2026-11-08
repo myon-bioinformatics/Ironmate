@@ -5,7 +5,7 @@
 The logo is **I’m with a 🔰 apostrophe**. The 6 variants are used by purpose; for now the favicon uses dark green, the README the Famicom style, the web UI the heatmap palette and the home-screen icon Pixel 3D, provisionally. The final version is undecided. Each variant can be saved from the [6-variant gallery](https://myon-bioinformatics.github.io/Ironmate/brand/). [Design and regeneration](docs/brand.md).
 
 A Python-centered project for verifying **conversion and replacement of content and attributes** in documents, images and more.
-Replacing text, color and arrow attributes in PPTX is a future target, and pixel/palette-based dot representations are being prototyped.
+Replacing text, color, font and slide-background attributes in PPTX is prototyped with `pptx_replace.py`; arrow attributes are still a future target. Pixel/palette-based dot representations are being prototyped, and the browser-based Image Studio and Slide Studio are published as working demos.
 Requirements are in [Issue #80](https://github.com/myon-bioinformatics/Ironmate/issues/80),
 and the dot representation prototype was merged as [PR #79](https://github.com/myon-bioinformatics/Ironmate/pull/79).
 Markdown→PPTX conversion and a CLI for editing attributes of existing PPTX files are prototyped. Photo conversion is prototyped only for stage 1 (Base64 → color-index grid), and character part composition is not implemented. See the next section for the implemented scope of dot representations.
@@ -249,7 +249,7 @@ Any other keys or free-form strings are discarded both when writing and when rea
 - For shared GitHub operations and vendor management, see the [parent repository](https://github.com/myon-bioinformatics/myon-bioinformatics) and [gh_identity](https://github.com/myon-bioinformatics/gh_identity).
 - The old GitHub catalog, MCP server, repository metadata/diagnostics and artifact provenance generation prototypes have been retired. This does not mean every old API has a compatible implementation at its destination.
 - The source/niconico implementation and tests moved to [mcp-toolcall-lab PR #108](https://github.com/myon-bioinformatics/mcp-toolcall-lab/pull/108), which is merged. This repository's `vendor/niconico_search_api_template.py` still remains for now. The design for absorbing API/MCP differences was handled in that repo's #107 (closed).
-- `vendor/` and `vendor.lock.json` are the consumer's pinned copies. 58 shared tool files (from 24 repositories, including LICENSE) are registered with the parent's management scheme and verified against pinned hashes. `vendor.lock.json` is the only provenance.
+- `vendor/` and `vendor.lock.json` are the consumer's pinned copies. 61 shared files (from 25 repositories, including LICENSE) are registered with the parent's management scheme and verified against pinned hashes. `vendor.lock.json` is the only provenance.
 
 Introduction and metadata are consolidated in the [portfolio](https://myon-bioinformatics.github.io/#ironmate). Ironmate's dedicated metadata stub Pages has been retired. [Image Studio](https://myon-bioinformatics.github.io/Ironmate/) is published statically as a working demo, and images and scenes are handled only in the browser.
 
@@ -275,7 +275,7 @@ To turn CSV into xlsx, use the [Excel workbook](docs/xlsx-exceljs.md). Encoding 
 
 ## Comparing screenshots across browsers
 
-`browser_matrix.py` collects screenshots of the same page taken by browser-test-kit on Linux, macOS and Windows × Chromium, Firefox and WebKit
+`browser_matrix.py` collects screenshots of the same page taken by BrowserTestKit on Linux, macOS and Windows × Chromium, Firefox and WebKit
 into a "page × environment" comparison sheet (PNG, table, JSON). See the [comparison sheet](docs/browser-matrix.md) for details.
 
 ## Image digest page
@@ -297,7 +297,7 @@ interpreter on the Node side and is not subject to `-I`. For details see
 
 ## Common JSON flow diagrams
 
-[web-ui flow export](docs/flow-export.md) connects a single bounded JSON input to Mermaid Markdown, SVG, PNG, standard Base64 and PNG data URI, through Python/Node APIs and CLIs. It reuses the upstream contract and Image Studio raster output.
+[PySaiyanWeBoo flow export](docs/flow-export.md) connects a single bounded JSON input to Mermaid Markdown, SVG, PNG, standard Base64 and PNG data URI, through Python/Node APIs and CLIs. It reuses the upstream contract and Image Studio raster output.
 
 Retain, edit and regenerate flow JSON with the [flow workspace CLI and Python/Node APIs](docs/flow-export.md#retained-json-workspace-import--patch--regenerate), while preserving the original UTF-8 source.
 

@@ -19,16 +19,16 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 STUDIO = ROOT / "studio"
 
-# The brand, as --ui-* tokens: light paper, deep green ink, teal accent. Header and primary button keep
+# The brand, as --ui-* tokens: light paper, deep green ink, teal accent (tests run web_ui.check_theme on it). Header and primary button keep
 # their own (dark green / lime) colours in the studio rules, because they are the two brand surfaces.
 IRONMATE = {
     "--ui-bg": "#edf0ec",
     "--ui-panel": "#ffffff",
     "--ui-fg": "#213a3c",
-    "--ui-muted": "#657970",
-    "--ui-border": "#d9e0d9",
-    "--ui-accent": "#087d79",
-    "--ui-danger": "#bc4e40",
+    "--ui-muted": "#566a61",   # web_ui.check_theme: every text token reads at WCAG AA on paper and panel
+    "--ui-border": "#cfd8cf",
+    "--ui-accent": "#076c68",
+    "--ui-danger": "#ad4337",
     "--ui-radius": "7px",
 }
 INK = "#163b3b"

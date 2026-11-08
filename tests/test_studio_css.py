@@ -27,6 +27,7 @@ def test_studio_stylesheets_match_the_generator():
         assert '.ui-elements button,' in text and 'cdn.' not in text
     assert '/* css/' not in (ROOT / 'studio/slides/slides.css').read_text(encoding='utf-8')  # loaded after style.css
     assert module.main(['--check']) == 0
+    assert web_ui.check_theme(module.IRONMATE) == []  # the brand palette reads at WCAG AA on both grounds
 
 
 def test_studio_pages_opt_into_the_components_and_palette():

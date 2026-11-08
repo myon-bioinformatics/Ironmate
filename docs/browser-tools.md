@@ -48,8 +48,8 @@ Image grid decoding depends on the browser implementation. Animation, full EXIF/
 
 ```sh
 uv run pytest -q tests/test_pages_tools.py tests/test_studio_delivery.py tests/test_image_studio.py
-# after starting Docker on port 8080 as above, run with the test-only Playwright:
-IRONMATE_PLAYWRIGHT_MODULE="$PWD/build/pages-test/node_modules/playwright" node tests/pages_browser.cjs
+# after starting Docker on port 8080 as above, with `npm ci` done (Playwright is a locked devDependency):
+node tests/pages_browser.cjs
 ```
 
 Color indices of all 100 presets are checked against the existing Python implementation. Nearest-neighbor scaling is compared with Python, including odd and non-square sizes. Browser checks cover the link from the existing Studio, PNG/SVG/JSON/Base64 export, lossless PNG→Python round-trip, resizing and undo, rejecting invalid JSON, the image grid, HTML-escaping file names, Base64 size and a 390 px-wide screen.

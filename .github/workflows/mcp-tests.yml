@@ -234,7 +234,6 @@ jobs:
           IRONMATE_FLOW_REQUIRE_CJK: "1"
           IRONMATE_MMDC_BIN: scripts/marp-tools/node_modules/.bin/mmdc
           IRONMATE_CHROME: /usr/bin/google-chrome
-          IRONMATE_PLAYWRIGHT_MODULE: ${{ github.workspace }}/scripts/marp-tools/node_modules/playwright
           PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome
         run: |
           uv run --locked python -m pytest -q tests/test_flow_integration.py --junitxml=build/test-results/flow.xml
@@ -247,7 +246,7 @@ jobs:
         run: |
           IRONMATE_CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
           export IRONMATE_CHROME
-          IRONMATE_PLAYWRIGHT_MODULE="$PWD/scripts/marp-tools/node_modules/playwright" IRONMATE_STUDIO_STATIC=1 node tests/image_studio_browser.cjs
+          IRONMATE_STUDIO_STATIC=1 node tests/image_studio_browser.cjs
       - name: Preserve Marp JUnit
         if: always()
         uses: actions/upload-artifact@v7
@@ -308,8 +307,8 @@ jobs:
       - name: Install isolated test-only Playwright and browser
         timeout-minutes: 10
         run: |
-          npm install --prefix build/clipboard-tools --no-save --ignore-scripts --package-lock=false playwright@1.64.1
-          node build/clipboard-tools/node_modules/playwright/cli.js install --with-deps ${{ matrix.browser }}
+          npm ci --ignore-scripts --no-audit --no-fund
+          npx playwright install --with-deps ${{ matrix.browser }}
       - name: Make apt downloads cacheable (main only)
         id: apt_cache
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -324,7 +323,6 @@ jobs:
       - name: Verify clipboard ingress in the static Pages build
         env:
           IRONMATE_BROWSERS: ${{ matrix.browser }}
-          IRONMATE_PLAYWRIGHT_MODULE: ${{ github.workspace }}/build/clipboard-tools/node_modules/playwright
         run: node tests/studio_clipboard.cjs
       - name: Preserve clipboard browser evidence
         if: always()

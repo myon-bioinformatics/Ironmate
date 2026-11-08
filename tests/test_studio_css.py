@@ -13,16 +13,19 @@ def _generator():
 
 
 def test_studio_stylesheets_match_the_generator():
+    import web_ui
     module = _generator()
-    rendered = module.render_all()
-    assert {p.relative_to(ROOT).as_posix() for p in rendered} == {
+    bundles = module.bundles()
+    assert {p.relative_to(ROOT).as_posix() for p in bundles} == {
         'studio/style.css', 'studio/tools/tools.css', 'studio/brand/gallery.css', 'studio/slides/slides.css'}
-    for target, text in rendered.items():
-        assert target.read_text(encoding='utf-8') == text, f'{target.relative_to(ROOT)} is stale; run scripts/build_studio_css.py'
+    for target, options in bundles.items():
+        assert web_ui.check_bundle(target, **options) == [], target.relative_to(ROOT)
+        assert target.read_text(encoding='utf-8').startswith('/* web-ui-bundle/1 commit=')
     for name in ('studio/style.css', 'studio/tools/tools.css', 'studio/brand/gallery.css'):
         text = (ROOT / name).read_text(encoding='utf-8')
         assert '/* css/components.css */' in text and 'body[data-ui-theme="ironmate"]{--ui-bg:#edf0ec;' in text
         assert '.ui-elements button,' in text and 'cdn.' not in text
+    assert '/* css/' not in (ROOT / 'studio/slides/slides.css').read_text(encoding='utf-8')  # loaded after style.css
     assert module.main(['--check']) == 0
 
 

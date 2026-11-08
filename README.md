@@ -295,7 +295,7 @@ To turn CSV into xlsx, use the [Excel workbook](docs/xlsx-exceljs.md). Encoding 
 
 ```sh
 python3 -S image_studio.py --build-site /tmp/site/Ironmate
-python ../BrowserTestKit/tools/evidence_gif.py docs/evidence/browser.gif --serve /tmp/site --plan docs/evidence/browser.json
+uv run --project ../BrowserTestKit --group pages --group browser python ../BrowserTestKit/tools/evidence_gif.py docs/evidence/browser.gif --serve /tmp/site --plan docs/evidence/browser.json
 ```
 
 ## Comparing screenshots across browsers

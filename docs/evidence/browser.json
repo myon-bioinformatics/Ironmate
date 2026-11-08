@@ -1,13 +1,47 @@
 {
-  "schema": "btk-evidence-gif/1",
+  "schema": "btk-evidence-gif/2",
   "gif": "browser.gif",
-  "bytes": 248069,
-  "sha256": "6961d83d6a52094ddd6d52b4cc77c3a8f1049dca368237dba2eac415f1d99d3d",
+  "bytes": 215023,
+  "sha256": "40aefed8254f3f680a077835e8a7afe6c72780c8ae98efbda9d8ed729573c5cd",
   "frames": 7,
   "canvas": "720x512",
   "browser": "chromium 153.0.8010.12",
   "recorded": "2026-11-08",
-  "commit": null,
+  "commit": "020a20a5e0fe7c0220650408fb7731ea7b688359",
+  "encoder": {
+    "module": "PySaiyanWeBoo web_ui gif.js",
+    "web_ui": "d55e14fcf3f088522259295e4a8cf9564beb5721",
+    "bytes": 215023,
+    "frames": 7,
+    "colors": 255,
+    "thin": 0,
+    "attempts": 1,
+    "stored": 7,
+    "merged": 0,
+    "buckets": 3470,
+    "overBudget": false,
+    "encodeMs": 129,
+    "images": 7,
+    "reused": 0,
+    "patches": 0,
+    "synthesized": 0,
+    "capture_s": 6.2
+  },
+  "limits": {
+    "colors": 255,
+    "max_bytes": null,
+    "max_frames": 300,
+    "last_hold_ms": 2000
+  },
+  "transfer": {
+    "screenshots": 7,
+    "png_bytes": 595540,
+    "identical": 0,
+    "patches": 0,
+    "calls": 6,
+    "sent_bytes": 794064,
+    "gif_bytes": 215023
+  },
   "mapped": [],
   "summary": {
     "pass": 6,
@@ -22,7 +56,8 @@
       "status": "pass",
       "errors": [],
       "allowed": [],
-      "external": []
+      "external": [],
+      "generator": null
     },
     {
       "label": "📱 Image Studio",
@@ -32,7 +67,8 @@
       "status": "pass",
       "errors": [],
       "allowed": [],
-      "external": []
+      "external": [],
+      "generator": null
     },
     {
       "label": "🧰 Pixel tools",
@@ -44,7 +80,8 @@
       "status": "pass",
       "errors": [],
       "allowed": [],
-      "external": []
+      "external": [],
+      "generator": null
     },
     {
       "label": "📱 Pixel tools",
@@ -54,7 +91,8 @@
       "status": "pass",
       "errors": [],
       "allowed": [],
-      "external": []
+      "external": [],
+      "generator": null
     },
     {
       "label": "🖼️ Slide Studio",
@@ -64,7 +102,8 @@
       "status": "pass",
       "errors": [],
       "allowed": [],
-      "external": []
+      "external": [],
+      "generator": null
     },
     {
       "label": "📱 Slide Studio",
@@ -74,7 +113,8 @@
       "status": "pass",
       "errors": [],
       "allowed": [],
-      "external": []
+      "external": [],
+      "generator": null
     }
   ],
   "plan": [

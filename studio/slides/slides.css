@@ -1,4 +1,4 @@
-/* web-ui-bundle/1 commit=438f0e2e5e463df0189e51601a6d90f2d6bff651 sha256=db95532bebc2952b2dcf5e316b39fe38450ac99fbbab64dd7cf9999f5bf2f9e8 scripts/build_studio_css.py*/
+/* web-ui-bundle/1 commit=1854362d625279f4278f917cd18bacd151bc69b4 sha256=db95532bebc2952b2dcf5e316b39fe38450ac99fbbab64dd7cf9999f5bf2f9e8 scripts/build_studio_css.py*/
 /* slide studio panel (loaded after style.css) */
 .slide-controls{padding:14px 24px;background:#e6f0e9;border-bottom:1px solid var(--ui-border)}
 .slide-toolbar,.slide-template{display:flex;gap:10px;align-items:center;flex-wrap:wrap}

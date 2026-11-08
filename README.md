@@ -291,7 +291,7 @@ To turn CSV into xlsx, use the [Excel workbook](docs/xlsx-exceljs.md). Encoding 
 
 📝 Docker was not available, so the Pages tree was built with the same `image_studio.py --build-site` step the Dockerfile runs. Firefox / WebKit not installed here.
 
-🔁 Re-record:
+🔁 Re-record (the studio stylesheets come from PySaiyanWeBoo's `web_ui` via `scripts/build_studio_css.py`; `uv run --group test python scripts/build_studio_css.py` regenerates them):
 
 ```sh
 python3 -S image_studio.py --build-site /tmp/site/Ironmate

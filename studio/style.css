@@ -1,4 +1,4 @@
-/* web-ui-bundle/1 commit=1854362d625279f4278f917cd18bacd151bc69b4 sha256=44773644237dcf13ce98ca9a12cd157deb6575f4bb5a9325c7116dae460ca2fe scripts/build_studio_css.py*/
+/* web-ui-bundle/1 commit=10d52554ec63c050ffe489d3f98af0747ce40d7a sha256=44773644237dcf13ce98ca9a12cd157deb6575f4bb5a9325c7116dae460ca2fe scripts/build_studio_css.py*/
 @layer base,components,theme;
 /* css/tokens.css */
 :root{--ui-bg:#0d1117;--ui-panel:#101820;--ui-fg:#d1f7c4;--ui-muted:#8b949e;--ui-border:#58a6ff;--ui-accent:#7ee787;--ui-danger:#cf222e;--ui-radius:0;--ui-text:16px;--ui-space:1rem;--ui-max:960px;--ui-font:Meiryo,メイリオ,sans-serif;--ui-font-mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}

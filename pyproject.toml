@@ -16,7 +16,7 @@ test = [
     "pyyaml>=6",
     # The studio stylesheets are generated from PySaiyanWeBoo's web_ui (scripts/build_studio_css.py); the pin is a
     # commit. Move it with: uv lock --upgrade-package pysaiyanweboo
-    "pysaiyanweboo @ git+https://github.com/myon-bioinformatics/PySaiyanWeBoo@1854362d625279f4278f917cd18bacd151bc69b4",
+    "pysaiyanweboo @ git+https://github.com/myon-bioinformatics/PySaiyanWeBoo@10d52554ec63c050ffe489d3f98af0747ce40d7a",
 ]
 codecs = [
     "numpy>=1.26",

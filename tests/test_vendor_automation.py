@@ -12,7 +12,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ".github/workflows/ci.yml"
-PIN = "9e3da7ae1846e9604ebc24bb5178f7de094a4e77"
+PIN = "26c442bc51b8a2837fe2556782b2937f396932af"
 
 
 def _workflow():

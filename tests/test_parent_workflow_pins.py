@@ -26,7 +26,7 @@ def test_parent_workflow_references_use_reviewed_rollout_commit():
                 if ref_match is None:
                     pins.append(None)
                     continue
-                ref = ref_match.group(1).strip().strip("'\\"")
+                ref = ref_match.group(1).strip().strip("'").strip('"')
                 if "${{" in ref:
                     continue
                 pins.append(ref)

@@ -1,10 +1,5 @@
 """pillow_min: PNG decode/encode, Image API, and diff helpers vs Pillow reference."""
-import base64
-import io
-import struct
-import subprocess
-import sys
-import zlib
+import base64, io, struct, subprocess, sys, zlib
 from pathlib import Path
 
 import pytest

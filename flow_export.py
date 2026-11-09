@@ -5,15 +5,8 @@ This adapter only renders it; it never installs tools or contacts a service.
 """
 from __future__ import annotations
 
-import argparse
-import json
-import math
-import re
-import subprocess
-import sys
-import tempfile
-from pathlib import Path
-from xml.etree import ElementTree as ET
+import argparse, json, math, re, subprocess, sys, tempfile
+from pathlib import Path; from xml.etree import ElementTree as ET
 
 from vendor.web_ui_flow import MAX_INPUT, flow_mermaid, validate
 from mermaid_svg import render_mermaid

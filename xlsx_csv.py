@@ -4,8 +4,7 @@ Usage:
   python xlsx_csv.py -o book.xlsx --border --autofilter 売上=costs.csv メモ=notes.csv
   python xlsx_csv.py --spec book.json -o book.xlsx
 """
-import json
-import os
+import json, os
 from pathlib import Path
 
 from xlsx_render import write_workbook

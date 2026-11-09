@@ -1,6 +1,5 @@
-import ast
+import ast, unittest
 from pathlib import Path
-import unittest
 from scripts.observable_choice import Prototype
 from scripts.instance_scene import components, quorum_scene, Detection, Tracker
 

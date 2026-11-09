@@ -1,7 +1,6 @@
 """Downscale / size estimator: exact Base64 math, signals, bounds, lossless detection, CLI."""
 import io, json, random, subprocess, sys
-from fractions import Fraction
-from pathlib import Path
+from fractions import Fraction; from pathlib import Path
 
 import pytest
 

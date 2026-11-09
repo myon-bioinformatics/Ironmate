@@ -4,14 +4,7 @@ Each case starts the tool the way a person or another program would, and checks
 the exit status, help text, and stderr. Success payloads stay in their existing
 shape. Fixable failures exit 2, name a next step, and do not print a traceback.
 """
-import json
-import os
-import pty
-import select
-import shutil
-import subprocess
-import sys
-import time
+import json, os, pty, select, shutil, subprocess, sys, time
 from pathlib import Path
 
 import pytest

@@ -6,11 +6,8 @@ either writer, ``canonicalize`` sets the autofilter, ``xl/styles.xml``, and each
 cell's style index so the package carries 罫線, number formats, and alignment.
 Reading the XML back is the check that does not need Excel or a browser.
 """
-import io
-import math
-import re
-from xml.etree import ElementTree as ET
-from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
+import io, math, re
+from xml.etree import ElementTree as ET; from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 from xlsx_spec import column_name
 

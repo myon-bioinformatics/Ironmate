@@ -2,8 +2,7 @@
 # __all__: 0
 """Browser-independent workspace contract and HTML control regression."""
 import re, shutil, subprocess
-from html.parser import HTMLParser
-from pathlib import Path
+from html.parser import HTMLParser; from pathlib import Path
 
 import pytest
 

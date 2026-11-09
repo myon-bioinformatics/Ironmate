@@ -1,10 +1,5 @@
 """Independent numerical oracles and adversarial controls for the survey lab."""
-import ast
-import itertools
-import json
-import random
-import subprocess
-import sys
+import ast, itertools, json, random, subprocess, sys
 from pathlib import Path
 
 import pytest

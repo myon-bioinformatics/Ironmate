@@ -1,7 +1,5 @@
 """Attribute insertion and narrow Open XML mutation experiments."""
-from pathlib import Path
-from zipfile import ZipFile
-from xml.etree import ElementTree as ET
+from pathlib import Path; from xml.etree import ElementTree as ET; from zipfile import ZipFile
 
 import pytest
 from pptx import Presentation

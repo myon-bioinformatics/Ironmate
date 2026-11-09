@@ -1,11 +1,5 @@
 """Regression checks for vendor verification CI wiring."""
-import hashlib
-import json
-import os
-import shlex
-import shutil
-import subprocess
-import sys
+import hashlib, json, os, shlex, shutil, subprocess, sys
 from pathlib import Path
 
 import pytest

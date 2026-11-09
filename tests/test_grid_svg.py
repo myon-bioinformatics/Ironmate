@@ -1,5 +1,4 @@
-import base64, json, struct, subprocess, sys, zlib
-import xml.etree.ElementTree as ET
+import base64, json, struct, subprocess, sys, xml.etree.ElementTree as ET, zlib
 from pathlib import Path
 
 import pytest

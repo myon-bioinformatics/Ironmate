@@ -3,9 +3,7 @@
 Python 3.11+. This is only a test helper, not a general-purpose Markdown or
 Marp parser. The local ``pptx`` package stands in for the old python-pptx API.
 """
-import argparse
-import json
-import sys
+import argparse, json, sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))

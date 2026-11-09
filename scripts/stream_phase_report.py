@@ -5,13 +5,8 @@ Pixel buffers are borrowed; patch descriptors and CSV fields allocate. CSV uses
 seekable two-pass calibration. Ladders are model counterfactuals, not causality.
 """
 from __future__ import annotations
-import argparse
-from collections import deque
-import csv
-import html
-import json
-from pathlib import Path
-import re
+import argparse, csv, html, json, re
+from collections import deque; from pathlib import Path
 
 try:
     from .littlebit_jev_5way_survey import CalibratedTernaryPatch, FiveWaySurveyEngine

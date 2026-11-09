@@ -13,10 +13,7 @@ Humans and non-human callers share one contract:
 """
 from __future__ import annotations
 
-import argparse
-import json
-import sys
-import zipfile
+import argparse, json, sys, zipfile
 
 EXIT_OK = 0
 EXIT_BUG = 1

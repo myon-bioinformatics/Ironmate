@@ -4,8 +4,7 @@ Produces a proposed lock (never modifies vendor.lock.json) and an explicit
 per-tool enrollment/skip/error report. Run in a disposable checkout with
 the pinned parent vendor_sync.py on PYTHONPATH.
 """
-import argparse
-import json
+import argparse, json
 from pathlib import Path
 
 import vendor_sync

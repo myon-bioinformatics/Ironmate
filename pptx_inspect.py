@@ -1,8 +1,6 @@
 """Inspect generated PPTX text editability without assuming raster content is editable."""
 import json
-from pathlib import Path
-from zipfile import ZipFile
-from xml.etree import ElementTree as ET
+from pathlib import Path; from xml.etree import ElementTree as ET; from zipfile import ZipFile
 
 from pptx_ooxml import ordered_slide_members
 

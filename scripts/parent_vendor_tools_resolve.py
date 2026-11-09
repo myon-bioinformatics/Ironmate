@@ -1,14 +1,7 @@
 """Resolve the parent repository default-branch tip for catalog audit tooling."""
 from __future__ import annotations
 
-import argparse
-import json
-import os
-import re
-import subprocess
-import sys
-import urllib.error
-import urllib.request
+import argparse, json, os, re, subprocess, sys, urllib.error, urllib.request
 
 PARENT_REPOSITORY = "myon-bioinformatics/myon-bioinformatics"
 EXPECTED_REPOSITORY_ID = 638801160

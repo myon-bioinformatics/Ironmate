@@ -1,6 +1,5 @@
 """Independent Python/JS parity and static publication boundary checks."""
-import json
-import subprocess
+import json, subprocess
 from pathlib import Path
 
 import pytest

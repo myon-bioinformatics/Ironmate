@@ -5,10 +5,8 @@ Integer bit operations scale with the mask's machine-word length, not O(1).
 """
 from __future__ import annotations
 
-from collections import Counter
-from copy import deepcopy
-from dataclasses import dataclass
 import re
+from collections import Counter; from copy import deepcopy; from dataclasses import dataclass
 
 
 def _integer(value, name, minimum=0, maximum=None):

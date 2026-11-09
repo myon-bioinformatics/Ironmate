@@ -2,8 +2,7 @@
 # __all__: 0
 """Frozen observations and independent fixture/metric checks, not accuracy gates."""
 import gzip, hashlib, json, random, subprocess, sys
-from dataclasses import asdict
-from pathlib import Path
+from dataclasses import asdict; from pathlib import Path
 
 import pytest
 

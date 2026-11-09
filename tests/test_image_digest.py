@@ -1,10 +1,8 @@
 # test_image_digest.py
 # __all__: 0
 """image_digest: any rows x cols of images with a status -> one small self-contained page."""
-import json
+import json, shutil, subprocess
 from pathlib import Path
-import shutil
-import subprocess
 
 import pytest
 

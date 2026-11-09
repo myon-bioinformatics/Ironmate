@@ -1,6 +1,5 @@
 """Consumer regression for the canonical single-file xprobe Node contract."""
-import shutil
-import subprocess
+import shutil, subprocess
 
 import pytest
 

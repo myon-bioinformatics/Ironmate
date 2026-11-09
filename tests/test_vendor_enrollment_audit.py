@@ -1,10 +1,5 @@
 """Candidate generation respects owner policy and never mutates adopted locks."""
-import importlib.util
-import json
-import os
-import subprocess
-import sys
-import types
+import importlib.util, json, os, subprocess, sys, types
 from pathlib import Path
 
 import pytest

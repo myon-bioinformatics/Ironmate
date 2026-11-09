@@ -1,5 +1,4 @@
-import ast
-import itertools
+import ast, itertools
 from pathlib import Path
 
 import pytest

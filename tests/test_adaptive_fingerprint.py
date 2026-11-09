@@ -1,6 +1,4 @@
-import ast
-import random
-import unittest
+import ast, random, unittest
 from pathlib import Path
 from scripts import adaptive_fingerprint as f
 

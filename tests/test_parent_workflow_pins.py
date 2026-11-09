@@ -18,12 +18,16 @@ def test_parent_workflow_references_use_reviewed_rollout_commit():
         lines = text.splitlines()
         for i, line in enumerate(lines):
             if re.fullmatch(r"\s+repository:\s*['\"]?" + re.escape(PARENT) + r"['\"]?\s*", line):
-                refs = [re.fullmatch(r"\s+ref:\s*(.+?)\s*$", item) for item in lines[i + 1:i + 12]]
+                block = lines[i + 1:i + 12]
+                path_match = next((re.fullmatch(r"\s+path:\s*['\"]?(.+?)['\"]?\s*", item) for item in block if re.fullmatch(r"\s+path:", item)), None)
+                if path_match and path_match.group(1).strip("'\\"") == ".vendor-sync-tools":
+                    continue
+                refs = [re.fullmatch(r"\s+ref:\s*(.+?)\s*$", item) for item in block]
                 ref_match = next((m for m in refs if m), None)
                 if ref_match is None:
                     pins.append(None)
                     continue
-                ref = ref_match.group(1).strip().strip("'\"")
+                ref = ref_match.group(1).strip().strip("'\\"")
                 if "${{" in ref:
                     continue
                 pins.append(ref)

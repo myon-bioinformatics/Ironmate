@@ -84,7 +84,7 @@ def test_acquire_and_update_settings_are_bounded_and_fail_closed():
 
 
 def test_workflow_keeps_coverage_budgets_and_setup_failure_visibility():
-    workflow = yaml.safe_load((ROOT / ".github/workflows/mcp-tests.yml").read_text())
+    workflow = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text())
     jobs = workflow["jobs"]
     setup_runs = []
     for job_id, budget, install_name, setup_budget in [

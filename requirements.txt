@@ -1,2 +1,0 @@
-# Retained adapters use the Python standard library.
-# Tests: uv run --locked python -m pytest

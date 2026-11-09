@@ -35,12 +35,7 @@ def repository_python_sources():
     return [ROOT / line for line in result.stdout.splitlines() if line]
 
 
-DEPENDENCY_MANIFESTS = (
-    "pyproject.toml",
-    "requirements.txt",
-    "tests/requirements.txt",
-    "tests/requirements-preview.txt",
-)
+DEPENDENCY_MANIFESTS = ("pyproject.toml",)
 _DEPENDENCY_CAP = re.compile(r"(==|<=|~=|(?<!>)<(?!=))")
 
 

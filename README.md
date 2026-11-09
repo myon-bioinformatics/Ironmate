@@ -272,6 +272,31 @@ xprobe and the parent's vendor tools are separate checkouts for testing (the par
 New PPTX packages need Node.js 26+ and `npm ci` (pinned `pptxgenjs@4.0.1`). Ironmate does not install dependencies automatically. The source of truth for slide shapes is the [JSON ↔ OOXML mapping](docs/pptx-ooxml-mapping.md). A separately installed Marp CLI is needed only for Marp conversion.
 To turn CSV into xlsx, use the [Excel workbook](docs/xlsx-exceljs.md). Encoding detection covers UTF-8 / BOM / Shift_JIS / CP932. openpyxl and pandas are not used. Writing needs Python only (no Node.js, no npm package); `npm ci` installs ExcelJS as a dev dependency, the test oracle (`npm ci --omit=dev` leaves it out).
 
+## 🎞️ Browser evidence
+
+![Image Studio, pixel tools and Slide Studio at desktop and mobile widths in Chromium](docs/evidence/browser.gif)
+
+🗓️ 2026-11-07 · 🧭 Chromium 153 · 🐧 Linux · receipt [`docs/evidence/browser.json`](docs/evidence/browser.json)
+
+| 🧪 Suite | Result |
+| --- | --- |
+| `tests/pages_browser.cjs` · `slides_browser.cjs` (against the built `/Ironmate/` site) | ✅ |
+| `tests/studio_clipboard.cjs` (Chromium) | ✅ 44 checks |
+| `tests/image_studio_browser.cjs` · `flow_export_browser.cjs` | ✅ |
+| `studio_quality` · `studio_scale` · `studio_shelf` · `studio_tradeoff` browser checks | ✅ |
+| pytest flow / Marp / UNO / browser slides / PPTX preview + pipeline / CDN pypdf | ✅ 82 · ⏭️ 4 (review lane, run next row) |
+| pytest review lane (`IRONMATE_RUN_REVIEW=1`) | ✅ 60 |
+| 🎞️ evidence GIF shots | ✅ 6 |
+
+📝 Docker was not available, so the Pages tree was built with the same `image_studio.py --build-site` step the Dockerfile runs. Firefox / WebKit not installed here.
+
+🔁 Re-record (the studio stylesheets come from PySaiyanWeBoo's `web_ui` via `scripts/build_studio_css.py`; `uv run --group test python scripts/build_studio_css.py` regenerates them):
+
+```sh
+python3 -S image_studio.py --build-site /tmp/site/Ironmate
+uv run --project ../BrowserTestKit --group pages --group browser python ../BrowserTestKit/tools/evidence_gif.py docs/evidence/browser.gif --serve /tmp/site --plan docs/evidence/browser.json
+```
+
 ## Comparing screenshots across browsers
 
 `browser_matrix.py` collects screenshots of the same page taken by browser-test-kit on Linux, macOS and Windows × Chromium, Firefox and WebKit

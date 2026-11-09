@@ -14,6 +14,9 @@ requires-python = ">=3.11"
 test = [
     "pytest>=8",
     "pyyaml>=6",
+    # The studio stylesheets are generated from PySaiyanWeBoo's web_ui (scripts/build_studio_css.py); the pin is a
+    # commit. Move it with: uv lock --upgrade-package pysaiyanweboo
+    "pysaiyanweboo @ git+https://github.com/myon-bioinformatics/PySaiyanWeBoo@f624d9364017b7e2da7f797817dfba2a8d9adb14",
 ]
 codecs = [
     "numpy>=1.26",

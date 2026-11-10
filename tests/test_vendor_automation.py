@@ -6,13 +6,15 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ".github/workflows/mcp-tests.yml"
-PIN = "9e3da7ae1846e9604ebc24bb5178f7de094a4e77"
+CI_WORKFLOW = ".github/workflows/ci.yml"
+WORKFLOWS = (WORKFLOW, CI_WORKFLOW)
+PIN = "26c442bc51b8a2837fe2556782b2937f396932af"
 
 
-def _workflow():
+def _workflow(workflow=WORKFLOW):
     import yaml
 
-    return yaml.load((ROOT / WORKFLOW).read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
+    return yaml.load((ROOT / workflow).read_text(encoding="utf-8"), Loader=yaml.BaseLoader)
 
 
 def _lock_files(root=ROOT):
@@ -21,8 +23,9 @@ def _lock_files(root=ROOT):
     return lock["files"]
 
 
-def test_vendor_ci_verifies_lock_without_auto_updates():
-    ci = _workflow()
+@pytest.mark.parametrize("workflow", WORKFLOWS)
+def test_vendor_ci_verifies_lock_without_auto_updates(workflow):
+    ci = _workflow(workflow)
     assert {"push", "pull_request"} <= set(ci["on"])
     assert "schedule" not in ci["on"]
     assert "workflow_dispatch" not in ci["on"]
@@ -34,7 +37,7 @@ def test_vendor_ci_verifies_lock_without_auto_updates():
     assert job["permissions"] == {"contents": "read"}
     assert "continue-on-error" not in job
     steps = job["steps"]
-    text = (ROOT / WORKFLOW).read_text(encoding="utf-8")
+    text = (ROOT / workflow).read_text(encoding="utf-8")
     assert "vendor_sync.py promote" not in text
     assert "vendor_sync.py update" not in text
     assert "sync_vendor_provenance" not in text
@@ -49,7 +52,8 @@ def test_vendor_ci_verifies_lock_without_auto_updates():
         for s in steps
         if s.get("with", {}).get("repository") == "myon-bioinformatics/myon-bioinformatics"
     ]
-    assert pins == ["${{ steps.parent-vendor-tools.outputs.sha }}"]
+    expected_pin = "${{ steps.parent-vendor-tools.outputs.sha }}" if workflow == WORKFLOW else PIN
+    assert pins == [expected_pin]
     for step in steps:
         if step.get("uses", "").startswith("actions/checkout@"):
             assert step["with"]["persist-credentials"] == "false"
@@ -86,6 +90,13 @@ def test_parent_vendor_sync_checkout_resolves_parent_main_at_runtime():
     assert "14ef53c8316015d1350e62ff9cce3301103e65a7" not in text
 
 
+def test_parent_vendor_sync_checkout_is_pinned():
+    text = (ROOT / CI_WORKFLOW).read_text(encoding="utf-8")
+    assert PIN in text
+    assert "974da5eb9593df652b132e4b0f1a679f67422566" not in text
+    assert "14ef53c8316015d1350e62ff9cce3301103e65a7" not in text
+
+
 def test_vendor_catalog_audit_resolves_parent_main_at_runtime():
     path = ROOT / ".github/workflows/vendor-catalog-audit.yml"
     text = path.read_text(encoding="utf-8")
@@ -100,7 +111,8 @@ def test_vendor_catalog_audit_resolves_parent_main_at_runtime():
     assert "octolytics" not in text
 
 
-def test_workflow_stages_locked_vendor_evidence(tmp_path):
+@pytest.mark.parametrize("workflow", WORKFLOWS)
+def test_workflow_stages_locked_vendor_evidence(tmp_path, workflow):
     lock_path = tmp_path / "vendor.lock.json"
     shutil.copyfile(ROOT / "vendor.lock.json", lock_path)
     for entry in _lock_files():
@@ -110,7 +122,7 @@ def test_workflow_stages_locked_vendor_evidence(tmp_path):
     tools = Path(os.environ.get("IRONMATE_CANONICAL_TOOLS", ROOT / ".vendor-sync-tools"))
     if not (tools / "vendor_stage.py").is_file():
         pytest.skip("parent vendor tools checkout not present")
-    steps = _workflow()["jobs"]["test"]["steps"]
+    steps = _workflow(workflow)["jobs"]["test"]["steps"]
     stage = next(s for s in steps if s.get("name") == "Stage canonical vendor evidence")
     assert stage["if"] == "always()"
     command = stage["run"].replace(

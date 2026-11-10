@@ -37,6 +37,9 @@ jobs:
           version: "latest"
           python-version: "3.15"
           activate-environment: true
-          enable-cache: false
+          enable-cache: true
+          # Pull requests restore the cache and never write it; only main saves it.
+          save-cache: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          prune-cache: true
       - name: Compare PdfReader.pages from the wheel and the installed package
         run: python scripts/cdn_pypdf_pages.py compare --cache build/cdn-cache

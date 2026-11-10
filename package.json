@@ -3,12 +3,13 @@
   "engines": {
     "node": ">=26"
   },
-  "description": "Pinned Node packages for Ironmate. PptxGenJS writes the slide package shell; ironlib.xlsx_ooxml.write_package writes xlsx values with the Python standard library. ExcelJS is the independent test oracle for xlsx, so it is a dev dependency. Ironmate owns the Open XML for both and does not auto-install these packages.",
+  "description": "Pinned Node packages for Ironmate. PptxGenJS writes the slide package shell; ironlib.xlsx_ooxml.write_package writes xlsx values with the Python standard library. ExcelJS is the independent test oracle for xlsx, so it is a dev dependency. Ironmate owns the Open XML for both and does not auto-install these packages. Playwright drives the browser tests (tests/*_browser.cjs, studio_clipboard.cjs); the same version serves the Pages, clipboard and Marp lanes.",
   "dependencies": {
     "pptxgenjs": "4.0.1"
   },
   "devDependencies": {
-    "exceljs": "4.4.0"
+    "exceljs": "4.4.0",
+    "playwright": "1.64.1"
   },
   "overrides": {
     "image-size": "2.0.4",

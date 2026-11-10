@@ -130,7 +130,7 @@ def test_workflow_keeps_suite_failure_and_exact_reports(tmp_path):
     marp_steps = jobs['marp-integration']['steps']
     install = next(s for s in marp_steps if s.get('name') == 'Install pinned Node packages and pinned Marp CLI')
     assert '--ignore-scripts' in install['run']
-    assert 'puppeteer@25.15.0' in install['run']  # Do not resolve Mermaid's peer to a floating latest release.
+    assert 'puppeteer@25.15.0' in install['run']  # Legacy ci.yml remains pinned independently.
     marp_upload = next(s for s in marp_steps if s.get('name') == 'Preserve Marp JUnit')
     assert marp_upload['if'] == 'always()'
     assert marp_upload['with']['if-no-files-found'] == 'error'
@@ -138,3 +138,24 @@ def test_workflow_keeps_suite_failure_and_exact_reports(tmp_path):
     reports.append(marp_upload['with']['name'] + '/marp.xml')
     assert json.loads(collector['with']['expected-reports']) == reports
     assert collector['with']['artifact-pattern'] == 'junit-*'
+
+
+def test_mcp_workflow_uses_locked_marp_tools():
+    import yaml
+
+    jobs = yaml.load((ROOT / '.github/workflows/mcp-tests.yml').read_text(),
+                     Loader=yaml.BaseLoader)['jobs']
+    marp_steps = jobs['marp-integration']['steps']
+    install = next(s for s in marp_steps if s.get('name') == 'Install pinned Node packages and the locked Marp CLI tools')
+    assert 'npm ci --prefix scripts/marp-tools --ignore-scripts' in install['run']
+    # Do not resolve Mermaid's Puppeteer peer (or anything else) to a floating latest release.
+    tools = json.loads((ROOT / 'scripts/marp-tools/package.json').read_text())
+    assert tools['dependencies']['puppeteer'] == '25.15.0'
+    lock = json.loads((ROOT / 'scripts/marp-tools/package-lock.json').read_text())
+    assert lock['packages']['']['dependencies'] == tools['dependencies']
+    assert lock['packages']['node_modules/puppeteer']['version'] == '25.15.0'
+    root_package = json.loads((ROOT / 'package.json').read_text())
+    root_lock = json.loads((ROOT / 'package-lock.json').read_text())
+    assert root_package['devDependencies']['playwright'] == '1.64.1'
+    assert root_lock['packages']['node_modules/playwright']['version'] == '1.64.1'
+    assert 'playwright' not in tools['dependencies']

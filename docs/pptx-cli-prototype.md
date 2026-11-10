@@ -258,7 +258,7 @@ Two deliberate diagram lanes: (1) fenced Mermaid source is preserved and **optio
 
 Opt in using `python pptx_pipeline.py --text '# Diagram ...' --mmdc node_modules/.bin/mmdc -o output.pptx` or pass a file/stdin. The `--mmdc` mode temporarily writes `.mmd` and `.svg` files, retains the original Markdown in memory, and enables Marp `--allow-local-files` solely for this explicitly requested path. **Security:** `--allow-local-files` grants the renderer access to other local paths referenced by Markdown; only use this mode with trusted source. Normal Marp conversion leaves it disabled. The real integration test uses a fixed, trusted diagram and no LibreOffice.
 
-The initial supported fence is a plain triple-backtick `mermaid` block. More elaborate Markdown fence variants are intentionally not silently rewritten. Prefer narrow documented support over a new full Markdown parser; `vendor/markdown.py` remains an optional source-extraction helper. Upgrade dependency versions only after pinned integration tests pass, and inspect npm's transitive dependencies/security audit separately.
+The initial supported fence is a plain triple-backtick `mermaid` block. More elaborate Markdown fence variants are intentionally not silently rewritten. Prefer narrow documented support over a new full Markdown parser; `vendor/markdown.py` remains an optional source-extraction helper. Upgrade dependency versions only after pinned integration tests pass, and inspect npm's transitive dependencies/security audit separately. The CI lane installs these CLIs from `scripts/marp-tools/package-lock.json` (`npm ci --prefix scripts/marp-tools --ignore-scripts`), so the transitive versions are fixed there too.
 
 
 ## SVG UML and Open XML edit experiment

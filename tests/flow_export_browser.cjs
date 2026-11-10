@@ -2,7 +2,7 @@
 // Real browser verification of generated SVG/PNG/Base64 and Canvas reuse.
 const fs = require("node:fs"), path = require("node:path"), assert = require("node:assert/strict");
 const http = require("node:http");
-const {chromium} = require("playwright");
+const {chromium} = require(process.env.IRONMATE_PLAYWRIGHT_MODULE || "playwright");
 const root = path.resolve(__dirname,".."), dir = path.join(root,"build/test-results/flow-export");
 (async()=>{
   let cjkFont=null;

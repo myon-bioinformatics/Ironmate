@@ -63,5 +63,5 @@ Only the generated XML, JS/CSS and editor screen are added to `image_studio.py -
 
 ```sh
 uv run pytest -q tests/test_browser_slides.py tests/test_pages_tools.py tests/test_studio_delivery.py
-IRONMATE_PLAYWRIGHT_MODULE="$PWD/build/pages-test/node_modules/playwright" node tests/slides_browser.cjs
+node tests/slides_browser.cjs
 ```

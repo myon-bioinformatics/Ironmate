@@ -1,0 +1,12 @@
+{
+  "private": true,
+  "description": "Test-only CLIs for the marp-integration CI job, locked here so their transitive versions do not float. Not Ironmate dependencies; CI installs them with `npm ci --prefix scripts/marp-tools --ignore-scripts`. Puppeteer is pinned as Mermaid CLI's peer. Playwright comes from the root package.json.",
+  "engines": {
+    "node": ">=26"
+  },
+  "dependencies": {
+    "@marp-team/marp-cli": "4.5.1",
+    "@mermaid-js/mermaid-cli": "12.0.0",
+    "puppeteer": "25.15.0"
+  }
+}

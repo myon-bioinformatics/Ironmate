@@ -9,7 +9,7 @@ import argparse, json, math, re, subprocess, sys, tempfile
 from pathlib import Path; from xml.etree import ElementTree as ET
 
 from vendor.web_ui_flow import MAX_INPUT, flow_mermaid, validate
-from mermaid_svg import render_mermaid
+from ironlib.mermaid_svg import render_mermaid
 from image_studio import raster_svg, _png_output
 
 FORMATS = ('mermaid', 'svg', 'png', 'base64', 'data-uri')
@@ -110,7 +110,7 @@ def main(argv=None):
         data = render_flow(spec, args.format, scale=args.scale, background=args.background,
                            mmdc=args.mmdc, chrome=args.chrome, puppeteer_config=args.puppeteer_config)
         if args.output:
-            from grid_output import write_output
+            from ironlib.grid_output import write_output
             write_output(str(args.output), data, args.force)
         else:
             sys.stdout.buffer.write(data)

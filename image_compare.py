@@ -8,7 +8,7 @@ from __future__ import annotations
 import argparse, hashlib, json, math, sys
 from pathlib import Path
 
-from grid_output import write_output
+from ironlib.grid_output import write_output
 from grid_png import to_png
 from photo_grid import decode_png
 
@@ -154,7 +154,7 @@ def main(argv=None):
         report, images = analyze(*(read_png(sources[k]) for k in ('reference', 'nearest', 'smooth')),
                                  steps=args.steps, mae_weight=args.mae_weight)
         if args.quality:
-            from studio_candidate_selection import enrich_sweep, select_quality
+            from ironlib.studio_candidate_selection import enrich_sweep, select_quality
             enrich_sweep(report, images, read_png(sources['reference']))
             report['quality']['selection'] = select_quality(
                 report['quality']['candidates'], objective=args.select_by or 'balance_score',
@@ -178,7 +178,7 @@ def main(argv=None):
             output['quality_selected'] = report['quality']['selection']['selected_index']
         print(json.dumps(output))
     except (OSError, ValueError) as e:
-        from ironmate_cli import emit_error, hint_for
+        from ironlib.ironmate_cli import emit_error, hint_for
         if args.json:
             return emit_error('image_compare.py', e, json_mode=True)
         print(f'error: {e}', file=sys.stderr)

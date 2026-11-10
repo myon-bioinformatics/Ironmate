@@ -7,8 +7,8 @@ from pptx.enum.dml import MSO_FILL_TYPE
 from pptx.enum.shapes import MSO_CONNECTOR, MSO_SHAPE
 from pptx.enum.text import MSO_ANCHOR
 from pptx.util import Emu
-from pptx_mapping import ANS, _inches_from_emu, _q, describe_slide, write_slide_xml
-from pptx_render import _package_bytes
+from ironlib.pptx_mapping import ANS, _inches_from_emu, _q, describe_slide, write_slide_xml
+from ironlib.pptx_render import _package_bytes
 
 _NS = {'a': ANS, 'p': 'http://schemas.openxmlformats.org/presentationml/2006/main'}
 
@@ -356,7 +356,7 @@ class Connector(_BaseShape):
         self._touch()
 
     def to_spec(self):
-        from pptx_spec import line_box
+        from ironlib.pptx_spec import line_box
         x1, y1 = _inches_from_emu(self._x1), _inches_from_emu(self._y1)
         x2, y2 = _inches_from_emu(self._x2), _inches_from_emu(self._y2)
         color = str(self.line.color.rgb) if self.line.color.type == MSO_COLOR_TYPE.RGB else '000000'
@@ -396,7 +396,7 @@ class Cell:
 
     @property
     def _tc(self):
-        from pptx_mapping import write_slide_xml
+        from ironlib.pptx_mapping import write_slide_xml
         payload = write_slide_xml({'objects': [self._owner_spec()]})
         import xml.etree.ElementTree as ET
         root = ET.fromstring(payload)
@@ -582,7 +582,7 @@ class Presentation:
             self._load(source)
 
     def _load(self, source):
-        from pptx_ooxml import ordered_slide_members, slide_size
+        from ironlib.pptx_ooxml import ordered_slide_members, slide_size
         if hasattr(source, 'read'):
             data = source.read()
         else:
@@ -645,8 +645,8 @@ class Presentation:
             Path(target).write_bytes(data)
 
     def _save_loaded(self):
-        from pptx_mapping import normalized_xml
-        from pptx_ooxml import reorder_sld_id_lst, set_sld_sz, slide_size
+        from ironlib.pptx_mapping import normalized_xml
+        from ironlib.pptx_ooxml import reorder_sld_id_lst, set_sld_sz, slide_size
         replacements = {}
         with ZipFile(io.BytesIO(self._source_bytes)) as original:
             width, height = slide_size(original)

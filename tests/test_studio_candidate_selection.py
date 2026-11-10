@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 import image_compare as compare
-import studio_candidate_selection as selection
+from ironlib import studio_candidate_selection as selection
 from scripts import quality_selection_experiment as study
 
 ROOT = Path(__file__).resolve().parents[1]

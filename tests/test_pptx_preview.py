@@ -5,7 +5,7 @@ from pathlib import Path
 from pptx import Presentation
 import pytest
 
-import pptx_preview
+from ironlib import pptx_preview
 
 
 @pytest.mark.parametrize('patch', [dict(expected_slides=0), dict(expected_slides=True), dict(expected_slides=101), dict(sha='short'), dict(run_id='')])

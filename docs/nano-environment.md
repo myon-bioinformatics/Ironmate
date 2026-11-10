@@ -154,9 +154,9 @@ mkdir -p "$JOB/home" "$JOB/tmp" "$JOB/cache"
   XDG_CACHE_HOME="$JOB/cache" python3 -B -S - "$JOB/example.pptx" <<'PY'
 import sys
 from pathlib import Path
-from pptx_mapping import canonical_spec
-from pptx_render import read_package_spec, write_new_package
-from pptx_spec import sample_deck_spec
+from ironlib.pptx_mapping import canonical_spec
+from ironlib.pptx_render import read_package_spec, write_new_package
+from ironlib.pptx_spec import sample_deck_spec
 expected = canonical_spec(sample_deck_spec())
 output = write_new_package(Path(sys.argv[1]), expected)
 if canonical_spec(read_package_spec(output)) != expected:
@@ -199,8 +199,8 @@ skipped by this split.
 | Group | Packages | What uses them |
 |---|---|---|
 | `test` | pytest, PyYAML | The test runner. PyYAML is used only by the vendor and CI tests. |
-| `codecs` | NumPy, Pillow | The optional NumPy backend of `grid_tools.py` and `svg_raster.py` (the standard-library backend stays the fallback), the optional Pillow decoders for JPEG, WebP and PNG variants in `photo_grid.py`, and the oracle for the `pillow_min` parity tests. |
-| `preview` | Playwright, pypdf | The `pptx_preview.py` review lane and `scripts/cdn_pypdf_pages.py`. Playwright's browsers are downloaded separately and are not part of this group. |
+| `codecs` | NumPy, Pillow | The optional NumPy backend of `grid_tools.py` and `ironlib/svg_raster.py` (the standard-library backend stays the fallback), the optional Pillow decoders for JPEG, WebP and PNG variants in `photo_grid.py`, and the oracle for the `pillow_min` parity tests. |
+| `preview` | Playwright, pypdf | The `ironlib/pptx_preview.py` review lane and `scripts/cdn_pypdf_pages.py`. Playwright's browsers are downloaded separately and are not part of this group. |
 
 To work on one feature, install it with the test tools in its own environment.
 The shared `dev` environment is unchanged:

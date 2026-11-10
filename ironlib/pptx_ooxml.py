@@ -1,7 +1,7 @@
 """Tolerant PPTX package helpers. Surgical edits copy every untouched member."""
 from pathlib import PurePosixPath; from xml.etree import ElementTree as ET; from zipfile import ZipFile
 
-from pptx_mapping import ANS, PNS, RNS, _q
+from ironlib.pptx_mapping import ANS, PNS, RNS, _q
 
 REL = '{http://schemas.openxmlformats.org/package/2006/relationships}'
 
@@ -89,7 +89,7 @@ def append_objects(payload, objects):
     Ids continue after the highest ``p:cNvPr/@id`` already in the part. Existing
     elements, including ones outside the reversible subset, stay in place.
     """
-    from pptx_mapping import write_slide_xml
+    from ironlib.pptx_mapping import write_slide_xml
     root = ET.fromstring(payload)
     tree = root.find(_q('p', 'cSld') + '/' + _q('p', 'spTree'))
     if tree is None:

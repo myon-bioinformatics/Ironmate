@@ -4,10 +4,10 @@ name: ExcelJS smoke
 # This job checks that ExcelJS xlsx/CSV still works with the locked tree.
 on:
   pull_request:
-    paths: ["package.json", "package-lock.json", "*.mjs", "*.cjs", "scripts/**", "xlsx_*.py", "tests/test_xlsx*.py", "scripts/exceljs_smoke.cjs", ".github/workflows/exceljs-smoke.yml"]
+    paths: ["package.json", "package-lock.json", "*.mjs", "*.cjs", "scripts/**", "xlsx_*.py", "ironlib/xlsx_*.py", "tests/test_xlsx*.py", "scripts/exceljs_smoke.cjs", ".github/workflows/exceljs-smoke.yml"]
   push:
     branches: [main]
-    paths: ["package.json", "package-lock.json", "*.mjs", "*.cjs", "scripts/**", "xlsx_*.py", "tests/test_xlsx*.py", "scripts/exceljs_smoke.cjs", ".github/workflows/exceljs-smoke.yml"]
+    paths: ["package.json", "package-lock.json", "*.mjs", "*.cjs", "scripts/**", "xlsx_*.py", "ironlib/xlsx_*.py", "tests/test_xlsx*.py", "scripts/exceljs_smoke.cjs", ".github/workflows/exceljs-smoke.yml"]
 
 permissions:
   contents: read

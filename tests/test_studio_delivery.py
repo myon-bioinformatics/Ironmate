@@ -6,7 +6,7 @@ import pytest
 
 import image_studio as s
 from grid_tools import encode, make
-from pptx_spec import arrow_geometry
+from ironlib.pptx_spec import arrow_geometry
 from tests.test_image_studio import node
 
 ROOT = Path(__file__).resolve().parents[1]

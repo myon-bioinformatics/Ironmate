@@ -40,7 +40,7 @@ python -S image_studio.py --build-site build/studio-site
 | Image grid | Up to 20 PNG/JPEG/WebP, column count, grid PNG, HTML with embedded images | 8 MiB per image, 32 MiB total, 4 MP per image. Pixel count is checked after decoding; thumbnails up to 512 px on the long side are kept. Keeping original bytes/metadata and pass/fail or MAE/RMSE computation are out of scope |
 | Base64 size | Computes `4*ceil(bytes/3)` from File.size; adds 22 characters for a PNG data URI | Not an estimate of compression or downscaling. Uses only the size without reading the file |
 | Slides / PPTX creation | Place text, shapes, arrows and images in [Slide Studio](slide-studio.md) and export multi-slide PPTX | Reading arbitrary PPTX, editing existing PPTX and PDF rendering are CLI-only |
-| Existing PPTX/PDF, external APIs | The parts that need a runtime are stated on screen | Run pptx_pipeline.py / pptx_replace.py / pptx_preview.py etc. locally. The pypdf fetch from #145 is not a browser implementation |
+| Existing PPTX/PDF, external APIs | The parts that need a runtime are stated on screen | Run pptx_pipeline.py / pptx_replace.py / ironlib/pptx_preview.py etc. locally. The pypdf fetch from #145 is not a browser implementation |
 
 Image grid decoding depends on the browser implementation. Animation, full EXIF/color-management preservation and cross-OS font matching are out of scope. Canceling a file selection or choosing invalid JSON keeps the current work. Work is lost when the page closes, so save explicitly.
 

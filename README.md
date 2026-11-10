@@ -96,7 +96,7 @@ Detection uses the leading bytes (magic bytes), not the extension. Files are pas
 | data URI (`data:image/png;base64,`) | Supported | None | Same as above. If the type and content differ (e.g. `image/jpeg` but PNG), or for other types (gif, svg+xml etc.), errors such as "unsupported data URI type" |
 | `.jpg` / `.jpeg` (file, Base64, `image/jpeg`) | Conditional | Pillow | JPEG needs DCT + Huffman decoding, and the standard library has no decoder. Without Pillow, error "needs the optional Pillow package". EXIF orientation is corrected |
 | `.webp` (same, `image/webp`) | Conditional | Pillow | WebP needs VP8/VP8L decoding, and the standard library has no decoder. Same error without Pillow. For animations, the first frame only |
-| `.svg` | Unsupported in `photo_grid.py` / conditional in `grid_tools.py load` | None (faster with numpy) | Photo input (`photo_grid.py`) still gives "SVG input is not supported". Reading pixel art back (`grid_tools.py`, `svg_raster.py`) renders only a safe subset: `rect` (fill only, exact by area), `circle`/`ellipse`/`polygon` (4×4 supersampling), `g` (translate only), `#rgb`/`#rrggbb`, `fill-opacity`/`opacity`. DOCTYPE, ENTITY, `path`, `line`, gradients, `style`/`class`, `script`, `image`, `text` and transforms such as rotation give `SvgError` with a reason. Reversibility through SVG is not guaranteed (transparent cells become `#00000000`) |
+| `.svg` | Unsupported in `photo_grid.py` / conditional in `grid_tools.py load` | None (faster with numpy) | Photo input (`photo_grid.py`) still gives "SVG input is not supported". Reading pixel art back (`grid_tools.py`, `ironlib/svg_raster.py`) renders only a safe subset: `rect` (fill only, exact by area), `circle`/`ellipse`/`polygon` (4×4 supersampling), `g` (translate only), `#rgb`/`#rrggbb`, `fill-opacity`/`opacity`. DOCTYPE, ENTITY, `path`, `line`, gradients, `style`/`class`, `script`, `image`, `text` and transforms such as rotation give `SvgError` with a reason. Reversibility through SVG is not guaranteed (transparent cells become `#00000000`) |
 | `.gif` | Unsupported | — | LZW decoding would have to be written ourselves, and frame selection for animations is undefined. Pillow can read it, but it is rejected as out of scope ("GIF input is not supported") |
 | `.bmp` | Unsupported | — | Not adopted (to be considered if demand arises). "BMP input is not supported" regardless of Pillow |
 | `.tif` / `.tiff` | Unsupported | — | Not adopted due to varied compression, multiple pages and color spaces. "TIFF input is not supported" |
@@ -114,7 +114,7 @@ Detection uses the leading bytes (magic bytes), not the extension. Files are pas
 | Native PPTX shapes | Unsupported | — | Out of scope by the user's decision (image output only) |
 
 All errors are `ValueError` (including `ImageDecodeError`); the CLI prints the reason and exits with code 2.
-`-o` does not overwrite existing files or symlinks and exits 2 ("refusing to overwrite"). To replace, use `--force` (temporary file + `os.replace`, replacing the symlink itself rather than its target). Common to all CLIs (`grid_output.py`).
+`-o` does not overwrite existing files or symlinks and exits 2 ("refusing to overwrite"). To replace, use `--force` (temporary file + `os.replace`, replacing the symlink itself rather than its target). Common to all CLIs (`ironlib/grid_output.py`).
 Pillow is not a required dependency.
 
 ```bash
@@ -183,7 +183,7 @@ The target is **the default grid_tools output**: with `ironmate` metadata (tEXt)
 ```bash
 python -m grid_tools estimate --width 1024 --height 768 --bytes 900000 --limit-chars 200000 --data-uri
 python -m grid_tools estimate photo.jpg --limit-chars 100000 --data-uri --verify   # actually encode to check
-python -c "import size_estimate as s;print(s.estimate(width=64,height=64,nbytes=3000,limit_chars=2000)['recommended'])"
+python -c "from ironlib import size_estimate as s;print(s.estimate(width=64,height=64,nbytes=3000,limit_chars=2000)['recommended'])"
 ```
 
 | Item | Details |
@@ -246,6 +246,7 @@ Any other keys or free-form strings are discarded both when writing and when rea
 
 ## Responsibilities
 
+- Layout: the command-line tools (`image_studio.py`, `pptx_pipeline.py`, `photo_grid.py` and so on) stay at the repository root and run as `python -S <tool>.py`. Their library modules live in `ironlib/` (19 files such as `grid_output`, `ironmate_cli`, `pptx_ooxml`, `xlsx_ooxml`), imported as `from ironlib import grid_output`.
 - For shared GitHub operations and vendor management, see the [parent repository](https://github.com/myon-bioinformatics/myon-bioinformatics) and [gh_identity](https://github.com/myon-bioinformatics/gh_identity).
 - The old GitHub catalog, MCP server, repository metadata/diagnostics and artifact provenance generation prototypes have been retired. This does not mean every old API has a compatible implementation at its destination.
 - The source/niconico implementation and tests moved to [mcp-toolcall-lab PR #108](https://github.com/myon-bioinformatics/mcp-toolcall-lab/pull/108), which is merged. This repository's `vendor/niconico_search_api_template.py` still remains for now. The design for absorbing API/MCP differences was handled in that repo's #107 (closed).
@@ -266,7 +267,7 @@ uv run --locked pytest -q -m 'not heavy'
 python -S ironmate_tests.py list
 ```
 
-`ironmate_tests.py list` outputs JSON by default. Run fast Node tests by id, like `python -S ironmate_tests.py run studio-ingress`; the child process's exit code is returned as-is. Each tool's `--help` and fixable errors (exit code 2, JSON on stderr with `--json`) follow the `ironmate_cli.py` contract. `-o` / `--output` / `--out` are the same output destination for the image digest and comparison sheet.
+`ironmate_tests.py list` outputs JSON by default. Run fast Node tests by id, like `python -S ironmate_tests.py run studio-ingress`; the child process's exit code is returned as-is. Each tool's `--help` and fixable errors (exit code 2, JSON on stderr with `--json`) follow the `ironlib/ironmate_cli.py` contract. `-o` / `--output` / `--out` are the same output destination for the image digest and comparison sheet.
 
 xprobe and the parent's vendor tools are separate checkouts for testing (the parent's is its current `main`, the same as CI resolves). They are not fetched automatically as runtime dependencies.
 New PPTX packages need Node.js 26+ and `npm ci` (pinned `pptxgenjs@4.0.1`). Ironmate does not install dependencies automatically. The source of truth for slide shapes is the [JSON ↔ OOXML mapping](docs/pptx-ooxml-mapping.md). A separately installed Marp CLI is needed only for Marp conversion.

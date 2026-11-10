@@ -7,10 +7,10 @@ from pathlib import Path; from zipfile import ZipFile
 from vendor.markdown import markdown_table_to_rows
 
 from vendor.cli_args import Argument, make_parser
-from mermaid_svg import render_mermaid
+from ironlib.mermaid_svg import render_mermaid
 from pptx_inspect import inspect
-from pptx_ooxml import append_objects, copy_with_replacements, ordered_slide_members, require_package, slide_size
-from pptx_spec import pattern_objects
+from ironlib.pptx_ooxml import append_objects, copy_with_replacements, ordered_slide_members, require_package, slide_size
+from ironlib.pptx_spec import pattern_objects
 
 
 def enrich(source, patterns, *, destination=None, dry_run=False):
@@ -152,7 +152,7 @@ def review(*, source=None, text=None, directory, marp='marp', mmdc=None,
     import hashlib
     import html as html_escape
     import uuid
-    from pptx_preview import render_preview_html
+    from ironlib.pptx_preview import render_preview_html
     target = Path(directory)
     if os.path.lexists(target) or not target.parent.is_dir():
         raise ValueError('review directory must be new with an existing parent')
@@ -282,7 +282,7 @@ def main(argv=None):
         Argument(("--enrich",), {"type": Path, "help": "TOML patterns applied as native OOXML shapes after Marp"}),
         Argument(("--json",), {"action": "store_true", "help": "on a fixable failure, write one JSON object to stderr"}),
     ], description=__doc__)
-    from ironmate_cli import bind_json_errors, guard
+    from ironlib.ironmate_cli import bind_json_errors, guard
     bind_json_errors(parser, argv, "pptx_pipeline.py")
     args = parser.parse_args(argv)
     if (args.source is None) == (args.text is None):

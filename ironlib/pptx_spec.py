@@ -6,7 +6,7 @@ the same coordinates as the previous python-pptx enrich path.
 """
 import math
 
-from pptx_mapping import canon_color, emu_inches
+from ironlib.pptx_mapping import canon_color, emu_inches
 
 _EMU = 914400
 

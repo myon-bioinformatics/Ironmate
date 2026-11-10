@@ -248,7 +248,7 @@ def main(argv=None):
         write(args.out, report, sheet, tiles)
     except (OSError, ValueError) as error:
         print(f'error: {error}', file=sys.stderr)
-        from ironmate_cli import hint_for
+        from ironlib.ironmate_cli import hint_for
         hint = hint_for(error)
         if hint:
             print(f'hint: {hint}', file=sys.stderr)

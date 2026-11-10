@@ -7,10 +7,10 @@ through Node and ExcelJS and is the independent oracle for the tests.
 import json, shutil, subprocess, tempfile
 from pathlib import Path
 
-from xlsx_ooxml import canonicalize, write_package
-from xlsx_spec import assert_formulas_allowed
+from ironlib.xlsx_ooxml import canonicalize, write_package
+from ironlib.xlsx_spec import assert_formulas_allowed
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 
 
 def _tool():

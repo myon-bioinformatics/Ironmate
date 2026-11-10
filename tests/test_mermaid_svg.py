@@ -1,7 +1,7 @@
 """Mermaid SVG preprocessing: source retention, fail closed and pipeline handoff."""
 from pathlib import Path; from types import SimpleNamespace
 import pytest
-import mermaid_svg
+from ironlib import mermaid_svg
 import pptx_pipeline
 
 

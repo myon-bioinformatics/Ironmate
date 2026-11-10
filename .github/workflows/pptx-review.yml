@@ -4,15 +4,15 @@ on:
   pull_request:
     paths:
       - pptx_pipeline.py
-      - pptx_preview.py
+      - ironlib/pptx_preview.py
       - tests/test_pptx_pipeline.py
       - tests/test_pptx_preview.py
       - pyproject.toml
       - uv.lock
-      - pptx_mapping.py
-      - pptx_spec.py
-      - pptx_ooxml.py
-      - pptx_render.py
+      - ironlib/pptx_mapping.py
+      - ironlib/pptx_spec.py
+      - ironlib/pptx_ooxml.py
+      - ironlib/pptx_render.py
       - pptx/**
       - package.json
       - package-lock.json
@@ -23,15 +23,15 @@ on:
     branches: [main]
     paths:
       - pptx_pipeline.py
-      - pptx_preview.py
+      - ironlib/pptx_preview.py
       - tests/test_pptx_pipeline.py
       - tests/test_pptx_preview.py
       - pyproject.toml
       - uv.lock
-      - pptx_mapping.py
-      - pptx_spec.py
-      - pptx_ooxml.py
-      - pptx_render.py
+      - ironlib/pptx_mapping.py
+      - ironlib/pptx_spec.py
+      - ironlib/pptx_ooxml.py
+      - ironlib/pptx_render.py
       - pptx/**
       - package.json
       - package-lock.json

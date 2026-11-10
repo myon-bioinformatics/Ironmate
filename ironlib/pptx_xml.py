@@ -3,7 +3,7 @@
 # --- pptx_xml_probe.py ---
 from pathlib import Path, PurePosixPath; from xml.etree import ElementTree as ET; from zipfile import ZipFile
 
-from pptx_ooxml import require_package
+from ironlib.pptx_ooxml import require_package
 
 P = "{http://schemas.openxmlformats.org/presentationml/2006/main}"
 
@@ -104,7 +104,7 @@ def set_run_style(source, destination, *, slide=1, rgb=None, points=None, bold=N
 
 
 # --- pptx_xml_shapes.py ---
-from pptx_ooxml import require_package
+from ironlib.pptx_ooxml import require_package
 
 A = "{http://schemas.openxmlformats.org/drawingml/2006/main}"
 P = "{http://schemas.openxmlformats.org/presentationml/2006/main}"
@@ -180,7 +180,7 @@ def edit_shape(source, destination, *, slide=1, shape_name, fill_rgb=None, line_
 
 # --- pptx_xml_batch.py ---
 
-from pptx_ooxml import require_package
+from ironlib.pptx_ooxml import require_package
 
 A = "{http://schemas.openxmlformats.org/drawingml/2006/main}"
 P = "{http://schemas.openxmlformats.org/presentationml/2006/main}"

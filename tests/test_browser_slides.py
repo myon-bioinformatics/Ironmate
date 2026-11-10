@@ -3,7 +3,7 @@ import json, posixpath, subprocess
 from pathlib import Path; from xml.etree import ElementTree as ET; from zipfile import ZipFile
 
 import pytest
-from pptx_ooxml import require_package, ordered_slide_members
+from ironlib.pptx_ooxml import require_package, ordered_slide_members
 
 ROOT = Path(__file__).resolve().parents[1]
 NS = {'p':'http://schemas.openxmlformats.org/presentationml/2006/main',

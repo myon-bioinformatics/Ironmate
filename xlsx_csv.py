@@ -7,8 +7,8 @@ Usage:
 import json, os
 from pathlib import Path
 
-from xlsx_render import write_workbook
-from xlsx_spec import sheet_from_csv, workbook_from_sheets, workbook_from_spec
+from ironlib.xlsx_render import write_workbook
+from ironlib.xlsx_spec import sheet_from_csv, workbook_from_sheets, workbook_from_spec
 
 
 def convert_paths(sheets, *, borders=False, autofilter=False, encoding='auto'):
@@ -46,7 +46,7 @@ def _sheet_arg(value):
 
 
 def main(argv=None):
-    from ironmate_cli import ToolParser, guard
+    from ironlib.ironmate_cli import ToolParser, guard
     parser = ToolParser(description='Convert CSV files into an xlsx workbook.', tool='xlsx_csv.py')
     parser.add_argument('sheets', nargs='*', type=_sheet_arg, help='SheetName=file.csv, or a csv path')
     parser.add_argument('-o', '--output', type=Path, required=True)

@@ -22,8 +22,8 @@ module.exports = async function ({ page, out, root, download }) {
       ]),
     );
   await page.setViewportSize({ width: 1600, height: 1100 });
-  await page.click("#stamp-demo");
-  await page.click("#example-open");
+  // The clock / arrow / emoticon scene (once the stamp example) is a fixture now: the example button only shows a GIF.
+  await page.evaluate((scene) => IronmateStudio.replaceScene(scene), JSON.parse(fs.readFileSync(path.join(root, "tests/fixtures/stamp_scene.json"), "utf8")));
   await page.evaluate(() => IronmateStudio.ready);
   const stamps = await page.evaluate(() => IronmateStudio.scene);
   assert(

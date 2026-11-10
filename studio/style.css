@@ -1,4 +1,4 @@
-/* web-ui-bundle/1 commit=f624d9364017b7e2da7f797817dfba2a8d9adb14 sha256=af66b6d1b001d0a8ae3dad5e92cea017453317c3fb6465cdc895d132faac404a scripts/build_studio_css.py*/
+/* web-ui-bundle/1 commit=f624d9364017b7e2da7f797817dfba2a8d9adb14 sha256=0bd4c2f43297ae0d0c1a292551275bfcf7be0bd69160ca66908a053840ebd41b scripts/build_studio_css.py*/
 @layer base,components,theme;
 /* css/tokens.css */
 :root{--ui-bg:#0d1117;--ui-panel:#101820;--ui-fg:#d1f7c4;--ui-muted:#8b949e;--ui-border:#58a6ff;--ui-accent:#7ee787;--ui-danger:#cf222e;--ui-radius:0;--ui-text:16px;--ui-space:1rem;--ui-max:960px;--ui-font:Meiryo,メイリオ,sans-serif;--ui-font-mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
@@ -69,7 +69,6 @@ input[type=checkbox]{display:inline;width:auto;margin:0 7px 0 0}
 .examples label{margin:0;max-width:76px}
 .example-view{margin:16px 0 0}
 .example-view img{display:block;max-width:100%;height:auto;border:1px solid var(--ui-border)}
-.example-view figcaption{margin-top:8px}
 .examples input[type=color]{width:45px}
 .examples input[type=number]{width:68px}
 .examples .check{max-width:none}

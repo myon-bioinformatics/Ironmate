@@ -893,95 +893,18 @@ function demo() {
   });
   return doc;
 }
-// An example button only shows its GIF (pressing it by mistake changes nothing); ▶ in the GIF's figure loads it.
-const EXAMPLES = {
-  demo: [demo, "独自の合成サンプルです。データは説明用の架空値です。"],
-  "stamp-demo": [stampDemo, "時計も顔文字も、保持した図形・文字を拡大して再描画します。"],
-};
+// An example button only shows its GIF: nothing is loaded, so pressing one by mistake changes nothing.
 let example = null;
-for (const id of Object.keys(EXAMPLES))
-  $(id).onclick = () => {
-    example = example === id ? null : id;
+for (const button of document.querySelectorAll(".examples [data-gif]"))
+  button.onclick = () => {
+    example = example === button.id ? null : button.id;
     $("example-view").hidden = !example;
-    for (const other of Object.keys(EXAMPLES)) $(other).setAttribute("aria-expanded", String(other === example));
+    for (const other of document.querySelectorAll(".examples [data-gif]")) other.setAttribute("aria-expanded", String(other.id === example));
     if (example) {
-      $("example-gif").src = $(id).dataset.gif;
-      $("example-gif").alt = $(id).textContent.trim();
+      $("example-gif").src = button.dataset.gif;
+      $("example-gif").alt = button.textContent.trim();
     }
   };
-$("example-open").onclick = () => {
-  const [build, note] = EXAMPLES[example];
-  scene = build();
-  history.commit(scene);
-  selected = null;
-  dirty = true;
-  render().catch(error);
-  message(note);
-};
-function stampDemo() {
-  const d = blank();
-  const text = (id, text, x, y, w, h, size, fill) => ({
-    ...base("text", x, y, w, h),
-    id,
-    name: text,
-    text,
-    fontSize: size,
-    fill,
-    mono: true,
-  });
-  d.layers = [
-    text(
-      "title",
-      "STAMP LAB / 色を変えて、重ねる。",
-      60,
-      45,
-      1160,
-      70,
-      38,
-      "#163B3B",
-    ),
-    {
-      ...base("rect", 60, 150, 1160, 420),
-      name: "カード",
-      fill: "#FFFFFF",
-      stroke: "#D6DFD2",
-      strokeWidth: 1,
-    },
-    {
-      ...base("clock", 100, 210, 230, 230),
-      name: "10:10の時計",
-      hour: 10,
-      minute: 10,
-      fill: "#F8F7F2",
-      stroke: "#087D79",
-      strokeWidth: 4,
-    },
-    {
-      ...base("arrow", 390, 260, 230, 80),
-      name: "直線＋中央の矢羽根",
-      headSize: 40,
-      headPlacement: "middle",
-      headStyle: "beginner",
-      fill: "#EFBE4C",
-      stroke: "#D59C22",
-      strokeWidth: 6,
-    },
-    text("face", "(・∀・)", 710, 225, 450, 105, 68, "#D05B78"),
-    text("emoji", "🌱", 750, 365, 160, 130, 100, "#087D79"),
-    text("emoji2", "❤️", 990, 365, 180, 130, 100, "#D05B78"),
-    text(
-      "footer",
-      "CLOCK     →     LINE + TRIANGLE     →     TEXT / EMOJI / KAOMOJI",
-      65,
-      635,
-      1150,
-      50,
-      18,
-      "#56766D",
-    ),
-  ];
-  return d;
-}
 window.addEventListener("beforeunload", (e) => {
   if (dirty && document.body.dataset.mode !== "slides") {
     e.preventDefault();

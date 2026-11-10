@@ -87,7 +87,6 @@ input[type=checkbox]{{display:inline;width:auto;margin:0 7px 0 0}}
 .examples label{{margin:0;max-width:76px}}
 .example-view{{margin:16px 0 0}}
 .example-view img{{display:block;max-width:100%;height:auto;border:1px solid var(--ui-border)}}
-.example-view figcaption{{margin-top:8px}}
 .examples input[type=color]{{width:45px}}
 .examples input[type=number]{{width:68px}}
 .examples .check{{max-width:none}}

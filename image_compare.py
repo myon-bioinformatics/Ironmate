@@ -5,12 +5,8 @@ explicit weight, not perceptual quality or recovered information.
 """
 from __future__ import annotations
 
-import argparse
-import hashlib
-import json
-import math
+import argparse, hashlib, json, math, sys
 from pathlib import Path
-import sys
 
 from ironlib.grid_output import write_output
 from grid_png import to_png

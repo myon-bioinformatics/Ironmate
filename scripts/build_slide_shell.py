@@ -2,12 +2,8 @@
 
 Only generated XML data is retained. No third-party JS runs in the browser.
 """
-import json
-import re
-import subprocess
-import tempfile
-from pathlib import Path
-from zipfile import ZipFile
+import json, re, subprocess, tempfile
+from pathlib import Path; from zipfile import ZipFile
 
 ROOT = Path(__file__).resolve().parents[1]
 

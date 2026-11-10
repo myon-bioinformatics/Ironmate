@@ -81,9 +81,9 @@ Embedded PNGs in existing scenes are also limited to 12,000,000 characters per i
 Reproduction (test-only Playwright 1.58.2, no added runtime dependencies):
 
 ```sh
-npm install --prefix build/clipboard-tools --no-save --ignore-scripts --package-lock=false playwright@1.64.1
-node build/clipboard-tools/node_modules/playwright/cli.js install --with-deps chromium firefox webkit
-IRONMATE_PLAYWRIGHT_MODULE="$PWD/build/clipboard-tools/node_modules/playwright" node tests/studio_clipboard.cjs
+npm ci --ignore-scripts   # Playwright is a locked devDependency of the root package.json
+npx playwright install --with-deps chromium firefox webkit
+node tests/studio_clipboard.cjs
 ```
 
 On the static build's `/Ironmate/` subpath, it checks the real-browser UI, PNG/JPEG/WebP decoding, RGBA, input byte/pixel boundaries and cancellation.

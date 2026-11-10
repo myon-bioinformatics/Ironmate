@@ -1,14 +1,8 @@
 """Join recorded Studio diagnostics with existing MAE/RMSE selection; stdlib only."""
 from __future__ import annotations
 
-import argparse
-import hashlib
-import json
-import platform
-import sys
-import time
-from collections import defaultdict
-from pathlib import Path
+import argparse, hashlib, json, platform, sys, time
+from collections import defaultdict; from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import image_compare as compare
@@ -136,11 +130,11 @@ def run(folder, out):
     return report
 
 
-def main():
+def main(argv=None):
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--evidence',type=Path,default=ROOT/'docs/evidence/studio-quality')
     p.add_argument('--out',type=Path,required=True)
-    args=p.parse_args()
+    args=p.parse_args(argv)
     run(args.evidence,args.out)
 
 

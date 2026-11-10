@@ -10,10 +10,7 @@ a failure into success.
 """
 from __future__ import annotations
 
-import json
-import shutil
-import subprocess
-import sys
+import json, shutil, subprocess, sys
 
 from ironlib.ironmate_cli import ToolParser, guard
 from vendor.cli_args import pytest_command

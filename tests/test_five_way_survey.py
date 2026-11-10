@@ -1,12 +1,6 @@
 """Independent pixel-graph oracles; no production topology/ring code in oracle."""
-import ast
-import copy
-import json
-import random
-import subprocess
-import sys
-from collections import deque
-from pathlib import Path
+import ast, copy, json, random, subprocess, sys
+from collections import deque; from pathlib import Path
 
 import pytest
 

@@ -8,14 +8,8 @@ The client runs in the Python that ships `uno` (apt's python3-uno is for /usr/bi
 set IRONMATE_UNO_PYTHON to use another.
 This reads a freshly generated deck, not an edited or LibreOffice-saved round trip.
 """
-from collections import Counter
-import json
-import os
-import shutil
-import socket
-import subprocess
-import tempfile
-from pathlib import Path
+import json, os, shutil, socket, subprocess, tempfile
+from collections import Counter; from pathlib import Path
 
 import pytest
 

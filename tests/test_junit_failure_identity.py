@@ -2,14 +2,8 @@
 
 from __future__ import annotations
 
-import hashlib
-import importlib.util
-import json
-import os
+import hashlib, importlib.util, json, os, shutil, subprocess, sys
 from pathlib import Path
-import shutil
-import subprocess
-import sys
 
 import pytest
 
@@ -96,7 +90,7 @@ def test_skip(): pass
 def test_workflow_keeps_suite_failure_and_exact_reports(tmp_path):
     import yaml
 
-    jobs = yaml.load((ROOT / '.github/workflows/mcp-tests.yml').read_text(),
+    jobs = yaml.load((ROOT / '.github/workflows/ci.yml').read_text(),
                      Loader=yaml.BaseLoader)['jobs']
     steps = jobs['test']['steps']
     suite = next(s for s in steps if s.get('name') == 'Run default pytest suite (exclude heavy tests)')
@@ -134,6 +128,24 @@ def test_workflow_keeps_suite_failure_and_exact_reports(tmp_path):
     assert collector['if'] == 'always()'
     assert collector['uses'].endswith('@9e3da7ae1846e9604ebc24bb5178f7de094a4e77')
     marp_steps = jobs['marp-integration']['steps']
+    install = next(s for s in marp_steps if s.get('name') == 'Install pinned Node packages and pinned Marp CLI')
+    assert '--ignore-scripts' in install['run']
+    assert 'puppeteer@25.15.0' in install['run']  # Legacy ci.yml remains pinned independently.
+    marp_upload = next(s for s in marp_steps if s.get('name') == 'Preserve Marp JUnit')
+    assert marp_upload['if'] == 'always()'
+    assert marp_upload['with']['if-no-files-found'] == 'error'
+    assert marp_upload['with']['path'] == 'build/test-results/marp.xml'
+    reports.append(marp_upload['with']['name'] + '/marp.xml')
+    assert json.loads(collector['with']['expected-reports']) == reports
+    assert collector['with']['artifact-pattern'] == 'junit-*'
+
+
+def test_mcp_workflow_uses_locked_marp_tools():
+    import yaml
+
+    jobs = yaml.load((ROOT / '.github/workflows/mcp-tests.yml').read_text(),
+                     Loader=yaml.BaseLoader)['jobs']
+    marp_steps = jobs['marp-integration']['steps']
     install = next(s for s in marp_steps if s.get('name') == 'Install pinned Node packages and the locked Marp CLI tools')
     assert 'npm ci --prefix scripts/marp-tools --ignore-scripts' in install['run']
     # Do not resolve Mermaid's Puppeteer peer (or anything else) to a floating latest release.
@@ -142,10 +154,8 @@ def test_workflow_keeps_suite_failure_and_exact_reports(tmp_path):
     lock = json.loads((ROOT / 'scripts/marp-tools/package-lock.json').read_text())
     assert lock['packages']['']['dependencies'] == tools['dependencies']
     assert lock['packages']['node_modules/puppeteer']['version'] == '25.15.0'
-    marp_upload = next(s for s in marp_steps if s.get('name') == 'Preserve Marp JUnit')
-    assert marp_upload['if'] == 'always()'
-    assert marp_upload['with']['if-no-files-found'] == 'error'
-    assert marp_upload['with']['path'] == 'build/test-results/marp.xml'
-    reports.append(marp_upload['with']['name'] + '/marp.xml')
-    assert json.loads(collector['with']['expected-reports']) == reports
-    assert collector['with']['artifact-pattern'] == 'junit-*'
+    root_package = json.loads((ROOT / 'package.json').read_text())
+    root_lock = json.loads((ROOT / 'package-lock.json').read_text())
+    assert root_package['devDependencies']['playwright'] == '1.64.1'
+    assert root_lock['packages']['node_modules/playwright']['version'] == '1.64.1'
+    assert 'playwright' not in tools['dependencies']

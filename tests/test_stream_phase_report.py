@@ -1,6 +1,4 @@
-import io
-import itertools
-import json
+import io, itertools, json
 from pathlib import Path
 import pytest
 from scripts import stream_phase_report as s

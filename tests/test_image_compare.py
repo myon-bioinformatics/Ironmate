@@ -1,9 +1,6 @@
 """Independent scalar error, alpha, Pareto and CLI regression checks."""
-import json
-import math
+import json, math, subprocess, sys
 from pathlib import Path
-import subprocess
-import sys
 
 import pytest
 

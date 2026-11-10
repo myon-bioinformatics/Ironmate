@@ -1,12 +1,6 @@
 """Reproduce row, column and grid spacing of existing native PPTX objects."""
-import json
-import math
-import os
-from pathlib import Path
-import tempfile
-import tomllib
-from zipfile import ZipFile
-from xml.etree import ElementTree as ET
+import json, math, os, tempfile, tomllib
+from pathlib import Path; from xml.etree import ElementTree as ET; from zipfile import ZipFile
 
 from ironlib.pptx_ooxml import ordered_slide_members, require_package, slide_size
 

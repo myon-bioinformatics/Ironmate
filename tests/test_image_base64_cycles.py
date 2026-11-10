@@ -2,11 +2,7 @@
 
 Transport cycles are lossless PNG controls, not JPEG re-encoding or resize claims.
 """
-import base64
-import json
-import random
-import subprocess
-import sys
+import base64, json, random, subprocess, sys
 from pathlib import Path
 
 import pytest

@@ -3,9 +3,7 @@
 Stdlib only; importing this module performs no I/O.
 """
 from __future__ import annotations
-import argparse
-import json
-import sys
+import argparse, json, sys
 
 __all__ = ['MASKS', 'MASK_BOUNDS', 'PALETTE_BASE', 'PALETTE_LABELS', 'PALETTES', 'SIZES', 'EFFECTS',
            'derive_palette', 'mask_problem', 'silhouette', 'render', 'filename', 'emoji', 'main']

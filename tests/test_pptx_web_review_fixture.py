@@ -2,10 +2,8 @@
 
 This script does not claim that PowerPoint Web has been opened or verified.
 """
-import hashlib
-import json
-from pathlib import Path
-from zipfile import ZipFile
+import hashlib, json
+from pathlib import Path; from zipfile import ZipFile
 
 from pptx import Presentation
 from pptx.dml.color import RGBColor
@@ -77,7 +75,6 @@ def generate(directory):
 
 
 
-from pathlib import Path
 from pptx import Presentation
 
 

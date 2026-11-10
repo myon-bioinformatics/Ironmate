@@ -2,10 +2,7 @@
 
 Pillow is a dev-only reference here; pillow_min itself never imports it.
 """
-import io
-import random
-import struct
-import zlib
+import io, random, struct, zlib
 
 import pytest
 

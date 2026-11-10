@@ -1,7 +1,6 @@
 """In-memory presentation model backed by the reversible slide spec."""
 import io
-from pathlib import Path
-from zipfile import ZipFile
+from pathlib import Path; from zipfile import ZipFile
 
 from pptx.dml.color import MSO_COLOR_TYPE, RGBColor
 from pptx.enum.dml import MSO_FILL_TYPE

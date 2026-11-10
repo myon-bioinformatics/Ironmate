@@ -2,11 +2,8 @@
 
 Opt-in only. Preserve the original Markdown; never treat SVG as editable PPTX shapes.
 """
-import hashlib
+import hashlib, re, shutil, subprocess
 from pathlib import Path
-import re
-import shutil
-import subprocess
 
 _FENCE = re.compile(r"(?m)^```mermaid[ \t]*\r?\n(.*?)^```[ \t]*$", re.DOTALL | re.MULTILINE)
 

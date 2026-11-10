@@ -8,8 +8,7 @@ Output is always the default grid_tools PNG (8-bit RGBA, ironmate metadata when 
 """
 from __future__ import annotations
 import base64, json, os, sys
-from dataclasses import dataclass, field
-from fractions import Fraction
+from dataclasses import dataclass, field; from fractions import Fraction
 
 import grid_tools
 import photo_grid

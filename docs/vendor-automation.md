@@ -10,14 +10,18 @@ for every enrolled source and LICENSE. Each entry's `ref` is the same 40-hex
 commit SHA as `commit`. Tests assert schema, hashes, and ref/commit alignment for
 every file.
 
-The pinned parent `vendor_sync.py` is checked out only in CI (not vendored in
-this repository). Checkout credentials are not persisted.
+The parent `vendor_sync.py` is checked out only in CI (not vendored in this
+repository). The commit is not pinned here: `scripts/parent_vendor_tools_resolve.py`
+resolves the parent's default-branch tip at run time, after verifying the
+repository id (`638801160`), and the checkout uses that SHA. Checkout credentials
+are not persisted. Reusable-workflow references (`uses:`) cannot take an
+expression, so they stay on the reviewed rollout commit.
 
-ALM agents can use the same mechanism in a disposable checkout:
+ALM agents can use the same mechanism in a disposable checkout (the parent's
+current `main`):
 
 ```bash
-git clone https://github.com/myon-bioinformatics/myon-bioinformatics.git .vendor-sync-tools
-git -C .vendor-sync-tools checkout --detach 990f5165da97214e8213ea0a99ae1b03569efe0c
+git clone --depth 1 https://github.com/myon-bioinformatics/myon-bioinformatics.git .vendor-sync-tools
 python -S .vendor-sync-tools/vendor_sync.py check --manifest vendor.lock.json
 python -S .vendor-sync-tools/vendor_sync.py materialize --manifest vendor.lock.json
 python -S .vendor-sync-tools/vendor_sync.py check --manifest vendor.lock.json
@@ -35,7 +39,7 @@ The primary Python job checks and materializes the lock, then runs unit tests an
 default pytest. A separate Marp integration job exercises real PPTX conversion.
 `failure-identity` correlates JUnit artifacts across jobs.
 
-Vendor evidence is staged with the pinned parent `vendor_stage.py` (`locked` kind).
+Vendor evidence is staged with the parent `vendor_stage.py` from the same resolved checkout (`locked` kind).
 Membership comes from the lock only; legacy per-file provenance JSON sidecars are
 retired. `vendor-evidence.json` records member SHA-256 values. Staging runs on
 failure as well.

@@ -1,6 +1,4 @@
-import hashlib
-import json
-import re
+import hashlib, json, re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]

@@ -6,15 +6,8 @@ Integer kernel ends before evaluation(); only reporting/fixtures use floats/*.
 """
 from __future__ import annotations
 
-import argparse
-from fractions import Fraction
-import hashlib
-import json
-import math
-import platform
-import random
-import time
-from pathlib import Path
+import argparse, hashlib, json, math, platform, random, time
+from fractions import Fraction; from pathlib import Path
 
 DIRS = ((-1, 0), (1, 0), (0, -1), (0, 1))
 SCENARIOS = ('Dense_Object', 'Thin_Skeleton', 'Hollow_Ring', 'Double_Ring',

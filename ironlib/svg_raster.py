@@ -6,8 +6,7 @@ solid fills (#rgb, #rrggbb, none) with fill-opacity/opacity, <title>/<desc>.
 Everything else is rejected with an error naming the element/attribute. No import-time I/O.
 """
 from __future__ import annotations
-import re
-import xml.etree.ElementTree as ET
+import re, xml.etree.ElementTree as ET
 
 __all__ = ['MAX_BYTES', 'MAX_PIXELS', 'SvgError', 'rasterize']
 MAX_BYTES = 1024 * 1024

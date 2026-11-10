@@ -1,9 +1,7 @@
 """PNG to a zoom-in / reverse zoom-out GIF (optional Pillow codec)."""
 from __future__ import annotations
 
-import argparse
-import io
-import math
+import argparse, io, math
 from pathlib import Path
 
 from pillow_min import decode_png_rgba

@@ -13,19 +13,8 @@ also use installed Chrome through Node 26 built-in WebSocket (no runtime npm pac
 """
 from __future__ import annotations
 
-import argparse
-import base64
-import os
-import shutil
-import struct
-import subprocess
-import sys
-import tempfile
-import json
-import math
-from functools import lru_cache
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from pathlib import Path
+import argparse, base64, json, math, os, shutil, struct, subprocess, sys, tempfile
+from functools import lru_cache; from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer; from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 SCHEMA = 'ironmate-image-studio/1'
@@ -145,7 +134,7 @@ def public_assets():
         page = page.replace('"' + name + '"', '"../' + name + '"')
     page = page.replace('href="tools/"', 'href="../tools/"')
     page = page.replace('<a href="slides/">スライド・PPTX作成 ↗</a>', '<a href="../">Image Studio ↗</a>')
-    page = page.replace('<body>', '<body data-mode="slides">').replace('画像にする。', 'スライドにする。')
+    page = page.replace('<body class="ui-elements" data-ui-theme="ironmate">', '<body class="ui-elements" data-ui-theme="ironmate" data-mode="slides">').replace('画像にする。', 'スライドにする。')
     page = page.replace('IMAGE STUDIO / 01', 'SLIDE STUDIO / 03').replace('Ironmate — Image Studio', 'Ironmate — Slide Studio')
     extra = '<link rel="stylesheet" href="slides.css">' + ''.join(
         f'<script defer src="{name}"></script>' for name in ('package.js', 'pptx.js', 'slides.js'))

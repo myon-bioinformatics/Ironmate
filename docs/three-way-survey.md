@@ -104,11 +104,11 @@ That an injected connected fake pattern passes the structure evaluation is also 
 
 ## CI
 
-`.github/workflows/verify_3way_survey.yml` measures on related PRs, related pushes to main, manual runs,
+`.github/workflows/verify-3way-survey.yml` measures on related PRs, related pushes to main, manual runs,
 and every morning at 08:00 JST. The schedule takes effect once it is on main.
 Permissions are contents:read, with a 15-minute timeout. Markdown goes to the Job Summary and JSON/SVG to an artifact.
 No pipes that swallow failures are used; exceptions exit nonzero.
-Regression tests and JUnit are automatically included in the existing `mcp-tests.yml` and use the shared JUnit collection path.
+Regression tests and JUnit are automatically included in the existing `ci.yml` and use the shared JUnit collection path.
 
 For measured results see the [first CPU measurement](evidence/three-way-survey/report.md).
 

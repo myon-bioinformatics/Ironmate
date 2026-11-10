@@ -65,11 +65,18 @@ jobs:
         run: |
           time uv sync --locked
           du -sk .venv "$(uv cache dir)"
-      - name: Fetch pinned shared vendor tool
+      - name: Resolve parent main for shared vendor tools
+        id: parent-vendor-tools
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python -S scripts/parent_vendor_tools_resolve.py --emit-github-actions
+      - name: Fetch shared vendor tool at resolved parent main
         uses: actions/checkout@v7
         with:
           repository: myon-bioinformatics/myon-bioinformatics
-          ref: 9e3da7ae1846e9604ebc24bb5178f7de094a4e77
+          ref: ${{ steps.parent-vendor-tools.outputs.sha }}
           path: .vendor-sync-tools
           persist-credentials: false
       - name: Verify checked-in vendor copies
@@ -77,14 +84,7 @@ jobs:
       - name: Recreate locked vendor files from GitHub
         shell: bash
         run: |
-          python -S - <<'PY'
-          import json
-          from pathlib import Path
-          for entry in json.loads(Path('vendor.lock.json').read_text(encoding='utf-8'))['files']:
-              Path(entry['destination']).unlink()
-          PY
-          python -S .vendor-sync-tools/vendor_sync.py materialize --manifest vendor.lock.json
-          python -S .vendor-sync-tools/vendor_sync.py check --manifest vendor.lock.json
+          python -S .vendor-sync-tools/vendor_sync.py recreate --manifest vendor.lock.json
       - name: Install pinned pptxgenjs and ExcelJS
         run: npm ci
       - name: Type-check the .d.cts declarations (TypeScript is fetched here only, not a repo dependency)
@@ -170,7 +170,7 @@ jobs:
         run: |
           time uv sync --locked
           du -sk .venv "$(uv cache dir)"
-      # The test-only CLIs (Marp, Mermaid with its pinned Puppeteer peer, Playwright) and all
+      # The test-only CLIs (Marp, Mermaid with its pinned Puppeteer peer) and all
       # their transitive packages come from scripts/marp-tools/package-lock.json, not a live
       # resolution: a floating peer once selected a puppeteer before its puppeteer-core existed.
       - name: Install pinned Node packages and the locked Marp CLI tools
@@ -234,7 +234,6 @@ jobs:
           IRONMATE_FLOW_REQUIRE_CJK: "1"
           IRONMATE_MMDC_BIN: scripts/marp-tools/node_modules/.bin/mmdc
           IRONMATE_CHROME: /usr/bin/google-chrome
-          IRONMATE_PLAYWRIGHT_MODULE: ${{ github.workspace }}/scripts/marp-tools/node_modules/playwright
           PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome
         run: |
           uv run --locked python -m pytest -q tests/test_flow_integration.py --junitxml=build/test-results/flow.xml
@@ -247,7 +246,7 @@ jobs:
         run: |
           IRONMATE_CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
           export IRONMATE_CHROME
-          IRONMATE_PLAYWRIGHT_MODULE="$PWD/scripts/marp-tools/node_modules/playwright" IRONMATE_STUDIO_STATIC=1 node tests/image_studio_browser.cjs
+          IRONMATE_STUDIO_STATIC=1 node tests/image_studio_browser.cjs
       - name: Preserve Marp JUnit
         if: always()
         uses: actions/upload-artifact@v7
@@ -308,8 +307,8 @@ jobs:
       - name: Install isolated test-only Playwright and browser
         timeout-minutes: 10
         run: |
-          npm install --prefix build/clipboard-tools --no-save --ignore-scripts --package-lock=false playwright@1.64.1
-          node build/clipboard-tools/node_modules/playwright/cli.js install --with-deps ${{ matrix.browser }}
+          npm ci --ignore-scripts --no-audit --no-fund
+          npx playwright install --with-deps ${{ matrix.browser }}
       - name: Make apt downloads cacheable (main only)
         id: apt_cache
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -324,7 +323,6 @@ jobs:
       - name: Verify clipboard ingress in the static Pages build
         env:
           IRONMATE_BROWSERS: ${{ matrix.browser }}
-          IRONMATE_PLAYWRIGHT_MODULE: ${{ github.workspace }}/build/clipboard-tools/node_modules/playwright
         run: node tests/studio_clipboard.cjs
       - name: Preserve clipboard browser evidence
         if: always()

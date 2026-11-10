@@ -2,14 +2,10 @@
 
 Run from the repository root: python -m tests.fixture_pptx_layout OUTPUT_DIR
 """
-import argparse
-import hashlib
-import json
-import subprocess
-import tempfile
+import argparse, hashlib, json, subprocess, tempfile
+from pathlib import Path
 
 from PIL import Image, ImageChops
-from pathlib import Path
 
 from pptx import Presentation
 from pptx.dml.color import RGBColor

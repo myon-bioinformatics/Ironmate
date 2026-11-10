@@ -1,6 +1,5 @@
 """Contract tests for reusing vendor Markdown's opaque Mermaid helpers."""
-import importlib.util
-import sys
+import importlib.util, sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]

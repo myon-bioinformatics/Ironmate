@@ -1,0 +1,305 @@
+name: CI
+
+on:
+  pull_request:
+    paths:
+      - "*.py"
+      - "vendor.lock.json"
+      - "vendor/**"
+      - "scripts/**"
+      - "studio/**"
+      - "tests/**"
+      - "pytest.ini"
+      - "package.json"
+      - "package-lock.json"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "*.py"
+      - "vendor.lock.json"
+      - "vendor/**"
+      - "scripts/**"
+      - "studio/**"
+      - "tests/**"
+      - "pytest.ini"
+      - "package.json"
+      - "package-lock.json"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "latest"
+          python-version: "3.15"
+          enable-cache: true
+          # Pull requests restore the cache and never write it; only main saves it, so code
+          # under review cannot plant what later runs restore. The pruned cache is about 1 MB:
+          # it holds just the wheel built from source (PyYAML has no cp315 wheel), which is what
+          # costs time here. Downloads of the other wheels take under a second on the runner.
+          save-cache: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          prune-cache: true
+          activate-environment: true
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26"
+      # `uv run --locked` below would sync the environment on its first call and hide the cost
+      # inside the pytest step. Doing it here, once, puts the install time and the sizes in the log.
+      - name: Install the locked Python environment
+        run: |
+          time uv sync --locked
+          du -sk .venv "$(uv cache dir)"
+      - name: Fetch pinned shared vendor tool
+        uses: actions/checkout@v7
+        with:
+          repository: myon-bioinformatics/myon-bioinformatics
+          ref: 26c442bc51b8a2837fe2556782b2937f396932af
+          path: .vendor-sync-tools
+          persist-credentials: false
+      - name: Verify checked-in vendor copies
+        run: python -S .vendor-sync-tools/vendor_sync.py check --manifest vendor.lock.json
+      - name: Recreate locked vendor files from GitHub
+        shell: bash
+        run: |
+          python -S .vendor-sync-tools/vendor_sync.py recreate --manifest vendor.lock.json
+      - name: Install pinned pptxgenjs and ExcelJS
+        run: npm ci
+      - name: Type-check the .d.cts declarations (TypeScript is fetched here only, not a repo dependency)
+        run: |
+          npm install --prefix build/types --no-save --ignore-scripts --package-lock=false --no-audit --no-fund typescript@7.0.2 @types/node@26.6.5
+          build/types/node_modules/.bin/tsc --noEmit --strict --module nodenext --typeRoots build/types/node_modules/@types --types node ./*.d.cts ./studio/*.d.cts
+      - name: Check out pinned test-only JUnit importer
+        uses: actions/checkout@v7
+        with:
+          repository: myon-bioinformatics/xprobe
+          ref: 7e7015b2df69ad446b968f6fa49711b5b1dbdd3f
+          path: build/shared
+          persist-credentials: false
+          sparse-checkout: xprobe.py
+          sparse-checkout-cone-mode: false
+      - name: Compile all tracked Python sources before test collection
+        id: compile
+        run: |
+          git ls-files '*.py' -z | xargs -0 python -m py_compile
+      - name: Verify pillow_min.py runs standalone under python -S
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
+        run: python -S pillow_min.py
+      # The default pytest suite also collects the unittest-based vendor and
+      # repository hygiene cases; do not run them twice on Python 3.15.
+      - name: Run default pytest suite (exclude heavy tests)
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
+        env:
+          FAILURE_EVIDENCE_DIR: build/controlled-failure
+        run: uv run --locked python -m pytest -q -m "not heavy and not network" --junitxml=build/test-results/pytest-3.15.xml
+      - name: Preserve raw suite JUnit
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: junit-py3.15
+          path: build/test-results/pytest-3.15.xml
+          if-no-files-found: error
+          retention-days: 14
+      - name: Preserve controlled child evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: junit-controlled-py3.15
+          path: build/controlled-failure/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Stage canonical vendor evidence
+        if: always()
+        run: >-
+          python -S .vendor-sync-tools/vendor_stage.py
+          --kind locked --output build/vendor-evidence-test
+      - name: Preserve vendor lock used by this run
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: vendor-lock-py3.15
+          path: build/vendor-evidence-test
+          if-no-files-found: error
+          retention-days: 14
+
+  marp-integration:
+    name: Marp real PPTX conversion
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "latest"
+          python-version: "3.15"
+          enable-cache: true
+          # Same policy as the `test` job: pull requests restore the cache, only main saves it.
+          save-cache: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          prune-cache: true
+          activate-environment: true
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26"
+      - name: Install the locked Python environment
+        run: |
+          time uv sync --locked
+          du -sk .venv "$(uv cache dir)"
+      # Pin Mermaid's Puppeteer peer too: a floating peer can select a newly
+      # published puppeteer before its exact puppeteer-core release is available.
+      - name: Install pinned Node packages and pinned Marp CLI
+        run: |
+          npm ci
+          npm install --no-save --ignore-scripts @marp-team/marp-cli@4.5.1 @mermaid-js/mermaid-cli@12.0.0 puppeteer@25.15.0 playwright@1.58.2
+      - name: Bound apt dependency setup
+        run: |
+          sudo python3 -S scripts/configure_ci_apt.py
+          sudo apt-config dump Acquire::Retries Acquire::http::Timeout Acquire::https::Timeout APT::Update::Error-Mode
+      # Package names live in scripts/apt-ci-*.txt; shell: bash adds pipefail so a
+      # missing or empty list fails the step instead of installing nothing.
+      - name: Install Japanese fonts for diagram evidence
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          sudo apt-get update
+          grep -v '^#' scripts/apt-ci-fonts.txt | xargs sudo apt-get install --no-install-recommends -y
+          fc-match ':lang=ja'
+      # Test lane only: UNO is LibreOffice's own API (see scripts/apt-ci-uno.txt).
+      - name: Install minimal LibreOffice for the UNO check
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          grep -v '^#' scripts/apt-ci-uno.txt | xargs sudo apt-get install --no-install-recommends -y
+          soffice --version
+      - name: Locate browser
+        shell: bash
+        run: |
+          command -v google-chrome || command -v chromium || command -v chromium-browser
+      - name: Run real Markdown to Marp to PPTX integration
+        env:
+          IRONMATE_RUN_MARP_INTEGRATION: "1"
+          IRONMATE_RUN_UNO_INTEGRATION: "1"
+          IRONMATE_MARP_BIN: node_modules/.bin/marp
+          IRONMATE_MMDC_BIN: node_modules/.bin/mmdc
+          PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome
+        run: uv run --locked python -m pytest -q tests/test_marp_pptx.py tests/test_uno_roundtrip.py --junitxml=build/test-results/marp.xml
+      - name: Exercise common JSON flow formats and browser pixel parity
+        env:
+          IRONMATE_RUN_FLOW_INTEGRATION: "1"
+          IRONMATE_FLOW_REQUIRE_CJK: "1"
+          IRONMATE_MMDC_BIN: node_modules/.bin/mmdc
+          IRONMATE_CHROME: /usr/bin/google-chrome
+          PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome
+        run: |
+          uv run --locked python -m pytest -q tests/test_flow_integration.py --junitxml=build/test-results/flow.xml
+          node tests/flow_export_browser.cjs
+      - name: Generate Open XML before-after PPTX web review fixtures
+        run: python -c 'import runpy; runpy.run_path("tests/test_pptx_web_review_fixture.py")["generate"]("build/test-results/pptx-web-review")'
+      - name: Exercise Image Studio and preserve browser exports
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          IRONMATE_CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          export IRONMATE_CHROME
+          IRONMATE_STUDIO_STATIC=1 node tests/image_studio_browser.cjs
+      - name: Preserve Marp JUnit
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: junit-marp
+          path: build/test-results/marp.xml
+          if-no-files-found: error
+          retention-days: 14
+      - name: Preserve raw Marp Open XML
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: marp-openxml-observations
+          path: |
+            build/test-results/marp-openxml-inspection.json
+            build/test-results/marp-mermaid-observation.json
+            build/test-results/marp-openxml/
+            build/test-results/marp-visual/
+            build/test-results/flow-export/
+            build/test-results/flow.xml
+            build/test-results/pptx-web-review/
+            build/image-studio/
+          if-no-files-found: warn
+          retention-days: 14
+
+  studio-clipboard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          version: "latest"
+          python-version: "3.15"
+          activate-environment: true
+          enable-cache: true
+          # Pull requests restore the cache and never write it; only main saves it.
+          save-cache: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          prune-cache: true
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26"
+      - name: Bound apt dependency setup
+        run: |
+          sudo python3 -S scripts/configure_ci_apt.py
+          sudo apt-config dump Acquire::Retries Acquire::http::Timeout Acquire::https::Timeout APT::Update::Error-Mode
+      - name: Install isolated test-only Playwright and browser
+        timeout-minutes: 10
+        run: |
+          npm install --prefix build/clipboard-tools --no-save --ignore-scripts --package-lock=false playwright@1.64.1
+          node build/clipboard-tools/node_modules/playwright/cli.js install --with-deps ${{ matrix.browser }}
+      - name: Verify clipboard ingress in the static Pages build
+        env:
+          IRONMATE_BROWSERS: ${{ matrix.browser }}
+          IRONMATE_PLAYWRIGHT_MODULE: ${{ github.workspace }}/build/clipboard-tools/node_modules/playwright
+        run: node tests/studio_clipboard.cjs
+      - name: Preserve clipboard browser evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: studio-clipboard-${{ matrix.browser }}
+          path: build/studio-clipboard/
+          if-no-files-found: warn
+          retention-days: 14
+
+  failure-identity:
+    needs: [test, marp-integration]
+    if: always()
+    permissions:
+      contents: read
+      actions: read
+    uses: myon-bioinformatics/myon-bioinformatics/.github/workflows/reusable-junit-identity.yml@9e3da7ae1846e9604ebc24bb5178f7de094a4e77
+    with:
+      commit-sha: ${{ github.event.pull_request.head.sha || github.sha }}
+      expected-reports: '["junit-py3.15/pytest-3.15.xml","junit-controlled-py3.15/junit.xml","junit-marp/marp.xml"]'
+      artifact-pattern: "junit-*"
+      output-artifact: "failure-identity"

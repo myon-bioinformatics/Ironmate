@@ -1,26 +1,12 @@
-"""Reusable CLI building blocks. Python 3.10+, standard library only.
+"""Reusable CLI building blocks. Python 3.11+, standard library only.
 
 Importing this module never parses argv or starts a subprocess.
 External tools keep their own option semantics; pass their argv unchanged.
 """
 from __future__ import annotations
 
-import argparse
-import base64
-from difflib import get_close_matches
-from collections.abc import Sequence as SequenceABC
-from dataclasses import asdict, dataclass, field
-import json
-import math
-import os
-import re
-import shutil
-from pathlib import Path
-import subprocess
-import sys
-import tempfile
-from threading import Event, Lock, Thread
-from typing import Any, Iterable, Mapping, Sequence, TextIO
+import argparse, base64, json, math, os, re, shutil, subprocess, sys, tempfile
+from collections import deque; from collections.abc import Sequence as SequenceABC; from dataclasses import asdict, dataclass, field; from difflib import get_close_matches; from pathlib import Path; from threading import Event, Lock, Thread; from typing import Any, Iterable, Mapping, Sequence, TextIO
 
 
 __version__ = "0.0.0"
@@ -28,11 +14,23 @@ __version__ = "0.0.0"
 __all__ = [
     "Argument", "make_parser", "parse_args", "add_output_arguments",
     "add_execution_arguments", "add_node_arguments", "require_when",
-    "positive_seconds", "Command", "CommandResult", "run_command",
+    "positive_seconds", "requested_format", "write_error",
+    "EXIT_OK", "EXIT_FAILURE", "EXIT_USAGE", "EXIT_PARTIAL",
+    "Command", "CommandResult", "run_command",
     "render_output", "write_output", "pytest_command", "trim_output",
     "pytest_summary", "build_env", "NodeNotFoundError", "is_node_target",
     "resolve_node", "node_command", "run_node", "node_or_command",
 ]
+
+# Exit vocabulary shared by the agent-facing CLIs across the repositories
+# (xprobe, yourself, nvd_nist_known_vulns, gh_identity pr-checks, Err-o-RoadRunner).
+# A child's status is data inside the output, never this process exit.
+EXIT_OK = 0        # request handled
+EXIT_FAILURE = 1   # launch, I/O or runtime failure; nothing usable was produced
+EXIT_USAGE = 2     # usage error or rejected request (argparse's own code)
+EXIT_PARTIAL = 3   # a partial or pending result was still written (never usage)
+
+OUTPUT_FORMATS = ("text", "json")
 
 
 @dataclass(frozen=True)
@@ -49,16 +47,96 @@ class Argument:
         object.__setattr__(self, "names", names)
 
 
-class _SuggestingArgumentParser(argparse.ArgumentParser):
-    """Offer a closest *option* on unknown-argument errors, without accepting it."""
+def requested_format(argv: Sequence[str] | None = None, *, default: str = "text",
+                     choices: Sequence[str] = OUTPUT_FORMATS) -> str:
+    """Pre-parse scan for the last ``--format X`` / ``--format=X`` before ``--``.
+
+    Usage errors are raised before argparse has produced a namespace, so a CLI
+    that promises a JSON error record must learn the requested format from raw
+    argv. Only the exact ``--format`` spelling counts (parsers here reject
+    abbreviations). An unknown value falls back to ``default`` and is left for
+    argparse to reject.
+    """
+    tokens = list(sys.argv[1:] if argv is None else _tokens(argv))
+    value = None
+    index = 0
+    while index < len(tokens):
+        token = tokens[index]
+        if token == "--":
+            break
+        if token.startswith("--format="):
+            value = token[len("--format="):]
+        elif token == "--format":
+            value = tokens[index + 1] if index + 1 < len(tokens) else None
+            index += 1
+        index += 1
+    return value if value in tuple(choices) else default
+
+
+def write_error(message: str, *, error: str = "usage", exit_code: int = EXIT_USAGE,
+                format: str = "text", stream: TextIO | None = None,
+                extra: Mapping[str, Any] | None = None) -> int:
+    """Write one error record (text line or JSON object) and return ``exit_code``.
+
+    text: ``error: <error>: <message>`` on one line. json: one JSON object on one
+    line with ``ok`` false, ``error`` (a short machine code such as ``usage``,
+    ``io_error``, ``timeout``), ``message`` and ``exit_code``; ``extra`` keys are
+    added but can never shadow those four. Both go to stderr by default so stdout
+    stays reserved for the successful document.
+    """
+    if format not in OUTPUT_FORMATS:
+        raise ValueError("format must be text or json")
+    if type(exit_code) is not int:
+        raise TypeError("exit_code must be int")
+    if not re.fullmatch(r"[a-z][a-z0-9_]*", error):
+        raise ValueError("error must be a short snake_case code")
+    out = sys.stderr if stream is None else stream
+    text = str(message).replace("\r", " ").replace("\n", " ").strip()
+    if format == "json":
+        record: dict[str, Any] = dict(extra or {})
+        record.update({"ok": False, "error": error, "message": text, "exit_code": exit_code})
+        out.write(json.dumps(record, ensure_ascii=False, allow_nan=False, sort_keys=True) + "\n")
+    else:
+        out.write(f"error: {error}: {text}\n")
+    return exit_code
+
+
+_STDLIB_SUGGEST = sys.version_info >= (3, 14)  # argparse grew ``suggest_on_error`` in 3.14 (default True from 3.15)
+
+
+class _AgentArgumentParser(argparse.ArgumentParser):
+    """Agent ergonomics: typo hints and JSON usage errors. Parsing never changes.
+
+    ``suggest_unknown`` offers the closest *long option* on unknown-argument
+    errors (searching the chosen subcommand's options too), without accepting
+    it. ``suggest_on_error`` offers the closest *choice or subcommand name*
+    exactly as Python 3.15's argparse does, also on 3.11-3.13. ``json_errors``
+    turns every ``error()`` into one ``write_error`` JSON record when the argv
+    asked for ``--format json``; text mode keeps argparse's usage line and
+    message. The exit code stays 2.
+    """
+
+    suggest_unknown = False
+    json_errors = False
+    _cli_argv: list[str] | None = None
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        # Subparsers are built with parser_class=type(parent), so children inherit this default.
+        on = kwargs.pop("suggest_on_error", True)
+        if _STDLIB_SUGGEST:
+            kwargs["suggest_on_error"] = on
+        super().__init__(*args, **kwargs)
+        self.suggest_on_error = on
 
     def parse_args(self, args=None, namespace=None):
         # Keep structured argv: error text loses token and -- boundaries.
         tokens = list(sys.argv[1:] if args is None else args)
+        self._cli_argv = tokens
         parsed, extras = self.parse_known_args(tokens, namespace)
         if extras:
             message = argparse._("unrecognized arguments: %s") % " ".join(extras)
-            message += self._unknown_option_hint(tokens, extras)
+            if self.suggest_unknown:
+                message += self._unknown_option_hint(tokens, extras)
             # argparse honors exit_on_error here starting with 3.12.5.
             # Earlier releases always call error(), even when it is false.
             if sys.version_info >= (3, 12, 5) and not self.exit_on_error:
@@ -66,12 +144,52 @@ class _SuggestingArgumentParser(argparse.ArgumentParser):
             self.error(message)
         return parsed
 
+    def error(self, message):
+        # A typo'd option can surface as a different error first (e.g. its value read as a
+        # subcommand name, or a required option reported missing); point at it there too.
+        if self.suggest_unknown and self._cli_argv is not None and "(did you mean " not in message:
+            message += self._unknown_option_hint(self._cli_argv, self._cli_argv)
+        if self.json_errors and requested_format(self._cli_argv) == "json":
+            write_error(message, error="usage", exit_code=EXIT_USAGE, format="json")
+            self.exit(EXIT_USAGE)
+        super().error(message)
+
+    if not _STDLIB_SUGGEST:
+        def _check_value(self, action, value):
+            # Backport of the 3.14+ wording so every supported Python says the same thing.
+            try:
+                super()._check_value(action, value)
+            except argparse.ArgumentError as exc:
+                choices = action.choices
+                if (not self.suggest_on_error or not isinstance(value, str) or isinstance(choices, str)
+                        or not all(isinstance(choice, str) for choice in choices)):
+                    raise
+                close = get_close_matches(value, list(choices), 1)
+                head, sep, tail = exc.message.partition(" (choose from ")
+                if not close or not sep:
+                    raise
+                raise argparse.ArgumentError(action, f"{head}, maybe you meant {close[0]!r}?{sep}{tail}") from None
+
+    def _option_pool(self, tokens):
+        """Long options visible along the subcommand path the argv selected: {option: hidden}."""
+        pool: dict[str, bool] = {}
+        parser: argparse.ArgumentParser | None = self
+        rest = list(tokens)
+        while parser is not None:
+            pool.update({option: action.help == argparse.SUPPRESS
+                         for action in parser._actions for option in action.option_strings
+                         if option.startswith("--")})
+            sub = next((a for a in parser._actions if isinstance(a, argparse._SubParsersAction)), None)
+            index = next((i for i, token in enumerate(rest) if sub is not None and token in sub.choices), None)
+            if index is None:
+                break
+            parser, rest = sub.choices[rest[index]], rest[index + 1:]
+        return pool
+
     def _unknown_option_hint(self, tokens, extras):
         boundary = tokens.index("--") if "--" in tokens else len(tokens)
         wrapper_tokens = tokens[:boundary]
-        options = {option: action.help == argparse.SUPPRESS
-                   for action in self._actions for option in action.option_strings
-                   if option.startswith("--")}
+        options = self._option_pool(wrapper_tokens)
         for token in extras:
             if token == "--":
                 break
@@ -90,14 +208,30 @@ class _SuggestingArgumentParser(argparse.ArgumentParser):
         return ""
 
 
-def make_parser(arguments: Iterable[Argument] = (), *, suggest_unknown: bool = False,
-                **kwargs: Any) -> argparse.ArgumentParser:
-    """Create a parser; optional unknown-option hints never change parsing."""
+def make_parser(arguments: Iterable[Argument] = (), *, suggest_unknown: bool = True,
+                json_errors: bool = False, **kwargs: Any) -> argparse.ArgumentParser:
+    """Create a parser; typo hints (on by default) and JSON usage errors never change parsing.
+
+    ``suggest_unknown=False`` restores plain argparse diagnostics, including on
+    Python 3.15+ where argparse itself suggests choices unless told otherwise.
+    Pass ``suggest_on_error=`` to control choice/subcommand hints separately.
+    """
     if type(suggest_unknown) is not bool:
         raise TypeError("suggest_unknown must be bool")
+    if type(json_errors) is not bool:
+        raise TypeError("json_errors must be bool")
     kwargs.setdefault("allow_abbrev", False)
-    parser_class = _SuggestingArgumentParser if suggest_unknown else argparse.ArgumentParser
-    parser = parser_class(**kwargs)
+    if suggest_unknown or json_errors:
+        kwargs.setdefault("suggest_on_error", suggest_unknown)
+        parser: argparse.ArgumentParser = _AgentArgumentParser(**kwargs)
+        parser.suggest_unknown = suggest_unknown  # type: ignore[attr-defined]
+        parser.json_errors = json_errors  # type: ignore[attr-defined]
+    else:
+        if _STDLIB_SUGGEST:
+            kwargs.setdefault("suggest_on_error", False)
+        else:
+            kwargs.pop("suggest_on_error", None)
+        parser = argparse.ArgumentParser(**kwargs)
     for argument in arguments:
         parser.add_argument(*argument.names, **argument.kwargs)
     return parser
@@ -119,13 +253,24 @@ def positive_seconds(value: str) -> float:
     return number
 
 
-def add_output_arguments(parser: argparse.ArgumentParser) -> None:
+def add_output_arguments(parser: argparse.ArgumentParser, *, json_flag: bool = False) -> None:
+    """Add ``--format text|json`` and ``--output``; ``json_flag`` adds ``--json`` as sugar.
+
+    Most CLIs across the repositories grew a boolean ``--json`` before ``--format``
+    existed. With ``json_flag=True`` both spellings set the same ``format``
+    destination, so a caller can migrate without breaking existing invocations.
+    """
+    if type(json_flag) is not bool:
+        raise TypeError("json_flag must be bool")
     parser.add_argument(
         "--format",
-        choices=("text", "json"),
+        choices=OUTPUT_FORMATS,
         default="text",
         help="text renders a human document; json writes one JSON document (default: text)",
     )
+    if json_flag:
+        parser.add_argument("--json", action="store_const", const="json", dest="format",
+                            help="shorthand for --format json")
     parser.add_argument("--output", type=Path, help="UTF-8 output file; default: stdout")
 
 
@@ -563,25 +708,54 @@ def pytest_command(paths: Sequence[str] = (), *, quiet: bool = False,
             .passthrough(extra).positional(*path_tokens))
 
 
-def trim_output(text: str, *, head: int = 40, tail: int = 40) -> str:
+def trim_output(text: str, *, head: int = 40, tail: int = 40, bounded_memory: bool = False) -> str:
     """Keep the first ``head`` and last ``tail`` lines with an explicit omission marker.
 
     A log cut with ``head``/``tail`` silently looks complete; here the gap is a line
     ``... N line(s) omitted ...`` so a reader (or an agent) knows output is missing.
     Text that already fits is returned unchanged; a trailing newline is kept.
+    ``bounded_memory=True`` retains only head/tail line spans instead of splitting
+    all lines. This reduces temporary memory usage but can be slower; the input
+    string remains in memory. ``bounded_memory`` must be a bool.
     """
     if not isinstance(text, str):
         raise TypeError("text must be str")
     for value in (head, tail):
         if type(value) is not int or value < 0:
             raise ValueError("head and tail must be nonnegative integers")
-    lines = text.splitlines(keepends=True)
-    if len(lines) <= head + tail:
-        return text
-    omitted = len(lines) - head - tail
-    kept_tail = lines[len(lines) - tail:] if tail else []
+    if type(bounded_memory) is not bool:
+        raise TypeError("bounded_memory must be bool")
+    if not bounded_memory:
+        lines = text.splitlines(keepends=True)
+        if len(lines) <= head + tail:
+            return text
+        omitted = len(lines) - head - tail
+        kept_tail = lines[-tail:] if tail else []
+        first = None
+    else:
+        # Match exactly str.splitlines boundaries without allocating every line.
+        first = []
+        last = deque(maxlen=tail)
+        start = total = 0
+        for match in re.finditer(r"\r\n|[\n\r\v\f\x1c-\x1e\x85\u2028\u2029]", text):
+            span = (start, match.end())
+            if total < head:
+                first.append(span)
+            last.append(span)
+            total += 1
+            start = match.end()
+        if start < len(text):
+            span = (start, len(text))
+            if total < head:
+                first.append(span)
+            last.append(span)
+            total += 1
+        if total <= head + tail:
+            return text
+        omitted = total - head - tail
+        kept_tail = [text[a:b] for a, b in last]
     gap = f"... {omitted} line(s) omitted ...\n"
-    body = "".join(lines[:head])
+    body = "".join(text[a:b] for a, b in first) if bounded_memory else "".join(lines[:head])
     if body and not body.endswith(("\n", "\r")):
         body += "\n"
     return body + gap + "".join(kept_tail)
@@ -892,7 +1066,7 @@ def _cli_run() -> int:
         )
     except OSError as exc:
         print(str(exc), file=sys.stderr)
-        return 1
+        return EXIT_FAILURE
     body = json.dumps(
         _command_result_cli_json(result, stdout_raw, stderr_raw),
         ensure_ascii=False,
@@ -900,20 +1074,20 @@ def _cli_run() -> int:
         indent=2,
     ) + "\n"
     _emit_cli_stdout(body, request["response_max_bytes"])
-    return 0
+    return EXIT_OK
 
 
 def _cli_render(format: str, response_max_bytes: int | None) -> int:
     payload = _load_stdin_json()
     if format == "json":
         _emit_cli_json_stdout(payload, response_max_bytes)
-        return 0
+        return EXIT_OK
     try:
         rendered = render_output(payload, format=format)
     except ValueError as exc:
         raise _CliRequestError(str(exc)) from exc
     _emit_cli_stdout(rendered, response_max_bytes)
-    return 0
+    return EXIT_OK
 
 
 def _main(argv: Sequence[str] | None = None) -> int:
@@ -959,24 +1133,24 @@ def _main(argv: Sequence[str] | None = None) -> int:
         args = parser.parse_args(None if argv is None else list(argv))
     except argparse.ArgumentError as exc:
         print(str(exc), file=sys.stderr)
-        return 2
+        return EXIT_USAGE
     if args.command is None:
         parser.print_usage(sys.stderr)
         print("cli_args.py: error: command required (run or render)", file=sys.stderr)
-        return 2
+        return EXIT_USAGE
     try:
         if args.command == "run":
             return _cli_run()
         return _cli_render(args.format, args.response_max_bytes)
     except _CliRequestError as exc:
         print(str(exc), file=sys.stderr)
-        return 2
+        return EXIT_USAGE
     except _CliResponseTooLargeError as exc:
         print(str(exc), file=sys.stderr)
-        return 1
+        return EXIT_FAILURE
     except Exception as exc:
         print(str(exc) or exc.__class__.__name__, file=sys.stderr)
-        return 1
+        return EXIT_FAILURE
 
 
 if __name__ == "__main__":

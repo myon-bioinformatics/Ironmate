@@ -1,11 +1,6 @@
 """Opt-in real renderer check, run in the existing Marp/browser CI lane."""
-import base64
-import hashlib
-import json
-import os
+import base64, hashlib, json, os, subprocess, sys
 from pathlib import Path
-import subprocess
-import sys
 
 import pytest
 

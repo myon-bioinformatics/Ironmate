@@ -130,11 +130,11 @@ def run(folder, out):
     return report
 
 
-def main():
+def main(argv=None):
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--evidence',type=Path,default=ROOT/'docs/evidence/studio-quality')
     p.add_argument('--out',type=Path,required=True)
-    args=p.parse_args()
+    args=p.parse_args(argv)
     run(args.evidence,args.out)
 
 

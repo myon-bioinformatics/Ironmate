@@ -124,13 +124,15 @@ def public_assets():
              'brand/app-512.png', 'brand/app-maskable-512.png',
              'brand/icon.svg', 'brand/heatmap.svg', 'brand/hero.svg', 'brand/favicon.ico', 'brand/favicon-16.png',
              'brand/favicon-32.png', 'brand/favicon-48.png', 'brand/icon-192.png',
+             'brand/example-demo.gif', 'brand/example-stamp-demo.gif',
              'slides/package.js', 'slides/pptx.js', 'slides/slides.js', 'slides/slides.css')
     assets = {name: (ROOT / 'studio' / name).read_bytes() for name in names}
     from scripts.pages_catalog import catalog_script
     assets['tools/catalog.js'] = catalog_script()
     page = assets['index.html'].decode('utf-8')
     for name in ('style.css', 'core.js', 'studio.js', 'brand/icon.svg', 'brand/heatmap.svg', 'brand/favicon.ico',
-                 'brand/manifest.webmanifest', 'brand/apple-touch-icon.png'):
+                 'brand/manifest.webmanifest', 'brand/apple-touch-icon.png',
+                 'brand/example-demo.gif', 'brand/example-stamp-demo.gif'):
         page = page.replace('"' + name + '"', '"../' + name + '"')
     page = page.replace('href="tools/"', 'href="../tools/"')
     page = page.replace('<a href="slides/">スライド・PPTX作成 ↗</a>', '<a href="../">Image Studio ↗</a>')
@@ -278,7 +280,7 @@ class StudioHandler(BaseHTTPRequestHandler):
             self.send_error(404)
             return
         mime = {'.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css',
-                '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json'}[Path(filename).suffix]
+                '.svg': 'image/svg+xml', '.png': 'image/png', '.gif': 'image/gif', '.ico': 'image/x-icon', '.webmanifest': 'application/manifest+json'}[Path(filename).suffix]
         payload = assets[filename]
         self.send_response(200)
         self.send_header('Content-Type', mime + ('; charset=utf-8' if Path(filename).suffix in ('.html', '.js', '.css', '.svg') else ''))

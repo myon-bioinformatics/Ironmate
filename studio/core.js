@@ -480,12 +480,12 @@
       if (this.items.length > 40) this.items.shift();
       this.index = this.items.length - 1;
     }
-    undo() {
-      this.index = Math.max(0, this.index - 1);
+    undo(steps = 1) {
+      this.index = Math.max(0, this.index - steps);
       return this.current;
     }
-    redo() {
-      this.index = Math.min(this.items.length - 1, this.index + 1);
+    redo(steps = 1) {
+      this.index = Math.min(this.items.length - 1, this.index + steps);
       return this.current;
     }
   }

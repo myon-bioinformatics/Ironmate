@@ -55,7 +55,7 @@ def test_static_allowlist_excludes_private_scenes_and_generation_inputs(tmp_path
         'brand/manifest.webmanifest', 'brand/apple-touch-icon.png', 'brand/app-192.png',
         'brand/app-512.png', 'brand/app-maskable-512.png',
         'brand/icon.svg', 'brand/heatmap.svg', 'brand/hero.svg', 'brand/favicon.ico', 'brand/favicon-16.png',
-        'brand/favicon-32.png', 'brand/favicon-48.png', 'brand/icon-192.png',
+        'brand/favicon-32.png', 'brand/favicon-48.png', 'brand/icon-192.png', 'brand/example-demo.gif', 'brand/example-stamp-demo.gif',
         'slides/index.html', 'slides/package.js', 'slides/pptx.js', 'slides/slides.js', 'slides/slides.css'}
     assert not list(target.rglob('*.py')) and not list(target.rglob('*.json'))
     assert 'href="tools/"' in (target / 'index.html').read_text()

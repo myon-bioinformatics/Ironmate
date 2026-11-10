@@ -107,6 +107,8 @@ Even when a color font has built-in colors, it does not rely on simply changing 
 Making a photo monochrome fills its whole opaque area. It is not outline extraction or subject cutout.
 Emoticons can be added freely through text input. `等幅` (monospace) can be chosen for ASCII art.
 `時計・矢印・顔文字の例` (clock / arrow / emoticon example) lets you try it right away.
+An example button only shows a GIF of that example (pressing it by mistake changes nothing); `▶ 開く` under the GIF loads it onto the canvas.
+`⏪` / `⏩` in the header go back / forward two states at once (`↶` / `↷` one).
 
 ## Output scale and CLI
 

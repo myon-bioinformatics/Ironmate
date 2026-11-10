@@ -26,6 +26,16 @@ test("workspace restores selected index, redo branch, Unicode and detached state
   assert.equal(new TextEncoder().encode(text).length, new Blob([text]).size);
 });
 
+test("undo and redo take a step count and stop at both ends", () => {
+  const h = new C.History(blank());
+  for (const background of ["#111111", "#222222", "#333333"]) h.commit({...h.current, background});
+  assert.equal(h.undo(2).background, "#111111");
+  assert.equal(h.redo(2).background, "#333333");
+  assert.equal(h.undo(9).background, "none");
+  assert.equal(h.redo(9).background, "#333333");
+  assert.equal(h.undo().background, "#222222");
+});
+
 test("workspace validates index, schema, count and every scene before returning", () => {
   const record = JSON.parse(C.workspaceText(history()));
   for (const patch of [{schema:"wrong"},{index:-1},{index:2},{index:0.5},{items:[]},

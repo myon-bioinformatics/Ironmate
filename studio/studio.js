@@ -158,8 +158,8 @@ function updateInspector() {
   $("continuous").disabled = l?.kind !== "heatmap";
   for (const id of ["delete", "duplicate", "front", "back", "custom"])
     $(id).disabled = !l;
-  $("undo").disabled = history.index === 0;
-  $("redo").disabled = history.index === history.items.length - 1;
+  $("undo").disabled = $("undo-2").disabled = history.index === 0;
+  $("redo").disabled = $("redo-2").disabled = history.index === history.items.length - 1;
   $("size-note").textContent = `${scene.width} × ${scene.height}`;
   $("canvas-width").value = scene.width;
   $("canvas-height").value = scene.height;
@@ -375,18 +375,14 @@ $("custom").onclick = () => {
     $("stamp-note").textContent = `「${l.name || l.kind}」を繰り返し押せます`;
   }
 };
-$("undo").onclick = () => {
-  scene = history.undo();
-  dirty = true;
-  selected = null;
-  render().catch(error);
-};
-$("redo").onclick = () => {
-  scene = history.redo();
-  dirty = true;
-  selected = null;
-  render().catch(error);
-};
+// ↶ ↷ move one state, ⏪ ⏩ two (data-steps); History clamps at both ends.
+for (const [id, move] of [["undo", "undo"], ["undo-2", "undo"], ["redo", "redo"], ["redo-2", "redo"]])
+  $(id).onclick = () => {
+    scene = history[move](Number($(id).dataset.steps || 1));
+    dirty = true;
+    selected = null;
+    render().catch(error);
+  };
 $("duplicate").onclick = guarded(() => {
   const l = copy(selectedLayer());
   l.id = uid();
@@ -897,14 +893,30 @@ function demo() {
   });
   return doc;
 }
-$("demo").onclick = () => {
-  const next = demo();
-  history.commit(next);
-  scene = next;
+// An example button only shows its GIF (pressing it by mistake changes nothing); ▶ in the GIF's figure loads it.
+const EXAMPLES = {
+  demo: [demo, "独自の合成サンプルです。データは説明用の架空値です。"],
+  "stamp-demo": [stampDemo, "時計も顔文字も、保持した図形・文字を拡大して再描画します。"],
+};
+let example = null;
+for (const id of Object.keys(EXAMPLES))
+  $(id).onclick = () => {
+    example = example === id ? null : id;
+    $("example-view").hidden = !example;
+    for (const other of Object.keys(EXAMPLES)) $(other).setAttribute("aria-expanded", String(other === example));
+    if (example) {
+      $("example-gif").src = $(id).dataset.gif;
+      $("example-gif").alt = $(id).textContent.trim();
+    }
+  };
+$("example-open").onclick = () => {
+  const [build, note] = EXAMPLES[example];
+  scene = build();
+  history.commit(scene);
   selected = null;
   dirty = true;
   render().catch(error);
-  message("独自の合成サンプルです。データは説明用の架空値です。");
+  message(note);
 };
 function stampDemo() {
   const d = blank();
@@ -970,14 +982,6 @@ function stampDemo() {
   ];
   return d;
 }
-$("stamp-demo").onclick = () => {
-  scene = stampDemo();
-  history.commit(scene);
-  selected = null;
-  dirty = true;
-  render().catch(error);
-  message("時計も顔文字も、保持した図形・文字を拡大して再描画します。");
-};
 window.addEventListener("beforeunload", (e) => {
   if (dirty && document.body.dataset.mode !== "slides") {
     e.preventDefault();

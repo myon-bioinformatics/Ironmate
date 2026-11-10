@@ -23,6 +23,7 @@ module.exports = async function ({ page, out, root, download }) {
     );
   await page.setViewportSize({ width: 1600, height: 1100 });
   await page.click("#stamp-demo");
+  await page.click("#example-open");
   await page.evaluate(() => IronmateStudio.ready);
   const stamps = await page.evaluate(() => IronmateStudio.scene);
   assert(

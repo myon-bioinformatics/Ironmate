@@ -85,6 +85,9 @@ input[type=checkbox]{{display:inline;width:auto;margin:0 7px 0 0}}
 .canvas-footer{{display:flex;justify-content:space-between;gap:10px;font-size:10px;line-height:1.5;color:var(--ui-muted);margin:16px 0}}
 .examples{{display:flex;flex-wrap:wrap;gap:8px;align-items:center;border-top:1px solid var(--ui-border);padding-top:24px;margin-top:30px}}
 .examples label{{margin:0;max-width:76px}}
+.example-view{{margin:16px 0 0}}
+.example-view img{{display:block;max-width:100%;height:auto;border:1px solid var(--ui-border)}}
+.example-view figcaption{{margin-top:8px}}
 .examples input[type=color]{{width:45px}}
 .examples input[type=number]{{width:68px}}
 .examples .check{{max-width:none}}

@@ -6,7 +6,15 @@
   },
   "dependencies": {
     "@marp-team/marp-cli": "4.5.1",
-    "@mermaid-js/mermaid-cli": "12.0.0",
+    "@mermaid-js/mermaid-cli": "12.2.0",
     "puppeteer": "25.15.0"
+  },
+  "overrides": {
+    "@marp-team/marp-cli": {
+      "puppeteer-core": "25.15.0"
+    },
+    "@marp-team/marp-core": {
+      "katex": "0.18.10"
+    }
   }
 }

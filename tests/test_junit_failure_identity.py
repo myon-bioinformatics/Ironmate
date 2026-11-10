@@ -159,3 +159,25 @@ def test_mcp_workflow_uses_locked_marp_tools():
     assert root_package['devDependencies']['playwright'] == '1.64.1'
     assert root_lock['packages']['node_modules/playwright']['version'] == '1.64.1'
     assert 'playwright' not in tools['dependencies']
+
+
+def test_locked_marp_tools_keep_security_overrides_scoped():
+    tools = json.loads((ROOT / 'scripts/marp-tools/package.json').read_text())
+    lock = json.loads((ROOT / 'scripts/marp-tools/package-lock.json').read_text())
+    assert tools['dependencies']['@marp-team/marp-cli'] == '4.5.1'
+    assert tools['dependencies']['@mermaid-js/mermaid-cli'] == '12.2.0'
+    assert tools['overrides'] == {
+        '@marp-team/marp-cli': {'puppeteer-core': '25.15.0'},
+        '@marp-team/marp-core': {'katex': '0.18.10'},
+    }
+    packages = lock['packages']
+    assert packages['']['dependencies'] == tools['dependencies']
+    for name, version in (('puppeteer-core', '25.15.0'),
+                          ('katex', '0.18.10'), ('zod', '4.6.7')):
+        copies = [package for path, package in packages.items()
+                  if path.endswith('/node_modules/' + name)
+                  or path == 'node_modules/' + name]
+        assert copies, f'{name} must remain in the verified toolchain'
+        assert all(package['version'] == version for package in copies)
+    assert not any(path == 'node_modules/basic-ftp'
+                   or path.endswith('/node_modules/basic-ftp') for path in packages)

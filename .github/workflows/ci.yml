@@ -163,12 +163,12 @@ jobs:
         run: |
           time uv sync --locked
           du -sk .venv "$(uv cache dir)"
-      # Pin Mermaid's Puppeteer peer too: a floating peer can select a newly
-      # published puppeteer before its exact puppeteer-core release is available.
-      - name: Install pinned Node packages and pinned Marp CLI
+      # Share the audited, locked test-only CLIs with mcp-tests.yml without
+      # replacing the root Playwright installation used by browser tests.
+      - name: Install pinned Node packages and the locked Marp CLI tools
         run: |
           npm ci
-          npm install --no-save --ignore-scripts @marp-team/marp-cli@4.5.1 @mermaid-js/mermaid-cli@12.0.0 puppeteer@25.15.0 playwright@1.58.2
+          npm ci --prefix scripts/marp-tools --ignore-scripts --no-audit --no-fund
       - name: Bound apt dependency setup
         run: |
           sudo python3 -S scripts/configure_ci_apt.py
@@ -197,15 +197,15 @@ jobs:
         env:
           IRONMATE_RUN_MARP_INTEGRATION: "1"
           IRONMATE_RUN_UNO_INTEGRATION: "1"
-          IRONMATE_MARP_BIN: node_modules/.bin/marp
-          IRONMATE_MMDC_BIN: node_modules/.bin/mmdc
+          IRONMATE_MARP_BIN: scripts/marp-tools/node_modules/.bin/marp
+          IRONMATE_MMDC_BIN: scripts/marp-tools/node_modules/.bin/mmdc
           PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome
         run: uv run --locked python -m pytest -q tests/test_marp_pptx.py tests/test_uno_roundtrip.py --junitxml=build/test-results/marp.xml
       - name: Exercise common JSON flow formats and browser pixel parity
         env:
           IRONMATE_RUN_FLOW_INTEGRATION: "1"
           IRONMATE_FLOW_REQUIRE_CJK: "1"
-          IRONMATE_MMDC_BIN: node_modules/.bin/mmdc
+          IRONMATE_MMDC_BIN: scripts/marp-tools/node_modules/.bin/mmdc
           IRONMATE_CHROME: /usr/bin/google-chrome
           PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome
         run: |

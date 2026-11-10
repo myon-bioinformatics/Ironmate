@@ -1,8 +1,8 @@
 # Locked Marp integration tools
 
-`mcp-tests.yml` installs this package with `npm ci --prefix scripts/marp-tools
---ignore-scripts`. These are test tools, not Ironmate runtime dependencies. The
-legacy `ci.yml` has a separate installation and is not changed here.
+Both `ci.yml` and `mcp-tests.yml` install this package with `npm ci --prefix scripts/marp-tools
+--ignore-scripts`. These are test tools, not Ironmate runtime dependencies. The root
+locked Playwright installation remains separate and is never replaced by these tools.
 
 ## Temporary security overrides
 

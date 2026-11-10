@@ -25,8 +25,10 @@
         <a href="slides/">スライド・PPTX作成 ↗</a>
         <a href="tools/">ドット絵・画像一覧 ↗</a>
         <a href="https://myon-bioinformatics.github.io/#ironmate">ポートフォリオ ↗</a>
+        <button id="undo-2" data-steps="2" title="2つ戻す" aria-label="2つ戻す">⏪</button>
         <button id="undo">↶ 戻す</button>
         <button id="redo">↷ やり直す</button>
+        <button id="redo-2" data-steps="2" title="2つやり直す" aria-label="2つやり直す">⏩</button>
         <button id="save">JSON保存</button>
         <button id="shelf-button">クリップボード・シェルフ</button>
         <button id="save-workspace">作業履歴を保存</button>
@@ -133,8 +135,8 @@
           ><span>ドラッグで移動 / 右下の点で拡縮</span>
         </div>
         <div class="examples">
-          <button id="stamp-demo">◷ 時計・矢印・顔文字の例</button
-          ><button id="demo">✦ スタンプとヒートマップの例</button
+          <button id="stamp-demo" data-gif="brand/example-stamp-demo.gif" aria-controls="example-view" aria-expanded="false">◷ 時計・矢印・顔文字の例</button
+          ><button id="demo" data-gif="brand/example-demo.gif" aria-controls="example-view" aria-expanded="false">✦ スタンプとヒートマップの例</button
           ><button id="blank">＋ 新しいキャンバス</button
           ><label
             >背景<input id="background" type="color" value="#f8f7f2" /></label
@@ -156,6 +158,9 @@
               max="4096" /></label
           ><button id="canvas-size">適用</button>
         </div>
+        <figure id="example-view" class="example-view" hidden>
+          <img id="example-gif" alt="" width="640" height="432" />
+        </figure>
         <div class="note">
           PNGは表示と同じ構成を画像化。SVGは図形・文字を保持。JSONで元画像とレイヤーを再編集できます。
         </div>

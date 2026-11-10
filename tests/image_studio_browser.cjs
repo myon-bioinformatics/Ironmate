@@ -440,6 +440,15 @@ const failures = [],
   await page.locator("#error button").click();
   await page.setViewportSize({ width: 390, height: 844 });
   await page.click("#demo");
+  // The example button only shows its GIF; the scene stays as it was.
+  const beforeExample = await page.evaluate(() => JSON.stringify(IronmateStudio.scene));
+  await page.waitForFunction(() => {
+    const img = document.getElementById("example-gif");
+    return img.src.endsWith("brand/example-demo.gif") && img.complete && img.naturalWidth === 640;
+  });
+  assert.equal(await page.evaluate(() => JSON.stringify(IronmateStudio.scene)), beforeExample);
+  await page.click("#demo");
+  assert(await page.locator("#example-view").isHidden());
   await page.evaluate(() => window.IronmateStudio.ready);
   await page.screenshot({ path: path.join(out, "mobile.png"), fullPage: true });
   assert(

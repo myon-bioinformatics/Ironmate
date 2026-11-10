@@ -106,7 +106,8 @@ Setting text, emoticons, emoji or images to `単色で描く` (draw in one color
 Even when a color font has built-in colors, it does not rely on simply changing the text fill.
 Making a photo monochrome fills its whole opaque area. It is not outline extraction or subject cutout.
 Emoticons can be added freely through text input. `等幅` (monospace) can be chosen for ASCII art.
-`時計・矢印・顔文字の例` (clock / arrow / emoticon example) lets you try it right away.
+An example button (`時計・矢印・顔文字の例`, clock / arrow / emoticon; `スタンプとヒートマップの例`, stamps and heatmap) only shows a GIF of that example; nothing is loaded onto the canvas, so pressing it by mistake changes nothing.
+`⏪` / `⏩` in the header go back / forward two states at once (`↶` / `↷` one).
 
 ## Output scale and CLI
 

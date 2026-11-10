@@ -20,7 +20,7 @@ def test_build_site_contains_only_public_client_assets_and_relative_paths(tmp_pa
         'gameboy.svg', 'pixel-3d.svg', 'manifest.webmanifest', 'apple-touch-icon.png',
         'app-192.png', 'app-512.png', 'app-maskable-512.png', 'icon.svg',
         'heatmap.svg', 'hero.svg', 'favicon.ico', 'favicon-16.png', 'favicon-32.png',
-        'favicon-48.png', 'icon-192.png',
+        'favicon-48.png', 'icon-192.png', 'example-demo.gif', 'example-stamp-demo.gif',
     }
     assert {p.relative_to(target/'brand').as_posix() for p in (target/'brand').rglob('*')} == brand_files
     for name in brand_files:

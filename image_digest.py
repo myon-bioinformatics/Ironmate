@@ -21,15 +21,8 @@ pixels. Standard library only; image_digest.cjs is the Node entry point.
 """
 from __future__ import annotations
 
-import argparse
-import base64
-import html
-import json
-import os
+import argparse, base64, html, json, os, re, stat, sys
 from pathlib import Path
-import re
-import stat
-import sys
 
 from browser_matrix import encode_png, tile as thumbnail
 from photo_grid import decode_png

@@ -4,9 +4,7 @@ Pure validation only: OS picker/camera/clipboard permissions belong to adapters.
 """
 from __future__ import annotations
 
-import base64
-import binascii
-import re
+import base64, binascii, re
 
 MAX_BYTES = 32 * 1024 * 1024
 _DATA = re.compile(r"^data:([a-z0-9.+-]+/[a-z0-9.+-]+)?(?:;[a-z0-9.+-]+=[a-z0-9.+-]+)*;base64,", re.I)

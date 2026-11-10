@@ -1,5 +1,4 @@
-import io
-import itertools
+import io, itertools
 import pytest
 from scripts.observable_choice import ObservableChoice, Prototype
 from scripts.stream_phase_report import csv_spins

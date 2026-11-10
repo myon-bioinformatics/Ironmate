@@ -1,7 +1,5 @@
 """Board enumeration is an independent existence oracle, never the solver."""
-import ast
-import inspect
-import itertools
+import ast, inspect, itertools
 import pytest
 from scripts import boundary_synthesis as module
 from scripts.boundary_twins import evaluate_rule, audit_boundary_twins

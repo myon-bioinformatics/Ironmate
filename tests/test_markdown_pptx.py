@@ -1,8 +1,5 @@
-import subprocess
-import sys
-import zipfile
-from pathlib import Path
-from xml.etree import ElementTree as ET
+import subprocess, sys, zipfile
+from pathlib import Path; from xml.etree import ElementTree as ET
 
 import pytest
 from pptx import Presentation

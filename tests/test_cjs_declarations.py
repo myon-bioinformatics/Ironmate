@@ -4,11 +4,8 @@ Names only; CI type-checks the declarations themselves with tsc. CLI-only script
 (studio/raster.cjs, studio/render.cjs) run on load and export nothing, so they are
 never required here and must not have a declaration.
 """
-import json
+import json, re, shutil, subprocess
 from pathlib import Path
-import re
-import shutil
-import subprocess
 
 import pytest
 

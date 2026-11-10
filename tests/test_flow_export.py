@@ -1,13 +1,6 @@
 """Contract reuse, failure behavior and transport identity for flow exports."""
-import base64
-import copy
-import json
-import math
-import subprocess
-import sys
-from pathlib import Path
-from types import SimpleNamespace
-from xml.etree import ElementTree as ET
+import base64, copy, json, math, subprocess, sys
+from pathlib import Path; from types import SimpleNamespace; from xml.etree import ElementTree as ET
 
 import pytest
 

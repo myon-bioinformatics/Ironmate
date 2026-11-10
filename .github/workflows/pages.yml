@@ -1,4 +1,4 @@
-name: Ironmate Tools Pages
+name: Pages
 
 on:
   push:
@@ -16,7 +16,7 @@ on:
         "tests/test_pages_tools.py",
         "tests/slides_browser.cjs",
         "tests/test_browser_slides.py",
-        ".github/workflows/studio-pages.yml",
+        ".github/workflows/pages.yml",
       ]
   pull_request:
     paths:
@@ -32,7 +32,7 @@ on:
         "tests/test_pages_tools.py",
         "tests/slides_browser.cjs",
         "tests/test_browser_slides.py",
-        ".github/workflows/studio-pages.yml",
+        ".github/workflows/pages.yml",
       ]
   workflow_dispatch:
 

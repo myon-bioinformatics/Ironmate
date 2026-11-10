@@ -4,12 +4,8 @@ The Node script is allowlisted and does not edit OOXML. Ironmate owns the
 JSON ↔ XML mapping, so the slide parts written here are the reversible subset
 rather than PptxGenJS's extra run properties.
 """
-import json
-import shutil
-import subprocess
-import tempfile
-from pathlib import Path
-from zipfile import ZipFile
+import json, shutil, subprocess, tempfile
+from pathlib import Path; from zipfile import ZipFile
 
 from ironlib.pptx_mapping import EMU_PER_INCH, canonical_spec, public_slide, read_slide_xml, write_slide_xml
 from ironlib.pptx_ooxml import copy_with_replacements, ordered_slide_members, reorder_sld_id_lst, set_sld_sz

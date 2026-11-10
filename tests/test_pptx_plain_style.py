@@ -1,6 +1,5 @@
 """PPTX-first styling contracts and explicit Open XML fallback boundaries."""
-from zipfile import ZipFile
-from xml.etree import ElementTree as ET
+from xml.etree import ElementTree as ET; from zipfile import ZipFile
 
 import pytest
 from pptx import Presentation

@@ -1,15 +1,6 @@
 """Cross-runtime color/mosaic oracles, editable data, local server and output contracts."""
-import functools
-import json
-import random
-import shutil
-import subprocess
-import sys
-import threading
-import urllib.error
-import urllib.request
-from http.server import ThreadingHTTPServer
-from pathlib import Path
+import functools, json, random, shutil, subprocess, sys, threading, urllib.error, urllib.request
+from http.server import ThreadingHTTPServer; from pathlib import Path
 
 import pytest
 

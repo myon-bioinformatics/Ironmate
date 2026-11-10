@@ -1,6 +1,5 @@
 """Input-mode tests without requiring Marp or a browser."""
-import io
-import json
+import io, json
 from pathlib import Path
 
 import pytest

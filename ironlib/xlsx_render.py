@@ -4,10 +4,7 @@
 needs neither Node.js nor npm packages. ``exceljs`` writes and reads the same subset
 through Node and ExcelJS and is the independent oracle for the tests.
 """
-import json
-import shutil
-import subprocess
-import tempfile
+import json, shutil, subprocess, tempfile
 from pathlib import Path
 
 from ironlib.xlsx_ooxml import canonicalize, write_package

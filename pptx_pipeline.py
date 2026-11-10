@@ -2,19 +2,11 @@
 
 No promise of Mermaid rendering unless a configured Marp renderer supports it.
 """
-import json
-import csv
-import tomllib
-from zipfile import ZipFile
+import csv, json, os, shutil, subprocess, sys, tempfile, tomllib
+from pathlib import Path; from zipfile import ZipFile
 from vendor.markdown import markdown_table_to_rows
-import os
-from pathlib import Path
-import sys
-import tempfile
 
 from vendor.cli_args import Argument, make_parser
-import shutil
-import subprocess
 from ironlib.mermaid_svg import render_mermaid
 from pptx_inspect import inspect
 from ironlib.pptx_ooxml import append_objects, copy_with_replacements, ordered_slide_members, require_package, slide_size

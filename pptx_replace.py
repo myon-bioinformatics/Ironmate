@@ -1,9 +1,6 @@
 """Conservative PPTX attribute replacement prototype. Python 3.11+."""
-import json
-import os
-import tempfile
+import json, os, tempfile, tomllib
 from pathlib import Path
-import tomllib
 
 from pptx import Presentation
 from pptx.dml.color import RGBColor

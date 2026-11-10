@@ -2,14 +2,8 @@
 
 from __future__ import annotations
 
-import hashlib
-import importlib.util
-import json
-import os
+import hashlib, importlib.util, json, os, shutil, subprocess, sys
 from pathlib import Path
-import shutil
-import subprocess
-import sys
 
 import pytest
 
@@ -96,7 +90,7 @@ def test_skip(): pass
 def test_workflow_keeps_suite_failure_and_exact_reports(tmp_path):
     import yaml
 
-    jobs = yaml.load((ROOT / '.github/workflows/mcp-tests.yml').read_text(),
+    jobs = yaml.load((ROOT / '.github/workflows/ci.yml').read_text(),
                      Loader=yaml.BaseLoader)['jobs']
     steps = jobs['test']['steps']
     suite = next(s for s in steps if s.get('name') == 'Run default pytest suite (exclude heavy tests)')

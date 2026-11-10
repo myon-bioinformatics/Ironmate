@@ -1,8 +1,5 @@
 """Canonical JSON edits, source retention and regeneration transactions."""
-import copy
-import json
-import subprocess
-import sys
+import copy, json, subprocess, sys
 from pathlib import Path
 
 import pytest

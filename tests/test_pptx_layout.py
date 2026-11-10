@@ -1,10 +1,6 @@
-import json
-from pathlib import Path
-import subprocess
-import sys
-from zipfile import ZipFile
+import json, subprocess, sys
+from pathlib import Path; from xml.etree import ElementTree as ET; from zipfile import ZipFile
 
-from xml.etree import ElementTree as ET
 from tests.fixture_pptx_layout import CASES, IDS, case_rule, make_source
 import pytest
 from pptx import Presentation

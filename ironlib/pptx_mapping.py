@@ -6,8 +6,7 @@ ids are assigned from that order and are not JSON fields. ``canonical_spec``
 is the lossless form: JSON → XML → JSON of a canonical spec equals that spec,
 and writing the read spec is an XML no-op under canonicalization.
 """
-import copy
-import math
+import copy, math
 from xml.etree import ElementTree as ET
 
 PNS = 'http://schemas.openxmlformats.org/presentationml/2006/main'

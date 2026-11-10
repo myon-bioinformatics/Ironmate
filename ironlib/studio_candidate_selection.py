@@ -1,9 +1,7 @@
 """Reference-scoped diagnostic selection; no perceptual or unknown-image oracle."""
 from __future__ import annotations
 
-import hashlib
-import math
-import time
+import hashlib, math, time
 from itertools import combinations
 
 from image_compare import metrics as pixel_metrics, balance_score, select_candidates

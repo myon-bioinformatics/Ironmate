@@ -1,9 +1,5 @@
 """Offline checks for the pure-wheel fetch and marker gate."""
-import hashlib
-import io
-import json
-import sys
-import zipfile
+import hashlib, io, json, sys, zipfile
 from pathlib import Path
 
 import pytest

@@ -12,15 +12,8 @@ Known, intentional differences from Pillow are listed in ``docs/pillow-min.md``.
 """
 from __future__ import annotations
 
-import base64
-import binascii
-import os
-import re
-import struct
-import warnings
-import zlib
-from operator import add, sub
-from typing import Callable, Iterable, Iterator, List, Optional, Sequence, Tuple, Union
+import base64, binascii, os, re, struct, warnings, zlib
+from operator import add, sub; from typing import Callable, Iterable, Iterator, List, Optional, Sequence, Tuple, Union
 
 __all__ = [
     'Image',

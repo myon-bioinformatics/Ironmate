@@ -28,7 +28,7 @@ python -S image_studio.py --build-site build/studio-site
 # the output must be a new or empty directory
 ```
 
-`studio-pages.yml` generates the static files with Docker, verifies `/Ironmate/` in the container with a real browser, then publishes. Docker and Python do not run in the published environment. Permissions, publish target and existing Studio URLs are unchanged.
+`pages.yml` generates the static files with Docker, verifies `/Ironmate/` in the container with a real browser, then publishes. Docker and Python do not run in the published environment. Permissions, publish target and existing Studio URLs are unchanged.
 
 ## Coverage
 

@@ -1,11 +1,6 @@
 """Stdlib contracts for optional reduced-bit PNG output."""
-import base64
-import json
+import base64, json, struct, subprocess, sys, unittest
 from pathlib import Path
-import struct
-import subprocess
-import sys
-import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import grid_png

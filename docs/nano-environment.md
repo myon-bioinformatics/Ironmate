@@ -332,7 +332,7 @@ this machine's network was not separated.
 ### On CI
 
 The same idea applies on CI only where a cache or a built environment is carried
-between jobs. The `test` job of `mcp-tests.yml` (Python 3.15, the `dev` group, 13
+between jobs. The `test` job of `ci.yml` (Python 3.15, the `dev` group, 13
 packages) was measured on a GitHub-hosted runner with the uv cache off and on. It
 now has its own `uv sync --locked` step, so the install time shows in the log.
 Seconds, from the `setup-uv` step (which restores the cache), the sync step and the
@@ -357,7 +357,7 @@ download in under a second. That is why the pruned cache, which keeps only built
 wheels, saves as much as the unpruned one at 1/50 of the size. When a PyYAML release
 ships a Python 3.15 wheel there is little left for the cache to save in this job.
 
-The jobs that install through uv (`test` and `marp-integration` in `mcp-tests.yml`,
+The jobs that install through uv (`test` and `marp-integration` in `ci.yml`,
 `chromium-review` in `pptx-review.yml`, `audit` in `vendor-catalog-audit.yml`)
 therefore use `enable-cache: true` and `prune-cache: true`, and set `save-cache` to
 true only on `main`: pull requests restore the cache and never write it. The runs in
@@ -369,6 +369,6 @@ in `test`, `marp-integration` and `audit` and 2 s in `chromium-review`. `audit` 
 whole went from 25-27 s to 13 s; the longer jobs vary by more than the saving.
 
 Jobs that use `setup-uv` only to provide Python (`cdn-pypdf.yml`, `node-tests.yml`,
-`studio-pages.yml`, `verify_3way_survey.yml` and `studio-clipboard`) keep
+`pages.yml`, `verify-3way-survey.yml` and `studio-clipboard`) keep
 `enable-cache: false`: they install nothing through uv, so there is nothing to
 cache, and `setup-uv`'s `ignore-nothing-to-cache` defaults to false.

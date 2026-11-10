@@ -1,12 +1,7 @@
 """Repository-wide source hygiene checks."""
 
-import py_compile
-import re
-import subprocess
-import tempfile
-import unittest
-from pathlib import Path
-from unittest import mock
+import py_compile, re, subprocess, tempfile, unittest
+from pathlib import Path; from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -103,7 +98,7 @@ class RepositoryHygieneTest(unittest.TestCase):
                 failures.append(f"{path.relative_to(ROOT)}: pip install")
         self.assertEqual(failures, [], "\n".join(failures))
         for relative in (
-            ".github/workflows/mcp-tests.yml",
+            ".github/workflows/ci.yml",
             ".github/workflows/pptx-review.yml",
         ):
             text = (ROOT / relative).read_text(encoding="utf-8")

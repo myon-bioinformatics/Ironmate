@@ -3,9 +3,7 @@
 Encodings are detected here. The workbook file stores Unicode, so Excel does
 not have to guess Shift_JIS when it opens the xlsx.
 """
-import csv
-import io
-import re
+import csv, io, re
 from pathlib import Path
 
 _UNSUPPORTED = {'merge', 'merges', 'mergeCells', 'image', 'images', 'drawing', 'conditional', 'conditionalFormatting'}

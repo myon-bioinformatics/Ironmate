@@ -1,14 +1,6 @@
 """CSV encoding and xlsx Open XML checks. No spreadsheet app."""
-import csv
-import io
-import json
-import shutil
-import subprocess
-import sys
-from io import BytesIO
-from pathlib import Path
-from xml.etree import ElementTree as ET
-from zipfile import ZipFile
+import csv, io, json, shutil, subprocess, sys
+from io import BytesIO; from pathlib import Path; from xml.etree import ElementTree as ET; from zipfile import ZipFile
 
 import pytest
 

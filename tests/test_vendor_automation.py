@@ -1,11 +1,5 @@
 """Regression checks for vendor verification CI wiring."""
-import hashlib
-import json
-import os
-import shlex
-import shutil
-import subprocess
-import sys
+import hashlib, json, os, shlex, shutil, subprocess, sys
 from pathlib import Path
 
 import pytest
@@ -55,7 +49,7 @@ def test_vendor_ci_verifies_lock_without_auto_updates():
         for s in steps
         if s.get("with", {}).get("repository") == "myon-bioinformatics/myon-bioinformatics"
     ]
-    assert pins == [PIN]
+    assert pins == ["${{ steps.parent-vendor-tools.outputs.sha }}"]
     for step in steps:
         if step.get("uses", "").startswith("actions/checkout@"):
             assert step["with"]["persist-credentials"] == "false"
@@ -73,9 +67,21 @@ def test_canonical_vendor_evidence_membership_is_derived_from_lock():
     assert all((ROOT / path).is_file() for path in locked)
 
 
-def test_parent_vendor_sync_checkout_is_pinned():
+def test_parent_vendor_sync_checkout_resolves_parent_main_at_runtime():
+    # `uses:` cannot take an expression, so the reusable-workflow references keep the reviewed
+    # rollout pin (see test_parent_workflow_pins.py). Only the vendor_sync checkout follows main.
     text = (ROOT / WORKFLOW).read_text(encoding="utf-8")
-    assert PIN in text
+    steps = _workflow()["jobs"]["test"]["steps"]
+    resolve = next(i for i, s in enumerate(steps) if s.get("id") == "parent-vendor-tools")
+    fetch = next(
+        i
+        for i, s in enumerate(steps)
+        if s.get("with", {}).get("repository") == "myon-bioinformatics/myon-bioinformatics"
+    )
+    assert resolve < fetch
+    assert "parent_vendor_tools_resolve.py --emit-github-actions" in steps[resolve]["run"]
+    assert steps[resolve]["env"] == {"GITHUB_TOKEN": "${{ github.token }}"}
+    assert "steps.parent-vendor-tools.outputs.sha" in text
     assert "974da5eb9593df652b132e4b0f1a679f67422566" not in text
     assert "14ef53c8316015d1350e62ff9cce3301103e65a7" not in text
 

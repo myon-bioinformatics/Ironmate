@@ -128,9 +128,8 @@ def test_workflow_keeps_suite_failure_and_exact_reports(tmp_path):
     assert collector['if'] == 'always()'
     assert collector['uses'].endswith('@9e3da7ae1846e9604ebc24bb5178f7de094a4e77')
     marp_steps = jobs['marp-integration']['steps']
-    install = next(s for s in marp_steps if s.get('name') == 'Install pinned Node packages and pinned Marp CLI')
+    install = next(s for s in marp_steps if s.get('name') == 'Install pinned Node packages and the locked Marp CLI tools')
     assert '--ignore-scripts' in install['run']
-    assert 'puppeteer@25.15.0' in install['run']  # Legacy ci.yml remains pinned independently.
     marp_upload = next(s for s in marp_steps if s.get('name') == 'Preserve Marp JUnit')
     assert marp_upload['if'] == 'always()'
     assert marp_upload['with']['if-no-files-found'] == 'error'
@@ -140,14 +139,44 @@ def test_workflow_keeps_suite_failure_and_exact_reports(tmp_path):
     assert collector['with']['artifact-pattern'] == 'junit-*'
 
 
-def test_mcp_workflow_uses_locked_marp_tools():
+@pytest.mark.parametrize("workflow", ["ci.yml", "mcp-tests.yml"])
+def test_workflow_uses_locked_marp_tools(workflow):
     import yaml
 
-    jobs = yaml.load((ROOT / '.github/workflows/mcp-tests.yml').read_text(),
-                     Loader=yaml.BaseLoader)['jobs']
+    config = yaml.load((ROOT / '.github/workflows' / workflow).read_text(),
+                       Loader=yaml.BaseLoader)
+    jobs = config['jobs']
+    assert config['permissions'] == {'contents': 'read'}
+    assert jobs['marp-integration']['permissions'] == {'contents': 'read'}
     marp_steps = jobs['marp-integration']['steps']
     install = next(s for s in marp_steps if s.get('name') == 'Install pinned Node packages and the locked Marp CLI tools')
-    assert 'npm ci --prefix scripts/marp-tools --ignore-scripts' in install['run']
+    assert install['run'].splitlines() == [
+        'npm ci',
+        'npm ci --prefix scripts/marp-tools --ignore-scripts --no-audit --no-fund',
+    ]
+    assert 'continue-on-error' not in jobs['marp-integration']
+    for step in marp_steps:
+        assert 'continue-on-error' not in step
+        if step.get('uses', '').startswith('actions/checkout@'):
+            assert step['with']['persist-credentials'] == 'false'
+        if step.get('uses', '').startswith('astral-sh/setup-uv@'):
+            assert step['with']['save-cache'] == (
+                "${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}"
+            )
+        for variable, binary in [('IRONMATE_MARP_BIN', 'marp'),
+                                 ('IRONMATE_MMDC_BIN', 'mmdc')]:
+            if variable in step.get('env', {}):
+                assert step['env'][variable] == f'scripts/marp-tools/node_modules/.bin/{binary}'
+                assert marp_steps.index(install) < marp_steps.index(step)
+    render = next(s for s in marp_steps if s.get('name') == 'Run real Markdown to Marp to PPTX integration')
+    flow = next(s for s in marp_steps if s.get('name') == 'Exercise common JSON flow formats and browser pixel parity')
+    assert render['env']['IRONMATE_RUN_MARP_INTEGRATION'] == '1'
+    assert render['env']['IRONMATE_RUN_UNO_INTEGRATION'] == '1'
+    assert render['env']['IRONMATE_MARP_BIN'].endswith('/.bin/marp')
+    assert render['env']['IRONMATE_MMDC_BIN'].endswith('/.bin/mmdc')
+    assert flow['env']['IRONMATE_MMDC_BIN'].endswith('/.bin/mmdc')
+    assert flow['env']['IRONMATE_RUN_FLOW_INTEGRATION'] == '1'
+    assert 'node tests/flow_export_browser.cjs' in flow['run']
     # Do not resolve Mermaid's Puppeteer peer (or anything else) to a floating latest release.
     tools = json.loads((ROOT / 'scripts/marp-tools/package.json').read_text())
     assert tools['dependencies']['puppeteer'] == '25.15.0'

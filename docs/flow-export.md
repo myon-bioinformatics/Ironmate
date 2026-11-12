@@ -1,13 +1,14 @@
 # Common JSON flow export
 
-`flow_export.py` connects the **web-ui** flow contract to Ironmate's existing
+`flow_export.py` connects the **ascii_artist** card-flow contract to Ironmate's existing
 `mermaid_svg.render_mermaid` and Image Studio Chrome rasterizer. It does not
-implement another graph model/layout engine. `vendor/web_ui_flow.py`, its LICENSE
+implement another graph model/layout engine. `vendor/ascii_artist.py`, its LICENSE
 and `examples/flow.json` are byte-identical locked upstream artifacts; update them
-through the parent vendor registry and lock, never edit the copies.
+through the parent vendor registry and lock, never edit the copies. (The flow code
+started in web-ui, which handed it to ascii_artist; web-ui no longer has it.)
 
 The bounded merge-style JSON schema (1–8 sources and 1–8 steps, labels/notes only)
-is documented at https://github.com/myon-bioinformatics/web-ui/blob/main/docs/flow-diagrams.md.
+is documented at https://github.com/myon-bioinformatics/ascii_artist/blob/main/docs/card-flows.md.
 This is not a general graph editor or an editable Studio scene importer.
 
 | Format | Returned bytes | Local tools |
@@ -119,20 +120,16 @@ JSON. A visual Studio scene importer is still outside this path.
 
 The `ironmate-flow/1` workspace stores `original_json` (the exact input UTF-8 text,
 including whitespace and omitted defaults) and `spec` (the validated, current
-web-ui JSON). Saving and loading preserves both. Original text is never patched;
+flow JSON). Saving and loading preserves both. Original text is never patched;
 `original` extracts its bytes, while `spec` extracts the current JSON. Importing a
 new source creates a new workspace. Workspace files are bounded to 2MiB, original
 JSON to 256KiB, and patch documents including the working spec to 320KiB.
 
-Editing uses web-ui's byte-identical `tool/flow_patch.py` in an isolated Python
-process, with its required `tool/flow_diagram.py` kept in upstream relative layout
-under `vendor/web_ui/`. The Node workspace API wraps this same Python path. The
-locked native Node patcher and validator are also exercised for cross-language
-contract comparison. The existing flat renderer copy remains for compatibility;
-both validators, both patchers, the sample and MIT LICENSE are pinned together to
-merged web-ui #71 (including #70), `95dcfc6f3fa764249566bf2f9df90dcead7c64db`.
-Do not edit these vendor bytes. Parent PR #112 registers the four additional
-runtime sources; the child lock records commit, Git blob and SHA-256 for each.
+Editing runs the byte-identical `vendor/ascii_artist.py flow-patch` in an isolated
+Python process (`-I -S -X utf8`). The Node workspace API wraps this same Python path;
+there is no second (Node) patcher or validator. The module and the sample are pinned
+together to merged ascii_artist `001de63c23396e3ea6333867a169df2c60a50244`, and the
+child lock records commit, Git blob and SHA-256 for each. Do not edit these vendor bytes.
 
 ```sh
 python -S flow_workspace.py import examples/flow.json -o work.flow.json
@@ -147,10 +144,10 @@ python -S flow_workspace.py spec edited.flow.json -o edited.json
 node flow_workspace.cjs render edited.flow.json --format mermaid -o edited.md
 ```
 
-Supported operations are exactly web-ui's array of `{path,value}` entries:
+Supported operations are exactly ascii_artist's array of `{path,value}` entries:
 `/title`, `/sources_label`, `/sources/<index>/title`, `/sources/<index>/note`,
 `/steps/<index>/title`, `/steps/<index>/note`. Indices are canonical decimal and
-must already exist. Up to 64 operations apply atomically, with final web-ui
+must already exist. Up to 64 operations apply atomically, with final ascii_artist
 validation. No insertion/deletion, arbitrary JSON pointers or pixel changes.
 The upstream Mermaid renderer uses card labels and `sources_label`; `title` is
 retained metadata and is not drawn by that renderer.

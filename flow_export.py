@@ -1,6 +1,6 @@
-"""web-ui JSON -> Mermaid Markdown, SVG, PNG, standard Base64 or PNG data URI.
+"""Card-flow JSON -> Mermaid Markdown, SVG, PNG, standard Base64 or PNG data URI.
 
-JSON validation and diagram generation belong to the locked web-ui source.
+JSON validation and diagram generation belong to the locked ascii_artist source.
 This adapter only renders it; it never installs tools or contacts a service.
 """
 from __future__ import annotations
@@ -8,7 +8,7 @@ from __future__ import annotations
 import argparse, json, math, re, subprocess, sys, tempfile
 from pathlib import Path; from xml.etree import ElementTree as ET
 
-from vendor.web_ui_flow import MAX_INPUT, flow_mermaid, validate
+from vendor.ascii_artist import FLOW_MAX_INPUT as MAX_INPUT, flow_mermaid, validate_flow as validate
 from ironlib.mermaid_svg import render_mermaid
 from image_studio import raster_svg, _png_output
 

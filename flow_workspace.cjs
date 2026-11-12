@@ -1,5 +1,5 @@
 "use strict";
-/** Workspace persistence uses Python; patch semantics belong to locked web-ui. */
+/** Workspace persistence uses Python; patch semantics belong to locked ascii_artist. */
 const path = require("node:path");
 const {main, run} = require("./vendor/py_launch.cjs");
 const {mapLaunchError, PY_LAUNCH} = require("./ironmate_py_launch.cjs");

@@ -1,4 +1,4 @@
-"""Retain original flow JSON, apply web-ui patches, and regenerate exports.
+"""Retain original flow JSON, apply ascii_artist flow patches, and regenerate exports.
 
 This is structural JSON editing, independent of Image Studio pixel operations.
 """
@@ -13,7 +13,7 @@ from flow_export import FORMATS, MAX_INPUT, read_spec, render_flow
 from ironlib.grid_output import write_output
 
 ROOT = Path(__file__).resolve().parent
-UPSTREAM = ROOT / 'vendor/web_ui'
+UPSTREAM = ROOT / 'vendor/ascii_artist.py'
 SCHEMA = 'ironmate-flow/1'
 MAX_PATCH_DOCUMENT = 320 * 1024
 MAX_WORKSPACE = 2 * 1024 * 1024
@@ -54,7 +54,7 @@ def workspace_bytes(workspace):
 
 
 def patch_workspace(workspace, operations):
-    """Use the byte-identical upstream CLI in an isolated module search path.
+    """Use the byte-identical upstream CLI (``ascii_artist.py flow-patch``) in an isolated process.
 
     No process-global sys.path/module aliases and no local patch implementation.
     All validation and rendering complete before callers receive replacement state.
@@ -64,10 +64,7 @@ def patch_workspace(workspace, operations):
     if len(document) > MAX_PATCH_DOCUMENT:
         raise ValueError('patch document exceeds 320KiB')
     patched = subprocess.run(
-        [sys.executable, '-I', '-S', '-X', 'utf8', '-c',
-         'import sys,runpy; sys.path.insert(0,sys.argv[1]); '
-         'sys.argv=["flow_patch"]; runpy.run_module("tool.flow_patch",run_name="__main__")',
-         str(UPSTREAM)],
+        [sys.executable, '-I', '-S', '-X', 'utf8', str(UPSTREAM), 'flow-patch'],
         input=document, capture_output=True, timeout=10, check=False)
     if patched.returncode:
         raise ValueError(patched.stderr.decode('utf-8', errors='replace').strip() or 'flow patch failed')
@@ -103,7 +100,7 @@ def main(argv=None):
         command.add_argument('-o', '--output', type=Path)
         command.add_argument('--force', action='store_true')
         if name == 'patch':
-            command.add_argument('patch', type=Path, help='web-ui array of path/value operations')
+            command.add_argument('patch', type=Path, help='array of path/value operations (ascii_artist flow-patch)')
         if name == 'render':
             command.add_argument('--format', choices=FORMATS, default='svg')
             command.add_argument('--scale', type=float, default=1)

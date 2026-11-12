@@ -3,12 +3,12 @@
   "files": [
     {
       "repository": "myon-bioinformatics/ascii_artist",
-      "ref": "43c080016ecdbf1e8aa09bcb4c7583c8d96582eb",
-      "commit": "43c080016ecdbf1e8aa09bcb4c7583c8d96582eb",
+      "ref": "001de63c23396e3ea6333867a169df2c60a50244",
+      "commit": "001de63c23396e3ea6333867a169df2c60a50244",
       "source": "ascii_artist.py",
       "destination": "vendor/ascii_artist.py",
-      "blob_sha": "80902c1fd0bcf865639180d661dd605c9ef6d7f0",
-      "sha256": "8b99f18d56742fa9a164b5bfb67c53dc1333abb334ed488311daf264105ff43f"
+      "blob_sha": "e693e7f5ced720f2ed4939f842d664248cc55c8b",
+      "sha256": "620064ae79867b7a233d9f5978ba3e3b266e71b12d22f6041f907ee8a3c5f19a"
     },
     {
       "repository": "myon-bioinformatics/markdown",
@@ -461,67 +461,13 @@
       "sha256": "15f66204c4a6a1ce0c94f0ed4319ff9400f872e85fd32c95f21695c2f231af59"
     },
     {
-      "repository": "myon-bioinformatics/PySaiyanWeBoo",
-      "ref": "95dcfc6f3fa764249566bf2f9df90dcead7c64db",
-      "commit": "95dcfc6f3fa764249566bf2f9df90dcead7c64db",
-      "source": "tool/flow_diagram.py",
-      "destination": "vendor/web_ui_flow.py",
-      "blob_sha": "d4d64f6530d92a8cac0a5a04a1a4325243db5045",
-      "sha256": "ddc8203917829c4de6f6c21404cf4d42d83af78f7bd90ff2bfe81d3fe1cd5be6"
-    },
-    {
-      "repository": "myon-bioinformatics/PySaiyanWeBoo",
-      "ref": "95dcfc6f3fa764249566bf2f9df90dcead7c64db",
-      "commit": "95dcfc6f3fa764249566bf2f9df90dcead7c64db",
-      "source": "LICENSE",
-      "destination": "vendor/web-ui-LICENSE",
-      "blob_sha": "4ec4989b801bf1a3df6184d21f79e6e7ed5931f6",
-      "sha256": "15f66204c4a6a1ce0c94f0ed4319ff9400f872e85fd32c95f21695c2f231af59"
-    },
-    {
-      "repository": "myon-bioinformatics/PySaiyanWeBoo",
-      "ref": "95dcfc6f3fa764249566bf2f9df90dcead7c64db",
-      "commit": "95dcfc6f3fa764249566bf2f9df90dcead7c64db",
+      "repository": "myon-bioinformatics/ascii_artist",
+      "ref": "001de63c23396e3ea6333867a169df2c60a50244",
+      "commit": "001de63c23396e3ea6333867a169df2c60a50244",
       "source": "examples/pr-flow.json",
       "destination": "examples/flow.json",
       "blob_sha": "5e2a96bc83f86bfe82058ffae48b6c4e229f285d",
       "sha256": "6664001dacd324f347fd7dde67203b15b1e5fdafb130a127a05c71566eacf5ad"
-    },
-    {
-      "repository": "myon-bioinformatics/PySaiyanWeBoo",
-      "source": "tool/flow_diagram.py",
-      "destination": "vendor/web_ui/tool/flow_diagram.py",
-      "ref": "95dcfc6f3fa764249566bf2f9df90dcead7c64db",
-      "commit": "95dcfc6f3fa764249566bf2f9df90dcead7c64db",
-      "blob_sha": "d4d64f6530d92a8cac0a5a04a1a4325243db5045",
-      "sha256": "ddc8203917829c4de6f6c21404cf4d42d83af78f7bd90ff2bfe81d3fe1cd5be6"
-    },
-    {
-      "repository": "myon-bioinformatics/PySaiyanWeBoo",
-      "source": "tool/flow_patch.py",
-      "destination": "vendor/web_ui/tool/flow_patch.py",
-      "ref": "95dcfc6f3fa764249566bf2f9df90dcead7c64db",
-      "commit": "95dcfc6f3fa764249566bf2f9df90dcead7c64db",
-      "blob_sha": "d89e0151918009b9d29e66592a04edc3e9430a2b",
-      "sha256": "6136c2c050eb18509b1a45e1c92a10a3092141ea6d266a1ab69ddca1879817ee"
-    },
-    {
-      "repository": "myon-bioinformatics/PySaiyanWeBoo",
-      "source": "js/flow.cjs",
-      "destination": "vendor/web_ui/js/flow.cjs",
-      "ref": "95dcfc6f3fa764249566bf2f9df90dcead7c64db",
-      "commit": "95dcfc6f3fa764249566bf2f9df90dcead7c64db",
-      "blob_sha": "240c2192f2808d463f01dba9a8969181045e8b9f",
-      "sha256": "0d3259c293811221fb6366fb6df849e64a9e146202fc28a732b0e60f7828fb7f"
-    },
-    {
-      "repository": "myon-bioinformatics/PySaiyanWeBoo",
-      "source": "js/flow-patch.cjs",
-      "destination": "vendor/web_ui/js/flow-patch.cjs",
-      "ref": "95dcfc6f3fa764249566bf2f9df90dcead7c64db",
-      "commit": "95dcfc6f3fa764249566bf2f9df90dcead7c64db",
-      "blob_sha": "4e50aa3d59d390adb5d241f240d04982069d4f1d",
-      "sha256": "e4d0bdf3851f4f479f4f2caae1958d10b62d080e4c11bd26f96c3a01597fc4ab"
     },
     {
       "repository": "myon-bioinformatics/myon-bioinformatics",

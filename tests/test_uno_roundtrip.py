@@ -4,7 +4,8 @@
 
 LibreOffice is a test-lane dependency only (apt, minimal); it is not part of the product and the
 default pytest run skips this. UNO is LibreOffice's own API, so it cannot be had without LibreOffice.
-The client runs in the Python that ships `uno` (apt's python3-uno is for /usr/bin/python3).
+The client runs in the Python that ships `uno` (apt's python3-uno is for /usr/bin/python3);
+set IRONMATE_UNO_PYTHON to use another.
 This reads a freshly generated deck, not an edited or LibreOffice-saved round trip.
 """
 import json, os, shutil, socket, subprocess, tempfile
@@ -59,6 +60,17 @@ def _assert_fixture_readback(seen):
         assert abs(x - round((10 + i * .15) * 2540)) <= 5 and abs(y - round((8 + i * .1) * 2540)) <= 5, (i, x, y)
 
 
+def _uno_python():
+    return os.environ.get('IRONMATE_UNO_PYTHON', '/usr/bin/python3')
+
+
+def test_uno_python_preserves_explicit_interpreter_override(monkeypatch):
+    monkeypatch.delenv('IRONMATE_UNO_PYTHON', raising=False)
+    assert _uno_python() == '/usr/bin/python3'
+    monkeypatch.setenv('IRONMATE_UNO_PYTHON', '/custom UNO/python3')
+    assert _uno_python() == '/custom UNO/python3'
+
+
 def test_libreoffice_reads_the_fixture_deck_through_uno(tmp_path):
     if os.environ.get('IRONMATE_RUN_UNO_INTEGRATION') != '1':
         pytest.skip('optional UNO integration not enabled')
@@ -77,7 +89,7 @@ def test_libreoffice_reads_the_fixture_deck_through_uno(tmp_path):
          f'--accept=socket,host=127.0.0.1,port={port};urp;'],
         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
-        done = subprocess.run(['/usr/bin/python3', '-c', CLIENT,
+        done = subprocess.run([_uno_python(), '-c', CLIENT,
                                str(deck), str(port)], capture_output=True, text=True, timeout=180)
         assert done.returncode == 0, done.stderr
     finally:

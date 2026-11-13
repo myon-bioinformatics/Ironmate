@@ -8,7 +8,7 @@ Every sheet is ``pysaiyanweboo.write_bundle`` output: ``core_css()`` (tokens, ba
 workspace, the board and its handles, the shelf cards, the inspector. Buttons, inputs, selects, textareas and
 tables take the component look through ``class="ui-elements"`` on ``<body>``; nothing generic lives here.
 The files are committed (the studio is served as static files and image_studio.py is stdlib-only), and
-``tests/test_studio_css.py`` (``pysaiyanweboo.check_bundle``) fails when they drift.
+``tests/test_studio.py`` (``pysaiyanweboo.check_bundle``) fails when they drift.
 """
 from __future__ import annotations
 

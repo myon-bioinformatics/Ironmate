@@ -2,7 +2,7 @@
 /** Thin Node API. Python owns rendering, locked ascii_artist owns the JSON contract. */
 const path = require("node:path");
 const {run, main} = require("./vendor/py_launch.cjs");
-const {mapLaunchError, PY_LAUNCH} = require("./ironmate_py_launch.cjs");
+const {mapLaunchError, PY_LAUNCH} = require("./ironmate_cli.cjs");
 const PY_SCRIPT = path.join(__dirname, "flow_export.py");
 const MAX_INPUT_BYTES = 256 * 1024;
 const RESPONSE_MAX_BYTES = 48 * 1024 * 1024;

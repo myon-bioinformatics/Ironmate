@@ -47,7 +47,7 @@ Image grid decoding depends on the browser implementation. Animation, full EXIF/
 ## Verification
 
 ```sh
-uv run pytest -q tests/test_pages_tools.py tests/test_studio_delivery.py tests/test_image_studio.py
+uv run pytest -q tests/test_pages_tools.py tests/test_studio.py
 # after starting Docker on port 8080 as above, with `npm ci` done (Playwright is a locked devDependency):
 node tests/pages_browser.cjs
 ```

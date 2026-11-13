@@ -2,7 +2,7 @@
 /** Workspace persistence uses Python; patch semantics belong to locked ascii_artist. */
 const path = require("node:path");
 const {main, run} = require("./vendor/py_launch.cjs");
-const {mapLaunchError, PY_LAUNCH} = require("./ironmate_py_launch.cjs");
+const {mapLaunchError, PY_LAUNCH} = require("./ironmate_cli.cjs");
 const root = __dirname;
 const PY_SCRIPT = path.join(root, "flow_workspace.py");
 const MAX_INPUT_BYTES = 4 * 1024 * 1024;

@@ -147,7 +147,7 @@ Separately from Aoi's exact FWHT, the integer rounding of H8//2 here is kept.
 
 ```sh
 python -S scripts/survey_holdout.py --trials 3 --output build/survey-holdout
-uv run pytest -q tests/test_three_way_survey.py tests/test_survey_holdout.py
+uv run pytest -q tests/test_three_way_survey.py tests/test_research.py
 ```
 
 - 3 new shape families: a comb with repeating notches, a plate with 9 holes, and a 1-point-wide meandering path that wraps at the image edge

@@ -94,7 +94,7 @@ pixels across different operating systems/fonts/browser versions are not promise
 ## Reproducible verification
 
 ```sh
-uv run pytest -q tests/test_flow_export.py
+uv run pytest -q tests/test_studio.py
 IRONMATE_RUN_FLOW_INTEGRATION=1 IRONMATE_MMDC_BIN=node_modules/.bin/mmdc \
   IRONMATE_CHROME=/path/to/chrome uv run pytest -q tests/test_flow_integration.py
 IRONMATE_CHROME=/path/to/chrome node tests/flow_export_browser.cjs
@@ -179,11 +179,11 @@ in two separate commands is not a multi-file transaction; a later drawing failur
 does not roll back a previously saved valid workspace. Use `patch_and_render` /
 `patchAndRender` to compute both before deciding to persist either.
 
-`tests/test_flow_workspace.py` covers exact original-byte recovery, detached state,
+`tests/test_studio.py` covers exact original-byte recovery, detached state,
 64/65 operations, invalid late operations, files surviving failure, and Python /
 Node wrapper / native upstream parity. The existing real-renderer integration
 also saves original/edited JSON, before/after PNG, edited SVG/Mermaid/Base64/data URI,
 and hashes under `build/test-results/flow-export/workspace/`. It checks changed
 pixels and exact Python/Node PNG and transport identity. These artifacts are
 included by the existing browser CI lane. Run with the same environment shown
-above plus `uv run pytest -q tests/test_flow_workspace.py`.
+above plus `uv run pytest -q tests/test_studio.py`.

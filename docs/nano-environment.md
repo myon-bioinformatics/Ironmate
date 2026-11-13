@@ -271,7 +271,7 @@ What was checked, and what differs:
   resolves to the same `name@version` as under npm, and all 180 `integrity`
   values in `bun.lock` (generated once from the npm lock) equal the npm lock's.
 - Same behavior: the 163 tests in `test_xlsx_csv.py`, `test_pptxgenjs_image.py` and
-  `test_pptx_mapping.py`, the ExcelJS smoke and the 41 `node --test` tests (40
+  `test_pptx_mapping.py` (since 2026-11-13 sections of `tests/test_pptx.py`), the ExcelJS smoke and the 41 `node --test` tests (40
   pass, 1 skipped, as on npm's tree) pass under Node 26 on the Bun-installed tree.
   The smoke also passes under Bun (`bun scripts/exceljs_smoke.cjs`). A PPTX built
   from npm's tree with Node, from Bun's tree with Node and from Bun's tree with Bun
@@ -283,7 +283,7 @@ What was checked, and what differs:
 - Bun is not a drop-in `node` on `PATH`: with Bun 1.4.4 behind a symlink named
   `node`, `node -e CODE a b` loses its first extra argument (`process.argv.slice(1)`
   is `[b]`, Node gives `[a, b]`). `bun -e` itself and scripts run from a file give
-  the same `process.argv` as Node. `test_pptxgenjs_image.py` runs `node -e` with
+  the same `process.argv` as Node. `test_pptxgenjs_image.py` (now in `tests/test_pptx.py`) runs `node -e` with
   arguments, so it is the one of the 163 tests that fails (162 pass) with such a
   symlink. Keep Node as `node`, and call `bun` by its own name.
 
@@ -314,7 +314,8 @@ the requirements exported from `uv.lock`, so the versions are the same):
 Ten environments installed at the same time from one shared cache (every
 environment imported its packages afterwards, and the existing tests pass in both
 the uv and the pip environment: 165 passed in
-`test_xlsx_csv.py`, `test_pptxgenjs_image.py`, `test_pptx_mapping.py` and `test_apng_input.py`):
+`test_xlsx_csv.py`, `test_pptxgenjs_image.py`, `test_pptx_mapping.py` and `test_apng_input.py`, now sections of
+`tests/test_pptx.py` and `tests/test_grid.py`):
 
 | 10 at once | cache warm | cache empty (all start together) |
 | --- | --- | --- |

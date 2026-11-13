@@ -80,7 +80,7 @@ python -S pixel_grid.py --mask circle --palette C02 --size 31 --format png --sca
 
 Examples (from the top: 5 shapes × color IDs `C01`–`C10` with the shadow effect / 4 effects on cloud and rock / odd sizes 5, 9, 7, 13, 17, 31).
 It can be regenerated with `python -S grid_preview.py -o docs/pixel-grid-preview.png --force`,
-and a test (`tests/test_grid_preview.py`) checks byte equality with the committed PNG, so the implementation and image cannot drift.
+and a test (`tests/test_grid.py`) checks byte equality with the committed PNG, so the implementation and image cannot drift.
 
 `photo_grid.py` reads Base64 (a raw string or `data:image/...;base64,`) or an image file
 and converts it to the same `ironmate-pixel-grid/1` format (fixed RGBA + color-index grid).
@@ -226,7 +226,7 @@ python -c "import ironmate_image as im,grid_tools as g;print(g.encode(im.resize(
 
 #### Privacy (source image metadata is always discarded)
 
-Output (PNG, Base64, data URI, SVG, JSON) contains **none** of the source image's EXIF (including GPS location, capture time, device model and author), XMP, ICC profile, PNG `tEXt`/`zTXt`/`iTXt` (author, comments etc.), `eXIf` or `tIME`. Only pixels are read, and output is written from scratch. Tests (`tests/test_privacy.py`) confirm that no original strings remain in the output on every path: `ironmate_image`, `grid_tools` (`photo`/`load`/`fit`) and `photo_grid`.
+Output (PNG, Base64, data URI, SVG, JSON) contains **none** of the source image's EXIF (including GPS location, capture time, device model and author), XMP, ICC profile, PNG `tEXt`/`zTXt`/`iTXt` (author, comments etc.), `eXIf` or `tIME`. Only pixels are read, and output is written from scratch. Tests (`tests/test_grid.py`) confirm that no original strings remain in the output on every path: `ironmate_image`, `grid_tools` (`photo`/`load`/`fit`) and `photo_grid`.
 
 PNG output contains only `IHDR`, `IDAT`, `IEND` and, by default, a single ironmate `tEXt`. Its content is limited to the following (omitted with `--no-meta`).
 

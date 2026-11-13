@@ -44,6 +44,6 @@ To match Pillow's results, the following behaviors are reproduced as-is.
 
 ## Verification
 
-- `tests/test_pillow_min_parity.py`: seeded random comparison with Pillow as the reference (Pillow is a dev-only dependency; `pillow_min` itself does not import it). It compares reading all color types, bit depths, filters, interlacing and out-of-range transparency keys, plus every frame of Pillow-written and hand-made APNGs (partial frames, all dispose / blend modes, with/without default image, split fdAT). Frames are compared both "reading each frame in sequence" and "seeking directly". It also compares each Image / ImageChops operation, `save` round-trips and limit handling.
-- `tests/test_pillow_min.py`: unit tests added in #152.
+- `tests/test_grid.py`: seeded random comparison with Pillow as the reference (Pillow is a dev-only dependency; `pillow_min` itself does not import it). It compares reading all color types, bit depths, filters, interlacing and out-of-range transparency keys, plus every frame of Pillow-written and hand-made APNGs (partial frames, all dispose / blend modes, with/without default image, split fdAT). Frames are compared both "reading each frame in sequence" and "seeking directly". It also compares each Image / ImageChops operation, `save` round-trips and limit handling.
+- `tests/test_grid.py`: unit tests added in #152.
 - browser-test-kit's `scripts/image_diff.py` was switched to pillow_min and compared with the Pillow version. Over 300 random cases (all PNG formats, APNG, zip members, clip / viewport, tolerance, broken inputs), exit codes and stdout all matched. Only error wording on broken inputs differed.

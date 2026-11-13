@@ -413,7 +413,7 @@ Keep masks/integers in the hot path, convert once at interchange boundaries,
 and use the eight-byte adapter for fingerprint storage. Generic base conversion
 cost grows with digit count; arbitrary precision does not mean constant time.
 
-Checks: `uv run pytest -q tests/test_bit_representation.py` covers every base
+Checks: `uv run pytest -q tests/test_research.py` covers every base
 2..256, independently reconstructed signed large integers, all balanced values
 -4096..4096, a byte-order known vector and 64-bit bounds, exact rationals, and
 multi-codepoint/overlapping custom tokens with invalid-input rejection.
@@ -500,7 +500,7 @@ avoid Base64 expansion without altering image dimensions.
 
 ### Repeated Base64/image interchange tests
 
-`tests/test_image_base64_cycles.py` exercises 16 seeded metadata/data-URI
+`tests/test_grid.py` exercises 16 seeded metadata/data-URI
 configurations for 25 PNG cycles each (400 cycles), alternating dict/JSON,
 binary bytes, filesystem paths, raw Base64 and data URI inputs. Every cycle
 compares dimensions and original RGBA colors, including RGB under transparent
@@ -520,7 +520,7 @@ fed forward as successful results. The padding test appends bytes after a PNG
 only to exercise transport; it does not assert image-container validity.
 Existing image-format tests supply separate JPEG/WebP input coverage.
 
-Reproduce: `uv run pytest -q tests/test_image_base64_cycles.py tests/test_studio_ingress.py tests/test_image_formats.py`.
+Reproduce: `uv run pytest -q tests/test_grid.py tests/test_studio.py`.
 
 ## Verified local distance-one boundary audit
 
@@ -627,6 +627,6 @@ all 256 pairs of overlapping LUT clauses on three bits, every mutable mask and
 background, and all 64 combinations of two-bit AND/NOT/OR masks. Tests also cover
 multi-OR interference, duplicate clauses, constants, high immutable bits, budget
 errors and the distinction from local rescue. Run:
-`uv run pytest -q tests/test_boundary_synthesis.py tests/test_boundary_twins.py`.
+`uv run pytest -q tests/test_research.py`.
 Macro-scene integration, practical acceleration and performance ratios remain
 unverified; no benchmark or detector integration is claimed.

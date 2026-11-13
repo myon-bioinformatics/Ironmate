@@ -1,5 +1,10 @@
 "use strict";
-/** Shared stderr contract for Ironmate Node CLIs. Exit 2 is fixable. */
+/** Shared stderr contract for Ironmate Node CLIs (exit 2 is fixable), and their settings for vendored py_launch.cjs. */
+
+const {mapLaunchError} = require("./vendor/py_launch.cjs");
+
+/** How the Node wrappers start Python: IRONMATE_PYTHON picks the interpreter, -S keeps site off. */
+const PY_LAUNCH = {envVar: "IRONMATE_PYTHON", noSite: true};
 
 function fail(tool, message, hint, jsonMode) {
   const text = String(message || "failed").trim() || "failed";
@@ -18,4 +23,4 @@ function wantsJson(argv) {
   return argv.includes("--json");
 }
 
-module.exports = {fail, wantsJson};
+module.exports = {fail, wantsJson, mapLaunchError, PY_LAUNCH};

@@ -69,7 +69,7 @@ changed. Aoi can consume the CSV API without NumPy/Pandas, but no Aoi data or
 pipeline modification is included. Layer 1–9 completion, reported classification
 percentages, timing claims and arbitrary rotation invariance remain unverified.
 
-Verification: `python -m pytest -q tests/test_stream_phase_report.py tests/test_five_way_survey.py`.
+Verification: `python -m pytest -q tests/test_research.py tests/test_five_way_survey.py`.
 
 ## Observability and active sensing extension
 

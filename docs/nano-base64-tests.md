@@ -3,7 +3,7 @@
 From the repository root:
 
 ```sh
-PYTHONPATH=. uv run --locked --only-group test --exact python -m pytest -q tests/test_base64_bridge_cases.py tests/test_grid_base64.py
+PYTHONPATH=. uv run --locked --only-group test --exact python -m pytest -q tests/test_grid.py
 ```
 
 This reuses the existing test group. It does not replace full CI, codecs, preview, Docker, Marp or browser checks. No dependencies or lock records are changed. `--exact` removes leftover optional dependencies; use a separate UV_PROJECT_ENVIRONMENT when retaining a full development environment.

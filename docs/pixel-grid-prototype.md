@@ -251,7 +251,7 @@ Input formats: Base64 (raw or data URI) or an image file. Detected by the leadin
   Pillow opens, other formats claiming to be JPEG etc. are not read. For animated WebP, the first frame.
 - SVG (vector, needs a renderer), GIF, BMP, TIFF, ICO, HEIC/AVIF: rejected with "… input is not supported"
   regardless of whether Pillow is available.
-See the table in the README for per-format reasons and behavior. `tests/test_image_formats.py` verifies the table's behavior.
+See the table in the README for per-format reasons and behavior. `tests/test_grid.py` verifies the table's behavior.
 
 #### PNG output (`grid_png.py`)
 
@@ -311,13 +311,13 @@ Visual quality has not been evaluated.
 - `restore`: PNGs with meta are fully restored to the original JSON. Without meta, the scale is determined by `--size` or the GCD of run lengths, and it errors unless each block is a single color.
 - `resize`: nearest neighbor at cell centers (`(2i+1)*old // (2*new)`). Upscaling → original size always matches; downscaling loses information.
 - `recolor`: only swaps the color ID table (indices unchanged), so round-trips match.
-- SVG input is only `rect`, `circle`, `ellipse`, `polygon`, `g` (translate) and solid fills. Curved paths, gradients, CSS, external references and DOCTYPE/ENTITY are rejected with reasons (`tests/test_svg_raster.py`).
+- SVG input is only `rect`, `circle`, `ellipse`, `polygon`, `g` (translate) and solid fills. Curved paths, gradients, CSS, external references and DOCTYPE/ENTITY are rejected with reasons (`tests/test_grid.py`).
 - The README's "Round-trip in one line" is the authoritative condition table. Pillow and numpy are added as test dependencies and are optional at runtime.
 
 #### Stronger verification (property tests, mutation tests, matrix view)
 
-- `tests/test_grid_properties.py`: generates 11 kinds of adversarial grids with fixed-seed randomness (many colors, near colors differing by 1, every alpha 1–255, checkerboard, one differing pixel, 1×N/N×1, prime sizes, transparent only, single color, accidentally aligned blocks) and compares every path in the condition table per (x, y, RGBA) against an independent oracle (standard, Pillow, numpy). The heavy version is `heavy`.
+- `tests/test_grid.py`: generates 11 kinds of adversarial grids with fixed-seed randomness (many colors, near colors differing by 1, every alpha 1–255, checkerboard, one differing pixel, 1×N/N×1, prime sizes, transparent only, single color, accidentally aligned blocks) and compares every path in the condition table per (x, y, RGBA) against an independent oracle (standard, Pillow, numpy). The heavy version is `heavy`.
 - Mutation tests: confirm that swapping 2 pixels, ±1 on one channel, shifting a row, transposing, flipping, reordering the color table and corrupting or tampering with meta are all detected.
 - Crafted PNGs: filters 0–4 (including mixed per row), split IDAT, extra chunks, CRC mismatch, extra bytes after IEND and after zlib.
-- `tests/test_grid_matrix.py`: treats a grid as four RGBA matrices and confirms the residual R = restored − original is exactly 0 for reversible paths. Singular values and sign+scale fingerprints are auxiliary only (tests show singular values miss flips and transposes). Lossy paths (downscale → upscale, JPEG) report error as RMS.
+- `tests/test_grid.py`: treats a grid as four RGBA matrices and confirms the residual R = restored − original is exactly 0 for reversible paths. Singular values and sign+scale fingerprints are auxiliary only (tests show singular values miss flips and transposes). Lossy paths (downscale → upscale, JPEG) report error as RMS.
   The ideas come from myon-bioinformatics/Aoi's `pythdragoras/littlebit_prune.py` (SVD residual, sign + scale) and `queryu/ask/suggest.py` (SVD + sign index). No code was brought in.

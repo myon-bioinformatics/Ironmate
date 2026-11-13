@@ -230,8 +230,8 @@ then use this to re-save history from the current scene.
 It does not change the format to deduplicate images across history states, nor add automatic recovery after closing the browser.
 
 ```sh
-uv run pytest -q tests/test_image_studio.py
-uv run pytest -q tests/test_studio_workspace.py
+uv run pytest -q tests/test_studio.py
+uv run pytest -q tests/test_studio.py
 # Browser and PPTX evidence. Needs test-only Playwright and the existing pptxgenjs
 IRONMATE_CHROME=/path/to/chrome node tests/image_studio_browser.cjs
 ```
@@ -261,7 +261,7 @@ Strings with no image meaning are treated as ordinary text. Example image dict:
 `{"type": "image", "mime": "image/png", "text": "data:image/png;base64,...", "label": "画像"}`.
 Each returned item has `type`, `data`, `mime`, `text` and `label`.
 
-Regression checks are `tests/test_studio_ingress.py` and `tests/studio_shelf_browser.cjs`.
+Regression checks are `tests/test_studio.py` and `tests/studio_shelf_browser.cjs`.
 The latter runs from the existing `tests/image_studio_browser.cjs` with static, Pages-equivalent serving.
 Clipboard reads and permission errors are mocked, and validation, copy generation, URL release and image import are checked on real Chromium.
 It does not directly operate OS-specific clipboard permission UI.

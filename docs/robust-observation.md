@@ -50,7 +50,7 @@ motion errors and nonrigid changes. No rotation or Kalman estimator is present.
 Grid size is bounded to 1024 bits; the temporal implementation is a simple
 per-bit reference algorithm, not an optimized shift kernel.
 
-Verification: `python -m pytest -q tests/test_robust_observation.py` (8 tests).
+Verification: `python -m pytest -q tests/test_research.py` (8 tests).
 Exhausts all masks and bounded flip patterns for distance-three / one-error and
 distance-five / two-error codes, zero-budget parity with existing routing,
 probe outcome counts, and all single-pixel translations of a 4x3 grid over

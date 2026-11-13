@@ -125,7 +125,7 @@ IRONMATE_RUN_UNO_INTEGRATION=1 uv run pytest -q tests/test_uno_roundtrip.py   # 
 
 The original Ubuntu 24.04 estimate was about 70 MB to download and 200 MB installed. In [PR #175's Ubuntu 26.04 CI run](https://github.com/myon-bioinformatics/Ironmate/actions/runs/41182329884/job/124482093875), apt fetched 92.6 MB for 53 newly installed packages and forecast 307 MB additional disk usage (LibreOffice 26.2.6.3). The latter is apt's estimate, not a measured filesystem footprint or a portable dependency budget; preinstalled packages and runner versions affect it. These figures exclude the separate existing CJK-font installation. LibreOffice remains outside the production dependency set.
 
-`tests/test_uno_readback.py` checks duplicate, extra, missing and unlabelled shape rejection with fake data and a fake UNO client; it runs without LibreOffice.
+`tests/test_pptx.py` checks duplicate, extra, missing and unlabelled shape rejection with fake data and a fake UNO client; it runs without LibreOffice.
 
 This first proof checks actual output existence and PPTX readability, **not** that the output has editable text or that it is visually faithful. Standard Marp PPTX export can rasterize slide content; that must be measured before using python-pptx to edit generated text. Do not build the unified Markdown→Marp→PPTX→XML one-liner until this independent integration is green and the editability limitations are understood. The production PPTX editing CLI stays independent.
 
@@ -182,7 +182,7 @@ For operations unsupported by python-pptx, prototype a **narrow, schema-aware Op
 
 ## Attribute matrix experiments
 
-`tests/test_pptx_attribute_matrix.py` exercises absent→explicit bold and font-size attributes, inherited text-color rejection, ordered style updates and dry-run parity. It also performs a **test-only** Open XML insertion of an explicit `a:solidFill/a:srgbClr` under `a:rPr`, reconstructs the PPTX package, reopens it with python-pptx, and checks unrelated ZIP members are unchanged. This is deliberately not a general XML rewrite engine. Expand with theme colors, font family, paragraph alignment, shape fills and malformed packages only after each operation has a distinct observable contract. Record successes and failures as JUnit evidence, with unknown cases remaining fail-closed.
+`tests/test_pptx.py` exercises absent→explicit bold and font-size attributes, inherited text-color rejection, ordered style updates and dry-run parity. It also performs a **test-only** Open XML insertion of an explicit `a:solidFill/a:srgbClr` under `a:rPr`, reconstructs the PPTX package, reopens it with python-pptx, and checks unrelated ZIP members are unchanged. This is deliberately not a general XML rewrite engine. Expand with theme colors, font family, paragraph alignment, shape fills and malformed packages only after each operation has a distinct observable contract. Record successes and failures as JUnit evidence, with unknown cases remaining fail-closed.
 
 
 ## Pragmatic business/scientific slide editing scope
@@ -198,7 +198,7 @@ Stage work: verify existing text/font/color changes and XML evidence first; add 
 
 Use full-span straight lines behind boxes and place independent filled arrowhead shapes at the center of each **visible gap**, not at the center of the entire line. For horizontal neighbors, the line spans the left edge of A to the right edge of B and the head is centered between A's right edge and B's left edge. For vertical neighbors, span the outer top/bottom edges and place the head in the vertical gap, rotated/oriented toward the destination. Repeated neighbors use the same mechanical rule. Default to a filled triangle; optionally evaluate angular chevrons. These are static shapes, not auto-routing connectors; no movement-following guarantee.
 
-Initial multi-box and vertical geometry tests are in `tests/test_pptx_diagram_shapes.py`. Verify layering separately before exposing this in the production CLI; if existing shapes already occupy the slide, simply adding a line after them does not put it behind them.
+Initial multi-box and vertical geometry tests are in `tests/test_pptx.py`. Verify layering separately before exposing this in the production CLI; if existing shapes already occupy the slide, simply adding a line after them does not put it behind them.
 
 
 ## Diagonal links: explicit edge anchors
@@ -210,7 +210,7 @@ Prototype diagonal links by selecting the midpoint of a source edge and destinat
 
 Source and destination each independently select one of `left/right/top/bottom`; test all 16 combinations in both directions (32 directed cases). The arrowhead is centered on the line segment between edge midpoints, with the tip facing the destination. For the conceptual triangle, derive its tip and two base vertices from a normalized direction vector and perpendicular vector; verify equal base distances and forward-facing tip. Reject coincident anchors explicitly.
 
-`tests/test_pptx_edge_geometry.py` implements mathematical geometry checks only. PowerPoint shape presets may have different native orientations and rotation conventions; do not assume `head.rotation = atan2(...)` produces a visually aligned arrowhead until the rendered PPTX is checked. Future CLI adoption also requires line layering, shape insertion and visible-gap checks. No pathfinding or automatic box movement tracking is promised.
+`tests/test_pptx.py` implements mathematical geometry checks only. PowerPoint shape presets may have different native orientations and rotation conventions; do not assume `head.rotation = atan2(...)` produces a visually aligned arrowhead until the rendered PPTX is checked. Future CLI adoption also requires line layering, shape insertion and visible-gap checks. No pathfinding or automatic box movement tracking is promised.
 
 
 ## Mermaid / Marp / PPTX responsibility boundary
@@ -396,7 +396,7 @@ Integration tests stub the Marp boundary and run real native editing/inspection.
 Actual Marp rendering and final PowerPoint Web display remain unverified.
 
 ```sh
-uv run pytest -q tests/test_pptx_pipeline.py tests/test_markdown_pptx.py tests/test_pptx_replace.py tests/test_pptx_diagram_shapes.py
+uv run pytest -q tests/test_pptx_pipeline.py tests/test_pptx.py
 ```
 
 Existing-shape spacing from merged PR #97 is available through `pptx_layout.py`,
@@ -527,7 +527,7 @@ silently breaking connected diagrams; automatic arrow routing remains future wor
 Sizes, text, style and IDs stay unchanged. Only selected slide XML is reserialized;
 all other ZIP member bytes (including relationships) are copied unchanged. Input
 and existing output paths are never overwritten. Output is reopened before atomic
-publication. Tests: `uv run pytest -q tests/test_pptx_layout.py`.
+publication. Tests: `uv run pytest -q tests/test_pptx.py`.
 
 Reference-derived structural targets are cards in rows, vertical agenda rows,
 columns with headings and box/arrow flows. This first step implements spacing of

@@ -6,7 +6,7 @@ For that subset the mapping is one-to-one: `canonical_spec` → slide XML → `c
 
 Optional `behind` and `inFront` arrays are authoring conveniences. `canonical_spec` prepends `behind` and appends `inFront`, then drops both keys. The stored form and the XML reader have only `objects`. Slide keys `back`, `front`, and `items` are rejected so a bucket layout is not a second spec.
 
-Tests live in `tests/test_pptx_mapping.py`. They do not open PowerPoint or a browser. A package-level test also builds the ZIP with pinned **PptxGenJS 4.0.1** and then replaces each slide part with this mapping, so the package shell comes from PptxGenJS and the shape XML does not.
+Tests live in `tests/test_pptx.py`. They do not open PowerPoint or a browser. A package-level test also builds the ZIP with pinned **PptxGenJS 4.0.1** and then replaces each slide part with this mapping, so the package shell comes from PptxGenJS and the shape XML does not.
 
 The same idea applies to Excel later: a documented xlsx subset should round-trip as JSON ↔ worksheet XML, with an explicit list of what the reader will not preserve. That workbook mapping is not implemented here.
 

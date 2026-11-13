@@ -71,7 +71,7 @@ test("vendored run maps responseMaxBytes overflow to ERESPONSETOOLARGE", () => {
 });
 
 test("ironmate mapLaunchError relabels EINPUTTOOLARGE for flow export", () => {
-  const {mapLaunchError} = require(path.join(ROOT, "ironmate_py_launch.cjs"));
+  const {mapLaunchError} = require(path.join(ROOT, "ironmate_cli.cjs"));
   const err = Object.assign(
     new Error("py_launch: input exceeds maxInputBytes (100; got 200 bytes)"),
     {code: "EINPUTTOOLARGE"},
@@ -84,7 +84,7 @@ test("ironmate mapLaunchError relabels EINPUTTOOLARGE for flow export", () => {
 });
 
 test("ironmate mapLaunchError relabels ERESPONSETOOLARGE for flow export", () => {
-  const {mapLaunchError} = require(path.join(ROOT, "ironmate_py_launch.cjs"));
+  const {mapLaunchError} = require(path.join(ROOT, "ironmate_cli.cjs"));
   const err = Object.assign(
     new Error("py_launch: response exceeds responseMaxBytes (1024)"),
     {code: "ERESPONSETOOLARGE"},
@@ -96,10 +96,10 @@ test("ironmate mapLaunchError relabels ERESPONSETOOLARGE for flow export", () =>
   );
 });
 
-test("wrappers share ironmate_py_launch.cjs", () => {
+test("wrappers share ironmate_cli.cjs", () => {
   for (const name of ["flow_export.cjs", "flow_workspace.cjs", "image_digest.cjs"]) {
     const src = fs.readFileSync(path.join(ROOT, name), "utf8");
-    assert.match(src, /require\("\.\/ironmate_py_launch\.cjs"\)/);
+    assert.match(src, /require\("\.\/ironmate_cli\.cjs"\)/);
     assert.match(src, /require\("\.\/vendor\/py_launch\.cjs"\)/);
   }
 });
@@ -169,7 +169,7 @@ test("IRONMATE_PYTHON on Windows resolves to a real python.exe without .cmd shim
   assert.ok(real.toLowerCase().endsWith(".exe"));
   assert.ok(!/\.(cmd|bat)$/i.test(real));
   const {resolvePython} = require(path.join(ROOT, "vendor/py_launch.cjs"));
-  const {PY_LAUNCH} = require(path.join(ROOT, "ironmate_py_launch.cjs"));
+  const {PY_LAUNCH} = require(path.join(ROOT, "ironmate_cli.cjs"));
   const prev = process.env.IRONMATE_PYTHON;
   process.env.IRONMATE_PYTHON = real;
   t.after(() => {

@@ -1,5 +1,5 @@
 """Regression checks for vendor verification CI wiring."""
-import hashlib, json, os, shlex, shutil, subprocess, sys
+import hashlib, json, shlex, shutil, subprocess, sys
 from pathlib import Path
 
 import pytest
@@ -119,7 +119,7 @@ def test_workflow_stages_locked_vendor_evidence(tmp_path, workflow):
         dest = tmp_path / entry["destination"]
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(ROOT / entry["destination"], dest)
-    tools = Path(os.environ.get("IRONMATE_CANONICAL_TOOLS", ROOT / ".vendor-sync-tools"))
+    tools = ROOT / ".vendor-sync-tools"  # the parent checkout ci.yml makes
     if not (tools / "vendor_stage.py").is_file():
         pytest.skip("parent vendor tools checkout not present")
     steps = _workflow(workflow)["jobs"]["test"]["steps"]

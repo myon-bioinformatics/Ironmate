@@ -4,8 +4,7 @@
 
 LibreOffice is a test-lane dependency only (apt, minimal); it is not part of the product and the
 default pytest run skips this. UNO is LibreOffice's own API, so it cannot be had without LibreOffice.
-The client runs in the Python that ships `uno` (apt's python3-uno is for /usr/bin/python3);
-set IRONMATE_UNO_PYTHON to use another.
+The client runs in the Python that ships `uno` (apt's python3-uno is for /usr/bin/python3).
 This reads a freshly generated deck, not an edited or LibreOffice-saved round trip.
 """
 import json, os, shutil, socket, subprocess, tempfile
@@ -78,7 +77,7 @@ def test_libreoffice_reads_the_fixture_deck_through_uno(tmp_path):
          f'--accept=socket,host=127.0.0.1,port={port};urp;'],
         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
-        done = subprocess.run([os.environ.get('IRONMATE_UNO_PYTHON', '/usr/bin/python3'), '-c', CLIENT,
+        done = subprocess.run(['/usr/bin/python3', '-c', CLIENT,
                                str(deck), str(port)], capture_output=True, text=True, timeout=180)
         assert done.returncode == 0, done.stderr
     finally:

@@ -120,7 +120,7 @@ The UNO readback smoke check (`tests/test_uno_roundtrip.py`) needs `soffice` plu
 The real check is skipped by default pytest. The existing Marp CI job automatically installs the test-only packages and enables this check on the workflow's path-filtered pull requests and pushes to `main`; it is not a manually gated CI job. To opt in locally in an already provisioned environment:
 
 ```sh
-IRONMATE_RUN_UNO_INTEGRATION=1 uv run pytest -q tests/test_uno_roundtrip.py   # IRONMATE_UNO_PYTHON overrides /usr/bin/python3
+IRONMATE_RUN_UNO_INTEGRATION=1 uv run pytest -q tests/test_uno_roundtrip.py   # the client runs in /usr/bin/python3 (apt's python3-uno)
 ```
 
 The original Ubuntu 24.04 estimate was about 70 MB to download and 200 MB installed. In [PR #175's Ubuntu 26.04 CI run](https://github.com/myon-bioinformatics/Ironmate/actions/runs/41182329884/job/124482093875), apt fetched 92.6 MB for 53 newly installed packages and forecast 307 MB additional disk usage (LibreOffice 26.2.6.3). The latter is apt's estimate, not a measured filesystem footprint or a portable dependency budget; preinstalled packages and runner versions affect it. These figures exclude the separate existing CJK-font installation. LibreOffice remains outside the production dependency set.

@@ -2,7 +2,7 @@
 /** Thin Node API for image_digest.py: Python owns decoding, thumbnails and HTML. */
 const path = require("node:path");
 const {run} = require("./vendor/py_launch.cjs");
-const {mapLaunchError, PY_LAUNCH} = require("./ironmate_py_launch.cjs");
+const {mapLaunchError, PY_LAUNCH} = require("./ironmate_cli.cjs");
 const PY_SCRIPT = path.join(__dirname, "image_digest.py");
 const MAX_INPUT = 8 * 1024 * 1024;
 const ERR_PREFIX = "image digest Python process failed: ";

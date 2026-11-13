@@ -15,7 +15,8 @@ def test_real_flow_formats_and_node_api():
         pytest.skip('optional real flow renderer integration not enabled')
     spec = json.loads((ROOT/'examples/flow.json').read_text())
     opts = dict(mmdc=os.environ.get('IRONMATE_MMDC_BIN','mmdc'),
-                chrome=os.environ.get('IRONMATE_CHROME'))
+                chrome=os.environ.get('IRONMATE_CHROME'),
+                puppeteer_config=os.environ.get('IRONMATE_PUPPETEER_CONFIG'))
     directory = ROOT/'build/test-results/flow-export'; directory.mkdir(parents=True,exist_ok=True)
     outputs = {}
     for fmt, ext in (('mermaid','md'),('svg','svg'),('png','png'),('base64','base64.txt'),('data-uri','data-uri.txt')):
@@ -60,7 +61,8 @@ def test_retained_json_edit_regenerates_all_formats():
     operations=[{'path':'/steps/0/title','value':'JSON edited / 再描画'},
                 {'path':'/steps/0/note','value':'Canonical source retained'}]
     opts=dict(mmdc=os.environ.get('IRONMATE_MMDC_BIN','mmdc'),
-              chrome=os.environ.get('IRONMATE_CHROME'))
+              chrome=os.environ.get('IRONMATE_CHROME'),
+              puppeteer_config=os.environ.get('IRONMATE_PUPPETEER_CONFIG'))
     directory=ROOT/'build/test-results/flow-export/workspace'
     directory.mkdir(parents=True,exist_ok=True)
     before=w.workspace_bytes(original)

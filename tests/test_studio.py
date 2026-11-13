@@ -43,9 +43,7 @@ from flow_export import render_flow
 from grid_tools import encode, make
 from ironlib import mermaid_svg, studio_candidate_selection as selection
 from ironlib.pptx_spec import arrow_geometry
-from ironlib.studio_alignment import invert_translation, translate_rgba
-from ironlib.studio_image_quality import compare_rgba
-from ironlib.studio_shape_metrics import metrics
+from ironlib.studio_image_quality import (invert_translation, translate_rgba, compare_rgba, metrics)
 from photo_grid import decode_png
 from scripts import quality_selection_experiment as study
 from studio_ingress import MAX_BYTES, decode, parse_shelf

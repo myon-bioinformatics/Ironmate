@@ -443,8 +443,7 @@ import hashlib, json, random
 
 
 from scripts import quality_experiment as q
-from ironlib.studio_alignment import invert_translation
-from ironlib.studio_shape_metrics import metrics
+from ironlib.studio_image_quality import (invert_translation, metrics)
 
 
 def test_iou_dice_monotonic_equivalence_independent_counts():

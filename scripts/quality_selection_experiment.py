@@ -113,7 +113,7 @@ def run(folder, out):
     totals = {m:{k:sum(g['rank_relations'][m][k] for g in groups)
                   for k in groups[0]['rank_relations'][m]} for m in groups[0]['rank_relations']}
     files = ['image_compare.py','ironlib/studio_candidate_selection.py','ironlib/studio_image_quality.py',
-             'ironlib/studio_alignment.py','ironlib/studio_shape_metrics.py','scripts/quality_selection_experiment.py']
+             'scripts/quality_selection_experiment.py']
     report = {'schema':'ironmate-quality-selection/1', 'exploratory':True,
               'scope':'reference oracle; no perceptual preference or universal best candidate',
               'environment':{'python':sys.version,'platform':platform.platform()},

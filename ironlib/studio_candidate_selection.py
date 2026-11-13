@@ -5,9 +5,7 @@ import hashlib, math, time
 from itertools import combinations
 
 from image_compare import metrics as pixel_metrics, balance_score, select_candidates
-from ironlib.studio_alignment import translate_rgba, invert_translation
-from ironlib.studio_image_quality import compare_rgba, foreground_mask, reference_energy
-from ironlib.studio_shape_metrics import metrics as shape_metrics
+from ironlib.studio_image_quality import (translate_rgba, invert_translation, compare_rgba, foreground_mask, reference_energy, metrics as shape_metrics)
 
 # Positive direction means larger is better. Aligned overlap is diagnostic only.
 DIRECTIONS = {'rgb_mae': -1, 'rgb_rmse': -1, 'balance_score': 1, 'iou': 1,

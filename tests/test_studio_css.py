@@ -1,4 +1,4 @@
-"""The studio stylesheets are scripts/build_studio_css.py's output (PySaiyanWeBoo web_ui + the studio's layout)."""
+"""The studio stylesheets are scripts/build_studio_css.py's output (PySaiyanWeBoo pysaiyanweboo + the studio's layout)."""
 import importlib.util
 from pathlib import Path
 
@@ -13,13 +13,13 @@ def _generator():
 
 
 def test_studio_stylesheets_match_the_generator():
-    import web_ui
+    import pysaiyanweboo
     module = _generator()
     bundles = module.bundles()
     assert {p.relative_to(ROOT).as_posix() for p in bundles} == {
         'studio/style.css', 'studio/tools/tools.css', 'studio/brand/gallery.css', 'studio/slides/slides.css'}
     for target, options in bundles.items():
-        assert web_ui.check_bundle(target, **options) == [], target.relative_to(ROOT)
+        assert pysaiyanweboo.check_bundle(target, **options) == [], target.relative_to(ROOT)
         assert target.read_text(encoding='utf-8').startswith('/* web-ui-bundle/1 commit=')
     for name in ('studio/style.css', 'studio/tools/tools.css', 'studio/brand/gallery.css'):
         text = (ROOT / name).read_text(encoding='utf-8')
@@ -27,7 +27,7 @@ def test_studio_stylesheets_match_the_generator():
         assert '.ui-elements button,' in text and 'cdn.' not in text
     assert '/* css/' not in (ROOT / 'studio/slides/slides.css').read_text(encoding='utf-8')  # loaded after style.css
     assert module.main(['--check']) == 0
-    assert web_ui.check_theme(module.IRONMATE) == []  # the brand palette reads at WCAG AA on both grounds
+    assert pysaiyanweboo.check_theme(module.IRONMATE) == []  # the brand palette reads at WCAG AA on both grounds
 
 
 def test_studio_pages_opt_into_the_components_and_palette():

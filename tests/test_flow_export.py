@@ -7,7 +7,7 @@ import pytest
 import flow_export as f
 import image_studio
 from ironlib import mermaid_svg
-from vendor.web_ui_flow import flow_html, flow_mermaid, MAX_INPUT
+from vendor.ascii_artist import flow_html, flow_mermaid, FLOW_MAX_INPUT as MAX_INPUT
 
 ROOT = Path(__file__).resolve().parents[1]
 SAMPLE = json.loads((ROOT / 'examples/flow.json').read_text())

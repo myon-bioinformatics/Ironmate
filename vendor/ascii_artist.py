@@ -1,5 +1,5 @@
 # ascii_artist.py
-# metadata: __all__=32 | base_sha=7c21bacfac7b60327b77f9b31a87869ef7838a7e | updated_at=2026-09-23T05:39:43Z
+# metadata: __all__=39 | base_sha=7c21bacfac7b60327b77f9b31a87869ef7838a7e | updated_at=2026-09-23T05:39:43Z
 
 __all__ = [
     "generate_square",
@@ -35,16 +35,16 @@ __all__ = [
     "to_markdown_outline",
     "from_markdown_outline",
     "inventory",
+    "validate_flow",
+    "flow_html",
+    "flow_mermaid",
+    "flow_document",
+    "flow_css",
+    "patch_flow",
 ]
 
-import argparse
-import html
-import json
-import re
-import sys
-import unicodedata
-from dataclasses import dataclass
-from typing import Any, Callable, Iterable, Literal, Mapping, Protocol
+import argparse, html, json, re, sys, unicodedata
+from collections import deque; from dataclasses import dataclass; from typing import Any, Callable, Iterable, Literal, Mapping, Protocol
 
 SUPPORTED = {
     "generation": [
@@ -165,10 +165,10 @@ def _validate_dag(value: Diagram) -> None:
         indegree[edge.target] += 1
         outgoing[edge.source].append(edge.target)
 
-    ready = [node_id for node_id in node_ids if indegree[node_id] == 0]
+    ready = deque(node_id for node_id in node_ids if indegree[node_id] == 0)
     visited = 0
     while ready:
-        current = ready.pop(0)
+        current = ready.popleft()
         visited += 1
         for target in outgoing[current]:
             indegree[target] -= 1
@@ -187,17 +187,19 @@ def _topological_layers(value: Diagram) -> list[list[str]]:
         indegree[edge.target] += 1
         outgoing[edge.source].append(edge.target)
 
-    remaining = set(node_ids)
+    rank = {node_id: index for index, node_id in enumerate(node_ids)}
+    layer = [node_id for node_id in node_ids if indegree[node_id] == 0]
     layers: list[list[str]] = []
-    while remaining:
-        layer = [node_id for node_id in node_ids if node_id in remaining and indegree[node_id] == 0]
-        if not layer:
-            raise ValueError("diagram must be acyclic")
+    while layer:
         layers.append(layer)
+        following = []
         for source in layer:
-            remaining.remove(source)
             for target in outgoing[source]:
                 indegree[target] -= 1
+                if indegree[target] == 0:
+                    following.append(target)
+        # Edge traversal order can differ from input node order.
+        layer = sorted(following, key=rank.__getitem__)
     return layers
 
 
@@ -230,6 +232,8 @@ def from_dict(value: Mapping[str, Any]) -> Diagram:
 
     if not isinstance(value, Mapping):
         raise TypeError("diagram data must be a mapping")
+    if set(value) - {"nodes", "edges"}:
+        raise ValueError("expected nodes/edges Diagram; card flows use validate_flow")
     raw_nodes = value.get("nodes", ())
     raw_edges = value.get("edges", ())
     if not isinstance(raw_nodes, (list, tuple)) or not isinstance(raw_edges, (list, tuple)):
@@ -982,6 +986,185 @@ _CLI_READERS: dict[str, Callable[[str], Diagram]] = {
 }
 
 
+# Card-flow implementation adapted from web-ui (MIT, Copyright (c) 2026 myon).
+# Source and behavioral provenance: docs/card-flows.md.
+FLOW_MAX_INPUT = 256 * 1024
+FLOW_THEMES = ("modern", "github-like")
+
+def _flow_label(value, required=True, length=240):
+    if not isinstance(value, str) or len(value) > length:
+        raise ValueError("labels must be bounded strings")
+    if any(ord(char) < 32 or ord(char) == 127 or 0xD800 <= ord(char) <= 0xDFFF for char in value):
+        raise ValueError("control characters or unpaired surrogates in label")
+    if required and not value.strip():
+        raise ValueError("empty label")
+    return value
+
+def _flow_cards(value, kind):
+    if not isinstance(value, list) or not 1 <= len(value) <= 8:
+        raise ValueError(f"{kind} must contain 1..8 cards")
+    result = []
+    for card in value:
+        if not isinstance(card, dict) or "title" not in card or set(card) - {"title", "note"}:
+            raise ValueError("cards require title and optional note only")
+        result.append({"title": _flow_label(card["title"], length=120),
+                       "note": _flow_label(card.get("note", ""), required=False)})
+    return result
+
+def validate_flow(spec):
+    """Return a detached canonical source/step card flow; reject unknown fields."""
+    if not isinstance(spec, dict) or set(spec) - {"title", "sources_label", "sources", "steps"}:
+        raise ValueError("expected flow object")
+    return {"title": _flow_label(spec.get("title", ""), length=120),
+            "sources_label": _flow_label(spec.get("sources_label", "Sources"), length=120),
+            "sources": _flow_cards(spec.get("sources"), "sources"),
+            "steps": _flow_cards(spec.get("steps"), "steps")}
+
+def _card_html(card):
+    title = '<strong class="ui-flow-card-title">' + html.escape(card["title"]) + '</strong>'
+    note = ('<span class="ui-flow-card-note">' + html.escape(card["note"]) + '</span>') if card["note"] else ""
+    return '<div class="ui-flow-card">' + title + note + '</div>'
+
+def flow_html(spec):
+    """Render an escaped static figure fragment without styles or scripts."""
+    data = validate_flow(spec)
+    sources = "".join('<li class="ui-flow-source">' + _card_html(c) + '</li>' for c in data["sources"])
+    steps = "".join('<li class="ui-flow-step">' + _card_html(c) + '</li>' for c in data["steps"])
+    return ('<figure class="ui-flow" aria-label="' + html.escape(data["title"], quote=True) + '">'
+            '<figcaption class="ui-flow-caption">' + html.escape(data["title"]) + '</figcaption>'
+            '<ul class="ui-flow-sources" aria-label="' + html.escape(data["sources_label"], quote=True) + '">'
+            + sources + '</ul><div class="ui-flow-arrow" aria-hidden="true">↓</div>'
+            '<ol class="ui-flow-steps">' + steps + '</ol></figure>')
+
+def _mermaid_label(value):
+    entities = {'"': "#quot;", "<": "#lt;", ">": "#gt;", "&": "#amp;",
+                "[": "#91;", "]": "#93;", "\\": "#92;", "\n": "#10;"}
+    return "".join(entities.get(char, char) for char in value)
+
+def flow_mermaid(spec):
+    """Render fenced Mermaid with generated IDs and entity-escaped labels."""
+    data = validate_flow(spec)
+    lines = ["```mermaid", "flowchart TB",
+             '    subgraph input["' + _mermaid_label(data["sources_label"]) + '"]',
+             "        direction LR"]
+    for i, card in enumerate(data["sources"]):
+        label = _mermaid_label(card["title"])
+        if card["note"]:
+            label += "<br/>" + _mermaid_label(card["note"])
+        lines.append(f'        S{i}["{label}"]')
+    lines.append("    end")
+    for i, card in enumerate(data["steps"]):
+        label = _mermaid_label(card["title"])
+        if card["note"]:
+            label += "<br/>" + _mermaid_label(card["note"])
+        lines.append(f'    T{i}["{label}"]')
+    for i in range(len(data["sources"])):
+        lines.append(f"    S{i} --> T0")
+    for i in range(1, len(data["steps"])):
+        lines.append(f"    T{i-1} --> T{i}")
+    return "\n".join(lines + ["```", ""])
+
+def flow_document(spec, *, asset_base=".", theme="github-like", embed_css=True):
+    """Build standalone HTML in memory; linked mode expects exported flow.css."""
+    if theme not in FLOW_THEMES:
+        raise ValueError("unknown theme")
+    if not isinstance(asset_base, str) or not asset_base or any(
+        c in asset_base for c in ('<', '>', '"', "'", "\\", "?", "#", "\n", "\r")
+    ) or ":" in asset_base or asset_base.startswith("//") or any(
+        ord(c) < 32 or ord(c) == 127 or 0xD800 <= ord(c) <= 0xDFFF for c in asset_base
+    ):
+        raise ValueError("asset_base must be a local path")
+    if embed_css:
+        css = "<style>" + flow_css(theme=theme) + "</style>"
+    else:
+        prefix = asset_base.rstrip("/")
+        css = '<link rel="stylesheet" href="' + html.escape(prefix + "/flow.css", quote=True) + '">'
+    data = validate_flow(spec)
+    return ('<!doctype html>\n<html lang="ja"><head><meta charset="utf-8">'
+            '<meta name="viewport" content="width=device-width,initial-scale=1">'
+            '<title>' + html.escape(data["title"]) + '</title>' + css + '</head>'
+            '<body data-ui-theme="' + theme + '"><main class="ui-page">'
+            + flow_html(data) + '</main></body></html>\n')
+
+# Canonical stylesheet stays in this file: vendoring requires no runtime assets.
+_FLOW_CSS = '*{box-sizing:border-box}body{margin:0;font:16px/1.6 Meiryo,メイリオ,sans-serif;background:var(--ui-bg);color:var(--ui-fg)}.ui-page{max-width:960px;margin:auto;padding:1.25rem}\n/* Optional flow diagram component: no JS and no changes to contract/v1. */\n@layer components {\n.ui-flow{padding:clamp(.8rem,3vw,1.8rem);margin:1.25rem 0;border:1px solid var(--ui-border);border-radius:1.5rem;background:var(--ui-bg);color:var(--ui-fg)}\n.ui-flow-caption{margin:0 0 1.25rem;font-size:clamp(1rem,2.25vw,1.25rem);font-weight:700;text-align:center}\n.ui-flow-sources{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,10.5rem),1fr));gap:.85rem;list-style:none;margin:0;padding:0}\n.ui-flow-steps{list-style:none;padding:0;margin:0}\n.ui-flow-source,.ui-flow-step{min-width:0}\n.ui-flow-card{border:1px solid var(--ui-border);border-radius:1.2rem;background:var(--ui-panel);padding:clamp(1rem,3vw,1.7rem);text-align:center;overflow-wrap:anywhere}\n.ui-flow-card-title{display:block;font-weight:750;font-size:clamp(1.15rem,2.5vw,1.9rem);line-height:1.4}\n.ui-flow-card-note{display:block;margin-top:.5rem;color:var(--ui-muted);line-height:1.5}\n.ui-flow-arrow,.ui-flow-step+.ui-flow-step::before{display:block;content:"↓";margin:.85rem auto;width:fit-content;color:var(--ui-muted);font-size:1.8rem;line-height:1.4;font-weight:700;text-align:center}\n@media(max-width:520px){.ui-flow-sources{grid-template-columns:1fr}.ui-flow-card{padding:.85rem}}\n@media print{.ui-flow,.ui-flow-card{break-inside:avoid}}\n}\n'
+_FLOW_PALETTES = {
+    "github-like": "--ui-bg:#fff;--ui-fg:#1f2328;--ui-border:#d0d7de;--ui-panel:#f6f8fa;--ui-muted:#59636e",
+    "modern": "--ui-bg:#0d1117;--ui-fg:#d1f7c4;--ui-border:#58a6ff;--ui-panel:#101820;--ui-muted:#8b949e;color-scheme:dark",
+}
+
+
+def flow_css(*, theme="github-like"):
+    """Build a self-contained card stylesheet in memory (no I/O or JS)."""
+    if theme not in FLOW_THEMES:
+        raise ValueError("unknown theme")
+    return ":root{" + _FLOW_PALETTES[theme] + "}\n" + _FLOW_CSS
+
+
+FLOW_MAX_PATCH = 64 * 1024
+FLOW_MAX_OPS = 64
+_FLOW_FIELDS = frozenset({"title", "note"})
+
+
+def _canonical_flow(spec):
+    """Validate and return a detached, JSON-serializable flow document."""
+    return validate_flow(spec)
+
+
+def patch_flow(spec, operations):
+    """Apply a batch atomically; invalid operations never mutate caller state."""
+    result = _canonical_flow(spec)
+    if not isinstance(operations, list) or len(operations) > FLOW_MAX_OPS:
+        raise ValueError("patch must be an array with at most 64 operations")
+    for operation in operations:
+        if not isinstance(operation, dict) or set(operation) != {"path", "value"}:
+            raise ValueError("patch entries require path and value")
+        path = operation["path"]
+        if not isinstance(path, str):
+            raise ValueError("patch path must be a string")
+        if path in ("/title", "/sources_label"):
+            result[path[1:]] = operation["value"]
+            continue
+        parts = path.split("/")
+        if len(parts) != 4 or parts[0] != "" or parts[1] not in ("sources", "steps") or parts[3] not in _FLOW_FIELDS:
+            raise ValueError("unsupported patch path")
+        index = parts[2]
+        if not index.isascii() or not index.isdecimal() or str(int(index)) != index:
+            raise ValueError("patch index must be canonical decimal")
+        collection = result[parts[1]]
+        if int(index) >= len(collection):
+            raise ValueError("patch index out of range")
+        collection[int(index)][parts[3]] = operation["value"]
+    return validate_flow(result)
+
+
+def _apply_flow_patch_document(document):
+    if not isinstance(document, dict) or set(document) != {"spec", "patch"}:
+        raise ValueError("expected spec and patch")
+    return patch_flow(document["spec"], document["patch"])
+
+
+
+def _cli_flow(args):
+    budget = FLOW_MAX_INPUT + (FLOW_MAX_PATCH if args.command == "flow-patch" else 0)
+    raw = sys.stdin.buffer.read(budget + 1)
+    if len(raw) > budget:
+        raise ValueError("flow document exceeds byte budget")
+    try:
+        document = json.loads(raw.decode("utf-8"))
+    except RecursionError as exc:
+        raise ValueError("flow JSON nesting is too deep") from exc
+    if args.command == "flow-patch":
+        return json.dumps(_apply_flow_patch_document(document), ensure_ascii=False,
+                          indent=2 if args.pretty else None)
+    if args.format == "mermaid":
+        return flow_mermaid(document)
+    if args.format == "fragment":
+        return flow_html(document)
+    return flow_document(document, theme=args.theme, asset_base=args.asset_base,
+                         embed_css=not args.no_embed_css)
+
+
 def _cli_read(path: str) -> str:
     if path == "-":
         return sys.stdin.read()
@@ -1044,6 +1227,15 @@ def _cli_parser() -> argparse.ArgumentParser:
                          choices=sorted([*_CLI_READERS, "render", "inventory"]))
     convert.add_argument("--charset", choices=("unicode", "ascii"), default="unicode",
                          help="charset for --to render (default: unicode)")
+    cards = commands.add_parser("flow-cards", help="render bounded JSON cards from stdin", allow_abbrev=False)
+    cards.add_argument("--format", choices=("html", "fragment", "mermaid"), default="html")
+    cards.add_argument("--theme", choices=FLOW_THEMES, default="github-like")
+    cards.add_argument("--asset-base", default=".")
+    cards.add_argument("--no-embed-css", action="store_true")
+    patch = commands.add_parser("flow-patch", help="atomically patch JSON cards from stdin", allow_abbrev=False)
+    patch.add_argument("--pretty", action="store_true")
+    for each in (parser, *commands.choices.values()):
+        each.suggest_on_error = True  # 🤔 argparse 3.14+: "maybe you meant" for commands and choices; older Pythons ignore it
     return parser
 
 
@@ -1058,6 +1250,8 @@ def main(argv: Iterable[str] | None = None) -> int:
             generate = {"square": generate_square, "triangle": generate_triangle,
                         "diamond": generate_diamond}[args.command]
             text = generate(args.size, args.char)
+        elif args.command in ("flow-cards", "flow-patch"):
+            text = _cli_flow(args)
         elif args.command == "box":
             text = generate_box(_cli_read(args.input), padding=args.padding, style=args.style)
         elif args.command == "flow":
@@ -1080,7 +1274,12 @@ def main(argv: Iterable[str] | None = None) -> int:
     except (ValueError, TypeError, KeyError) as exc:
         print(f"ascii_artist.py: error: {exc}", file=sys.stderr)
         return 2
-    sys.stdout.write(text if not text or text.endswith("\n") else text + "\n")
+    output = text if not text or text.endswith("\n") else text + "\n"
+    if args.command in ("flow-cards", "flow-patch") and hasattr(sys.stdout, "buffer"):
+        # Card-flow JSON/HTML is UTF-8 even when redirected Windows stdout is not.
+        sys.stdout.buffer.write(output.encode("utf-8"))
+    else:
+        sys.stdout.write(output)
     return 0
 
 

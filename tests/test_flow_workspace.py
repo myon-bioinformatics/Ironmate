@@ -54,7 +54,7 @@ def test_invalid_batch_is_atomic(ops):
 
 
 def test_patch_child_utf8_preserves_non_ascii_labels():
-    """Isolated flow_patch child uses -I -S; -X utf8 keeps stdout UTF-8 on Windows."""
+    """The isolated ascii_artist flow-patch child uses -I -S; -X utf8 keeps stdout UTF-8 on Windows."""
     state = w.import_flow(RAW)
     value = '日本語ラベル & <text>'
     updated = w.patch_workspace(state, [{'path': '/steps/0/title', 'value': value}])
@@ -113,7 +113,7 @@ def test_invalid_workspace(raw):
     with pytest.raises(ValueError): w.read_workspace(raw)
 
 
-def test_python_node_workspace_api_and_upstream_native_patch_parity(tmp_path):
+def test_python_node_workspace_api(tmp_path):
     state = w.import_flow(RAW)
     expected = w.patch_workspace(state, PATCH)
     script = '''const w=require(process.argv[1]);const v=JSON.parse(process.argv[2]);
@@ -128,12 +128,6 @@ process.stdout.write(JSON.stringify({workspace:next,image:image.toString('utf8')
     actual = json.loads(result.stdout)
     assert actual['workspace'] == expected
     assert actual['image'].encode() == w.render_workspace(expected,'mermaid')
-    for ops in ([], PATCH, [{'path':'/sources_label','value':'入力'}],
-                [{'path':'/sources/0/note','value':'😀 & <text>'}]):
-        document=json.dumps(dict(spec=state['spec'],patch=ops)).encode()
-        node=subprocess.run(['node',str(w.UPSTREAM/'js/flow-patch.cjs')],input=document,capture_output=True,timeout=10)
-        assert node.returncode == 0, node.stderr
-        assert json.loads(node.stdout) == w.patch_workspace(state,ops)['spec']
     invalid_script = '''const w=require(process.argv[1]);const v=JSON.parse(process.argv[2]);
 const before=JSON.stringify(v);try{w.patchWorkspace(v,[{path:'/title',value:'new'},
 {path:'/steps/99/title',value:'bad'}],{python:process.argv[3]});process.exit(1)}
@@ -144,12 +138,14 @@ catch(e){if(JSON.stringify(v)!==before)process.exit(1)}'''
 
 
 def test_vendor_runtime_is_one_merged_commit_and_license_is_exact():
+    """The flow contract, its patch CLI and the sample come from one merged ascii_artist commit; web-ui no longer has flow code."""
     import hashlib
     lock=json.loads((ROOT/'vendor.lock.json').read_text())
-    files=[x for x in lock['files'] if x['repository'].endswith('/PySaiyanWeBoo')]
-    assert {x['commit'] for x in files} == {'95dcfc6f3fa764249566bf2f9df90dcead7c64db'}
-    assert len(files) == 7
-    for entry in files:
+    assert not [x for x in lock['files'] if x['repository'].endswith('/PySaiyanWeBoo')]
+    flow={x['destination']: x for x in lock['files'] if x['repository'].endswith('/ascii_artist')}
+    assert {flow[d]['commit'] for d in ('vendor/ascii_artist.py','examples/flow.json')} == {'001de63c23396e3ea6333867a169df2c60a50244'}
+    assert flow['examples/flow.json']['source'] == 'examples/pr-flow.json' and 'vendor/ascii_artist-LICENSE' in flow
+    for entry in flow.values():
         data=(ROOT/entry['destination']).read_bytes()
         assert hashlib.sha256(data).hexdigest() == entry['sha256']
         assert hashlib.sha1(b'blob '+str(len(data)).encode()+b'\0'+data).hexdigest() == entry['blob_sha']
@@ -163,15 +159,11 @@ def test_vendor_runtime_is_one_merged_commit_and_license_is_exact():
     ('/steps/0/title','\ud800',False),
 ], ids=['null_note','null_sources_label','title_120_emoji','title_121_emoji',
         'note_240_emoji','note_241_emoji','feff_label','blank_nel','lone_surrogate'])
-def test_native_python_node_patch_boundary_parity(path,value,accepted):
+def test_patch_boundaries(path,value,accepted):
     state=w.import_flow(RAW); before=w.workspace_bytes(state)
     operations=[{'path':'/title','value':'first valid edit'}, {'path':path,'value':value}]
-    node=subprocess.run(['node',str(w.UPSTREAM/'js/flow-patch.cjs')],
-        input=json.dumps(dict(spec=state['spec'],patch=operations)).encode(),capture_output=True,timeout=10)
-    assert node.returncode == (0 if accepted else 2),node.stderr
     if accepted:
-        assert json.loads(node.stdout)==w.patch_workspace(state,operations)['spec']
+        assert w.patch_workspace(state,operations)['spec']['title'] == 'first valid edit'
     else:
-        assert node.stdout==b''
         with pytest.raises(ValueError): w.patch_workspace(state,operations)
     assert w.workspace_bytes(state)==before

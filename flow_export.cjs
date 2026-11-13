@@ -1,5 +1,5 @@
 "use strict";
-/** Thin Node API. Python owns rendering, locked web-ui owns the JSON contract. */
+/** Thin Node API. Python owns rendering, locked ascii_artist owns the JSON contract. */
 const path = require("node:path");
 const {run, main} = require("./vendor/py_launch.cjs");
 const {mapLaunchError, PY_LAUNCH} = require("./ironmate_py_launch.cjs");

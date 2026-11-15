@@ -8,21 +8,13 @@ when the full output is too large to download conveniently, as with browser-test
 ```sh
 python -S image_digest.py input.json --out digest/            # image paths are relative to input.json
 python -S image_digest.py input.json -o digest/               # -o and --output are the same as --out
-node image_digest.cjs input.json digest/                       # from Node (Python does the work)
-node image_digest.cjs input.json --out digest/ --tile 64x128   # same flags as Python
-node image_digest.cjs --help
+python -S image_digest.py input.json digest/                  # the second argument is the same as --out
+node vendor/py_launch.cjs --env-var IRONMATE_PYTHON -- image_digest.py input.json --out digest/   # from Node
 ```
 
 Unfixable input exits with code 2. With `--json`, that failure becomes a single JSON object on stderr; stdout on success is unchanged. Missing arguments print usage without waiting.
 
-Types for the Node API (`buildDigest`) are in `image_digest.d.cts`. The other Node APIs (`flow_export.cjs`,
-`flow_workspace.cjs`, `studio/ingress.cjs`) also have `.d.cts` files of the same name; the implementations stay JavaScript.
-
-The Node wrapper launches Python with `vendor/py_launch.cjs`, inherited from the parent. When the API's `python` is omitted,
-each call runs a short version check for 3.9+ and then tries, in order, `IRONMATE_PYTHON` → `PYTHON` → `python3` →
-`python` (`py -3` on Windows). The API's `python` or a set `IRONMATE_PYTHON` does not fall back.
-Launch failures give `image digest Python process failed: …` (library) or CLI exit code `2`.
-Details are the same as [Node launch for flow export](flow-export.md).
+There is no Node wrapper: Node runs `image_digest.py` through the parent's `vendor/py_launch.cjs` (`IRONMATE_PYTHON` → `PYTHON` → `python3` → `python`), so the flags, exit codes and `--json` errors are the Python ones.
 
 Input is `ironmate-image-digest-input/1`:
 
@@ -61,10 +53,10 @@ Combinations without a cell are marked explicitly as "not run". Image paths must
   and reused across downscaling iterations. Candidates halve each dimension down to 16×32. Full-resolution pixels of all images are not kept.
 - The output must be a new or empty directory. `write()` rejects a regular file, a nonempty directory or a symlink
   (including a dangling one) with `ValueError`. On error the CLI exits with code 2,
-  and the Node API throws. Input is used as a snapshot that does not change during the run.
+  and a Node `run()` call throws with that stderr attached. Input is used as a snapshot that does not change during the run.
 - `build(spec, base, max_bytes=..., tile=(64, 128))` returns `(HTML, Markdown, info)`.
-  `write(out, *build(...))` saves the 3 files. Node saves with
-  `buildDigest(spec, {base, out, maxBytes, tile: "64x128"})` and returns the same `info`.
+  `write(out, *build(...))` saves the 3 files. From Node, `run("image_digest.py", ["-", "--base", base, "--out", out], {envVar: "IRONMATE_PYTHON", input: JSON.stringify(spec)})`
+  prints the same `info` as JSON.
 - `info` has `schema`, `tile: [width,height]`, `bytes` (UTF-8 byte count of the HTML), `fits`,
   `rows`, `cols` (row/column counts), `passed`, and `statuses` (counts per status of explicit cells).
   Omitted cells are not counted in `statuses`. If even the minimum size does not fit, output is still produced with `fits: false`.

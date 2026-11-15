@@ -37,9 +37,12 @@ def test_real_flow_formats_and_node_api():
     box=[float(x) for x in ET.fromstring(outputs['svg']).attrib['viewBox'].split()]
     import math
     assert decode_png(scaled,max_pixels=16777216)[:2]==(math.ceil(box[2]*2),math.ceil(box[3]*2))
-    script='const f=require("./flow_export.cjs");const fs=require("node:fs");process.stdout.write(f.renderFlow(JSON.parse(fs.readFileSync(0,"utf8")),JSON.parse(process.argv[1])));'
-    node_opts=dict(format='png',mmdc=opts['mmdc'],chrome=opts['chrome'],puppeteerConfig=opts['puppeteer_config'],python=sys.executable)
-    result=subprocess.run(['node','-e',script,json.dumps(node_opts)],input=json.dumps(spec).encode(),cwd=ROOT,capture_output=True,timeout=180)
+    # Node reaches flow_export.py through the shared launcher; the Python CLI is the contract.
+    cli=['--format','png']+[x for k,v in (('--mmdc',opts['mmdc']),('--chrome',opts['chrome']),
+         ('--puppeteer-config',opts['puppeteer_config'])) if v for x in (k,str(v))]
+    result=subprocess.run(['node','vendor/py_launch.cjs','--env-var','IRONMATE_PYTHON','--','flow_export.py',*cli],
+                          input=json.dumps(spec).encode(),cwd=ROOT,capture_output=True,timeout=180,
+                          env={**os.environ,'IRONMATE_PYTHON':sys.executable})
     assert result.returncode==0,result.stderr
     assert result.stdout==outputs['png']
     malicious=json.loads(json.dumps(spec))
@@ -86,12 +89,15 @@ def test_retained_json_edit_regenerates_all_formats():
     from xml.etree import ElementTree as ET
     assert 'JSON edited /' in ''.join(ET.fromstring(outputs['svg']).itertext())
     assert b'JSON edited /' in outputs['mermaid']
-    script='''const w=require('./flow_workspace.cjs');const fs=require('node:fs');
-const v=JSON.parse(fs.readFileSync(0,'utf8'));const r=w.patchAndRender(v.workspace,v.patch,v.options);
-process.stdout.write(r.image);'''
-    node_opts=dict(format='png',mmdc=opts['mmdc'],chrome=opts['chrome'],puppeteerConfig=opts['puppeteer_config'],python=sys.executable)
-    result=subprocess.run(['node','-e',script],input=json.dumps(dict(workspace=original,patch=operations,options=node_opts)).encode(),
-                          cwd=ROOT,capture_output=True,timeout=180)
+    script='''const {call,run}=require('./vendor/py_launch.cjs');const fs=require('node:fs');
+const v=JSON.parse(fs.readFileSync(0,'utf8'));const o={python:v.python,noSite:true,isolated:true};
+const next=call('flow_workspace.py','patch_workspace',[v.workspace,v.patch],o);
+const state=call('flow_workspace.py','validate_workspace',[next],o);
+process.stdout.write(run('flow_export.py',v.cli,{python:v.python,noSite:true,input:JSON.stringify(state.spec),timeout:180000}).stdout);'''
+    cli=['--format','png']+[x for k,v in (('--mmdc',opts['mmdc']),('--chrome',opts['chrome']),
+         ('--puppeteer-config',opts['puppeteer_config'])) if v for x in (k,str(v))]
+    result=subprocess.run(['node','-e',script],input=json.dumps(dict(workspace=original,patch=operations,cli=cli,
+                          python=sys.executable)).encode(),cwd=ROOT,capture_output=True,timeout=180)
     assert result.returncode==0,result.stderr
     assert result.stdout==png
     (directory/'report.json').write_text(json.dumps(dict(

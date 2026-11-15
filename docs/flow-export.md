@@ -30,7 +30,7 @@ python -S flow_export.py examples/flow.json --format svg --mmdc /path/to/mmdc -o
 python -S flow_export.py examples/flow.json --format png --mmdc /path/to/mmdc --chrome /path/to/chrome -o flow.png
 python -S flow_export.py examples/flow.json --format base64 --mmdc /path/to/mmdc -o flow.base64.txt
 python -S flow_export.py examples/flow.json --format data-uri --mmdc /path/to/mmdc -o flow.data-uri.txt
-node flow_export.cjs examples/flow.json --format mermaid -o flow.md
+node vendor/py_launch.cjs --env-var IRONMATE_PYTHON -- flow_export.py examples/flow.json --format mermaid -o flow.md  # from Node
 ```
 
 Omit the input path to read stdin. Output goes to stdout unless `-o` is supplied.
@@ -59,34 +59,21 @@ Path('flow.png').write_bytes(render_flow(spec, 'png', mmdc='/path/to/mmdc',
 ```
 
 ```js
-const {renderFlow} = require('./flow_export.cjs');
+const {run} = require('./vendor/py_launch.cjs');
 const spec = require('./examples/flow.json');
-const png = renderFlow(spec, {format: 'png', mmdc: '/path/to/mmdc',
-                              chrome: '/path/to/chrome', python: 'python3'});
+const png = run('flow_export.py', ['--format', 'png', '--mmdc', '/path/to/mmdc', '--chrome', '/path/to/chrome'],
+                {envVar: 'IRONMATE_PYTHON', noSite: true, input: JSON.stringify(spec), timeout: 180000}).stdout;
 require('node:fs').writeFileSync('flow.png', png);
 ```
 
-The Node API is a synchronous, bounded Buffer-returning **Python wrapper**, not a
-second implementation. It delegates process launch to the vendored parent
-`vendor/py_launch.cjs` (shared with `flow_workspace.cjs` and `image_digest.cjs`).
+There is no Node wrapper: Node starts the Python CLI through the vendored parent
+`vendor/py_launch.cjs` (Node 26+), so the flags, limits and exit codes are the
+Python ones above. The interpreter order is `IRONMATE_PYTHON`, `PYTHON`,
+`python3`, `python` (Windows `py -3`), each checked for 3.9+; an explicit
+`IRONMATE_PYTHON` or `python` option does not fall back. Windows `.cmd`/`.bat`
+shims are rejected. A failure throws with the Python CLI's stderr attached.
 
-**Interpreter resolution (Node wrappers):** each call runs a short Python 3.9+
-version probe before spawning the tool. The launcher is pinned to parent commit
-`1f6f1e345f640827703e2872151a73b4cbdfd382`. The probe honors the same
-`noSite` / `isolated` flags as the tool: ambient `sitecustomize` cannot run during
-discovery when either flag is enabled. Node remains 26 or later, with no upper bound.
-The shared launcher's asynchronous `main` also forwards every SIGINT / SIGTERM
-while its child is alive,
-including SIGTERM after an ignored SIGINT. Wrapper behavior is unchanged.
-Order when the API `python` option is
-unset: `IRONMATE_PYTHON`, then `PYTHON`, then `python3`, `python`, and on
-Windows `py -3`. An explicit API `python` path or a set `IRONMATE_PYTHON` does
-not fall back to later candidates. Windows `.cmd`/`.bat` shims are rejected.
-Launch failures surface as `flow Python process failed: …` (library API) or exit
-code `2` (CLI). Override the interpreter with `IRONMATE_PYTHON` or the API
-`python` option.
-
-All text formats are also Buffers; use `.toString('utf8')` to read them.
+`run(...).stdout` is a Buffer for every format; use `.toString('utf8')` for the text ones.
 PNG/Base64/data URI can be imported through the existing Studio file/Base64 input.
 Rendering uses CPU browser drawing, with fonts supplied by the host; identical
 pixels across different operating systems/fonts/browser versions are not promised.
@@ -102,7 +89,7 @@ IRONMATE_CHROME=/path/to/chrome node tests/flow_export_browser.cjs
 
 The integration fixture writes all five formats, white/transparent and 2× PNG,
 source/PNG hashes and a report to `build/test-results/flow-export/`. It checks
-Python/Node PNG byte identity and Base64/data URI decoding identity. The browser
+Python/Node (launcher) PNG byte identity and Base64/data URI decoding identity. The browser
 check opens the fixed sample, compares exact PNG/transport pixels through Canvas and records the
 SVG-to-PNG white-composited mean error (tolerance <2 on a 0–255 scale), verifies escaping without remote requests or script execution,
 and saves `sample.html` and `browser.png`. The existing browser CI lane preserves
@@ -113,7 +100,7 @@ rendering.
 
 ## Retained JSON workspace: import → patch → regenerate
 
-`flow_workspace.py` / `flow_workspace.cjs` add a reproducible **structural JSON**
+`flow_workspace.py` adds a reproducible **structural JSON**
 editing path. This is separate from the Image Studio pixel canvas: editing an
 imported PNG there does not update flow labels, and a PNG cannot recover the source
 JSON. A visual Studio scene importer is still outside this path.
@@ -141,7 +128,7 @@ python -S flow_workspace.py render edited.flow.json --format base64 -o edited.ba
 python -S flow_workspace.py original edited.flow.json -o original.json
 python -S flow_workspace.py spec edited.flow.json -o edited.json
 # Same CLI, including renderer options:
-node flow_workspace.cjs render edited.flow.json --format mermaid -o edited.md
+node vendor/py_launch.cjs --env-var IRONMATE_PYTHON -- flow_workspace.py render edited.flow.json --format mermaid -o edited.md
 ```
 
 Supported operations are exactly ascii_artist's array of `{path,value}` entries:
@@ -164,12 +151,12 @@ Path('edited.svg').write_bytes(svg)
 ```
 
 ```js
-const {importFlow, patchAndRender} = require('./flow_workspace.cjs');
-const fs = require('node:fs');
-const original = importFlow(fs.readFileSync('examples/flow.json', 'utf8'));
-const {workspace, image} = patchAndRender(original,
-  [{path:'/steps/0/note', value:'reviewed'}], {format:'png', mmdc:'/path/to/mmdc'});
-// workspace is detached; image is the existing Buffer-returning PNG export.
+const {call, run} = require('./vendor/py_launch.cjs');
+const py = {envVar: 'IRONMATE_PYTHON', noSite: true, isolated: true};
+const original = call('flow_workspace.py', 'import_flow', [require('node:fs').readFileSync('examples/flow.json', 'utf8')], py);
+const workspace = call('flow_workspace.py', 'patch_workspace', [original, [{path: '/steps/0/note', value: 'reviewed'}]], py);
+const {spec} = call('flow_workspace.py', 'validate_workspace', [workspace], py);
+const png = run('flow_export.py', ['--format', 'png', '--mmdc', '/path/to/mmdc'], {...py, input: JSON.stringify(spec)}).stdout;
 ```
 
 Invalid patches and renderer failures leave caller state untouched. CLI output is
@@ -177,11 +164,11 @@ fully computed before any destination is opened; `--force` uses the shared atomi
 file replacement. Each CLI command writes one file. Saving a workspace and image
 in two separate commands is not a multi-file transaction; a later drawing failure
 does not roll back a previously saved valid workspace. Use `patch_and_render` /
-`patchAndRender` to compute both before deciding to persist either.
+the same two calls from Node to compute both before deciding to persist either.
 
 `tests/test_studio.py` covers exact original-byte recovery, detached state,
 64/65 operations, invalid late operations, files surviving failure, and Python /
-Node wrapper / native upstream parity. The existing real-renderer integration
+Node (through `vendor/py_launch.cjs`) / native upstream parity. The existing real-renderer integration
 also saves original/edited JSON, before/after PNG, edited SVG/Mermaid/Base64/data URI,
 and hashes under `build/test-results/flow-export/workspace/`. It checks changed
 pixels and exact Python/Node PNG and transport identity. These artifacts are

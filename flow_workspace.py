@@ -24,7 +24,12 @@ def _json_bytes(value):
 
 
 def import_flow(raw):
-    """Keep the exact UTF-8 source text, including spacing and omitted defaults."""
+    """Keep the exact UTF-8 source text, including spacing and omitted defaults.
+
+    ``raw`` is UTF-8 bytes or text, so Node can call this by name through vendor/py_launch.cjs.
+    """
+    if isinstance(raw, str):
+        raw = raw.encode('utf-8')
     spec = read_spec(raw)
     return dict(schema=SCHEMA, original_json=raw.decode('utf-8'), spec=spec)
 
@@ -133,28 +138,5 @@ def main(argv=None):
     return 0
 
 
-_NODE_BRIDGE_OPS = {
-    'import_flow': import_flow,
-    'patch_workspace': patch_workspace,
-    'validate_workspace': validate_workspace,
-}
-
-
-def _node_bridge_main():
-    name = sys.argv[2]
-    try:
-        operation = _NODE_BRIDGE_OPS[name]
-    except KeyError:
-        raise SystemExit(f'unsupported node bridge operation: {name}') from None
-    values = json.load(sys.stdin.buffer)
-    if name == 'import_flow':
-        values = [values[0].encode('utf-8')]
-    result = operation(*values)
-    sys.stdout.buffer.write(_json_bytes(result))
-    return 0
-
-
 if __name__ == '__main__':
-    if len(sys.argv) >= 3 and sys.argv[1] == '__node_bridge__':
-        raise SystemExit(_node_bridge_main())
     raise SystemExit(main())

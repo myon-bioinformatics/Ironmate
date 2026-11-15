@@ -49,6 +49,6 @@ jobs:
       - name: Run Node unit tests
         run: >-
           node --test
-          tests/py_launch_wrappers.test.cjs
+          tests/py_launch.test.cjs
           tests/studio_ingress.test.cjs
           tests/studio_workspace.test.cjs

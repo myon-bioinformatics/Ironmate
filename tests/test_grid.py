@@ -22,11 +22,7 @@ import pytest
 from PIL import Image as PILImage, ImageChops as PILImageChops
 
 ROOT = Path(__file__).resolve().parents[1]
-import grid_png
-import grid_png as gp
-import grid_preview
-import grid_svg
-import grid_svg as s
+from scripts import build_grid_preview as grid_preview
 import grid_tools as g
 import grid_tools as grid
 import ironmate_image as im
@@ -39,6 +35,7 @@ import pixel_grid
 import pixel_grid as p
 import studio_ingress as ingress
 from ironlib import size_estimate as s_size_estimate, svg_raster as sr
+from ironlib import grid_output
 from ironlib.grid_output import write_output
 from ironlib.pixel_arcade_engine import InvaderSparseScanner, PacmanGhostProbes, ReversiblePixelGrid
 from ironlib.svg_raster import SvgError, rasterize
@@ -152,7 +149,7 @@ def visible(cells_map):
 def test_png_decoders_match_oracle_per_pixel():
     for kind, i, art in cases(1):
         scale = 1 + i % 3
-        data = grid_png.to_png(art, scale, meta=i % 2 == 0)
+        data = grid_output.to_png(art, scale, meta=i % 2 == 0)
         want = oracle(art, scale)
         assert not mismatches(from_rows(*photo_grid.decode_png(data)), want), (kind, i)
         if HAS_PIL:
@@ -740,7 +737,7 @@ def test_pixel_grid_round_trip_identical(data_uri):
     for mask in pixel_grid.MASKS:
         for palette in pixel_grid.PALETTES:
             art = pixel_grid.render(mask, palette, 'outline', 16)
-            text = gp.to_base64(art, data_uri=data_uri)
+            text = grid_output.to_base64(art, data_uri=data_uri)
             assert text.startswith('data:image/png;base64,') == data_uri
             back = photo_grid.convert(text, size=16, palette=palette)
             assert _key(back) == _key(art)
@@ -750,22 +747,22 @@ def test_pixel_grid_round_trip_identical(data_uri):
 def test_photo_grid_round_trip_identical(data_uri):
     art = _photo_art()
     assert len(art['colors']) == 4
-    back = photo_grid.convert(gp.to_base64(art, data_uri=data_uri), size=8, colors=len(art['colors']) - 1)
+    back = photo_grid.convert(grid_output.to_base64(art, data_uri=data_uri), size=8, colors=len(art['colors']) - 1)
     assert _key(back) == _key(art)
 
 
 def test_same_bytes_as_png_and_deterministic():
     art = pixel_grid.render('cloud', 'C03', 'shadow', 32)
     for scale in (1, 4):
-        text = gp.to_base64(art, scale)
-        assert text == gp.to_base64(art, scale)
-        assert base64.b64decode(text, validate=True) == gp.to_png(art, scale)
-        assert photo_grid.decode_base64(gp.to_base64(art, scale, True)) == gp.to_png(art, scale)
+        text = grid_output.to_base64(art, scale)
+        assert text == grid_output.to_base64(art, scale)
+        assert base64.b64decode(text, validate=True) == grid_output.to_png(art, scale)
+        assert photo_grid.decode_base64(grid_output.to_base64(art, scale, True)) == grid_output.to_png(art, scale)
 
 
 def test_scaled_round_trip_needs_matching_target():
     art = pixel_grid.render('diamond', 'C02', 'normal', 16)
-    text = gp.to_base64(art, scale=2)  # 32x32 image
+    text = grid_output.to_base64(art, scale=2)  # 32x32 image
     assert _key(photo_grid.convert(text, size=16, palette='C02')) == _key(art)  # target = original size
     assert photo_grid.convert(text, size=32, palette='C02')['width'] == 32  # different grid
 
@@ -776,12 +773,12 @@ def test_cli_end_to_end(tmp_path):
                                 '--data-uri', '-o', str(out)], capture_output=True, text=True)
     assert r.returncode == 0 and r.stdout == '', r.stderr
     art = pixel_grid.render('rock', 'C06', 'normal', 8)
-    assert out.read_text(encoding='ascii') == gp.to_base64(art, data_uri=True) + '\n'
+    assert out.read_text(encoding='ascii') == grid_output.to_base64(art, data_uri=True) + '\n'
     j = subprocess.run(PHOTO + [str(out), '--size', '8', '--palette', 'C06'], capture_output=True, text=True)
     assert _key(json.loads(j.stdout)) == _key(art)
     again = subprocess.run(PHOTO + [str(out), '--size', '8', '--palette', 'C06', '--format', 'base64'],
                            capture_output=True, text=True)
-    assert again.stdout == gp.to_base64(art) + '\n'
+    assert again.stdout == grid_output.to_base64(art) + '\n'
     piped = subprocess.run(PHOTO + ['-', '--size', '8', '--palette', 'C06'], input=again.stdout,
                            capture_output=True, text=True)
     assert _key(json.loads(piped.stdout)) == _key(art)
@@ -800,8 +797,8 @@ def _cells(art, scale=1):
 def test_round_trip_through_stdlib_decoder(scale):
     for mask in pixel_grid.MASKS:
         art = pixel_grid.render(mask, 'C02', 'shadow', 16)
-        data = gp.to_png(art, scale)
-        assert data == gp.to_png(art, scale)
+        data = grid_output.to_png(art, scale)
+        assert data == grid_output.to_png(art, scale)
         w, h, rows = photo_grid.decode_png(data)
         assert (w, h) == (16 * scale, 16 * scale)
         assert rows == _cells(art, scale)
@@ -810,9 +807,9 @@ def test_round_trip_through_stdlib_decoder(scale):
 
 def test_png_grid_png_round_trip_is_identical():
     art = pixel_grid.render('circle', 'C03', 'outline', 32)
-    back = photo_grid.convert(base64.b64encode(gp.to_png(art)).decode(), size=32, colors=16)
+    back = photo_grid.convert(base64.b64encode(grid_output.to_png(art)).decode(), size=32, colors=16)
     assert _cells(back) == _cells(art)
-    raw = photo_grid.convert(gp.to_png(art), size=32, colors=16)  # plain PNG bytes, no Base64
+    raw = photo_grid.convert(grid_output.to_png(art), size=32, colors=16)  # plain PNG bytes, no Base64
     assert raw == back
 
 
@@ -822,11 +819,11 @@ def test_png_grid_png_round_trip_is_identical():
     (pixel_grid.render(size=128), {'scale': 64})])
 def test_invalid(art, kw):
     with pytest.raises(ValueError):
-        gp.to_png(art, **kw)
+        grid_output.to_png(art, **kw)
 
 
 def test_plain_png_file_and_oversize():
-    data = gp.to_png(pixel_grid.render('circle', size=8))
+    data = grid_output.to_png(pixel_grid.render('circle', size=8))
     with pytest.raises(ValueError, match='exceeds'):
         photo_grid.convert(data, size=8, max_bytes=len(data) - 1)
 
@@ -834,7 +831,7 @@ def test_plain_png_file_and_oversize():
 def test_cli_png_outputs(tmp_path):
     art = pixel_grid.render('rock', 'C05', 'normal', 8)
     png = tmp_path / 'in.png'
-    png.write_bytes(gp.to_png(art))
+    png.write_bytes(grid_output.to_png(art))
     b64 = tmp_path / 'in.b64'
     b64.write_text('data:image/png;base64,' + base64.b64encode(png.read_bytes()).decode(), encoding='ascii')
     photo = [sys.executable, '-S', str(ROOT / 'photo_grid.py')]
@@ -851,21 +848,22 @@ def test_cli_png_outputs(tmp_path):
     assert _cells(json.loads(j.stdout)) == _cells(art)
     r = subprocess.run([sys.executable, '-S', str(ROOT / 'pixel_grid.py'), '--mask', 'rock', '--palette', 'C05',
                         '--size', '8', '--format', 'png'], capture_output=True)
-    assert r.returncode == 0 and r.stdout == gp.to_png(art)
+    assert r.returncode == 0 and r.stdout == grid_output.to_png(art)
     jf = tmp_path / 'a.json'
     jf.write_text(json.dumps(art), encoding='utf-8')
-    r = subprocess.run([sys.executable, '-S', str(ROOT / 'grid_png.py'), str(jf)], capture_output=True)
-    assert r.returncode == 0 and r.stdout == gp.to_png(art)
+    r = subprocess.run([sys.executable, '-S', str(ROOT / 'grid_tools.py'), 'load', str(jf), '--to', 'png', '--no-meta'],
+                       capture_output=True)
+    assert r.returncode == 0 and r.stdout == grid_output.to_png(art)
 
 
 def test_inert_import(tmp_path):
-    probe = 'import sys;sys.path.insert(0,sys.argv[1]);import grid_png'
+    probe = 'import sys;sys.path.insert(0,sys.argv[1]);from ironlib import grid_output'
     r = subprocess.run([sys.executable, '-S', '-c', probe, str(ROOT)], cwd=tmp_path, capture_output=True)
     assert r.returncode == 0 and r.stdout == r.stderr == b'' and list(tmp_path.iterdir()) == []
 
 
 # ═══ · grid preview ══════════════════════════════════════════════════════════════════════════════════════
-# The committed README preview must be exactly what grid_preview.py generates (no drift).
+# The committed README preview must be exactly what scripts/build_grid_preview.py generates (no drift).
 
 SHEET = ROOT / 'docs' / 'pixel-grid-preview.png'
 
@@ -873,7 +871,7 @@ SHEET = ROOT / 'docs' / 'pixel-grid-preview.png'
 def test_committed_preview_matches_generator():
     data = grid_preview.png()
     assert data == grid_preview.png()
-    assert SHEET.read_bytes() == data, 'regenerate: python -S grid_preview.py -o docs/pixel-grid-preview.png --force'
+    assert SHEET.read_bytes() == data, 'regenerate: python -S scripts/build_grid_preview.py -o docs/pixel-grid-preview.png --force'
 
 
 def test_preview_is_small_and_decodes():
@@ -884,7 +882,7 @@ def test_preview_is_small_and_decodes():
 
 def test_cli_refuses_overwrite(tmp_path):
     out = tmp_path / 'p.png'
-    run = lambda *a: subprocess.run([sys.executable, '-S', 'grid_preview.py', '-o', str(out), *a],
+    run = lambda *a: subprocess.run([sys.executable, '-S', 'scripts/build_grid_preview.py', '-o', str(out), *a],
                                     cwd=ROOT, capture_output=True)
     assert run().returncode == 0 and out.read_bytes() == SHEET.read_bytes()
     assert run().returncode == 2
@@ -940,7 +938,7 @@ def _check_random(seed, iterations):
         width, height = rnd.choice((1, 2, 7, 8, 16, 33, 128)), rnd.choice((1, 5, 8, 16, 128))
         art = _random_art(rnd, width, height, rnd.randint(1, 16), rnd.random() < 0.5)
         scale = rnd.randint(1, 4) if width * height <= 4096 else 1
-        data = gp.to_png(art, scale)
+        data = grid_output.to_png(art, scale)
         header = struct.unpack('>IIBBBBB', _chunks(data)[0][1])
         assert header == (width * scale, height * scale, 8, 6, 0, 0, 0)
         assert pg.decode_png(data) == (width * scale, height * scale, _expected_rows(art, scale))
@@ -948,11 +946,11 @@ def _check_random(seed, iterations):
             with Image.open(io.BytesIO(data)) as image:
                 assert image.mode == 'RGBA' and image.tobytes() == b''.join(_expected_rows(art, scale))
         for data_uri in (False, True):
-            assert pg.decode_base64(gp.to_base64(art, scale, data_uri)) == data
+            assert pg.decode_base64(grid_output.to_base64(art, scale, data_uri)) == data
         if width == height and width in pixel_grid.SIZES and art['colors'][0] == '#00000000':
             used = {v for row in art['pixels'] for v in row}
             if used >= set(range(1, len(art['colors']))):
-                back = pg.convert(gp.to_base64(art, scale, rnd.random() < 0.5), size=width,
+                back = pg.convert(grid_output.to_base64(art, scale, rnd.random() < 0.5), size=width,
                                   colors=len(art['colors']) - 1)
                 assert _key(back) == _key(art)
 
@@ -985,10 +983,10 @@ def test_photo_like_round_trip(name, fit):
             art = pg.convert(source, size=size, fit=fit, colors=colors)
             assert {v for row in art['pixels'] for v in row} >= set(range(1, len(art['colors'])))
             for scale, uri in ((1, False), (2, True)):
-                back = pg.convert(gp.to_base64(art, scale, uri), size=size, colors=len(art['colors']) - 1)
+                back = pg.convert(grid_output.to_base64(art, scale, uri), size=size, colors=len(art['colors']) - 1)
                 assert _key(back) == _key(art)
         fixed = pg.convert(source, size=size, fit=fit, palette='C01')
-        assert _key(pg.convert(gp.to_base64(fixed), size=size, palette='C01')) == _key(fixed)
+        assert _key(pg.convert(grid_output.to_base64(fixed), size=size, palette='C01')) == _key(fixed)
 
 
 def test_median_cut_drops_unused_colors():
@@ -997,7 +995,7 @@ def test_median_cut_drops_unused_colors():
     assert {v for row in art['pixels'] for v in row} == set(range(len(art['colors'])))
 
 
-PNG8 = gp.to_png(pixel_grid.render('circle', size=8))
+PNG8 = grid_output.to_png(pixel_grid.render('circle', size=8))
 B64 = base64.b64encode(PNG8).decode()
 
 
@@ -1034,26 +1032,26 @@ def test_limits():
     with pytest.raises(ValueError, match='exceeds'):
         pg.convert(over, max_bytes=limit)
     big = pixel_grid.render(size=128)
-    assert pg.decode_png(gp.to_png(big, 32))[:2] == (4096, 4096)
+    assert pg.decode_png(grid_output.to_png(big, 32))[:2] == (4096, 4096)
     with pytest.raises(ValueError, match='exceeds'):
-        gp.to_png(big, 33)
+        grid_output.to_png(big, 33)
     for scale in (0, 65, True, 1.0):
         with pytest.raises(ValueError, match='scale'):
-            gp.to_base64(big, scale)
+            grid_output.to_base64(big, scale)
 
 
 def test_cli_pipelines_and_crlf(tmp_path):
     art = pg.convert(base64.b64encode(_photos()['gradient']).decode(), size=16, colors=6)
     count = str(len(art['colors']) - 1)
     crlf = tmp_path / 'crlf.b64'
-    text = gp.to_base64(art, data_uri=True)
+    text = grid_output.to_base64(art, data_uri=True)
     crlf.write_bytes(('\r\n'.join(text[i:i + 76] for i in range(0, len(text), 76)) + '\r\n').encode('ascii'))
     one = subprocess.run(PHOTO + [str(crlf), '--size', '16', '--colors', count, '--format', 'base64'],
                          capture_output=True)
-    assert one.returncode == 0 and one.stdout == (gp.to_base64(art) + '\n').encode('ascii')
+    assert one.returncode == 0 and one.stdout == (grid_output.to_base64(art) + '\n').encode('ascii')
     two = subprocess.run(PHOTO + ['-', '--size', '16', '--colors', count, '--format', 'png'],
                          input=one.stdout, capture_output=True)
-    assert two.returncode == 0 and two.stdout == gp.to_png(art)
+    assert two.returncode == 0 and two.stdout == grid_output.to_png(art)
     out = tmp_path / 'again.b64'
     three = subprocess.run(PHOTO + ['-', '--size', '16', '--colors', count, '--format', 'base64',
                                     '--data-uri', '-o', str(out)], input=two.stdout, capture_output=True)
@@ -1098,7 +1096,7 @@ def _expected(art):
 
 def test_cells_colors_transparency_and_runs():
     art = _art([[0, 1, 1, 2], [2, 2, 0, 1]])
-    svg = s.to_svg(art, scale=4)
+    svg = grid_output.to_svg(art, scale=4)
     root, cells = _cover(svg)
     assert root.get('viewBox') == '0 0 4 2' and root.get('width') == '16' and root.get('height') == '8'
     assert root.get('shape-rendering') == 'crispEdges'
@@ -1112,21 +1110,21 @@ def test_cells_colors_transparency_and_runs():
 def test_opaque_zero_and_nonzero_transparency_follow_alpha(merge):
     art = _art([[0, 0, 1, 2], [3, 2, 0, 1]],
                ('#FF0000FF', '#12345600', '#0000FF80', '#00000000'))
-    assert _cover(s.to_svg(art, merge=merge))[1] == _expected(art)
+    assert _cover(grid_output.to_svg(art, merge=merge))[1] == _expected(art)
 
 
 def test_merge_equivalence_on_real_grids():
     for mask in pixel_grid.MASKS:
         art = pixel_grid.render(mask, 'C03', 'outline', 32)
-        merged, single = s.to_svg(art), s.to_svg(art, merge=False)
+        merged, single = grid_output.to_svg(art), grid_output.to_svg(art, merge=False)
         assert _cover(merged)[1] == _cover(single)[1] == _expected(art)
         assert len(merged) < len(single)
-        assert merged == s.to_svg(art)
+        assert merged == grid_output.to_svg(art)
 
 
 def test_metadata_is_escaped():
     art = _art([[1]]) | {'palette': '<&"x">'}
-    root = ET.fromstring(s.to_svg(art))
+    root = ET.fromstring(grid_output.to_svg(art))
     assert '<&"x">' in root.find(NS + 'title').text
 
 
@@ -1135,7 +1133,7 @@ def test_metadata_is_escaped():
     (_art([[1]], ('#000000', '#FF0000FF')), {}), (_art([[1]]), {'scale': 0}), (_art([[1]]), {'scale': 65})])
 def test_invalid_grid_svg(art, kw):
     with pytest.raises(ValueError):
-        s.to_svg(art, **kw)
+        grid_output.to_svg(art, **kw)
 
 
 def _png_b64():
@@ -1161,19 +1159,19 @@ def test_cli_end_to_end_from_base64_png(tmp_path):
     root, cells = _cover(out.read_text(encoding='utf-8'))
     assert root.get('width') == '24' and cells == _expected(art)
     assert any(v == 0 for row in art['pixels'] for v in row)
-    assert out.read_text(encoding='utf-8') == s.to_svg(art, 3)
+    assert out.read_text(encoding='utf-8') == grid_output.to_svg(art, 3)
     jf = tmp_path / 'a.json'
     jf.write_text(j.stdout, encoding='utf-8')
-    r2 = subprocess.run([sys.executable, '-S', str(ROOT / 'grid_svg.py'), str(jf), '--scale', '3'],
+    r2 = subprocess.run([sys.executable, '-S', str(ROOT / 'grid_tools.py'), 'load', str(jf), '--to', 'svg', '--scale', '3'],
                         capture_output=True, text=True)
-    assert r2.returncode == 0 and r2.stdout == s.to_svg(art, 3)
+    assert r2.returncode == 0 and r2.stdout == grid_output.to_svg(art, 3)
 
 
 def test_pixel_grid_cli_svg_and_inert_imports(tmp_path):
     r = subprocess.run([sys.executable, '-S', str(ROOT / 'pixel_grid.py'), '--mask', 'circle', '--size', '8', '--format', 'svg'],
                        cwd=tmp_path, capture_output=True, text=True)
-    assert r.returncode == 0 and r.stdout == s.to_svg(pixel_grid.render('circle', size=8))
-    probe = ('import sys;sys.path.insert(0,sys.argv[1]);import pixel_grid, grid_svg;'
+    assert r.returncode == 0 and r.stdout == grid_output.to_svg(pixel_grid.render('circle', size=8))
+    probe = ('import sys;sys.path.insert(0,sys.argv[1]);import pixel_grid;from ironlib import grid_output;'
              'import photo_grid;assert "PIL" not in sys.modules')
     r = subprocess.run([sys.executable, '-S', '-c', probe, str(ROOT)], cwd=tmp_path, capture_output=True)
     assert r.returncode == 0 and r.stdout == r.stderr == b''
@@ -1221,8 +1219,8 @@ def test_semi_transparent_many_colors_exact(ncolors):
 
 def test_meta_default_png_bytes_unchanged():
     art = ALL_ART[0]
-    assert grid_png.to_png(art) == grid_png.to_png(art, meta=False)
-    assert b'ironmate\x00' in grid_png.to_png(art, meta=True)
+    assert grid_output.to_png(art) == grid_output.to_png(art, meta=False)
+    assert b'ironmate\x00' in grid_output.to_png(art, meta=True)
 
 
 def test_duplicate_palette_rgba_is_the_one_meta_exception():
@@ -1240,8 +1238,8 @@ def test_tampered_meta_and_pixels_fail_clearly():
     with pytest.raises(ValueError, match='bad CRC'):
         g.restore(bytes(data))
     other = dict(art, colors=['#00000000', '#123456FF', '#123457FF', '#123458FF', '#123459FF'])
-    foreign = grid_png.to_png(art)  # no meta; splice meta of a different palette
-    meta = grid_png.to_png(other, meta=True)
+    foreign = grid_output.to_png(art)  # no meta; splice meta of a different palette
+    meta = grid_output.to_png(other, meta=True)
     spliced = meta[:meta.index(b'IDAT') - 4] + foreign[foreign.index(b'IDAT') - 4:]
     with pytest.raises(ValueError, match='not in the ironmate metadata'):
         g.restore(spliced)
@@ -1250,7 +1248,7 @@ def test_tampered_meta_and_pixels_fail_clearly():
 # --- PNG without metadata: scale detection ---------------------------------------------------
 def test_scale_auto_detect_64_to_32():
     art = pixel_grid.render('circle', 'C03', 'outline', 32)
-    back = g.restore(grid_png.to_png(art, 2))
+    back = g.restore(grid_output.to_png(art, 2))
     assert back['width'] == 32 and back['restored']['scale'] == 2
     assert g.cells(back) == g.cells(art)
     assert back['colors'] == g.canonical(art)['colors']
@@ -1260,7 +1258,7 @@ def test_gcd_detection_limit_is_documented():
     """Without a hint the scale is the largest exact one: a 2x2-checker 8x8 grid looks like 4x4 at 2x."""
     art = {'schema': 'ironmate-pixel-grid/1', 'width': 8, 'height': 8, 'colors': ['#00000000', '#FF0000FF'],
            'pixels': [[((x // 2) + (y // 2)) % 2 for x in range(8)] for y in range(8)]}
-    data = grid_png.to_png(art, 3)
+    data = grid_output.to_png(art, 3)
     assert g.restore(data)['width'] == 4                    # ambiguous: smaller grid also explains it
     assert g.cells(g.restore(data, size=8)) == g.cells(art)  # size hint restores exactly
 
@@ -1275,10 +1273,10 @@ def test_canonical_palette_gives_exact_json_without_meta():
 def test_non_nearest_images_rejected():
     art = pixel_grid.render('rock', 'C01', 'shadow', 16)
     with pytest.raises(ValueError, match='does not divide'):
-        g.restore(grid_png.to_png(art, 2), size=7)
-    smoothed = g.resize(g.restore(grid_png.to_png(art, 4)), 50)  # 64 -> 50: uneven blocks
+        g.restore(grid_output.to_png(art, 2), size=7)
+    smoothed = g.resize(g.restore(grid_output.to_png(art, 4)), 50)  # 64 -> 50: uneven blocks
     with pytest.raises(ValueError, match='not one color'):
-        g.restore(grid_png.to_png(smoothed), size=25)
+        g.restore(grid_output.to_png(smoothed), size=25)
 
 
 def test_lossy_inputs_point_to_photo():
@@ -1293,7 +1291,7 @@ def test_resize_up_then_down_exact(k):
         up = g.resize(art, art['width'] * k)
         assert up['height'] == art['height'] * k
         assert g.resize(up, art['width']) == art
-        w, h, rows = photo_grid.decode_png(grid_png.to_png(art, k))
+        w, h, rows = photo_grid.decode_png(grid_output.to_png(art, k))
         assert g.cells(up) == g._rows_to_cells(w, h, rows)              # resize == PNG --scale
 
 
@@ -1373,9 +1371,9 @@ def test_scale_detect_and_resize_stdlib_matches_numpy():
 def test_integer_resize_matches_pillow_nearest():
     from PIL import Image
     art = _random_art_grid_tools(13, 11, 9, 4)
-    w, h, rows = photo_grid.decode_png(grid_png.to_png(art))
+    w, h, rows = photo_grid.decode_png(grid_output.to_png(art))
     img = Image.frombytes('RGBA', (w, h), b''.join(rows)).resize((39, 33), Image.NEAREST)
-    assert img.tobytes() == b''.join(photo_grid.decode_png(grid_png.to_png(g.resize(art, 39)))[2])
+    assert img.tobytes() == b''.join(photo_grid.decode_png(grid_output.to_png(g.resize(art, 39)))[2])
 
 
 def test_without_optional_backends(monkeypatch):
@@ -2253,7 +2251,7 @@ def test_rectangular_exports_preserve_palette_and_visible_rgba(colors):
     assert small['colors'][:len(colors)] == colors
     assert small['custom_metadata'] == art['custom_metadata']
     assert g.restore(g.encode(small, 'json')) == small
-    from grid_png import header_info
+    from ironlib.grid_output import header_info
     for fmt in ('png', 'base64'):
         restored = g.restore(g.encode(small, fmt, scale=2, data_uri=True), backend='stdlib')
         # Existing PNG header whitelist and first-index rule for duplicate RGBA.
@@ -2293,7 +2291,7 @@ def test_fill_opacity_and_group_inheritance():
 def test_grid_svg_output_rasterizes_exactly():
     for mask in pixel_grid.MASKS:
         art = pixel_grid.render(mask, 'C06', 'outline', 20)
-        w, h, rows = rasterize(grid_svg.to_svg(art))
+        w, h, rows = rasterize(grid_output.to_svg(art))
         want = [b''.join(bytes.fromhex(art['colors'][v][1:]) for v in row) for row in art['pixels']]
         assert rows == want
 
@@ -2710,7 +2708,7 @@ def test_python_apis_drop_source_metadata(name, data):
             _check(g.encode(photo, fmt, meta=meta), f'photo {fmt}')
     photo2 = photo_grid.convert(b64, 16)
     _check(photo2, 'photo_grid.convert')
-    _check(grid_png.to_png(photo2, 1, True), 'grid_png meta')
+    _check(grid_output.to_png(photo2, 1, True), 'grid_png meta')
     if name.startswith('png'):
         _check(g.restore(data), 'restore')
 
@@ -2845,8 +2843,8 @@ def test_zlib_stream_must_terminate():
 CLIS = [
     ['pixel_grid.py', '--mask', 'cloud', '--format', 'png'],
     ['photo_grid.py', 'SRC', '--size', '8', '--format', 'png'],
-    ['grid_png.py', 'JSON'],
-    ['grid_svg.py', 'JSON'],
+    ['grid_tools.py', 'load', 'JSON', '--to', 'png'],
+    ['grid_tools.py', 'load', 'JSON', '--to', 'svg'],
     ['-m', 'grid_tools', 'make', 'cloud'],
 ]
 

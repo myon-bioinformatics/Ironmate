@@ -81,10 +81,10 @@ def compare(cache: Path) -> dict:
     installed = importlib.util.find_spec("pypdf")
     if installed is not None:
         raise SystemExit(f"pypdf is already installed ({installed.origin})")
-    scripts = Path(__file__).resolve().parent
-    if str(scripts) not in sys.path:
-        sys.path.insert(0, str(scripts))
-    import fetch_module
+    root = Path(__file__).resolve().parents[1]
+    if str(root) not in sys.path:
+        sys.path.insert(0, str(root))
+    from vendor import fetch_module
 
     spec = fetch_module.resolve("pypdf")
     wheel = fetch_module.fetch(spec, cache)

@@ -413,13 +413,13 @@ def main(argv=None):
                 text = handle.read(MAX_BYTES * 2)
         artifact = convert(text, args.size, args.fit, args.colors, args.palette)
         if args.format == 'base64':
-            from grid_png import to_base64
+            from ironlib.grid_output import to_base64
             result = (to_base64(artifact, args.scale or 1, args.data_uri) + '\n').encode('ascii')
         elif args.format == 'png':
-            from grid_png import to_png
+            from ironlib.grid_output import to_png
             result = to_png(artifact, args.scale or 1)
         elif args.format == 'svg':
-            from grid_svg import to_svg
+            from ironlib.grid_output import to_svg
             result = to_svg(artifact, args.scale or 8).encode('utf-8')
         else:
             result = (json.dumps(artifact, ensure_ascii=False) + '\n').encode('utf-8')

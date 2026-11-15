@@ -1,15 +1,17 @@
 """Deterministic README preview sheet of pixel_grid output (stdlib only). Python 3.11+.
 
-    python -S grid_preview.py -o docs/pixel-grid-preview.png --force
+    python -S scripts/build_grid_preview.py -o docs/pixel-grid-preview.png --force
 
 Rows: 5 masks x 10 color IDs (effect ``shadow``), a strip of the 4 effects, and odd sizes.
-The sheet is itself an ``ironmate-pixel-grid/1`` artifact encoded by grid_png, so the bytes are
-reproducible; tests/test_grid_preview.py asserts the committed PNG matches.
+The sheet is itself an ``ironmate-pixel-grid/1`` artifact encoded by ``ironlib.grid_output``, so the bytes are
+reproducible; tests/test_grid.py asserts the committed PNG matches.
 """
 from __future__ import annotations
 import argparse, sys
+from pathlib import Path
 
-import pixel_grid
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import pixel_grid  # noqa: E402
 
 __all__ = ['CELL', 'SCALE', 'build', 'png', 'main']
 CELL, SCALE, GAP, LABEL_W = 24, 3, 4, 44
@@ -89,7 +91,7 @@ def build():
 
 
 def png():
-    from grid_png import to_png
+    from ironlib.grid_output import to_png
     return to_png(build(), SCALE)
 
 

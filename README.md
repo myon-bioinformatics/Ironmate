@@ -79,7 +79,7 @@ python -S pixel_grid.py --mask circle --palette C02 --size 31 --format png --sca
 ![Examples: 5 shapes × 10 color IDs (shadow effect), 4 effects, odd sizes](docs/pixel-grid-preview.png)
 
 Examples (from the top: 5 shapes × color IDs `C01`–`C10` with the shadow effect / 4 effects on cloud and rock / odd sizes 5, 9, 7, 13, 17, 31).
-It can be regenerated with `python -S grid_preview.py -o docs/pixel-grid-preview.png --force`,
+It can be regenerated with `python -S scripts/build_grid_preview.py -o docs/pixel-grid-preview.png --force`,
 and a test (`tests/test_grid.py`) checks byte equality with the committed PNG, so the implementation and image cannot drift.
 
 `photo_grid.py` reads Base64 (a raw string or `data:image/...;base64,`) or an image file
@@ -107,8 +107,8 @@ Detection uses the leading bytes (magic bytes), not the extension. Files are pas
 | Output (`--format`) | Status | Required dependency | Reason / behavior |
 | --- | --- | --- | --- |
 | JSON (default) | Supported | None | `ironmate-pixel-grid/1` (fixed RGBA + color indices). Canonical data |
-| SVG | Supported | None | Written directly as a string (`grid_svg.py`, `<rect>` merging horizontal runs of one color) |
-| PNG | Supported | None | Writes 8-bit RGBA with `zlib` + `struct` (`grid_png.py`, integer nearest-neighbor upscaling, same input gives same bytes) |
+| SVG | Supported | None | Written directly as a string (`ironlib/grid_output.py` `to_svg`, `<rect>` merging horizontal runs of one color) |
+| PNG | Supported | None | Writes 8-bit RGBA with `zlib` + `struct` (`ironlib/grid_output.py` `to_png`, integer nearest-neighbor upscaling, same input gives same bytes) |
 | Base64 | Supported | None | The same bytes as PNG output, stringified with `base64`. `--data-uri` gives `data:image/png;base64,...`. Can be fed back into photo_grid.py |
 | WebP output | Unsupported | — | The standard library has no VP8/VP8L encoder. Out of requirements |
 | Native PPTX shapes | Unsupported | — | Out of scope by the user's decision (image output only) |
@@ -123,10 +123,10 @@ python -S photo_grid.py photo.b64 --size 32 --colors 8
 python photo_grid.py photo.b64 --size 16 --palette C01 --fit contain
 python -S photo_grid.py photo.b64 --size 32 --format svg --scale 8 -o photo.svg
 python -S pixel_grid.py --mask cloud --format svg > cloud.svg
-python -S grid_svg.py grid.json -o grid.svg   # SVG from an existing grid JSON
+python -S grid_tools.py load grid.json --to svg -o grid.svg   # SVG from an existing grid JSON
 python -S photo_grid.py photo.png --size 32 --format png --scale 4 -o dots.png
 python -S pixel_grid.py --mask cloud --format png --scale 8 > cloud.png
-python -S grid_png.py grid.json --scale 8 -o grid.png
+python -S grid_tools.py load grid.json --to png --scale 8 --no-meta -o grid.png
 python -S pixel_grid.py --mask cloud --format base64 --data-uri -o cloud.b64
 python -S photo_grid.py cloud.b64 --size 16 --palette C01   # returns to the original grid
 ```
@@ -155,7 +155,7 @@ and `scanner.grid.rollback_all()` fully restores pixels and the occupancy mask.
 [Frame operations, reversibility scope and probe spec](docs/pixel-arcade-engine.md).
 
 `encode` adds an `ironmate` tEXt chunk (color table and dimensions) to the PNG by default, and `load`/`restore` return
-the original JSON as-is when it is present (`--no-meta` omits it; the default PNG bytes themselves are the same as `grid_png.py`).
+the original JSON as-is when it is present (`--no-meta` omits it; with `--no-meta` the PNG bytes are the same as `grid_output.to_png`).
 
 | Path | Reversible? | Conditions (pinned by tests) |
 | --- | --- | --- |

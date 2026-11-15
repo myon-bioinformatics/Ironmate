@@ -180,7 +180,7 @@ def _processed_scene(scene):
             continue
         # Use original pixel dimensions; don't auto-infer a dot-art cell scale.
         from photo_grid import decode_png
-        from grid_png import to_png
+        from ironlib.grid_output import to_png
         width, height, rows = decode_png(base64.b64decode(layer['src'].split(',', 1)[1], validate=True), max_pixels=4194304)
         palette, indexes, pixels = [], {}, []
         for row in rows:

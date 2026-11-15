@@ -31,7 +31,7 @@ def _backend(name, module):
 
 
 def _png_meta(data):
-    """The ``ironmate`` tEXt payload written by grid_png.to_png(meta=True), or None."""
+    """The ``ironmate`` tEXt payload written by grid_output.to_png(meta=True), or None."""
     pos = 8
     while pos + 8 <= len(data):
         length, kind = struct.unpack('>I4s', data[pos:pos + 8])
@@ -49,7 +49,7 @@ def _png_meta(data):
             if (not isinstance(colors, list) or not colors
                     or not all(isinstance(c, str) and _HEX.fullmatch(c) for c in colors)):
                 raise ValueError('ironmate metadata colors must be a non-empty list of #RRGGBBAA')
-            from grid_png import header_info
+            from ironlib.grid_output import header_info
             return header_info(meta)   # foreign/free-text fields in a header are dropped, never echoed
         if kind in (b'IDAT', b'IEND'):
             return None
@@ -142,18 +142,20 @@ def photo(source, size=32, fit='crop', colors=8, palette=None):
     return photo_grid.convert(source, size, fit, colors, palette)
 
 
-def encode(artifact, fmt='base64', scale=1, data_uri=False, meta=True):
-    """Artifact -> str (json/svg/base64) or bytes (png). ``meta`` embeds the palette header in PNG."""
+def encode(artifact, fmt='base64', scale=1, data_uri=False, meta=True, *, indexed=False, merge=True):
+    """Artifact -> str (json/svg/base64) or bytes (png). ``meta`` embeds the palette header in PNG.
+
+    ``indexed`` writes a lossless palette PNG (png/base64); ``merge=False`` writes one SVG rect per cell.
+    """
+    from ironlib.grid_output import to_base64, to_png, to_svg
     if fmt == 'json':
         return json.dumps(artifact, ensure_ascii=False, separators=(',', ':'))
     if fmt == 'svg':
-        from grid_svg import to_svg
-        return to_svg(artifact, scale if scale != 1 else 8)
-    from grid_png import to_base64, to_png
+        return to_svg(artifact, scale if scale != 1 else 8, merge)
     if fmt == 'png':
-        return to_png(artifact, scale, meta)
+        return to_png(artifact, scale, meta, indexed=indexed)
     if fmt == 'base64':
-        return to_base64(artifact, scale, data_uri, meta)
+        return to_base64(artifact, scale, data_uri, meta, indexed=indexed)
     raise ValueError(f'format must be one of {FORMATS}')
 
 
@@ -167,6 +169,8 @@ def restore(source, size=None, backend='auto'):
     """
     if isinstance(source, dict):
         return json.loads(json.dumps(source))
+    if isinstance(source, bytes) and source.lstrip(b'\xef\xbb\xbf \t\r\n').startswith(b'{'):
+        source = source.decode('utf-8-sig')  # a JSON file read by the CLI arrives as bytes
     if isinstance(source, str) and source.lstrip().startswith('{'):
         return json.loads(source)
     if isinstance(source, str) and source.lstrip('\ufeff \t\r\n').startswith('<'):
@@ -199,7 +203,7 @@ def restore(source, size=None, backend='auto'):
             raise ValueError('pixels use colors that are not in the ironmate metadata')
         return dict(meta, pixels=[[index[c] for c in row] for row in small])
     if size is None and kind == 'svg':
-        size = width  # SVG pixel size comes from its viewBox (grid units for grid_svg output)
+        size = width  # SVG pixel size comes from its viewBox (grid units for grid_output.to_svg)
     if size is not None:
         if type(size) is not int or size < 1 or width % size:
             raise ValueError(f'size {size!r} does not divide the image width {width}')
@@ -319,6 +323,8 @@ def main(argv=None):
         cmd.add_argument('--scale', type=int, default=1, help='output pixels per cell (svg default 8)')
         cmd.add_argument('--data-uri', action='store_true')
         cmd.add_argument('--no-meta', action='store_true', help='omit the ironmate PNG header')
+        cmd.add_argument('--indexed', action='store_true', help='lossless palette PNG (png/base64); 1-256 colors')
+        cmd.add_argument('--no-merge', action='store_true', help='svg: one rect per cell')
         cmd.add_argument('--resize', type=int, help='resize to this width (nearest-neighbour by default)')
         cmd.add_argument('--resize-method', choices=('nearest', 'probes'), default='nearest',
                          help='probes: experimental lossy 2x downscale; requires --resize')
@@ -388,7 +394,8 @@ def main(argv=None):
             raise ValueError('--resize-method probes requires --resize')
         if args.recolor:
             art = recolor(art, args.recolor)
-        result = encode(art, args.to, args.scale, args.data_uri, not args.no_meta)
+        result = encode(art, args.to, args.scale, args.data_uri, not args.no_meta, indexed=args.indexed,
+                        merge=not args.no_merge)
     except (OSError, ValueError, KeyError) as exc:
         return fail(exc)
     data = result if isinstance(result, bytes) else (result + ('' if result.endswith('\n') else '\n')).encode()

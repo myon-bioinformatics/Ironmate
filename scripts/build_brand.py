@@ -8,7 +8,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from grid_png import to_png
+from ironlib.grid_output import to_png
 
 COLORS = ['#003D32FF', '#F5F9F0FF', '#00AD75FF', '#DBE442FF', '#21918CFF', '#5EC962FF']
 

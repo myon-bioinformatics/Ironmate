@@ -3,9 +3,9 @@ import hashlib, json, platform, statistics, sys, time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import grid_png
 import pillow_min
 import pixel_grid
+from ironlib import grid_output
 
 
 def main():
@@ -16,17 +16,17 @@ def main():
             outputs = {}
             for indexed in (False, True):
                 samples = []
-                grid_png.to_png(art, indexed=indexed)
+                grid_output.to_png(art, indexed=indexed)
                 for _ in range(7):
                     start = time.perf_counter_ns()
-                    data = grid_png.to_png(art, indexed=indexed)
+                    data = grid_output.to_png(art, indexed=indexed)
                     samples.append(time.perf_counter_ns() - start)
                 outputs['indexed' if indexed else 'rgba'] = {
                     'bytes': len(data), 'samples_ns': samples,
                     'median_ns': statistics.median(samples), 'sha256': hashlib.sha256(data).hexdigest(),
                 }
-            a = pillow_min.open_bytes(grid_png.to_png(art)).tobytes()
-            b = pillow_min.open_bytes(grid_png.to_png(art, indexed=True)).tobytes()
+            a = pillow_min.open_bytes(grid_output.to_png(art)).tobytes()
+            b = pillow_min.open_bytes(grid_output.to_png(art, indexed=True)).tobytes()
             assert a == b
             records.append({'size': size, 'mask': mask, 'rgba_pixels_sha256': hashlib.sha256(a).hexdigest(), **outputs})
     print(json.dumps({'python': sys.version, 'platform': platform.platform(),

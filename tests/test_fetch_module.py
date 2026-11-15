@@ -4,43 +4,11 @@ from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-import fetch_module as compatibility  # noqa: E402
 from vendor import fetch_module as fm  # noqa: E402
 
 
-def test_compatibility_import_delegates_to_the_pinned_vendor_module():
-    assert compatibility.resolve is fm.resolve
-    assert compatibility.fetch is fm.fetch
+def test_vendor_module_is_the_pinned_copy():
     assert Path(fm.__file__).resolve() == Path(__file__).resolve().parents[1] / "vendor/fetch_module.py"
-
-
-def test_compatibility_cli_works_without_site_packages_from_other_directory(tmp_path):
-    import subprocess
-    script = Path(__file__).resolve().parents[1] / "scripts/fetch_module.py"
-    result = subprocess.run([sys.executable, "-S", str(script), "--help"],
-                            cwd=tmp_path, capture_output=True, text=True, check=True)
-    assert "resolve" in result.stdout and "fetch" in result.stdout
-
-
-def test_compatibility_ensure_preserves_ironmate_cache_default(monkeypatch):
-    calls = []
-    monkeypatch.setattr(fm, "ensure", lambda *args: calls.append(args) or "loaded")
-    assert compatibility.ensure("cdnfake") == "loaded"
-    assert compatibility.ensure("cdnfake", "custom", "1.0") == "loaded"
-    assert calls == [("cdnfake", "build/cdn-cache", None), ("cdnfake", "custom", "1.0")]
-
-
-@pytest.mark.parametrize("cache_args,expected", [
-    ([], "build/cdn-cache"), (["--cache", "custom"], "custom"),
-    (["--cache=custom"], "custom"), (["--ca", "custom"], "custom"),
-])
-def test_compatibility_cli_preserves_cache_defaults_and_overrides(monkeypatch, cache_args, expected):
-    calls = []
-    monkeypatch.setattr(fm, "resolve", lambda *args: {"filename": "fake.whl"})
-    monkeypatch.setattr(fm, "fetch", lambda spec, cache: calls.append(str(cache)) or cache / "fake.whl")
-    assert compatibility.main(["fetch", "cdnfake", *cache_args]) == 0
-    assert calls == [expected]
 
 
 @pytest.mark.parametrize("marker,expected", [

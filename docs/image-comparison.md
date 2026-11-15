@@ -47,7 +47,7 @@ Binary-classification MCC/precision/recall are not repurposed directly for pixel
 
 `scripts/check_visual_regression.py` in web-ui `9ab07c0e09cd06209dd795f7a8f9a595da302c36`
 handles exact matches by PNG size and SHA-256. It provides no pixel error or candidate interpolation,
-so Ironmate's existing `photo_grid.decode_png`, `grid_png.to_png` and `grid_output.write_output` were reused.
+so Ironmate's existing `photo_grid.decode_png`, `grid_output.to_png` and `grid_output.write_output` were reused.
 No code or Python/JS dependencies from other repos were newly copied.
 If this is shared in the future, PNG size, presence of a reference, alpha/background and error definitions would be the contract,
 and it would not be treated as loosening web-ui's exact-match check.

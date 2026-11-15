@@ -9,7 +9,7 @@ import argparse, hashlib, json, math, sys
 from pathlib import Path
 
 from ironlib.grid_output import write_output
-from grid_png import to_png
+from ironlib.grid_output import to_png
 from photo_grid import decode_png
 
 

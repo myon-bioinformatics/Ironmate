@@ -30,7 +30,7 @@ import ironmate_image as image
 import photo_grid
 import photo_grid as g_photo_grid
 import photo_grid as pg
-import pillow_min as pm
+from vendor import pillow_min as pm
 import pixel_grid
 import pixel_grid as p
 import studio_ingress as ingress
@@ -3049,7 +3049,7 @@ def test_corrupt_crc_and_truncation():
 
 
 def test_standalone_python_s():
-    r = subprocess.run([sys.executable, '-S', str(ROOT / 'pillow_min.py')], capture_output=True, text=True)
+    r = subprocess.run([sys.executable, '-S', str(ROOT / 'vendor' / 'pillow_min.py')], capture_output=True, text=True)
     assert r.returncode == 0, r.stderr
 
 

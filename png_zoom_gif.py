@@ -4,7 +4,7 @@ from __future__ import annotations
 import argparse, io, math
 from pathlib import Path
 
-from pillow_min import decode_png_rgba
+from vendor.pillow_min import decode_png_rgba
 
 
 ANCHORS = {

@@ -11,7 +11,7 @@ from __future__ import annotations
 import argparse, base64, binascii, json, re, struct, sys, zlib
 
 from pixel_grid import PALETTES, SIZES
-from pillow_min import paeth as _paeth, unfilter_scanlines as _unfilter
+from vendor.pillow_min import paeth as _paeth, unfilter_scanlines as _unfilter
 
 __all__ = ['FITS', 'MAX_BYTES', 'MAX_PIXELS', 'max_base64_chars', 'ImageDecodeError', 'decode_base64',
            'decode_png', 'decode_pillow', 'decode_image', 'convert', 'main']

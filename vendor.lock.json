@@ -495,6 +495,15 @@
       "commit": "9cfa841818de56a22048c8c6196f10f698118122",
       "blob_sha": "4ec4989b801bf1a3df6184d21f79e6e7ed5931f6",
       "sha256": "15f66204c4a6a1ce0c94f0ed4319ff9400f872e85fd32c95f21695c2f231af59"
+    },
+    {
+      "repository": "myon-bioinformatics/myon-bioinformatics",
+      "ref": "63a4e339927d32282b0d5a8378da6c982890b9e9",
+      "commit": "63a4e339927d32282b0d5a8378da6c982890b9e9",
+      "source": "tools/stdlib_min/pillow_min.py",
+      "destination": "vendor/pillow_min.py",
+      "blob_sha": "d3d8e986ac5492f822c017ab7d9d5aa482e877a0",
+      "sha256": "3ef0bf0743934aebd39c6baf11ca20e9db6190486ec409ffe993da840cc63942"
     }
   ]
 }

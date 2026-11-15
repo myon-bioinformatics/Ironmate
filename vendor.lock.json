@@ -473,10 +473,10 @@
       "repository": "myon-bioinformatics/myon-bioinformatics",
       "source": "py_launch.cjs",
       "destination": "vendor/py_launch.cjs",
-      "ref": "384f5dd532076062f7833038764e9a62322c387c",
-      "commit": "384f5dd532076062f7833038764e9a62322c387c",
-      "blob_sha": "4a35b158b4a4cbd3a5d672ded1337a138a44bbd2",
-      "sha256": "f900e2662e7065a087897f4b927815d34a81f0e9ca811c0412151b38a218a501"
+      "ref": "2a7045b61ce4707c5bd988feedcfa11f77da3734",
+      "commit": "2a7045b61ce4707c5bd988feedcfa11f77da3734",
+      "blob_sha": "c858a1f71e1d75a1fbbefbd762fd7038287880aa",
+      "sha256": "c0e1333d34bcb95aec94cc78b2ee2ad9d01abe4e556c81c99094e2c8faf0feaa"
     },
     {
       "repository": "myon-bioinformatics/Aoi",

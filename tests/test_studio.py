@@ -1619,21 +1619,27 @@ def test_missing_renderer_is_explicit_and_does_not_replace_output(tmp_path):
 
 
 def test_python_and_node_cli_and_node_api_match_from_other_cwd(tmp_path):
+    """Node reaches flow_export.py through the shared vendor/py_launch.cjs (CLI and run()); no per-tool wrapper."""
     expected = f.render_flow(SAMPLE,'mermaid')
-    for command in ([sys.executable,'-S',str(ROOT/'flow_export.py')], ['node',str(ROOT/'flow_export.cjs')]):
+    launcher = str(ROOT/'vendor/py_launch.cjs')
+    for command in ([sys.executable,'-S',str(ROOT/'flow_export.py')],
+                    ['node',launcher,'--env-var','IRONMATE_PYTHON','--',str(ROOT/'flow_export.py')]):
         result = subprocess.run(command+['--format','mermaid'],input=json.dumps(SAMPLE).encode(),cwd=tmp_path,capture_output=True)
         assert result.returncode==0,result.stderr
         assert result.stdout==expected
-    script='const f=require(process.argv[1]); const spec=JSON.parse(process.argv[2]); process.stdout.write(f.renderFlow(spec,{format:"mermaid",python:process.argv[3]}));'
-    result=subprocess.run(['node','-e',script,str(ROOT/'flow_export.cjs'),json.dumps(SAMPLE),sys.executable],cwd=tmp_path,capture_output=True)
+    script=('const {run}=require(process.argv[1]); const r=run(process.argv[2],["--format","mermaid"],'
+            '{python:process.argv[4],noSite:true,input:process.argv[3]}); process.stdout.write(r.stdout);')
+    result=subprocess.run(['node','-e',script,launcher,str(ROOT/'flow_export.py'),json.dumps(SAMPLE),sys.executable],
+                          cwd=tmp_path,capture_output=True)
     assert result.returncode==0,result.stderr
     assert result.stdout==expected
 
 
 def test_node_api_missing_python_reports_error():
-    script='const f=require("./flow_export.cjs");try{f.renderFlow({}, {python:"/missing/python"})}catch(e){console.error(e.message);process.exit(2)}'
+    script=('const {run}=require("./vendor/py_launch.cjs");try{run("flow_export.py",[],{python:"/missing/python"})}'
+            'catch(e){console.error(e.message);process.exit(2)}')
     result=subprocess.run(['node','-e',script],cwd=ROOT,capture_output=True)
-    assert result.returncode==2 and b'Python process failed' in result.stderr
+    assert result.returncode==2 and b'/missing/python' in result.stderr
 
 
 def test_transparent_is_passed_explicitly_to_mmdc(monkeypatch,tmp_path):
@@ -1802,25 +1808,22 @@ def test_invalid_workspace(raw):
 
 
 def test_python_node_workspace_api(tmp_path):
+    """Node calls flow_workspace functions by name through vendor/py_launch.cjs call()."""
     state = w.import_flow(RAW)
     expected = w.patch_workspace(state, PATCH)
-    script = '''const w=require(process.argv[1]);const v=JSON.parse(process.argv[2]);
-const original=JSON.stringify(v);const imported=w.importFlow(v.original_json,{python:process.argv[3]});
-const next=w.patchWorkspace(imported,JSON.parse(process.argv[4]),{python:process.argv[3]});
-if(JSON.stringify(v)!==original)throw Error('mutated');
-const image=w.renderWorkspace(next,{format:'mermaid',python:process.argv[3]});
-process.stdout.write(JSON.stringify({workspace:next,image:image.toString('utf8')}));'''
-    result = subprocess.run(['node','-e',script,str(ROOT/'flow_workspace.cjs'),json.dumps(state),
-                             sys.executable,json.dumps(PATCH)],cwd=tmp_path,capture_output=True,timeout=30)
+    script = '''const {call}=require(process.argv[1]);const py=process.argv[2];const v=JSON.parse(process.argv[3]);
+const o={python:process.argv[4],noSite:true,isolated:true};const original=JSON.stringify(v);
+const imported=call(py,'import_flow',[v.original_json],o);const next=call(py,'patch_workspace',[imported,JSON.parse(process.argv[5])],o);
+if(JSON.stringify(v)!==original)throw Error('mutated');process.stdout.write(JSON.stringify({workspace:next}));'''
+    launcher, script_path = str(ROOT/'vendor/py_launch.cjs'), str(ROOT/'flow_workspace.py')
+    result = subprocess.run(['node','-e',script,launcher,script_path,json.dumps(state),sys.executable,json.dumps(PATCH)],
+                            cwd=tmp_path,capture_output=True,timeout=30)
     assert result.returncode == 0, result.stderr
-    actual = json.loads(result.stdout)
-    assert actual['workspace'] == expected
-    assert actual['image'].encode() == w.render_workspace(expected,'mermaid')
-    invalid_script = '''const w=require(process.argv[1]);const v=JSON.parse(process.argv[2]);
-const before=JSON.stringify(v);try{w.patchWorkspace(v,[{path:'/title',value:'new'},
-{path:'/steps/99/title',value:'bad'}],{python:process.argv[3]});process.exit(1)}
-catch(e){if(JSON.stringify(v)!==before)process.exit(1)}'''
-    result=subprocess.run(['node','-e',invalid_script,str(ROOT/'flow_workspace.cjs'),json.dumps(state),sys.executable],
+    assert json.loads(result.stdout)['workspace'] == expected
+    invalid_script = '''const {call}=require(process.argv[1]);const v=JSON.parse(process.argv[3]);const before=JSON.stringify(v);
+try{call(process.argv[2],'patch_workspace',[v,[{path:'/title',value:'new'},{path:'/steps/99/title',value:'bad'}]],
+{python:process.argv[4],noSite:true,isolated:true});process.exit(1)}catch(e){if(JSON.stringify(v)!==before)process.exit(1)}'''
+    result=subprocess.run(['node','-e',invalid_script,launcher,script_path,json.dumps(state),sys.executable],
                           capture_output=True,timeout=20)
     assert result.returncode == 0,result.stderr
 

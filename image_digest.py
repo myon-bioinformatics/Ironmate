@@ -14,7 +14,7 @@ Every image becomes a thumbnail embedded as a data URI, so the page is one file 
 open. Thumbnails start at ``--tile`` (default 64x128) and are halved in each direction (a
 quarter of the pixels) until the page fits ``--max-bytes``; the size used is printed on the
 page and in ``digest.json``. Status drives only colour and counts; it is never inferred from
-pixels. Standard library only; image_digest.cjs is the Node entry point.
+pixels. Standard library only; from Node, run it through vendor/py_launch.cjs.
 
     python -S image_digest.py input.json --out digest/ [--max-bytes 1000000] [--tile 64x128]
     python -S image_digest.py input.json -o digest/          # -o and --output are the same as --out
@@ -208,15 +208,20 @@ def write(out, page, summary, info):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    from ironlib.ironmate_cli import ToolParser
+    parser = ToolParser(prog='image_digest.py', description=__doc__.splitlines()[0])
     parser.add_argument('input', help=f'{SCHEMA} JSON; image paths are relative to it ("-" = stdin with --base)')
-    parser.add_argument('--out', '-o', '--output', required=True, dest='out')
+    parser.add_argument('out_dir', nargs='?', metavar='OUT', help='same as --out (INPUT.json DIR)')
+    parser.add_argument('--out', '-o', '--output', dest='out')
     parser.add_argument('--base', help='directory image paths are relative to (default: the input file directory)')
     parser.add_argument('--max-bytes', type=int, default=1_000_000)
     parser.add_argument('--tile', default='64x128', help='starting thumbnail WIDTHxHEIGHT')
     parser.add_argument('--json', action='store_true',
                         help='on a fixable failure, write one JSON object to stderr; success JSON is unchanged')
     args = parser.parse_args(argv)
+    if (args.out is None) == (args.out_dir is None):
+        parser.error('give the output directory once, as --out DIR or as the second argument')
+    args.out = args.out or args.out_dir
     try:
         match = re.fullmatch(r'(\d+)x(\d+)', args.tile)
         if not match:

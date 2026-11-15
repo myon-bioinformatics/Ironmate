@@ -257,7 +257,7 @@ def test_declarations_match_exports():
         declared = set(re.findall(r"^export (?:function|const) (\w+)", types.read_text(encoding="utf-8"), re.M))
         assert declared == set(names), module.name
         checked += 1
-    assert checked >= 4
+    assert checked >= 2
 
 
 # ═══ · cli contract ══════════════════════════════════════════════════════════════════════════════════════
@@ -294,7 +294,7 @@ def test_help_exits_zero_and_names_json():
         [PY, '-S', 'studio_ingress.py', '--help'],
         [PY, '-S', 'image_studio.py', '--help'],
         [PY, '-S', 'image_compare.py', '-h'],
-        ['node', 'image_digest.cjs', '--help'],
+        ['node', 'vendor/py_launch.cjs', '--env-var', 'IRONMATE_PYTHON', '--', 'image_digest.py', '--help'],
         ['node', 'studio/render.cjs', '--help'],
         ['node', 'studio/raster.cjs', '--help'],
         ['node', 'studio/ingress.cjs', '--help'],
@@ -373,13 +373,14 @@ def test_image_tools_share_output_flags_and_node_digest(tmp_path):
     info = json.loads(py.stdout)
     assert info['passed'] == 1 and (digest_out / 'digest.html').is_file()
     node_out = tmp_path / 'digest-node'
-    node = run(['node', 'image_digest.cjs', str(spec_path), '--out', str(node_out), '--tile', '32x64'])
+    via_node = ['node', 'vendor/py_launch.cjs', '--env-var', 'IRONMATE_PYTHON', '--', 'image_digest.py']
+    node = run([*via_node, str(spec_path), '--out', str(node_out), '--tile', '32x64'])
     assert node.returncode == 0, node.stderr
     assert json.loads(node.stdout)['tile'] == [32, 64]
-    legacy = run(['node', 'image_digest.cjs', str(spec_path), str(tmp_path / 'legacy')])
+    legacy = run([*via_node, str(spec_path), str(tmp_path / 'legacy')])
     assert legacy.returncode == 0, legacy.stderr
-    missing = run(['node', 'image_digest.cjs', '--json'])
-    assert missing.returncode == 2 and b'"ok":false' in missing.stderr
+    missing = run([*via_node, '--json'])
+    assert missing.returncode == 2 and json.loads(missing.stderr)['ok'] is False
     assert b'Traceback' not in missing.stderr
 
 

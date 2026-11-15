@@ -339,6 +339,13 @@ def _shared_strings(archive):
     return values
 
 
+def _black(color):
+    """A border side with no color, Excel's 自動 (auto), or system foreground (indexed 64) is black."""
+    if color is None or not color.attrib or color.get('auto') == '1' or color.get('indexed') == '64':
+        return True
+    return (color.get('rgb') or '').upper() == 'FF000000'
+
+
 def _xf_table(styles):
     formats = dict(_BUILTINS)
     for fmt in styles.iter(_q('numFmt')):
@@ -347,7 +354,7 @@ def _xf_table(styles):
     for border in styles.find(_q('borders')).findall(_q('border')):
         sides = {side: border.find(_q(side)) for side in ('left', 'right', 'top', 'bottom')}
         thin = all(node is not None and node.get('style') == 'thin' for node in sides.values())
-        black = thin and all((node.find(_q('color')).get('rgb') or '').upper() == 'FF000000' for node in sides.values())
+        black = thin and all(_black(node.find(_q('color'))) for node in sides.values())
         borders.append('thin' if black else '')
     xfs = []
     for xf in styles.find(_q('cellXfs')).findall(_q('xf')):

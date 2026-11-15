@@ -114,18 +114,81 @@ def mosaic(artifact, cell=8, levels=256):
     return {'schema': 'ironmate-pixel-grid/1', 'width': width, 'height': height, 'colors': palette, 'pixels': pixels}
 
 
+_SLIDES_PANEL_HTML = """\
+<section class="slide-controls" aria-label="スライド編集">
+  <div class="slide-toolbar">
+    <strong>スライド作成</strong
+    ><select id="slide-select" aria-label="スライド"></select
+    ><button id="slide-add">＋ 白紙</button
+    ><button id="slide-duplicate">スライド複製</button
+    ><button id="slide-up">前へ移動</button
+    ><button id="slide-down">後へ移動</button
+    ><button id="slide-delete">スライド削除</button
+    ><button id="deck-save">全スライドJSON保存</button
+    ><label class="button"
+      >全スライドを開く<input
+        id="deck-open"
+        type="file"
+        accept=".json,application/json" /></label
+    ><button id="deck-pptx" class="primary">PPTXを書き出す</button>
+  </div>
+  <details open>
+    <summary>タイトル・本文とフォント見本</summary>
+    <div class="slide-template">
+      <label
+        >タイトル<input
+          id="slide-title"
+          placeholder="タイトルを入力"
+          value="スライドのタイトル" /></label
+      ><label
+        >本文<textarea
+          id="slide-body"
+          rows="2"
+          placeholder="本文を入力。幅で自動折り返し。改行も使用できます。"
+        >
+ここに本文を入力します。
+テキストはPowerPointでも編集できます。</textarea></label
+      ><label
+        >文字の見本<select id="font-sample">
+          <option value="">見本を選ぶ</option>
+          <option value="日本語の文章と ABC abc 0123456789">
+            日本語・英数字
+          </option>
+          <option value="あいうえお　アイウエオ　漢字の見本">
+            ひらがな・カタカナ・漢字
+          </option>
+          <option value="The quick brown fox jumps over the lazy dog.">
+            英文
+          </option>
+        </select></label
+      ><button id="slide-template">タイトル＋本文を追加</button
+      ><button id="slide-arrow">編集できる矢印を追加</button
+      ><button id="slide-bold">選択した文字の太字を切替</button>
+    </div>
+  </details>
+  <p id="deck-status" role="status">
+    文字・図形をImage
+    Studioと同じ操作で配置できます。全スライドは同じ寸法で作成します。
+  </p>
+  <p class="slide-hint">
+    文字はボックス幅で折り返します。文字サイズは自動縮小しません。長文では高さ・位置も調整してください。
+    最大20枚・JSON合計32MiB。テキスト・通常図形・三角の矢羽根はPPTXの編集可能な要素になります。時計・ヒートマップ・単色スタンプ・🔰の矢印は、レイヤー単位の画像として保存します。フォントは表示先の端末に依存します。
+  </p>
+</section>
+"""
+
+
 def public_assets():
     """Explicit publication allowlist; no user scenes, globbing, or local images."""
     names = ('index.html', 'studio.js', 'style.css',
-             'tools/index.html', 'tools/tools.js',
+             'tools/index.html',
              'brand/index.html', 'brand/mono.svg', 'brand/dark-green.svg',
              'brand/famicom.svg', 'brand/gameboy.svg', 'brand/pixel-3d.svg',
              'brand/manifest.webmanifest', 'brand/apple-touch-icon.png', 'brand/app-192.png',
              'brand/app-512.png', 'brand/app-maskable-512.png',
              'brand/icon.svg', 'brand/heatmap.svg', 'brand/hero.svg', 'brand/favicon.ico', 'brand/favicon-16.png',
              'brand/favicon-32.png', 'brand/favicon-48.png', 'brand/icon-192.png',
-             'brand/example-demo.gif', 'brand/example-stamp-demo.gif',
-             'slides/package.js', 'slides/slides.js')
+             'brand/example-demo.gif', 'brand/example-stamp-demo.gif')
     assets = {name: (ROOT / 'studio' / name).read_bytes() for name in names}
     from scripts.pages_catalog import catalog_script
     assets['tools/catalog.js'] = catalog_script()
@@ -136,12 +199,9 @@ def public_assets():
         page = page.replace('"' + name + '"', '"../' + name + '"')
     page = page.replace('href="tools/"', 'href="../tools/"')
     page = page.replace('<a href="slides/">スライド・PPTX作成 ↗</a>', '<a href="../">Image Studio ↗</a>')
-    page = page.replace('<body class="ui-elements" data-ui-theme="ironmate" data-page="studio">', '<body class="ui-elements" data-ui-theme="ironmate" data-page="studio slides" data-mode="slides">').replace('画像にする。', 'スライドにする。')
+    page = page.replace('<body class="ui-elements" data-ui-theme="green" data-page="studio">', '<body class="ui-elements" data-ui-theme="green" data-page="studio slides" data-mode="slides">').replace('画像にする。', 'スライドにする。')
     page = page.replace('IMAGE STUDIO / 01', 'SLIDE STUDIO / 03').replace('Ironmate — Image Studio', 'Ironmate — Slide Studio')
-    extra = ''.join(
-        f'<script defer src="{name}"></script>' for name in ('package.js', 'slides.js'))
-    page = page.replace('</head>', extra + '</head>')
-    page = page.replace('</header>', '</header>' + (ROOT / 'studio/slides/panel.html').read_text())
+    page = page.replace('</header>', '</header>' + _SLIDES_PANEL_HTML)
     assets['slides/index.html'] = page.encode('utf-8')
     return assets
 

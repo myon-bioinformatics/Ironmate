@@ -3,12 +3,12 @@
     uv run --group test python scripts/build_studio_css.py          # rewrite studio/style.css (one sheet for every page)
     uv run --group test python scripts/build_studio_css.py --check  # exit 1 when a committed file is stale
 
-Every sheet is ``pysaiyanweboo.write_bundle`` output: ``core_css()`` (tokens, base, components) + the ``ironmate`` palette
-(``pysaiyanweboo.theme_css``) + the rules below, which are only this studio's layout: header and brand, the three-column
+The sheet is ``pysaiyanweboo.write_bundle`` output: ``core_css()`` (tokens, base, components) with PySaiyanWeBoo's ``green`` theme
+(``CANDIDATE_THEMES``) + the rules below, which are only this studio's layout: header and brand, the three-column
 workspace, the board and its handles, the shelf cards, the inspector. Buttons, inputs, selects, textareas and
 tables take the component look through ``class="ui-elements"`` on ``<body>``; nothing generic lives here.
-The files are committed (the studio is served as static files and image_studio.py is stdlib-only), and
-``tests/test_studio.py`` (``pysaiyanweboo.check_bundle``) fails when they drift.
+The file is committed (the studio is served as static files and image_studio.py is stdlib-only), and
+``tests/test_studio.py`` (``pysaiyanweboo.check_bundle``) fails when it drifts.
 """
 from __future__ import annotations
 
@@ -19,24 +19,15 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 STUDIO = ROOT / "studio"
 
-# The brand, as --ui-* tokens: light paper, deep green ink, teal accent (tests run pysaiyanweboo.check_theme on it). Header and primary button keep
-# their own (dark green / lime) colours in the studio rules, because they are the two brand surfaces.
-IRONMATE = {
-    "--ui-bg": "#edf0ec",
-    "--ui-panel": "#ffffff",
-    "--ui-fg": "#213a3c",
-    "--ui-muted": "#566a61",   # pysaiyanweboo.check_theme: every text token reads at WCAG AA on paper and panel
-    "--ui-border": "#cfd8cf",
-    "--ui-accent": "#076c68",
-    "--ui-danger": "#ad4337",
-    "--ui-radius": "7px",
-}
-INK = "#163b3b"
+# The palette is PySaiyanWeBoo's "green" theme (CANDIDATE_THEMES; first built by hand here, now owned there, so
+# `data-ui-theme` can switch it like any other theme). The header is the theme's ink (var(--ui-fg)); the primary
+# button keeps the studio's lime, the one brand surface the themes do not carry.
+THEME = "green"
 LIME = "#bdf06c"
 
 STUDIO_RULES = f"""/* studio layout */
 body{{font-size:13px;line-height:1.5;margin:0}}
-header{{min-height:76px;background:{INK};color:#fff;padding:18px 26px;display:flex;align-items:center;justify-content:space-between;gap:20px}}
+header{{min-height:76px;background:var(--ui-fg);color:#fff;padding:18px 26px;display:flex;align-items:center;justify-content:space-between;gap:20px}}
 .brand{{display:flex;align-items:center;gap:12px;font-weight:800;letter-spacing:2px;font-size:19px;white-space:nowrap}}
 .brand span{{font-weight:400;font-size:10px;display:block;letter-spacing:3px;margin:5px 0 0;color:#99c5bc}}
 .brand img{{flex:none;image-rendering:pixelated}}
@@ -106,7 +97,7 @@ dialog textarea{{max-width:100%;word-break:break-all}}
 .shelf-card-info{{display:flex;align-items:center;gap:12px;overflow:hidden}}
 .shelf-thumb{{width:48px;height:48px;object-fit:contain;background:repeating-conic-gradient(#e4e9e2 0 25%,#f7f9f4 0 50%) 0/10px 10px;border:1px solid var(--ui-border);border-radius:4px;flex-shrink:0}}
 .shelf-details{{font-size:11px;overflow:hidden}}
-.shelf-details strong{{display:block;font-size:12px;color:{INK};white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
+.shelf-details strong{{display:block;font-size:12px;color:var(--ui-fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
 .shelf-details span{{color:var(--ui-muted)}}
 .shelf-card-actions{{display:flex;gap:6px;flex-shrink:0}}
 #base64-text{{font:11px var(--ui-font-mono);resize:vertical}}
@@ -200,7 +191,6 @@ SLIDES_RULES = """/* slide studio panel (loaded after style.css) */
 
 
 NOTE = "scripts/build_studio_css.py"
-BRAND = ("ironmate", IRONMATE)
 
 
 PAGES = (("studio", "STUDIO_RULES"), ("tools", "TOOLS_RULES"), ("brand", "GALLERY_RULES"), ("slides", "SLIDES_RULES"))
@@ -242,10 +232,10 @@ def scoped(css: str, page: str) -> str:
 
 
 def bundles() -> dict[Path, dict]:
-    """One stylesheet for every studio page: the ironmate palette on core_css plus each page's layout,
+    """One stylesheet for every studio page: PySaiyanWeBoo's green theme on core_css plus each page's layout,
     scoped by ``<body data-page="...">`` (the slides page is ``data-page="studio slides"``)."""
     rules = "\n".join(scoped(globals()[name], page) for page, name in PAGES)
-    return {STUDIO / "style.css": {"brand": BRAND, "extra_css": rules}}
+    return {STUDIO / "style.css": {"theme": THEME, "extra_css": rules}}
 
 
 def main(argv: list[str] | None = None) -> int:

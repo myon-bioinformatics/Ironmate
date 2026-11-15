@@ -916,7 +916,7 @@ def test_studio_stylesheets_match_the_generator():
         assert pysaiyanweboo.check_bundle(target, **options) == [], target.relative_to(ROOT)
         assert target.read_text(encoding='utf-8').startswith('/* web-ui-bundle/1 commit=')
     text = (ROOT / 'studio/style.css').read_text(encoding='utf-8')
-    assert '/* css/components.css */' in text and 'body[data-ui-theme="ironmate"]{--ui-bg:#edf0ec;' in text
+    assert '/* css/components.css */' in text and 'body[data-ui-theme="green"]{' in text  # PySaiyanWeBoo's theme
     assert '.ui-elements button,' in text and 'cdn.' not in text
     for page in ('studio', 'tools', 'brand', 'slides'):
         assert f':where([data-page~="{page}"])' in text, page  # page layout is scoped, with zero added specificity
@@ -926,17 +926,17 @@ def test_studio_stylesheets_match_the_generator():
         'body:where([data-page~="p"]){a:b}:where([data-page~="p"]) .x,:where([data-page~="p"]) y z{c:d}'
         '@media(max-width:1px){:where([data-page~="p"]) .w{e:f}}')
     assert module.main(['--check']) == 0
-    assert pysaiyanweboo.check_theme(module.IRONMATE) == []  # the brand palette reads at WCAG AA on both grounds
+    assert module.THEME in pysaiyanweboo.CANDIDATE_THEMES and pysaiyanweboo.check_theme(pysaiyanweboo.theme_palettes()[module.THEME]) == []
 
 
 def test_studio_pages_opt_into_the_components_and_palette():
     for name, page in (('studio/index.html', 'studio'), ('studio/tools/index.html', 'tools'), ('studio/brand/index.html', 'brand')):
         html = (ROOT / name).read_text(encoding='utf-8')
-        assert f'<body class="ui-elements" data-ui-theme="ironmate" data-page="{page}">' in html, name
+        assert f'<body class="ui-elements" data-ui-theme="green" data-page="{page}">' in html, name
         assert ('href="style.css"' if page == 'studio' else 'href="../style.css"') in html, name  # one sheet for every page
     import image_studio
     slides = image_studio.public_assets()['slides/index.html'].decode('utf-8')
-    assert '<body class="ui-elements" data-ui-theme="ironmate" data-page="studio slides" data-mode="slides">' in slides
+    assert '<body class="ui-elements" data-ui-theme="green" data-page="studio slides" data-mode="slides">' in slides
     assert 'href="../style.css"' in slides and 'slides.css' not in slides
 
 
@@ -1268,13 +1268,27 @@ class _Controls(HTMLParser):
             self.ids.setdefault(attrs["id"], []).append(tag)
 
 
+def _page_ui(page):
+    """The part of studio/studio.js that runs on one page (each UI block is headed ``/* ... (data-page~="page")``)."""
+    script = (ROOT / "studio/studio.js").read_text()
+    start = script.index(f'(data-page~="{page}")')
+    following = [i for p in ("studio", "tools", "slides") if (i := script.find(f'(data-page~="{p}")')) > start]
+    return script[start:min(following, default=len(script))]
+
+
 def test_studio_html_contains_unique_controls_used_by_initialization():
+    import image_studio
+    assets = image_studio.public_assets()
+    for page, html in (("studio", (ROOT / "studio/index.html").read_text()),
+                       ("tools", (ROOT / "studio/tools/index.html").read_text()),
+                       ("slides", assets["slides/index.html"].decode("utf-8"))):
+        pages = _Controls()
+        pages.feed(html)
+        required = set(re.findall(r'(?:\$|byId)\("([a-z][a-z0-9-]*)"\)', _page_ui(page)))  # studio/tools use $(...), slides byId(...)
+        assert required, page
+        assert all(len(pages.ids.get(name, [])) == 1 for name in required), (page, sorted(n for n in required if len(pages.ids.get(n, [])) != 1))
     parser = _Controls()
     parser.feed((ROOT / "studio/index.html").read_text())
-    script = (ROOT / "studio/studio.js").read_text()
-    required = set(re.findall(r'\$\("([a-z][a-z0-9-]*)"\)', script))
-    assert required
-    assert all(len(parser.ids.get(name, [])) == 1 for name in required)
     for name in ("save", "save-workspace", "trim-history"):
         assert parser.ids[name] == ["button"]
     assert parser.ids["open-workspace"] == ["input"]

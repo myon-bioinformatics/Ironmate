@@ -1,5 +1,7 @@
+/* Ironmate studio: the one browser script for every page (studio, tools, slides; brand needs none).
+   Models first (composition, pixel-grid tools, slide shell, Open XML writer), then each page's UI. */
 /* Composition model. Optional browser canvas metrics; no network/framework dependency. */
-(function (root) {
+const StudioCore = (function (root) {
   "use strict";
   const SCHEMA = "ironmate-image-studio/1";
   const WORKSPACE_SCHEMA = "ironmate-studio-workspace/1";
@@ -550,12 +552,536 @@
     workspaceText,
     workspaceHistory,
   };
-  if (typeof module !== "undefined") module.exports = api;
-  else root.StudioCore = api;
+  return api;
 })(typeof globalThis !== "undefined" ? globalThis : this);
 
-/* Local-only UI: browser only (Node requires this file for the model above and skips this part). */
-if (typeof document !== "undefined") (function () {
+/* Browser/Node shared operations. Pixel coordinates follow grid_tools.py. */
+const IronmateTools = (function (root) {
+  "use strict";
+  const SCHEMA = "ironmate-pixel-grid/1";
+  function canonical(value) {
+    const g = JSON.parse(JSON.stringify(value));
+    if (
+      !g ||
+      g.schema !== SCHEMA ||
+      !Number.isInteger(g.width) ||
+      !Number.isInteger(g.height) ||
+      g.width < 1 ||
+      g.height < 1 ||
+      g.width > 256 ||
+      g.height > 256
+    )
+      throw Error("グリッドは1〜256セル／辺です。");
+    if (
+      !Array.isArray(g.colors) ||
+      !g.colors.length ||
+      g.colors.length > 65536 ||
+      g.colors.some((c) => typeof c !== "string" || !/^#[0-9a-f]{8}$/i.test(c))
+    )
+      throw Error("色表は#RRGGBBAAで指定してください。");
+    if (
+      !Array.isArray(g.pixels) ||
+      g.pixels.length !== g.height ||
+      g.pixels.some(
+        (r) =>
+          !Array.isArray(r) ||
+          r.length !== g.width ||
+          r.some((i) => !Number.isInteger(i) || i < 0 || i >= g.colors.length),
+      )
+    )
+      throw Error("色番号または行列の寸法が不正です。");
+    return g;
+  }
+  function resize(value, width, height) {
+    const g = canonical(value);
+    if (
+      ![width, height].every((n) => Number.isInteger(n) && n >= 1 && n <= 256)
+    )
+      throw Error("幅・高さは1〜256の整数です。");
+    const pixels = Array.from({ length: height }, (_, y) =>
+      Array.from(
+        { length: width },
+        (_, x) =>
+          g.pixels[
+            Math.min(g.height - 1, Math.floor(((y + 0.5) * g.height) / height))
+          ][Math.min(g.width - 1, Math.floor(((x + 0.5) * g.width) / width))],
+      ),
+    );
+    return { ...g, width, height, pixels, resampling: "nearest" };
+  }
+  const esc = (s) =>
+    String(s).replace(
+      /[&<>"']/g,
+      (c) =>
+        ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;",
+        })[c],
+    );
+  function svg(value, scale = 1) {
+    const g = canonical(value);
+    if (!Number.isInteger(scale) || scale < 1 || scale > 16)
+      throw Error("倍率は1〜16です。");
+    const cells = [];
+    g.pixels.forEach((row, y) =>
+      row.forEach((i, x) => {
+        const c = g.colors[i],
+          a = parseInt(c.slice(7), 16) / 255;
+        if (a)
+          cells.push(
+            `<rect x="${x}" y="${y}" width="1" height="1" fill="${c.slice(0, 7)}" fill-opacity="${a}"/>`,
+          );
+      }),
+    );
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${g.width * scale}" height="${g.height * scale}" viewBox="0 0 ${g.width} ${g.height}" shape-rendering="crispEdges">${cells.join("")}</svg>`;
+  }
+  function base64Length(bytes, prefix = false) {
+    if (
+      !Number.isSafeInteger(bytes) ||
+      bytes < 0 ||
+      bytes > Number.MAX_SAFE_INTEGER / 2
+    )
+      throw Error("ファイルサイズが大きすぎます。");
+    return 4 * Math.ceil(bytes / 3) + (prefix ? 22 : 0);
+  }
+  function crc32(bytes) {
+    let c = 0xffffffff;
+    for (const b of bytes) {
+      c ^= b;
+      for (let k = 0; k < 8; k++) c = (c >>> 1) ^ (c & 1 ? 0xedb88320 : 0);
+    }
+    return (c ^ 0xffffffff) >>> 0;
+  }
+  function pngHeader(value) {
+    const g = canonical(value),
+      keys = [
+        "schema",
+        "width",
+        "height",
+        "colors",
+        "mask",
+        "palette",
+        "effect",
+        "resampling",
+      ];
+    return Object.fromEntries(
+      keys
+        .filter(
+          (k) =>
+            k in g &&
+            (["schema", "width", "height", "colors"].includes(k) ||
+              g[k] === null ||
+              (typeof g[k] === "string" &&
+                /^[A-Za-z0-9_./-]{1,64}$/.test(g[k]))),
+        )
+        .map((k) => [k, g[k]]),
+    );
+  }
+  function pngChunk(type, body) {
+    const out = new Uint8Array(body.length + 12),
+      view = new DataView(out.buffer);
+    view.setUint32(0, body.length);
+    out.set(new TextEncoder().encode(type), 4);
+    out.set(body, 8);
+    view.setUint32(out.length - 4, crc32(out.subarray(4, out.length - 4)));
+    return out;
+  }
+  const api = {
+    canonical,
+    resize,
+    svg,
+    esc,
+    base64Length,
+    pngHeader,
+    pngChunk,
+  };
+  return api;
+})(typeof globalThis === "object" ? globalThis : this);
+
+/* <slide-shell> Generated by scripts/build_slide_shell.py using locked PptxGenJS 4.0.1. Do not edit by hand. */
+const IronmateSlideShell = {"[Content_Types].xml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"xml\" ContentType=\"application/xml\"/><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Default Extension=\"jpeg\" ContentType=\"image/jpeg\"/><Default Extension=\"jpg\" ContentType=\"image/jpg\"/><Default Extension=\"svg\" ContentType=\"image/svg+xml\"/><Default Extension=\"png\" ContentType=\"image/png\"/><Default Extension=\"gif\" ContentType=\"image/gif\"/><Default Extension=\"m4v\" ContentType=\"video/mp4\"/><Default Extension=\"mp4\" ContentType=\"video/mp4\"/><Default Extension=\"vml\" ContentType=\"application/vnd.openxmlformats-officedocument.vmlDrawing\"/><Default Extension=\"xlsx\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\"/><Override PartName=\"/ppt/presentation.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml\"/><Override PartName=\"/ppt/notesMasters/notesMaster1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.presentationml.notesMaster+xml\"/><Override PartName=\"/ppt/slideMasters/slideMaster1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml\"/><Override PartName=\"/ppt/slides/slide1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.presentationml.slide+xml\"/><Override PartName=\"/ppt/presProps.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.presentationml.presProps+xml\"/><Override PartName=\"/ppt/viewProps.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.presentationml.viewProps+xml\"/><Override PartName=\"/ppt/theme/theme1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.theme+xml\"/><Override PartName=\"/ppt/tableStyles.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.presentationml.tableStyles+xml\"/><Override PartName=\"/ppt/slideLayouts/slideLayout1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml\"/><Override PartName=\"/ppt/notesSlides/notesSlide1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.presentationml.notesSlide+xml\"/> <Override PartName=\"/docProps/core.xml\" ContentType=\"application/vnd.openxmlformats-package.core-properties+xml\"/> <Override PartName=\"/docProps/app.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.extended-properties+xml\"/></Types>","_rels/.rels":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n\t\t<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties\" Target=\"docProps/app.xml\"/>\n\t\t<Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties\" Target=\"docProps/core.xml\"/>\n\t\t<Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"ppt/presentation.xml\"/>\n\t\t</Relationships>","docProps/app.xml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Properties xmlns=\"http://schemas.openxmlformats.org/officeDocument/2006/extended-properties\" xmlns:vt=\"http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes\">\n\t<TotalTime>0</TotalTime>\n\t<Words>0</Words>\n\t<Application>Microsoft Office PowerPoint</Application>\n\t<PresentationFormat>On-screen Show (16:9)</PresentationFormat>\n\t<Paragraphs>0</Paragraphs>\n\t<Slides>1</Slides>\n\t<Notes>1</Notes>\n\t<HiddenSlides>0</HiddenSlides>\n\t<MMClips>0</MMClips>\n\t<ScaleCrop>false</ScaleCrop>\n\t<HeadingPairs>\n\t\t<vt:vector size=\"6\" baseType=\"variant\">\n\t\t\t<vt:variant><vt:lpstr>Fonts Used</vt:lpstr></vt:variant>\n\t\t\t<vt:variant><vt:i4>2</vt:i4></vt:variant>\n\t\t\t<vt:variant><vt:lpstr>Theme</vt:lpstr></vt:variant>\n\t\t\t<vt:variant><vt:i4>1</vt:i4></vt:variant>\n\t\t\t<vt:variant><vt:lpstr>Slide Titles</vt:lpstr></vt:variant>\n\t\t\t<vt:variant><vt:i4>1</vt:i4></vt:variant>\n\t\t</vt:vector>\n\t</HeadingPairs>\n\t<TitlesOfParts>\n\t\t<vt:vector size=\"4\" baseType=\"lpstr\">\n\t\t\t<vt:lpstr>Arial</vt:lpstr>\n\t\t\t<vt:lpstr>Calibri</vt:lpstr>\n\t\t\t<vt:lpstr>Office Theme</vt:lpstr>\n\t\t\t<vt:lpstr>Slide 1</vt:lpstr>\n\t\t</vt:vector>\n\t</TitlesOfParts>\n\t<Company>PptxGenJS</Company>\n\t<LinksUpToDate>false</LinksUpToDate>\n\t<SharedDoc>false</SharedDoc>\n\t<HyperlinksChanged>false</HyperlinksChanged>\n\t<AppVersion>16.0000</AppVersion>\n\t</Properties>","docProps/core.xml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n\t<cp:coreProperties xmlns:cp=\"http://schemas.openxmlformats.org/package/2006/metadata/core-properties\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:dcterms=\"http://purl.org/dc/terms/\" xmlns:dcmitype=\"http://purl.org/dc/dcmitype/\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n\t\t<dc:title>PptxGenJS Presentation</dc:title>\n\t\t<dc:subject>PptxGenJS Presentation</dc:subject>\n\t\t<dc:creator>PptxGenJS</dc:creator>\n\t\t<cp:lastModifiedBy>PptxGenJS</cp:lastModifiedBy>\n\t\t<cp:revision>1</cp:revision>\n\t\t<dcterms:created xsi:type=\"dcterms:W3CDTF\">2000-01-01T00:00:00Z</dcterms:created>\n\t\t<dcterms:modified xsi:type=\"dcterms:W3CDTF\">2000-01-01T00:00:00Z</dcterms:modified>\n\t</cp:coreProperties>","ppt/_rels/presentation.xml.rels":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster\" Target=\"slideMasters/slideMaster1.xml\"/><Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide\" Target=\"slides/slide1.xml\"/><Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesMaster\" Target=\"notesMasters/notesMaster1.xml\"/><Relationship Id=\"rId4\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/presProps\" Target=\"presProps.xml\"/><Relationship Id=\"rId5\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/viewProps\" Target=\"viewProps.xml\"/><Relationship Id=\"rId6\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme\" Target=\"theme/theme1.xml\"/><Relationship Id=\"rId7\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/tableStyles\" Target=\"tableStyles.xml\"/></Relationships>","ppt/notesMasters/_rels/notesMaster1.xml.rels":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n\t\t<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme\" Target=\"../theme/theme1.xml\"/>\n\t\t</Relationships>","ppt/notesMasters/notesMaster1.xml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<p:notesMaster xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:bg><p:bgRef idx=\"1001\"><a:schemeClr val=\"bg1\"/></p:bgRef></p:bg><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"0\" cy=\"0\"/><a:chOff x=\"0\" y=\"0\"/><a:chExt cx=\"0\" cy=\"0\"/></a:xfrm></p:grpSpPr><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"Header Placeholder 1\"/><p:cNvSpPr><a:spLocks noGrp=\"1\"/></p:cNvSpPr><p:nvPr><p:ph type=\"hdr\" sz=\"quarter\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"2971800\" cy=\"458788\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom></p:spPr><p:txBody><a:bodyPr vert=\"horz\" lIns=\"91440\" tIns=\"45720\" rIns=\"91440\" bIns=\"45720\" rtlCol=\"0\"/><a:lstStyle><a:lvl1pPr algn=\"l\"><a:defRPr sz=\"1200\"/></a:lvl1pPr></a:lstStyle><a:p><a:endParaRPr lang=\"en-US\"/></a:p></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"3\" name=\"Date Placeholder 2\"/><p:cNvSpPr><a:spLocks noGrp=\"1\"/></p:cNvSpPr><p:nvPr><p:ph type=\"dt\" idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"3884613\" y=\"0\"/><a:ext cx=\"2971800\" cy=\"458788\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom></p:spPr><p:txBody><a:bodyPr vert=\"horz\" lIns=\"91440\" tIns=\"45720\" rIns=\"91440\" bIns=\"45720\" rtlCol=\"0\"/><a:lstStyle><a:lvl1pPr algn=\"r\"><a:defRPr sz=\"1200\"/></a:lvl1pPr></a:lstStyle><a:p><a:fld id=\"{5282F153-3F37-0F45-9E97-73ACFA13230C}\" type=\"datetimeFigureOut\"><a:rPr lang=\"en-US\"/><a:t>7/23/19</a:t></a:fld><a:endParaRPr lang=\"en-US\"/></a:p></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"4\" name=\"Slide Image Placeholder 3\"/><p:cNvSpPr><a:spLocks noGrp=\"1\" noRot=\"1\" noChangeAspect=\"1\"/></p:cNvSpPr><p:nvPr><p:ph type=\"sldImg\" idx=\"2\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"685800\" y=\"1143000\"/><a:ext cx=\"5486400\" cy=\"3086100\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:noFill/><a:ln w=\"12700\"><a:solidFill><a:prstClr val=\"black\"/></a:solidFill></a:ln></p:spPr><p:txBody><a:bodyPr vert=\"horz\" lIns=\"91440\" tIns=\"45720\" rIns=\"91440\" bIns=\"45720\" rtlCol=\"0\" anchor=\"ctr\"/><a:lstStyle/><a:p><a:endParaRPr lang=\"en-US\"/></a:p></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"5\" name=\"Notes Placeholder 4\"/><p:cNvSpPr><a:spLocks noGrp=\"1\"/></p:cNvSpPr><p:nvPr><p:ph type=\"body\" sz=\"quarter\" idx=\"3\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"685800\" y=\"4400550\"/><a:ext cx=\"5486400\" cy=\"3600450\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom></p:spPr><p:txBody><a:bodyPr vert=\"horz\" lIns=\"91440\" tIns=\"45720\" rIns=\"91440\" bIns=\"45720\" rtlCol=\"0\"/><a:lstStyle/><a:p><a:pPr lvl=\"0\"/><a:r><a:rPr lang=\"en-US\"/><a:t>Click to edit Master text styles</a:t></a:r></a:p><a:p><a:pPr lvl=\"1\"/><a:r><a:rPr lang=\"en-US\"/><a:t>Second level</a:t></a:r></a:p><a:p><a:pPr lvl=\"2\"/><a:r><a:rPr lang=\"en-US\"/><a:t>Third level</a:t></a:r></a:p><a:p><a:pPr lvl=\"3\"/><a:r><a:rPr lang=\"en-US\"/><a:t>Fourth level</a:t></a:r></a:p><a:p><a:pPr lvl=\"4\"/><a:r><a:rPr lang=\"en-US\"/><a:t>Fifth level</a:t></a:r></a:p></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"6\" name=\"Footer Placeholder 5\"/><p:cNvSpPr><a:spLocks noGrp=\"1\"/></p:cNvSpPr><p:nvPr><p:ph type=\"ftr\" sz=\"quarter\" idx=\"4\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"0\" y=\"8685213\"/><a:ext cx=\"2971800\" cy=\"458787\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom></p:spPr><p:txBody><a:bodyPr vert=\"horz\" lIns=\"91440\" tIns=\"45720\" rIns=\"91440\" bIns=\"45720\" rtlCol=\"0\" anchor=\"b\"/><a:lstStyle><a:lvl1pPr algn=\"l\"><a:defRPr sz=\"1200\"/></a:lvl1pPr></a:lstStyle><a:p><a:endParaRPr lang=\"en-US\"/></a:p></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"7\" name=\"Slide Number Placeholder 6\"/><p:cNvSpPr><a:spLocks noGrp=\"1\"/></p:cNvSpPr><p:nvPr><p:ph type=\"sldNum\" sz=\"quarter\" idx=\"5\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"3884613\" y=\"8685213\"/><a:ext cx=\"2971800\" cy=\"458787\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom></p:spPr><p:txBody><a:bodyPr vert=\"horz\" lIns=\"91440\" tIns=\"45720\" rIns=\"91440\" bIns=\"45720\" rtlCol=\"0\" anchor=\"b\"/><a:lstStyle><a:lvl1pPr algn=\"r\"><a:defRPr sz=\"1200\"/></a:lvl1pPr></a:lstStyle><a:p><a:fld id=\"{CE5E9CC1-C706-0F49-92D6-E571CC5EEA8F}\" type=\"slidenum\"><a:rPr lang=\"en-US\"/><a:t>\u2039#\u203a</a:t></a:fld><a:endParaRPr lang=\"en-US\"/></a:p></p:txBody></p:sp></p:spTree><p:extLst><p:ext uri=\"{BB962C8B-B14F-4D97-AF65-F5344CB8AC3E}\"><p14:creationId xmlns:p14=\"http://schemas.microsoft.com/office/powerpoint/2010/main\" val=\"1024086991\"/></p:ext></p:extLst></p:cSld><p:clrMap bg1=\"lt1\" tx1=\"dk1\" bg2=\"lt2\" tx2=\"dk2\" accent1=\"accent1\" accent2=\"accent2\" accent3=\"accent3\" accent4=\"accent4\" accent5=\"accent5\" accent6=\"accent6\" hlink=\"hlink\" folHlink=\"folHlink\"/><p:notesStyle><a:lvl1pPr marL=\"0\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1200\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl1pPr><a:lvl2pPr marL=\"457200\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1200\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl2pPr><a:lvl3pPr marL=\"914400\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1200\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl3pPr><a:lvl4pPr marL=\"1371600\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1200\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl4pPr><a:lvl5pPr marL=\"1828800\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1200\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl5pPr><a:lvl6pPr marL=\"2286000\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1200\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl6pPr><a:lvl7pPr marL=\"2743200\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1200\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl7pPr><a:lvl8pPr marL=\"3200400\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1200\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl8pPr><a:lvl9pPr marL=\"3657600\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1200\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl9pPr></p:notesStyle></p:notesMaster>","ppt/notesSlides/_rels/notesSlide1.xml.rels":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n\t\t<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n\t\t\t<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesMaster\" Target=\"../notesMasters/notesMaster1.xml\"/>\n\t\t\t<Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide\" Target=\"../slides/slide1.xml\"/>\n\t\t</Relationships>","ppt/notesSlides/notesSlide1.xml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<p:notes xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"0\" cy=\"0\"/><a:chOff x=\"0\" y=\"0\"/><a:chExt cx=\"0\" cy=\"0\"/></a:xfrm></p:grpSpPr><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"Slide Image Placeholder 1\"/><p:cNvSpPr><a:spLocks noGrp=\"1\" noRot=\"1\" noChangeAspect=\"1\"/></p:cNvSpPr><p:nvPr><p:ph type=\"sldImg\"/></p:nvPr></p:nvSpPr><p:spPr/></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"3\" name=\"Notes Placeholder 2\"/><p:cNvSpPr><a:spLocks noGrp=\"1\"/></p:cNvSpPr><p:nvPr><p:ph type=\"body\" idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang=\"en-US\" dirty=\"0\"/><a:t></a:t></a:r><a:endParaRPr lang=\"en-US\" dirty=\"0\"/></a:p></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"4\" name=\"Slide Number Placeholder 3\"/><p:cNvSpPr><a:spLocks noGrp=\"1\"/></p:cNvSpPr><p:nvPr><p:ph type=\"sldNum\" sz=\"quarter\" idx=\"10\"/></p:nvPr></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:fld id=\"{F7021451-1387-4CA6-816F-3879F97B5CBC}\" type=\"slidenum\"><a:rPr lang=\"en-US\"/><a:t>1</a:t></a:fld><a:endParaRPr lang=\"en-US\"/></a:p></p:txBody></p:sp></p:spTree><p:extLst><p:ext uri=\"{BB962C8B-B14F-4D97-AF65-F5344CB8AC3E}\"><p14:creationId xmlns:p14=\"http://schemas.microsoft.com/office/powerpoint/2010/main\" val=\"1024086991\"/></p:ext></p:extLst></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:notes>","ppt/presProps.xml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<p:presentationPr xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"/>","ppt/presentation.xml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<p:presentation xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"  saveSubsetFonts=\"1\" autoCompressPictures=\"0\"><p:sldMasterIdLst><p:sldMasterId id=\"2147483648\" r:id=\"rId1\"/></p:sldMasterIdLst><p:sldIdLst><p:sldId id=\"256\" r:id=\"rId2\"/></p:sldIdLst><p:notesMasterIdLst><p:notesMasterId r:id=\"rId3\"/></p:notesMasterIdLst><p:sldSz cx=\"9144000\" cy=\"5143500\"/><p:notesSz cx=\"5143500\" cy=\"9144000\"/><p:defaultTextStyle><a:lvl1pPr marL=\"0\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1800\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl1pPr><a:lvl2pPr marL=\"457200\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1800\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl2pPr><a:lvl3pPr marL=\"914400\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1800\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl3pPr><a:lvl4pPr marL=\"1371600\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1800\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl4pPr><a:lvl5pPr marL=\"1828800\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1800\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl5pPr><a:lvl6pPr marL=\"2286000\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1800\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl6pPr><a:lvl7pPr marL=\"2743200\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1800\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl7pPr><a:lvl8pPr marL=\"3200400\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1800\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl8pPr><a:lvl9pPr marL=\"3657600\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1800\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl9pPr></p:defaultTextStyle></p:presentation>","ppt/slideLayouts/_rels/slideLayout1.xml.rels":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster\" Target=\"../slideMasters/slideMaster1.xml\"/></Relationships>","ppt/slideLayouts/slideLayout1.xml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n\t\t<p:sldLayout xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\" preserve=\"1\">\n\t\t<p:cSld name=\"DEFAULT\"><p:bg><p:bgRef idx=\"1001\"><a:schemeClr val=\"bg1\"/></p:bgRef></p:bg><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"0\" cy=\"0\"/><a:chOff x=\"0\" y=\"0\"/><a:chExt cx=\"0\" cy=\"0\"/></a:xfrm></p:grpSpPr></p:spTree></p:cSld>\n\t\t<p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sldLayout>","ppt/slideMasters/_rels/slideMaster1.xml.rels":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout\" Target=\"../slideLayouts/slideLayout1.xml\"/><Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme\" Target=\"../theme/theme1.xml\"/></Relationships>","ppt/slideMasters/slideMaster1.xml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<p:sldMaster xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"0\" cy=\"0\"/><a:chOff x=\"0\" y=\"0\"/><a:chExt cx=\"0\" cy=\"0\"/></a:xfrm></p:grpSpPr></p:spTree></p:cSld><p:clrMap bg1=\"lt1\" tx1=\"dk1\" bg2=\"lt2\" tx2=\"dk2\" accent1=\"accent1\" accent2=\"accent2\" accent3=\"accent3\" accent4=\"accent4\" accent5=\"accent5\" accent6=\"accent6\" hlink=\"hlink\" folHlink=\"folHlink\"/><p:sldLayoutIdLst><p:sldLayoutId id=\"2147483649\" r:id=\"rId1\"/></p:sldLayoutIdLst><p:hf sldNum=\"0\" hdr=\"0\" ftr=\"0\" dt=\"0\"/><p:txStyles> <p:titleStyle>  <a:lvl1pPr algn=\"ctr\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:spcBef><a:spcPct val=\"0\"/></a:spcBef><a:buNone/><a:defRPr sz=\"4400\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mj-lt\"/><a:ea typeface=\"+mj-ea\"/><a:cs typeface=\"+mj-cs\"/></a:defRPr></a:lvl1pPr> </p:titleStyle> <p:bodyStyle>  <a:lvl1pPr marL=\"342900\" indent=\"-342900\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:spcBef><a:spcPct val=\"20000\"/></a:spcBef><a:buFont typeface=\"Arial\" pitchFamily=\"34\" charset=\"0\"/><a:buChar char=\"\u2022\"/><a:defRPr sz=\"3200\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl1pPr>  <a:lvl2pPr marL=\"742950\" indent=\"-285750\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:spcBef><a:spcPct val=\"20000\"/></a:spcBef><a:buFont typeface=\"Arial\" pitchFamily=\"34\" charset=\"0\"/><a:buChar char=\"\u2013\"/><a:defRPr sz=\"2800\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl2pPr>  <a:lvl3pPr marL=\"1143000\" indent=\"-228600\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:spcBef><a:spcPct val=\"20000\"/></a:spcBef><a:buFont typeface=\"Arial\" pitchFamily=\"34\" charset=\"0\"/><a:buChar char=\"\u2022\"/><a:defRPr sz=\"2400\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl3pPr>  <a:lvl4pPr marL=\"1600200\" indent=\"-228600\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:spcBef><a:spcPct val=\"20000\"/></a:spcBef><a:buFont typeface=\"Arial\" pitchFamily=\"34\" charset=\"0\"/><a:buChar char=\"\u2013\"/><a:defRPr sz=\"2000\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl4pPr>  <a:lvl5pPr marL=\"2057400\" indent=\"-228600\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:spcBef><a:spcPct val=\"20000\"/></a:spcBef><a:buFont typeface=\"Arial\" pitchFamily=\"34\" charset=\"0\"/><a:buChar char=\"\u00bb\"/><a:defRPr sz=\"2000\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl5pPr>  <a:lvl6pPr marL=\"2514600\" indent=\"-228600\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:spcBef><a:spcPct val=\"20000\"/></a:spcBef><a:buFont typeface=\"Arial\" pitchFamily=\"34\" charset=\"0\"/><a:buChar char=\"\u2022\"/><a:defRPr sz=\"2000\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl6pPr>  <a:lvl7pPr marL=\"2971800\" indent=\"-228600\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:spcBef><a:spcPct val=\"20000\"/></a:spcBef><a:buFont typeface=\"Arial\" pitchFamily=\"34\" charset=\"0\"/><a:buChar char=\"\u2022\"/><a:defRPr sz=\"2000\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl7pPr>  <a:lvl8pPr marL=\"3429000\" indent=\"-228600\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:spcBef><a:spcPct val=\"20000\"/></a:spcBef><a:buFont typeface=\"Arial\" pitchFamily=\"34\" charset=\"0\"/><a:buChar char=\"\u2022\"/><a:defRPr sz=\"2000\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl8pPr>  <a:lvl9pPr marL=\"3886200\" indent=\"-228600\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:spcBef><a:spcPct val=\"20000\"/></a:spcBef><a:buFont typeface=\"Arial\" pitchFamily=\"34\" charset=\"0\"/><a:buChar char=\"\u2022\"/><a:defRPr sz=\"2000\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl9pPr> </p:bodyStyle> <p:otherStyle>  <a:defPPr><a:defRPr lang=\"en-US\"/></a:defPPr>  <a:lvl1pPr marL=\"0\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1800\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl1pPr>  <a:lvl2pPr marL=\"457200\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1800\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl2pPr>  <a:lvl3pPr marL=\"914400\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1800\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl3pPr>  <a:lvl4pPr marL=\"1371600\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1800\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl4pPr>  <a:lvl5pPr marL=\"1828800\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1800\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl5pPr>  <a:lvl6pPr marL=\"2286000\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1800\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl6pPr>  <a:lvl7pPr marL=\"2743200\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1800\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl7pPr>  <a:lvl8pPr marL=\"3200400\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1800\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl8pPr>  <a:lvl9pPr marL=\"3657600\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1800\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl9pPr> </p:otherStyle></p:txStyles></p:sldMaster>","ppt/tableStyles.xml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<a:tblStyleLst xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" def=\"{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}\"/>","ppt/theme/theme1.xml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><a:theme xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" name=\"Office Theme\"><a:themeElements><a:clrScheme name=\"Office\"><a:dk1><a:sysClr val=\"windowText\" lastClr=\"000000\"/></a:dk1><a:lt1><a:sysClr val=\"window\" lastClr=\"FFFFFF\"/></a:lt1><a:dk2><a:srgbClr val=\"44546A\"/></a:dk2><a:lt2><a:srgbClr val=\"E7E6E6\"/></a:lt2><a:accent1><a:srgbClr val=\"4472C4\"/></a:accent1><a:accent2><a:srgbClr val=\"ED7D31\"/></a:accent2><a:accent3><a:srgbClr val=\"A5A5A5\"/></a:accent3><a:accent4><a:srgbClr val=\"FFC000\"/></a:accent4><a:accent5><a:srgbClr val=\"5B9BD5\"/></a:accent5><a:accent6><a:srgbClr val=\"70AD47\"/></a:accent6><a:hlink><a:srgbClr val=\"0563C1\"/></a:hlink><a:folHlink><a:srgbClr val=\"954F72\"/></a:folHlink></a:clrScheme><a:fontScheme name=\"Office\"><a:majorFont><a:latin typeface=\"Calibri Light\" panose=\"020F0302020204030204\"/><a:ea typeface=\"\"/><a:cs typeface=\"\"/><a:font script=\"Jpan\" typeface=\"\u6e38\u30b4\u30b7\u30c3\u30af Light\"/><a:font script=\"Hang\" typeface=\"\ub9d1\uc740 \uace0\ub515\"/><a:font script=\"Hans\" typeface=\"\u7b49\u7ebf Light\"/><a:font script=\"Hant\" typeface=\"\u65b0\u7d30\u660e\u9ad4\"/><a:font script=\"Arab\" typeface=\"Times New Roman\"/><a:font script=\"Hebr\" typeface=\"Times New Roman\"/><a:font script=\"Thai\" typeface=\"Angsana New\"/><a:font script=\"Ethi\" typeface=\"Nyala\"/><a:font script=\"Beng\" typeface=\"Vrinda\"/><a:font script=\"Gujr\" typeface=\"Shruti\"/><a:font script=\"Khmr\" typeface=\"MoolBoran\"/><a:font script=\"Knda\" typeface=\"Tunga\"/><a:font script=\"Guru\" typeface=\"Raavi\"/><a:font script=\"Cans\" typeface=\"Euphemia\"/><a:font script=\"Cher\" typeface=\"Plantagenet Cherokee\"/><a:font script=\"Yiii\" typeface=\"Microsoft Yi Baiti\"/><a:font script=\"Tibt\" typeface=\"Microsoft Himalaya\"/><a:font script=\"Thaa\" typeface=\"MV Boli\"/><a:font script=\"Deva\" typeface=\"Mangal\"/><a:font script=\"Telu\" typeface=\"Gautami\"/><a:font script=\"Taml\" typeface=\"Latha\"/><a:font script=\"Syrc\" typeface=\"Estrangelo Edessa\"/><a:font script=\"Orya\" typeface=\"Kalinga\"/><a:font script=\"Mlym\" typeface=\"Kartika\"/><a:font script=\"Laoo\" typeface=\"DokChampa\"/><a:font script=\"Sinh\" typeface=\"Iskoola Pota\"/><a:font script=\"Mong\" typeface=\"Mongolian Baiti\"/><a:font script=\"Viet\" typeface=\"Times New Roman\"/><a:font script=\"Uigh\" typeface=\"Microsoft Uighur\"/><a:font script=\"Geor\" typeface=\"Sylfaen\"/><a:font script=\"Armn\" typeface=\"Arial\"/><a:font script=\"Bugi\" typeface=\"Leelawadee UI\"/><a:font script=\"Bopo\" typeface=\"Microsoft JhengHei\"/><a:font script=\"Java\" typeface=\"Javanese Text\"/><a:font script=\"Lisu\" typeface=\"Segoe UI\"/><a:font script=\"Mymr\" typeface=\"Myanmar Text\"/><a:font script=\"Nkoo\" typeface=\"Ebrima\"/><a:font script=\"Olck\" typeface=\"Nirmala UI\"/><a:font script=\"Osma\" typeface=\"Ebrima\"/><a:font script=\"Phag\" typeface=\"Phagspa\"/><a:font script=\"Syrn\" typeface=\"Estrangelo Edessa\"/><a:font script=\"Syrj\" typeface=\"Estrangelo Edessa\"/><a:font script=\"Syre\" typeface=\"Estrangelo Edessa\"/><a:font script=\"Sora\" typeface=\"Nirmala UI\"/><a:font script=\"Tale\" typeface=\"Microsoft Tai Le\"/><a:font script=\"Talu\" typeface=\"Microsoft New Tai Lue\"/><a:font script=\"Tfng\" typeface=\"Ebrima\"/></a:majorFont><a:minorFont><a:latin typeface=\"Calibri\" panose=\"020F0502020204030204\"/><a:ea typeface=\"\"/><a:cs typeface=\"\"/><a:font script=\"Jpan\" typeface=\"\u6e38\u30b4\u30b7\u30c3\u30af\"/><a:font script=\"Hang\" typeface=\"\ub9d1\uc740 \uace0\ub515\"/><a:font script=\"Hans\" typeface=\"\u7b49\u7ebf\"/><a:font script=\"Hant\" typeface=\"\u65b0\u7d30\u660e\u9ad4\"/><a:font script=\"Arab\" typeface=\"Arial\"/><a:font script=\"Hebr\" typeface=\"Arial\"/><a:font script=\"Thai\" typeface=\"Cordia New\"/><a:font script=\"Ethi\" typeface=\"Nyala\"/><a:font script=\"Beng\" typeface=\"Vrinda\"/><a:font script=\"Gujr\" typeface=\"Shruti\"/><a:font script=\"Khmr\" typeface=\"DaunPenh\"/><a:font script=\"Knda\" typeface=\"Tunga\"/><a:font script=\"Guru\" typeface=\"Raavi\"/><a:font script=\"Cans\" typeface=\"Euphemia\"/><a:font script=\"Cher\" typeface=\"Plantagenet Cherokee\"/><a:font script=\"Yiii\" typeface=\"Microsoft Yi Baiti\"/><a:font script=\"Tibt\" typeface=\"Microsoft Himalaya\"/><a:font script=\"Thaa\" typeface=\"MV Boli\"/><a:font script=\"Deva\" typeface=\"Mangal\"/><a:font script=\"Telu\" typeface=\"Gautami\"/><a:font script=\"Taml\" typeface=\"Latha\"/><a:font script=\"Syrc\" typeface=\"Estrangelo Edessa\"/><a:font script=\"Orya\" typeface=\"Kalinga\"/><a:font script=\"Mlym\" typeface=\"Kartika\"/><a:font script=\"Laoo\" typeface=\"DokChampa\"/><a:font script=\"Sinh\" typeface=\"Iskoola Pota\"/><a:font script=\"Mong\" typeface=\"Mongolian Baiti\"/><a:font script=\"Viet\" typeface=\"Arial\"/><a:font script=\"Uigh\" typeface=\"Microsoft Uighur\"/><a:font script=\"Geor\" typeface=\"Sylfaen\"/><a:font script=\"Armn\" typeface=\"Arial\"/><a:font script=\"Bugi\" typeface=\"Leelawadee UI\"/><a:font script=\"Bopo\" typeface=\"Microsoft JhengHei\"/><a:font script=\"Java\" typeface=\"Javanese Text\"/><a:font script=\"Lisu\" typeface=\"Segoe UI\"/><a:font script=\"Mymr\" typeface=\"Myanmar Text\"/><a:font script=\"Nkoo\" typeface=\"Ebrima\"/><a:font script=\"Olck\" typeface=\"Nirmala UI\"/><a:font script=\"Osma\" typeface=\"Ebrima\"/><a:font script=\"Phag\" typeface=\"Phagspa\"/><a:font script=\"Syrn\" typeface=\"Estrangelo Edessa\"/><a:font script=\"Syrj\" typeface=\"Estrangelo Edessa\"/><a:font script=\"Syre\" typeface=\"Estrangelo Edessa\"/><a:font script=\"Sora\" typeface=\"Nirmala UI\"/><a:font script=\"Tale\" typeface=\"Microsoft Tai Le\"/><a:font script=\"Talu\" typeface=\"Microsoft New Tai Lue\"/><a:font script=\"Tfng\" typeface=\"Ebrima\"/></a:minorFont></a:fontScheme><a:fmtScheme name=\"Office\"><a:fillStyleLst><a:solidFill><a:schemeClr val=\"phClr\"/></a:solidFill><a:gradFill rotWithShape=\"1\"><a:gsLst><a:gs pos=\"0\"><a:schemeClr val=\"phClr\"><a:lumMod val=\"110000\"/><a:satMod val=\"105000\"/><a:tint val=\"67000\"/></a:schemeClr></a:gs><a:gs pos=\"50000\"><a:schemeClr val=\"phClr\"><a:lumMod val=\"105000\"/><a:satMod val=\"103000\"/><a:tint val=\"73000\"/></a:schemeClr></a:gs><a:gs pos=\"100000\"><a:schemeClr val=\"phClr\"><a:lumMod val=\"105000\"/><a:satMod val=\"109000\"/><a:tint val=\"81000\"/></a:schemeClr></a:gs></a:gsLst><a:lin ang=\"5400000\" scaled=\"0\"/></a:gradFill><a:gradFill rotWithShape=\"1\"><a:gsLst><a:gs pos=\"0\"><a:schemeClr val=\"phClr\"><a:satMod val=\"103000\"/><a:lumMod val=\"102000\"/><a:tint val=\"94000\"/></a:schemeClr></a:gs><a:gs pos=\"50000\"><a:schemeClr val=\"phClr\"><a:satMod val=\"110000\"/><a:lumMod val=\"100000\"/><a:shade val=\"100000\"/></a:schemeClr></a:gs><a:gs pos=\"100000\"><a:schemeClr val=\"phClr\"><a:lumMod val=\"99000\"/><a:satMod val=\"120000\"/><a:shade val=\"78000\"/></a:schemeClr></a:gs></a:gsLst><a:lin ang=\"5400000\" scaled=\"0\"/></a:gradFill></a:fillStyleLst><a:lnStyleLst><a:ln w=\"6350\" cap=\"flat\" cmpd=\"sng\" algn=\"ctr\"><a:solidFill><a:schemeClr val=\"phClr\"/></a:solidFill><a:prstDash val=\"solid\"/><a:miter lim=\"800000\"/></a:ln><a:ln w=\"12700\" cap=\"flat\" cmpd=\"sng\" algn=\"ctr\"><a:solidFill><a:schemeClr val=\"phClr\"/></a:solidFill><a:prstDash val=\"solid\"/><a:miter lim=\"800000\"/></a:ln><a:ln w=\"19050\" cap=\"flat\" cmpd=\"sng\" algn=\"ctr\"><a:solidFill><a:schemeClr val=\"phClr\"/></a:solidFill><a:prstDash val=\"solid\"/><a:miter lim=\"800000\"/></a:ln></a:lnStyleLst><a:effectStyleLst><a:effectStyle><a:effectLst/></a:effectStyle><a:effectStyle><a:effectLst/></a:effectStyle><a:effectStyle><a:effectLst><a:outerShdw blurRad=\"57150\" dist=\"19050\" dir=\"5400000\" algn=\"ctr\" rotWithShape=\"0\"><a:srgbClr val=\"000000\"><a:alpha val=\"63000\"/></a:srgbClr></a:outerShdw></a:effectLst></a:effectStyle></a:effectStyleLst><a:bgFillStyleLst><a:solidFill><a:schemeClr val=\"phClr\"/></a:solidFill><a:solidFill><a:schemeClr val=\"phClr\"><a:tint val=\"95000\"/><a:satMod val=\"170000\"/></a:schemeClr></a:solidFill><a:gradFill rotWithShape=\"1\"><a:gsLst><a:gs pos=\"0\"><a:schemeClr val=\"phClr\"><a:tint val=\"93000\"/><a:satMod val=\"150000\"/><a:shade val=\"98000\"/><a:lumMod val=\"102000\"/></a:schemeClr></a:gs><a:gs pos=\"50000\"><a:schemeClr val=\"phClr\"><a:tint val=\"98000\"/><a:satMod val=\"130000\"/><a:shade val=\"90000\"/><a:lumMod val=\"103000\"/></a:schemeClr></a:gs><a:gs pos=\"100000\"><a:schemeClr val=\"phClr\"><a:shade val=\"63000\"/><a:satMod val=\"120000\"/></a:schemeClr></a:gs></a:gsLst><a:lin ang=\"5400000\" scaled=\"0\"/></a:gradFill></a:bgFillStyleLst></a:fmtScheme></a:themeElements><a:objectDefaults/><a:extraClrSchemeLst/><a:extLst><a:ext uri=\"{05A4C25C-085E-4340-85A3-A5531E510DB2}\"><thm15:themeFamily xmlns:thm15=\"http://schemas.microsoft.com/office/thememl/2012/main\" name=\"Office Theme\" id=\"{62F939B6-93AF-4DB8-9C6B-D6C7DFDC589F}\" vid=\"{4A3C46E8-61CC-4603-A589-7422A47A8E4A}\"/></a:ext></a:extLst></a:theme>","ppt/viewProps.xml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<p:viewPr xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:normalViewPr horzBarState=\"maximized\"><p:restoredLeft sz=\"15611\"/><p:restoredTop sz=\"94610\"/></p:normalViewPr><p:slideViewPr><p:cSldViewPr snapToGrid=\"0\" snapToObjects=\"1\"><p:cViewPr varScale=\"1\"><p:scale><a:sx n=\"136\" d=\"100\"/><a:sy n=\"136\" d=\"100\"/></p:scale><p:origin x=\"216\" y=\"312\"/></p:cViewPr><p:guideLst/></p:cSldViewPr></p:slideViewPr><p:notesTextViewPr><p:cViewPr><p:scale><a:sx n=\"1\" d=\"1\"/><a:sy n=\"1\" d=\"1\"/></p:scale><p:origin x=\"0\" y=\"0\"/></p:cViewPr></p:notesTextViewPr><p:gridSpacing cx=\"76200\" cy=\"76200\"/></p:viewPr>"};
+/* </slide-shell> */
+
+/* Native Open XML writer over the existing PptxGenJS-generated package shell. */
+const IronmateSlides = (function (root) {
+  "use strict";
+  const C = StudioCore;
+  const shell = IronmateSlideShell;
+  const SCHEMA = "ironmate-slide-deck/1",
+    LIMIT = 32 * 1024 * 1024;
+  const encoder = new TextEncoder(),
+    clone = C.clone;
+  function validate(deck) {
+    if (
+      !deck ||
+      deck.schema !== SCHEMA ||
+      !Array.isArray(deck.slides) ||
+      deck.slides.length < 1 ||
+      deck.slides.length > 20
+    )
+      throw Error("スライドは1〜20枚です。");
+    let bytes = 0;
+    const slides = deck.slides.map((scene) => {
+      bytes += encoder.encode(JSON.stringify(scene)).length;
+      if (bytes > LIMIT) throw Error("全スライドは32MiB以下にしてください。");
+      const checked = C.validate(scene);
+      for (const layer of checked.layers)
+        if (layer.kind === "text" && !layer.mono && layer.wrap === undefined)
+          layer.wrap = true;
+      return checked;
+    });
+    if (
+      slides.some(
+        (s) => s.width !== slides[0].width || s.height !== slides[0].height,
+      )
+    )
+      throw Error("全スライドを同じ幅・高さにしてください。");
+    const title = typeof deck.title === "string" ? deck.title : "Ironmate";
+    if (title.length > 200) throw Error("資料名は200文字以下です。");
+    return { schema: SCHEMA, title, slides };
+  }
+  function deckText(deck) {
+    const text = JSON.stringify(validate(deck));
+    if (encoder.encode(text).length > LIMIT)
+      throw Error("全スライドは32MiB以下にしてください。");
+    return text;
+  }
+  function parse(text) {
+    if (typeof text !== "string" || encoder.encode(text).length > LIMIT)
+      throw Error("全スライドJSONは32MiB以下です。");
+    return validate(JSON.parse(text));
+  }
+  function template(
+    width = 1280,
+    height = 720,
+    title = "スライドのタイトル",
+    body = "ここに本文を入力します。",
+  ) {
+    const text = (id, value, x, y, w, h, size, bold) => ({
+      id,
+      kind: "text",
+      name: id,
+      x,
+      y,
+      w,
+      h,
+      rotation: 0,
+      opacity: 1,
+      text: value,
+      fill: "#000000",
+      fontSize: Math.max(4, size),
+      font: "sans",
+      mono: false,
+      bold,
+      wrap: true,
+    });
+    return C.validate({
+      schema: C.SCHEMA,
+      width,
+      height,
+      background: "#FFFFFF",
+      layers: [
+        text(
+          "title",
+          title,
+          width * 0.075,
+          height * 0.08,
+          width * 0.85,
+          height * 0.16,
+          width * 0.045,
+          true,
+        ),
+        text(
+          "body",
+          body,
+          width * 0.075,
+          height * 0.3,
+          width * 0.85,
+          height * 0.55,
+          width * 0.027,
+          false,
+        ),
+      ],
+    });
+  }
+  function xml(value) {
+    for (const c of String(value)) {
+      const n = c.codePointAt(0);
+      if (
+        (n < 32 && ![9, 10, 13].includes(n)) ||
+        (n >= 0xd800 && n <= 0xdfff) ||
+        n === 0xfffe ||
+        n === 0xffff
+      )
+        throw Error("PPTXに保存できない制御文字が含まれています。");
+    }
+    return C.escape(value);
+  }
+  const A = "http://schemas.openxmlformats.org/drawingml/2006/main",
+    P = "http://schemas.openxmlformats.org/presentationml/2006/main",
+    R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
+    REL = "http://schemas.openxmlformats.org/package/2006/relationships";
+  const declaration = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+  function crc(bytes) {
+    let c = 0xffffffff;
+    for (const b of bytes) {
+      c ^= b;
+      for (let i = 0; i < 8; i++) c = (c >>> 1) ^ (c & 1 ? 0xedb88320 : 0);
+    }
+    return (c ^ 0xffffffff) >>> 0;
+  }
+  function zip(files) {
+    const entries = Object.entries(files).map(([name, data]) => ({
+      name: encoder.encode(name),
+      data: typeof data === "string" ? encoder.encode(data) : data,
+    }));
+    let size = 22;
+    for (const e of entries) {
+      if (!(e.data instanceof Uint8Array)) throw Error("ZIPデータが不正です。");
+      size += 76 + 2 * e.name.length + e.data.length;
+    }
+    if (size > LIMIT) throw Error("PPTXは32MiB以下にしてください。");
+    const out = new Uint8Array(size),
+      v = new DataView(out.buffer);
+    let offset = 0;
+    const central = [];
+    const word = (p, n) => v.setUint16(p, n, true),
+      dword = (p, n) => v.setUint32(p, n, true),
+      date = (20 << 9) | (1 << 5) | 1;
+    for (const e of entries) {
+      const start = offset,
+        sum = crc(e.data);
+      dword(offset, 0x04034b50);
+      word(offset + 4, 20);
+      word(offset + 6, 0x800);
+      word(offset + 8, 0);
+      word(offset + 12, date);
+      dword(offset + 14, sum);
+      dword(offset + 18, e.data.length);
+      dword(offset + 22, e.data.length);
+      word(offset + 26, e.name.length);
+      out.set(e.name, offset + 30);
+      out.set(e.data, offset + 30 + e.name.length);
+      offset += 30 + e.name.length + e.data.length;
+      central.push({ ...e, start, sum });
+    }
+    const cd = offset;
+    for (const e of central) {
+      dword(offset, 0x02014b50);
+      word(offset + 4, 20);
+      word(offset + 6, 20);
+      word(offset + 8, 0x800);
+      word(offset + 10, 0);
+      word(offset + 14, date);
+      dword(offset + 16, e.sum);
+      dword(offset + 20, e.data.length);
+      dword(offset + 24, e.data.length);
+      word(offset + 28, e.name.length);
+      dword(offset + 42, e.start);
+      out.set(e.name, offset + 46);
+      offset += 46 + e.name.length;
+    }
+    dword(offset, 0x06054b50);
+    word(offset + 8, entries.length);
+    word(offset + 10, entries.length);
+    dword(offset + 12, offset - cd);
+    dword(offset + 16, cd);
+    return out;
+  }
+  function isNative(layer) {
+    return (
+      ["rect", "ellipse", "triangle"].includes(layer.kind) ||
+      (layer.kind === "text" && !layer.mono) ||
+      (layer.kind === "arrow" && layer.headStyle !== "beginner")
+    );
+  }
+  async function exportPptx(input, imageForLayer) {
+    const deck = validate(input),
+      files = { ...shell };
+    let imageNumber = 0,
+      totalNative = 0,
+      totalImages = 0;
+    const unit =
+        9144000 / Math.max(deck.slides[0].width, deck.slides[0].height),
+      emu = (n) => Math.round(n * unit);
+    const slideIds = [],
+      presRels = [];
+    for (let number = 1; number <= deck.slides.length; number++) {
+      const scene = deck.slides[number - 1],
+        parts = [],
+        rels = [
+          `<Relationship Id="rIdLayout" Type="${R}/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>`,
+        ];
+      let nextId = 2;
+      const nv = (id, name, tx = false) =>
+        `<p:nvSpPr><p:cNvPr id="${id}" name="${xml(name)}"/><p:cNvSpPr${tx ? ' txBox="1"' : ""}/><p:nvPr/></p:nvSpPr>`;
+      const transform = (l) =>
+        `<a:xfrm rot="${Math.round(l.rotation * 60000)}"><a:off x="${emu(l.x)}" y="${emu(l.y)}"/><a:ext cx="${emu(l.w)}" cy="${emu(l.h)}"/></a:xfrm>`;
+      const fill = (color, opacity) =>
+        color === "none"
+          ? "<a:noFill/>"
+          : `<a:solidFill><a:srgbClr val="${color.slice(1).toUpperCase()}"><a:alpha val="${Math.round(opacity * 100000)}"/></a:srgbClr></a:solidFill>`;
+      const line = (l) =>
+        `<a:ln w="${emu(l.strokeWidth)}">${l.strokeWidth ? fill(l.stroke, l.opacity) : "<a:noFill/>"}<a:prstDash val="solid"/></a:ln>`;
+      for (const layer of scene.layers) {
+        const l = clone(layer),
+          name = l.name || l.id;
+        if (l.kind === "text" && !l.mono) {
+          const size = Math.round((l.fontSize * unit) / 127),
+            font = l.font === "mono" ? "MS Gothic" : "Meiryo";
+          if (size < 100 || size > 400000)
+            throw Error(
+              "PPTXの文字サイズが1〜4000ptの範囲を超えています。キャンバスまたは文字サイズを調整してください。",
+            );
+          const properties = `<a:rPr lang="ja-JP" sz="${size}" b="${l.bold ? 1 : 0}">${fill(l.fill, l.opacity)}<a:latin typeface="${font}"/><a:ea typeface="${font}"/></a:rPr>`;
+          // Explicit input newlines remain paragraphs; measured soft wraps are
+          // editable line breaks. Preserve the source text only in deck JSON.
+          const paragraphs = C.textLayout(l)
+            .map(
+              (lines) =>
+                `<a:p><a:pPr><a:lnSpc><a:spcPts val="${Math.round(size * 1.3)}"/></a:lnSpc><a:spcBef><a:spcPts val="0"/></a:spcBef><a:spcAft><a:spcPts val="0"/></a:spcAft></a:pPr>${lines.map(t => `<a:r>${properties}<a:t xml:space="preserve">${xml(t)}</a:t></a:r>`).join(`<a:br>${properties}</a:br>`)}<a:endParaRPr lang="ja-JP" sz="${size}"/></a:p>`,
+            )
+            .join("");
+          parts.push(
+            `<p:sp>${nv(nextId++, name, true)}<p:spPr>${transform(l)}<a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></p:spPr><p:txBody><a:bodyPr wrap="${l.wrap ? "square" : "none"}" lIns="0" tIns="0" rIns="0" bIns="0" anchor="t" vertOverflow="overflow"><a:noAutofit/></a:bodyPr><a:lstStyle/>${paragraphs}</p:txBody></p:sp>`,
+          );
+          totalNative++;
+        } else if (["rect", "ellipse", "triangle"].includes(l.kind)) {
+          const kind = {
+            rect: "rect",
+            ellipse: "ellipse",
+            triangle: "triangle",
+          }[l.kind];
+          parts.push(
+            `<p:sp>${nv(nextId++, name)}<p:spPr>${transform(l)}<a:prstGeom prst="${kind}"><a:avLst/></a:prstGeom>${fill(l.fill, l.opacity)}${line(l)}</p:spPr></p:sp>`,
+          );
+          totalNative++;
+        } else if (l.kind === "arrow" && l.headStyle !== "beginner") {
+          const geometry = C.arrowGeometry(
+              l.w,
+              l.h,
+              l.headSize,
+              l.headPlacement,
+            ),
+            groupId = nextId++,
+            shaftId = nextId++,
+            headId = nextId++,
+            points = geometry.points;
+          const gTransform = `<a:xfrm rot="${Math.round(l.rotation * 60000)}"><a:off x="${emu(l.x)}" y="${emu(l.y)}"/><a:ext cx="${emu(l.w)}" cy="${emu(l.h)}"/><a:chOff x="0" y="0"/><a:chExt cx="${emu(l.w)}" cy="${emu(l.h)}"/></a:xfrm>`;
+          const local = { ...l, x: 0, y: 0, rotation: 0 },
+            shaft = { ...local, y: l.h / 2, h: 0 };
+          const custom = `<a:custGeom><a:avLst/><a:gdLst/><a:ahLst/><a:cxnLst/><a:rect l="0" t="0" r="r" b="b"/><a:pathLst><a:path w="${emu(l.w)}" h="${emu(l.h)}"><a:moveTo><a:pt x="${emu(points[0][0])}" y="${emu(points[0][1])}"/></a:moveTo>${points
+            .slice(1)
+            .map(
+              (p) =>
+                `<a:lnTo><a:pt x="${emu(p[0])}" y="${emu(p[1])}"/></a:lnTo>`,
+            )
+            .join("")}<a:close/></a:path></a:pathLst></a:custGeom>`;
+          parts.push(
+            `<p:grpSp><p:nvGrpSpPr><p:cNvPr id="${groupId}" name="${xml(name)}"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr>${gTransform}</p:grpSpPr><p:sp>${nv(shaftId, "Arrow shaft")}<p:spPr>${transform(shaft)}<a:prstGeom prst="line"><a:avLst/></a:prstGeom><a:noFill/>${line(l)}</p:spPr></p:sp><p:sp>${nv(headId, "Arrow head")}<p:spPr>${transform(local)}${custom}${fill(l.fill, l.opacity)}<a:ln><a:noFill/></a:ln></p:spPr></p:sp></p:grpSp>`,
+          );
+          totalNative += 2;
+        } else {
+          if (typeof imageForLayer !== "function")
+            throw Error(
+              "画像化が必要なレイヤーがあります。ブラウザから書き出してください。",
+            );
+          const bytes = await imageForLayer(l, scene);
+          if (
+            !(bytes instanceof Uint8Array) ||
+            bytes.length < 8 ||
+            ![137, 80, 78, 71, 13, 10, 26, 10].every((b, i) => bytes[i] === b)
+          )
+            throw Error("埋め込み画像はPNGが必要です。");
+          const media = `image${++imageNumber}.png`,
+            rid = `rIdImage${imageNumber}`;
+          files["ppt/media/" + media] = bytes;
+          rels.push(
+            `<Relationship Id="${rid}" Type="${R}/image" Target="../media/${media}"/>`,
+          );
+          parts.push(
+            `<p:pic><p:nvPicPr><p:cNvPr id="${nextId++}" name="${xml(name)}"/><p:cNvPicPr><a:picLocks noChangeAspect="1"/></p:cNvPicPr><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed="${rid}"><a:alphaModFix amt="${Math.round(l.opacity * 100000)}"/></a:blip><a:stretch><a:fillRect/></a:stretch></p:blipFill><p:spPr>${transform(l)}<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:pic>`,
+          );
+          totalImages++;
+        }
+      }
+      files[`ppt/slides/slide${number}.xml`] =
+        declaration +
+        `<p:sld xmlns:a="${A}" xmlns:r="${R}" xmlns:p="${P}"><p:cSld name="Slide ${number}"><p:bg><p:bgPr>${scene.background === "none" ? "<a:noFill/>" : `<a:solidFill><a:srgbClr val="${scene.background.slice(1)}"/></a:solidFill>`}<a:effectLst/></p:bgPr></p:bg><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/><a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>${parts.join("")}</p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sld>`;
+      files[`ppt/slides/_rels/slide${number}.xml.rels`] =
+        declaration +
+        `<Relationships xmlns="${REL}">${rels.join("")}</Relationships>`;
+      slideIds.push(
+        `<p:sldId id="${255 + number}" r:id="rIdBrowserSlide${number}"/>`,
+      );
+      presRels.push(
+        `<Relationship Id="rIdBrowserSlide${number}" Type="${R}/slide" Target="slides/slide${number}.xml"/>`,
+      );
+    }
+    files["ppt/presentation.xml"] = files["ppt/presentation.xml"]
+      .replace(
+        /<p:sldIdLst>[\s\S]*?<\/p:sldIdLst>/,
+        `<p:sldIdLst>${slideIds.join("")}</p:sldIdLst>`,
+      )
+      .replace(
+        /<p:sldSz[^>]*\/>/,
+        `<p:sldSz cx="${emu(deck.slides[0].width)}" cy="${emu(deck.slides[0].height)}"/>`,
+      );
+    files["ppt/_rels/presentation.xml.rels"] = files[
+      "ppt/_rels/presentation.xml.rels"
+    ]
+      .replace(/<Relationship\b[^>]*Type="[^"]*\/slide"[^>]*\/>/g, "")
+      .replace("</Relationships>", presRels.join("") + "</Relationships>");
+    files["[Content_Types].xml"] = files["[Content_Types].xml"]
+      .replace(/<Override\b[^>]*PartName="\/ppt\/slides\/[^"]*"[^>]*\/>/g, "")
+      .replace(
+        "</Types>",
+        deck.slides
+          .map(
+            (_, i) =>
+              `<Override PartName="/ppt/slides/slide${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>`,
+          )
+          .join("") + "</Types>",
+      );
+    files["docProps/core.xml"] = files["docProps/core.xml"].replace(
+      /<dc:title>[\s\S]*?<\/dc:title>/,
+      `<dc:title>${xml(deck.title)}</dc:title>`,
+    );
+    files["docProps/app.xml"] =
+      declaration +
+      `<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>Ironmate</Application><Slides>${deck.slides.length}</Slides><Notes>0</Notes><HiddenSlides>0</HiddenSlides></Properties>`;
+    return {
+      data: zip(files),
+      native: totalNative,
+      images: totalImages,
+      slides: deck.slides.length,
+    };
+  }
+  const api = {
+    SCHEMA,
+    LIMIT,
+    validate,
+    deckText,
+    parse,
+    template,
+    zip,
+    isNative,
+    exportPptx,
+  };
+  return api;
+})(globalThis);
+
+/* Node: require("./studio/studio.js") is the composition model, with .tools, .slides and .slideShell beside it.
+   Browser: the same objects as globals, then each page's UI below runs only on the page that names it in data-page. */
+if (typeof module === "object" && module.exports)
+  module.exports = Object.assign({}, StudioCore, {tools: IronmateTools, slides: IronmateSlides, slideShell: IronmateSlideShell});
+else Object.assign(globalThis, {StudioCore, IronmateTools, IronmateSlides, IronmateSlideShell});
+
+/* Image Studio UI (data-page~="studio"): browser only. */
+if (typeof document !== "undefined" && document.body && (document.body.dataset.page || "").split(" ").includes("studio")) (function () {
 /* Local-only UI; all output passes through the same SVG composition function. */
 "use strict";
 const C = window.StudioCore,
@@ -1739,4 +2265,665 @@ window.IronmateStudio = {
 scene = demo();
 history = new C.History(scene);
 render().catch(error);
+})();
+
+/* Tools page UI (data-page~="tools"): browser only. */
+if (typeof document !== "undefined" && document.body && (document.body.dataset.page || "").split(" ").includes("tools")) (function () {
+"use strict";
+(() => {
+  const $ = (id) => document.getElementById(id),
+    C = IronmateTools,
+    catalog = IronmateCatalog;
+  let grid,
+    previous = null,
+    images = [];
+  const status = (text, error = false) => {
+    $("message").textContent = text;
+    $("message").dataset.error = error;
+  };
+  const action = (id, fn) =>
+    $(id).addEventListener("click", () =>
+      Promise.resolve()
+        .then(fn)
+        .catch((e) => status(e.message, true)),
+    );
+  const choose = (id, items) => {
+    $(id).replaceChildren(
+      ...items.map(([value, text]) => new Option(text, value)),
+    );
+  };
+  choose(
+    "mask",
+    catalog.masks.map((x) => [
+      x,
+      {
+        triangle: "三角",
+        diamond: "ひし形",
+        cloud: "雲",
+        circle: "丸",
+        rock: "岩",
+      }[x],
+    ]),
+  );
+  $("mask").value = "cloud";
+  choose(
+    "size",
+    catalog.sizes.map((x) => [x, `${x} × ${x}`]),
+  );
+  $("size").value = 32;
+  choose(
+    "effect",
+    catalog.effects.map((x) => [
+      x,
+      {
+        normal: "通常",
+        shadow: "影",
+        highlight: "ハイライト",
+        outline: "輪郭",
+      }[x],
+    ]),
+  );
+  choose(
+    "palette",
+    Object.keys(catalog.palettes).map((x) => [
+      x,
+      `${x} / ${catalog.labels[x]}`,
+    ]),
+  );
+  function draw() {
+    const canvas = $("grid");
+    canvas.width = grid.width;
+    canvas.height = grid.height;
+    const ctx = canvas.getContext("2d"),
+      data = ctx.createImageData(grid.width, grid.height);
+    grid.pixels.forEach((row, y) =>
+      row.forEach((i, x) => {
+        const color = grid.colors[i];
+        for (let k = 0; k < 4; k++)
+          data.data[(y * grid.width + x) * 4 + k] = parseInt(
+            color.slice(1 + k * 2, 3 + k * 2),
+            16,
+          );
+      }),
+    );
+    ctx.putImageData(data, 0, 0);
+    // CSS scales the canvas; the backing pixels remain the original grid.
+    $("width").value = grid.width;
+    $("height").value = grid.height;
+    $("grid-info").textContent =
+      `${grid.width} × ${grid.height} cells · ${grid.colors.length} colors`;
+    choose(
+      "ink",
+      grid.colors.map((c, i) => [i, `${i} / ${c}`]),
+    );
+    $("ink").value = Math.min(1, grid.colors.length - 1);
+    $("base64-output").value = "";
+  }
+  function update(value) {
+    const next = C.canonical(value);
+    previous = grid;
+    grid = next;
+    draw();
+  }
+  function generate() {
+    const mask = $("mask").value,
+      effect = $("effect").value,
+      size = Number($("size").value),
+      palette = $("palette").value;
+    const rows = catalog.grids[`${mask}/${effect}/${size}`];
+    update({
+      schema: "ironmate-pixel-grid/1",
+      mask,
+      effect,
+      palette,
+      width: size,
+      height: size,
+      colors: catalog.palettes[palette],
+      pixels: rows.map((r) => Array.from(r, Number)),
+      resampling: "procedural_mask",
+    });
+    status(
+      "Python版のプリセットから生成しました。クリックで色番号を編集できます。",
+    );
+  }
+  const save = (data, type, name) => {
+    const url = URL.createObjectURL(new Blob([data], { type }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+  };
+  async function png() {
+    const scale = Number($("scale").value),
+      g = C.canonical(grid),
+      width = g.width * scale,
+      height = g.height * scale;
+    // Direct RGBA encoding preserves hidden RGB in transparent cells, unlike Canvas exports.
+    if (!globalThis.CompressionStream)
+      throw Error(
+        "PNG出力にはCompressionStream対応ブラウザが必要です。JSON / SVG保存を利用できます。",
+      );
+    const bytes = new Uint8Array(height * (1 + 4 * width));
+    for (let y = 0; y < height; y++)
+      for (let x = 0; x < width; x++) {
+        const color =
+          g.colors[g.pixels[Math.floor(y / scale)][Math.floor(x / scale)]];
+        for (let k = 0; k < 4; k++)
+          bytes[y * (width * 4 + 1) + 1 + x * 4 + k] = parseInt(
+            color.slice(1 + 2 * k, 3 + 2 * k),
+            16,
+          );
+      }
+    const compressed = await new Response(
+      new Blob([bytes]).stream().pipeThrough(new CompressionStream("deflate")),
+    ).arrayBuffer();
+    const ihdr = new Uint8Array(13),
+      view = new DataView(ihdr.buffer);
+    view.setUint32(0, width);
+    view.setUint32(4, height);
+    ihdr[8] = 8;
+    ihdr[9] = 6;
+    const metadata =
+      "ironmate\0" +
+      JSON.stringify(C.pngHeader(g)).replace(
+        /[\u007f-\uffff]/g,
+        (c) => "\\u" + c.charCodeAt(0).toString(16).padStart(4, "0"),
+      );
+    return new Blob(
+      [
+        new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]),
+        C.pngChunk("IHDR", ihdr),
+        C.pngChunk("tEXt", new TextEncoder().encode(metadata)),
+        C.pngChunk("IDAT", new Uint8Array(compressed)),
+        C.pngChunk("IEND", new Uint8Array()),
+      ],
+      { type: "image/png" },
+    );
+  }
+  action("generate", generate);
+  action("resize", () => {
+    update(C.resize(grid, Number($("width").value), Number($("height").value)));
+    status("最近傍でサイズ変更しました。縮小は不可逆です。");
+  });
+  action("recolor", () => {
+    if (grid.colors.length > 5)
+      throw Error("配色IDの置換は5役割までのグリッドに対応します。");
+    update({
+      ...grid,
+      palette: $("palette").value,
+      colors: catalog.palettes[$("palette").value],
+    });
+    status("色番号を保持して配色を変更しました。");
+  });
+  action("undo-grid", () => {
+    if (previous) {
+      [grid, previous] = [previous, grid];
+      draw();
+      status("ひとつ前の状態に戻しました。");
+    }
+  });
+  action("grid-json", () =>
+    save(
+      JSON.stringify(grid, null, 2),
+      "application/json",
+      "ironmate-grid.json",
+    ),
+  );
+  action("grid-svg", () =>
+    save(
+      C.svg(grid, Number($("scale").value)),
+      "image/svg+xml",
+      "ironmate-grid.svg",
+    ),
+  );
+  action("grid-png", async () =>
+    save(await png(), "image/png", "ironmate-grid.png"),
+  );
+  action("grid-base64", async () => {
+    const blob = await png(),
+      bytes = new Uint8Array(await blob.arrayBuffer());
+    let binary = "";
+    for (let i = 0; i < bytes.length; i += 16384)
+      binary += String.fromCharCode(...bytes.subarray(i, i + 16384));
+    $("base64-output").value = "data:image/png;base64," + btoa(binary);
+    status(
+      `PNG ${blob.size.toLocaleString()} bytes / data URI ${C.base64Length(blob.size, true).toLocaleString()}文字。選択してコピーできます。`,
+    );
+  });
+  $("grid").addEventListener("click", (e) => {
+    const bounds = e.currentTarget.getBoundingClientRect(),
+      x = Math.min(
+        grid.width - 1,
+        Math.floor(((e.clientX - bounds.left) * grid.width) / bounds.width),
+      ),
+      y = Math.min(
+        grid.height - 1,
+        Math.floor(((e.clientY - bounds.top) * grid.height) / bounds.height),
+      ),
+      ink = $("ink").value;
+    const next = C.canonical(grid);
+    next.pixels[y][x] = Number(ink);
+    next.resampling = "edited";
+    update(next);
+    $("ink").value = ink;
+    status("セルを編集しました。");
+  });
+  $("grid-file").addEventListener("change", async (e) => {
+    try {
+      const file = e.target.files[0];
+      if (!file) return;
+      if (file.size > 4 * 1024 * 1024) throw Error("JSONは4MiB以下です。");
+      update(JSON.parse(await file.text()));
+      status("グリッドJSONを読み込みました。");
+    } catch (err) {
+      status(err.message, true);
+    } finally {
+      e.target.value = "";
+    }
+  });
+  $("capacity-file").addEventListener("change", (e) => {
+    const f = e.target.files[0];
+    if (f)
+      $("capacity-result").textContent =
+        `${f.name}: ${f.size.toLocaleString()} bytes → 標準Base64 ${C.base64Length(f.size).toLocaleString()}文字 / PNG data URIなら ${C.base64Length(f.size, true).toLocaleString()}文字。画像かどうかの判定・圧縮後サイズの推定はしません。`;
+  });
+  let imageGeneration = 0;
+  $("images").addEventListener("change", async (e) => {
+    const generation = ++imageGeneration,
+      files = Array.from(e.target.files);
+    if (!files.length) return;
+    $("digest-png").disabled = true;
+    $("digest-html").disabled = true;
+    try {
+      if (
+        files.length > 20 ||
+        files.some((f) => f.size > 8 * 1024 * 1024) ||
+        files.reduce((s, f) => s + f.size, 0) > 32 * 1024 * 1024
+      )
+        throw Error("画像は20枚、1枚8MiB、合計32MiB以下です。");
+      const next = [];
+      for (const file of files) {
+        if (!["image/png", "image/jpeg", "image/webp"].includes(file.type))
+          throw Error("PNG / JPEG / WebPを選んでください。");
+        const url = URL.createObjectURL(file),
+          image = new Image();
+        try {
+          image.src = url;
+          await image.decode();
+          if (image.naturalWidth * image.naturalHeight > 4194304)
+            throw Error("1画像4MP以下です。");
+          const ratio = Math.min(
+              1,
+              512 / Math.max(image.naturalWidth, image.naturalHeight),
+            ),
+            canvas = document.createElement("canvas");
+          canvas.width = Math.max(1, Math.round(image.naturalWidth * ratio));
+          canvas.height = Math.max(1, Math.round(image.naturalHeight * ratio));
+          canvas
+            .getContext("2d")
+            .drawImage(image, 0, 0, canvas.width, canvas.height);
+          next.push({
+            name: file.name,
+            src: canvas.toDataURL("image/png"),
+            canvas,
+          });
+        } finally {
+          URL.revokeObjectURL(url);
+        }
+      }
+      if (generation !== imageGeneration) return;
+      images = next;
+      $("image-list").replaceChildren(
+        ...images.map((item) => {
+          const figure = document.createElement("figure"),
+            image = new Image(),
+            caption = document.createElement("figcaption");
+          image.src = item.src;
+          image.alt = item.name;
+          caption.textContent = item.name;
+          figure.append(image, caption);
+          return figure;
+        }),
+      );
+      status(
+        `${images.length}枚を読み込みました。表示用サムネイルに縮小しています。`,
+      );
+    } catch (err) {
+      if (generation === imageGeneration) status(err.message, true);
+    } finally {
+      if (generation === imageGeneration) {
+        $("digest-png").disabled = !images.length;
+        $("digest-html").disabled = !images.length;
+      }
+      e.target.value = "";
+    }
+  });
+  action("digest-png", async () => {
+    const columns = Number($("columns").value),
+      canvas = document.createElement("canvas");
+    canvas.width = columns * 288;
+    canvas.height = Math.ceil(images.length / columns) * 260;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#f2f6f3";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.font = "14px sans-serif";
+    images.forEach((item, i) => {
+      const x = (i % columns) * 288,
+        y = Math.floor(i / columns) * 260,
+        ratio = Math.min(256 / item.canvas.width, 210 / item.canvas.height);
+      ctx.drawImage(
+        item.canvas,
+        x + 16 + (256 - item.canvas.width * ratio) / 2,
+        y + 12 + (210 - item.canvas.height * ratio) / 2,
+        item.canvas.width * ratio,
+        item.canvas.height * ratio,
+      );
+      ctx.fillStyle = "#183d42";
+      ctx.fillText(item.name, x + 16, y + 244, 256);
+    });
+    const blob = await new Promise((resolve) =>
+      canvas.toBlob(resolve, "image/png"),
+    );
+    if (!blob) throw Error("一覧PNGを生成できませんでした。");
+    save(blob, "image/png", "ironmate-digest.png");
+  });
+  action("digest-html", () => {
+    const columns = Number($("columns").value),
+      html = `<!doctype html><html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; base-uri 'none'"><title>Ironmate Image Digest</title><style>body{font:14px system-ui;background:#f2f6f3;color:#183d42;margin:24px}.grid{display:grid;grid-template-columns:repeat(${columns},minmax(0,1fr));gap:16px}figure{margin:0;padding:16px;background:white;overflow-wrap:anywhere}img{width:100%;height:210px;object-fit:contain}@media(max-width:600px){.grid{grid-template-columns:1fr}}</style><h1>Ironmate Image Digest</h1><div class="grid">${images.map((i) => `<figure><img src="${i.src}" alt="${C.esc(i.name)}"><figcaption>${C.esc(i.name)}</figcaption></figure>`).join("")}</div></html>`;
+    save(html, "text/html", "ironmate-digest.html");
+  });
+  generate();
+  window.IronmateWorkbench = {
+    get grid() {
+      return C.canonical(grid);
+    },
+    png,
+  };
+})();
+})();
+
+/* Slide document UI (data-page~="slides"): browser only. */
+if (typeof document !== "undefined" && document.body && (document.body.dataset.page || "").split(" ").includes("slides")) (function () {
+/* Multi-slide document state around the existing Image Studio editor. */
+"use strict";
+(async () => {
+  const C = window.StudioCore,
+    D = window.IronmateSlides,
+    E = window.IronmateStudio,
+    byId = (id) => document.getElementById(id);
+  let deck = { schema: D.SCHEMA, title: "Ironmate", slides: [D.template()] },
+    active = 0,
+    saved = "",
+    busy = false;
+  const note = (message, error = false) => {
+    byId("deck-status").textContent = message;
+    byId("deck-status").dataset.error = error;
+  };
+  function snapshot() {
+    const next = C.clone(deck);
+    next.slides[active] = E.scene;
+    return D.validate(next);
+  }
+  function selectList() {
+    const select = byId("slide-select");
+    select.replaceChildren(
+      ...deck.slides.map(
+        (s, i) =>
+          new Option(
+            `${i + 1} / ${s.layers.find((l) => l.kind === "text")?.text.slice(0, 24) || "白紙"}`,
+            i,
+          ),
+      ),
+    );
+    select.value = active;
+    byId("slide-delete").disabled = deck.slides.length === 1;
+    byId("slide-up").disabled = active === 0;
+    byId("slide-down").disabled = active === deck.slides.length - 1;
+  }
+  async function commit(next, index) {
+    const checked = D.validate(next);
+    await E.replaceScene(checked.slides[index]);
+    deck = checked;
+    active = index;
+    selectList();
+    note(
+      `${active + 1} / ${deck.slides.length} 枚目を編集中。全体の保存は「全スライドJSON保存」を使います。`,
+    );
+  }
+  function action(id, fn) {
+    byId(id).addEventListener("click", async () => {
+      if (busy) return;
+      busy = true;
+      try {
+        await fn();
+      } catch (e) {
+        note(e.message, true);
+      } finally {
+        busy = false;
+      }
+    });
+  }
+  function save(name, data, mime) {
+    const url = URL.createObjectURL(new Blob([data], { type: mime })),
+      a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+  }
+  const bytesFromData = (uri) =>
+    Uint8Array.from(atob(uri.split(",")[1]), (c) => c.charCodeAt(0));
+  async function imageForLayer(layer, scene) {
+    const imageSource = await E.imageSource(scene);
+    if (layer.kind === "image" && !layer.mono)
+      return bytesFromData(imageSource(layer));
+    const l = { ...layer, x: 0, y: 0, rotation: 0, opacity: 1 },
+      scale = Math.min(2, Math.sqrt(4194304 / (l.w * l.h))),
+      canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(l.w * scale));
+    canvas.height = Math.max(1, Math.round(l.h * scale));
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${canvas.width}" height="${canvas.height}" viewBox="0 0 ${l.w} ${l.h}">${C.layerSVG(l, imageSource)}</svg>`;
+    const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" })),
+      image = new Image();
+    try {
+      image.src = url;
+      await image.decode();
+      canvas.getContext("2d").drawImage(image, 0, 0);
+      const blob = await new Promise((resolve) =>
+        canvas.toBlob(resolve, "image/png"),
+      );
+      if (!blob) throw Error("画像レイヤーを出力できませんでした。");
+      return new Uint8Array(await blob.arrayBuffer());
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+  await E.ready;
+  await E.replaceScene(deck.slides[0]);
+  selectList();
+  saved = D.deckText(deck);
+  byId("fill").value = "#000000";
+  byId("stroke").value = "#000000";
+  byId("arrow-style").value = "triangle";
+  action("slide-add", async () => {
+    const next = snapshot();
+    if (next.slides.length >= 20) throw Error("スライドは最大20枚です。");
+    const current = next.slides[0];
+    next.slides.splice(active + 1, 0, {
+      schema: C.SCHEMA,
+      width: current.width,
+      height: current.height,
+      background: "#FFFFFF",
+      layers: [],
+    });
+    await commit(next, active + 1);
+  });
+  action("slide-duplicate", async () => {
+    const next = snapshot();
+    if (next.slides.length >= 20) throw Error("スライドは最大20枚です。");
+    next.slides.splice(active + 1, 0, C.clone(next.slides[active]));
+    await commit(next, active + 1);
+  });
+  action("slide-delete", async () => {
+    if (deck.slides.length === 1) return;
+    if (!confirm("このスライドを削除しますか？")) return;
+    const next = snapshot();
+    next.slides.splice(active, 1);
+    await commit(next, Math.min(active, next.slides.length - 1));
+  });
+  for (const [id, delta] of [
+    ["slide-up", -1],
+    ["slide-down", 1],
+  ])
+    action(id, async () => {
+      const next = snapshot(),
+        index = active + delta;
+      if (index < 0 || index >= next.slides.length) return;
+      [next.slides[active], next.slides[index]] = [
+        next.slides[index],
+        next.slides[active],
+      ];
+      await commit(next, index);
+    });
+  byId("slide-select").addEventListener("change", async (e) => {
+    if (busy) {
+      e.target.value = active;
+      return;
+    }
+    busy = true;
+    try {
+      const next = snapshot();
+      await commit(next, Number(e.target.value));
+    } catch (err) {
+      e.target.value = active;
+      note(err.message, true);
+    } finally {
+      busy = false;
+    }
+  });
+  action("slide-template", async () => {
+    const next = E.scene,
+      added = D.template(
+        next.width,
+        next.height,
+        byId("slide-title").value,
+        byId("slide-body").value,
+      ).layers;
+    added.forEach((l, i) => (l.id = "template-" + Date.now() + "-" + i));
+    next.layers.push(...added);
+    C.validate(next);
+    await E.replaceScene(next);
+    note(
+      "タイトルと本文を追加しました。レイヤーを選択して文字・位置・サイズを変更できます。",
+    );
+  });
+  action("slide-arrow", async () => {
+    const next = E.scene;
+    next.layers.push({
+      id: "arrow-" + Date.now(),
+      kind: "arrow",
+      name: "矢印",
+      x: next.width * 0.2,
+      y: next.height * 0.65,
+      w: next.width * 0.5,
+      h: next.height * 0.1,
+      rotation: 0,
+      opacity: 1,
+      fill: "#000000",
+      stroke: "#000000",
+      strokeWidth: 4,
+      headSize: 28,
+      headPlacement: "tip",
+      headStyle: "triangle",
+    });
+    await E.replaceScene(next);
+    note("編集可能な直線と三角の矢羽根を追加しました。");
+  });
+  action("slide-bold", () => {
+    const layer = E.scene.layers.find((l) => l.id === E.selectedId);
+    if (layer?.kind !== "text")
+      throw Error("先に文字レイヤーを選択してください。");
+    E.patchSelected({ bold: !layer.bold });
+  });
+  byId("font-sample").addEventListener("change", (e) => {
+    if (e.target.value) byId("slide-body").value = e.target.value;
+  });
+  action("deck-save", () => {
+    const next = snapshot(),
+      text = D.deckText(next);
+    save("ironmate-slides.json", text, "application/json");
+    deck = next;
+    saved = text;
+    selectList();
+    note("全スライドの編集用JSONを保存しました。");
+  });
+  byId("deck-open").addEventListener("change", async (e) => {
+    if (busy) {
+      e.target.value = "";
+      return;
+    }
+    const file = e.target.files[0];
+    if (!file) return;
+    busy = true;
+    try {
+      if (file.size > D.LIMIT) throw Error("JSONは32MiB以下です。");
+      const next = D.parse(await file.text());
+      for (const scene of next.slides) await E.imageSource(scene);
+      if (
+        D.deckText(snapshot()) !== saved &&
+        !confirm("現在の未保存のスライドを置き換えますか？")
+      )
+        return;
+      await commit(next, 0);
+      saved = D.deckText(next);
+      note("全スライドを読み込みました。");
+    } catch (err) {
+      note(err.message, true);
+    } finally {
+      busy = false;
+      e.target.value = "";
+    }
+  });
+  action("deck-pptx", async () => {
+    note("PPTXを作成しています…");
+    const current = snapshot(),
+      result = await D.exportPptx(current, imageForLayer);
+    save(
+      "ironmate-slides.pptx",
+      result.data,
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    );
+    note(
+      `${result.slides}枚のPPTXを保存しました。編集可能な要素 ${result.native}、画像レイヤー ${result.images}。再編集用には全スライドJSONも保存してください。`,
+    );
+  });
+  window.addEventListener("beforeunload", (e) => {
+    let dirty = true;
+    try {
+      dirty = D.deckText(snapshot()) !== saved;
+    } catch {}
+    if (dirty) {
+      e.preventDefault();
+      e.returnValue = "";
+    }
+  });
+  window.IronmateSlideEditor = {
+    get deck() {
+      return snapshot();
+    },
+    get active() {
+      return active;
+    },
+    get ready() {
+      return !busy;
+    },
+  };
+})().catch((e) => {
+  const status = document.getElementById("deck-status");
+  if (status) {
+    status.textContent = e.message;
+    status.dataset.error = true;
+  }
+});
 })();

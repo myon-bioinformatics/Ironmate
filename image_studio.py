@@ -462,8 +462,8 @@ _BRAND_HTML = """\
 
 def public_assets():
     """Explicit publication allowlist; no user scenes, globbing, or local images."""
-    names = ('index.html', 'studio.js', 'style.css',
-             'brand/mono.svg', 'brand/dark-green.svg',
+    from ironlib.studio_bundle import STUDIO_HTML, STUDIO_JS, STYLE_CSS
+    names = ('brand/mono.svg', 'brand/dark-green.svg',
              'brand/famicom.svg', 'brand/gameboy.svg', 'brand/pixel-3d.svg',
              'brand/manifest.webmanifest', 'brand/apple-touch-icon.png', 'brand/app-192.png',
              'brand/app-512.png', 'brand/app-maskable-512.png',
@@ -471,6 +471,9 @@ def public_assets():
              'brand/favicon-32.png', 'brand/favicon-48.png', 'brand/icon-192.png',
              'brand/example-demo.gif', 'brand/example-stamp-demo.gif')
     assets = {name: (ROOT / 'studio' / name).read_bytes() for name in names}
+    assets['index.html'] = STUDIO_HTML.encode('utf-8')
+    assets['studio.js'] = STUDIO_JS.encode('utf-8')
+    assets['style.css'] = STYLE_CSS.encode('utf-8')
     from scripts.pages_catalog import catalog_script
     assets['tools/catalog.js'] = catalog_script()
     assets['tools/index.html'] = _TOOLS_HTML.encode('utf-8')

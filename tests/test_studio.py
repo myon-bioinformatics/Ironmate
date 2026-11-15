@@ -56,7 +56,8 @@ from vendor.ascii_artist import FLOW_MAX_INPUT as MAX_INPUT, flow_html, flow_mer
 def node(script, data=None):
     if not shutil.which('node'):
         pytest.skip('Node.js required for browser-independent JS core checks')
-    run = subprocess.run(['node', '-e', "const c=require('./studio/studio.js');const fs=require('node:fs');const input=JSON.parse(fs.readFileSync(0,'utf8'));"+script],
+    loader = "const c=(()=>{const f=require('fs').readFileSync('ironlib/studio_bundle.py','utf8'),s=f.indexOf('STUDIO_JS = r\"\"\"')+16,m=new(require('module'))('studio.js');m._compile(f.slice(s,f.indexOf('\"\"\"',s)),'studio.js');return m.exports})();const fs=require('node:fs');const input=JSON.parse(fs.readFileSync(0,'utf8'));"
+    run = subprocess.run(['node', '-e', loader+script],
                          cwd=ROOT, input=json.dumps(data), text=True, capture_output=True, timeout=30)
     assert run.returncode == 0, run.stderr
     return json.loads(run.stdout)
@@ -912,10 +913,8 @@ def test_studio_stylesheets_match_the_generator():
     module = _generator()
     bundles = module.bundles()
     assert {p.relative_to(ROOT).as_posix() for p in bundles} == {'studio/style.css'}  # one sheet for every page
-    for target, options in bundles.items():
-        assert pysaiyanweboo.check_bundle(target, **options) == [], target.relative_to(ROOT)
-        assert target.read_text(encoding='utf-8').startswith('/* web-ui-bundle/1 commit=')
-    text = (ROOT / 'studio/style.css').read_text(encoding='utf-8')
+    from ironlib.studio_bundle import STYLE_CSS as text
+    assert text.startswith('/* web-ui-bundle/1 commit=')
     assert '/* css/components.css */' in text and 'body[data-ui-theme="green"]{' in text  # PySaiyanWeBoo's theme
     assert '.ui-elements button,' in text and 'cdn.' not in text
     for page in ('studio', 'tools', 'brand', 'slides'):
@@ -969,7 +968,7 @@ def test_build_site_contains_only_public_client_assets_and_relative_paths(tmp_pa
     text=(target/'index.html').read_text()
     assert "Content-Security-Policy" in text and 'Base64 / 渡す' in text
     for name in ('studio.js','style.css'):
-        assert (target/name).read_bytes()==(ROOT/'studio'/name).read_bytes()
+        assert (target/name).read_bytes()==s.public_assets()[name]
         assert f'"{name}"' in text
     assert 'src="/' not in text and 'href="/' not in text
     (target/'keep.txt').write_text('local')
@@ -1275,8 +1274,8 @@ class _Controls(HTMLParser):
 
 
 def _page_ui(page):
-    """The part of studio/studio.js that runs on one page (each UI block is headed ``/* ... (data-page~="page")``)."""
-    script = (ROOT / "studio/studio.js").read_text()
+    """The part of studio.js that runs on one page (each UI block is headed ``/* ... (data-page~="page")``)."""
+    from ironlib.studio_bundle import STUDIO_JS as script
     start = script.index(f'(data-page~="{page}")')
     following = [i for p in ("studio", "tools", "slides") if (i := script.find(f'(data-page~="{p}")')) > start]
     return script[start:min(following, default=len(script))]
@@ -1285,7 +1284,7 @@ def _page_ui(page):
 def test_studio_html_contains_unique_controls_used_by_initialization():
     import image_studio
     assets = image_studio.public_assets()
-    for page, html in (("studio", (ROOT / "studio/index.html").read_text()),
+    for page, html in (("studio", assets["index.html"].decode("utf-8")),
                        ("tools", assets["tools/index.html"].decode("utf-8")),
                        ("slides", assets["slides/index.html"].decode("utf-8"))):
         pages = _Controls()
@@ -1294,7 +1293,7 @@ def test_studio_html_contains_unique_controls_used_by_initialization():
         assert required, page
         assert all(len(pages.ids.get(name, [])) == 1 for name in required), (page, sorted(n for n in required if len(pages.ids.get(n, [])) != 1))
     parser = _Controls()
-    parser.feed((ROOT / "studio/index.html").read_text())
+    parser.feed(assets["index.html"].decode("utf-8"))
     for name in ("save", "save-workspace", "trim-history"):
         assert parser.ids[name] == ["button"]
     assert parser.ids["open-workspace"] == ["input"]

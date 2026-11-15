@@ -1,4 +1,496 @@
-/* Ironmate studio: the one browser script for every page (studio, tools, slides; brand needs none).
+"""Bundled Studio HTML, CSS, and browser JS wrapped in Python (stdlib only)."""
+
+STUDIO_HTML = r"""<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; manifest-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'"
+    />
+    <link rel="manifest" href="brand/manifest.webmanifest" />
+    <link rel="apple-touch-icon" sizes="180x180" href="brand/apple-touch-icon.png" />
+    <meta name="theme-color" content="#003D32" />
+    <meta name="apple-mobile-web-app-title" content="Ironmate" />
+    <title>Ironmate — Image Studio</title>
+    <link rel="icon" href="brand/favicon.ico" sizes="16x16 32x32 48x48" />
+    <link rel="icon" type="image/svg+xml" href="brand/icon.svg" sizes="any" />
+    <link rel="stylesheet" href="style.css" />
+    <script defer src="studio.js"></script>
+  </head>
+  <body class="ui-elements" data-ui-theme="green" data-page="studio">
+    <header>
+      <div class="brand"><img src="brand/heatmap.svg" width="48" height="48" alt="I’m — 🔰がアポストロフィのIronmateロゴ" /><div>IRONMATE <span>IMAGE STUDIO / 01</span></div></div>
+      <div class="top-actions">
+        <a href="slides/">スライド・PPTX作成 ↗</a>
+        <a href="tools/">ドット絵・画像一覧 ↗</a>
+        <a href="https://myon-bioinformatics.github.io/#ironmate">ポートフォリオ ↗</a>
+        <button id="undo-2" data-steps="2" title="2つ戻す" aria-label="2つ戻す">⏪</button>
+        <button id="undo">↶ 戻す</button>
+        <button id="redo">↷ やり直す</button>
+        <button id="redo-2" data-steps="2" title="2つやり直す" aria-label="2つやり直す">⏩</button>
+        <button id="save">JSON保存</button>
+        <button id="shelf-button">クリップボード・シェルフ</button>
+        <button id="save-workspace">作業履歴を保存</button>
+        <label class="button">作業履歴を開く<input id="open-workspace" type="file" accept=".json,application/json" /></label>
+        <label class="button">開く<input id="open" type="file" accept=".json" /></label>
+        <button id="svg">SVG</button><button id="base64">Base64 / 渡す</button>
+        <select id="export-scale" aria-label="出力倍率">
+          <option value="1">1×</option>
+          <option value="2">2×</option>
+          <option value="4">4×</option>
+          <option value="8">8×</option>
+        </select>
+        <button id="png" class="primary">PNGを書き出す ↗</button>
+      </div>
+    </header>
+    <main>
+      <aside class="tools">
+        <p class="eyebrow">01 / COMPOSE</p>
+        <h1>画像を編集</h1>
+        <p class="hint">
+          図形も文字も、スタンプのように。<br />キャンバスを押して配置できます。
+        </p>
+        <div id="tools" class="tool-grid">
+          <button data-tool="select" class="active">↖ 選択</button
+          ><button data-tool="rect">▭ 四角</button
+          ><button data-tool="ellipse">◯ 丸</button
+          ><button data-tool="triangle">△ 三角</button
+          ><button data-tool="text">T 文字</button
+          ><button data-tool="stamp">✦ スタンプ</button>
+          <button data-tool="arrow">→ 矢印</button
+          ><button data-tool="clock">◷ 時計</button>
+        </div>
+        <div id="kaomojis" class="emojis kaomojis">
+          <button>(・∀・)</button><button>(｡•̀ᴗ-)✧</button
+          ><button>٩(๑❛ᴗ❛๑)۶</button>
+        </div>
+        <label
+          >時計の時刻<input id="clock-time" type="time" value="10:10"
+        /></label>
+        <label
+          >文字・カスタムスタンプ<textarea id="text" rows="2">
+検証できたら、次へ。</textarea
+          >
+        </label>
+        <div id="emojis" class="emojis">
+          <button>❤️</button><button>😊</button><button>🌱</button
+          ><button>📊</button><button>✨</button><button>📌</button
+          ><button>🔰</button>
+        </div>
+        <div class="two">
+          <label>塗り<input id="fill" type="color" value="#18a7a1" /></label
+          ><label>線<input id="stroke" type="color" value="#183c42" /></label>
+        </div>
+        <label class="check"
+          ><input id="outline" type="checkbox" />枠線だけにする</label
+        >
+        <label class="button wide"
+          >＋ 写真・画像スタンプ<input
+            id="image"
+            type="file"
+            accept="image/png,image/jpeg,image/webp" /></label
+        ><label class="button wide">＋ カメラから写真<input id="camera-image" type="file" accept="image/png,image/jpeg,image/webp" capture="environment" /></label
+        ><button id="paste-image" class="wide">クリップボードの画像を取り込む</button>
+        <label>Base64 / PNG data URIを貼り付け<textarea id="import-base64" rows="3" aria-label="画像Base64入力"></textarea></label>
+        <button id="import-base64-button" class="wide">Base64画像を取り込む</button>
+        <button id="custom" class="wide">選択したレイヤーをスタンプに</button>
+        <p id="stamp-note" class="hint">
+          文字・絵文字・図形・画像を繰り返し配置。
+        </p>
+        <div class="section">
+          <p class="eyebrow">02 / MATRIX</p>
+          <label
+            >数値行列 / Plotly heatmap JSON<textarea id="matrix" rows="3">
+[[0,1,2,3],[3,2,1,0],[1,null,2,3]]</textarea
+            ></label
+          ><button id="heatmap" class="wide">＋ ヒートマップを置く</button
+          ><label class="button wide"
+            >行列JSONファイルを読む<input
+              id="matrix-file"
+              type="file"
+              accept=".json"
+          /></label>
+          <p class="hint">
+            先頭行が上。元の数値と欠測を保持し、色の段階だけを変更します。
+          </p>
+        </div>
+      </aside>
+      <section class="workspace">
+        <div class="canvas-heading">
+          <div>
+            <p class="eyebrow">YOUR CANVAS</p>
+            <h2>キャンバス</h2>
+          </div>
+          <span id="size-note">1280 × 720</span>
+        </div>
+        <div
+          id="board"
+          class="board"
+          tabindex="0"
+          aria-label="画像編集キャンバス"
+        ></div>
+        <div class="canvas-footer">
+          <span id="status" role="status">準備できました。</span
+          ><span>ドラッグで移動 / 右下の点で拡縮</span>
+        </div>
+        <div class="examples">
+          <button id="stamp-demo" data-gif="brand/example-stamp-demo.gif" aria-controls="example-view" aria-expanded="false">◷ 時計・矢印・顔文字の例</button
+          ><button id="demo" data-gif="brand/example-demo.gif" aria-controls="example-view" aria-expanded="false">✦ スタンプとヒートマップの例</button
+          ><button id="blank">＋ 新しいキャンバス</button
+          ><label
+            >背景<input id="background" type="color" value="#f8f7f2" /></label
+          ><label class="check"
+            ><input id="transparent" type="checkbox" />透明</label
+          ><label
+            >幅<input
+              id="canvas-width"
+              type="number"
+              value="1280"
+              min="64"
+              max="4096" /></label
+          ><label
+            >高さ<input
+              id="canvas-height"
+              type="number"
+              value="720"
+              min="64"
+              max="4096" /></label
+          ><button id="canvas-size">適用</button>
+        </div>
+        <figure id="example-view" class="example-view" hidden>
+          <img id="example-gif" alt="" width="640" height="432" />
+        </figure>
+        <div class="note">
+          PNGは表示と同じ構成を画像化。SVGは図形・文字を保持。JSONで元画像とレイヤーを再編集できます。
+        </div>
+        <details id="workspace-history">
+          <summary>作業履歴（最大40状態）</summary>
+          <ol id="history-list" aria-label="作業履歴"></ol>
+          <button id="trim-history">現在の状態だけ残す</button>
+          <p class="hint">履歴を整理すると過去の状態へ戻せなくなります。現在の画像・レイヤーは保持します。</p>
+          <p class="hint">履歴JSONは画像データを含む場合があります。共有時は内容を確認してください。</p>
+        </details>
+      </section>
+      <aside class="inspector">
+        <p class="eyebrow">03 / LAYERS</p>
+        <div id="layers" class="layers"></div>
+        <div class="two">
+          <button id="duplicate">複製</button><button id="delete">削除</button
+          ><button id="front">前へ</button><button id="back">後ろへ</button>
+        </div>
+        <div class="section">
+          <h2 id="selection">レイヤーを選択</h2>
+          <div class="two">
+            <label>X<input id="x" type="number" /></label
+            ><label>Y<input id="y" type="number" /></label
+            ><label>幅<input id="w" type="number" min="1" /></label
+            ><label>高さ<input id="h" type="number" min="1" /></label>
+          </div>
+          <label
+            >角度<input
+              id="rotation"
+              type="range"
+              min="-180"
+              max="180"
+              value="0" /></label
+          ><label
+            >不透明度<input
+              id="opacity"
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              value="1" /></label
+          ><label
+            >文字サイズ<input
+              id="font-size"
+              type="number"
+              min="4"
+              max="512"
+              value="48" /></label
+          ><label
+            >文字の配置<select id="font-family">
+              <option value="sans">標準</option>
+              <option value="mono">等幅（ASCIIアート・顔文字）</option>
+            </select></label
+          >
+          <button id="apply-text" class="wide">入力した文字・色を適用</button>
+          <label class="check"
+            ><input
+              id="monochrome"
+              type="checkbox"
+              checked
+            />文字・絵文字・画像を単色で描く</label
+          >
+          <label
+            >矢羽根の形<select id="arrow-style">
+              <option value="beginner">🔰を黒にする</option>
+              <option value="triangle">三角形</option>
+            </select></label
+          >
+          <label
+            >矢羽根の位置<select id="arrow-placement">
+              <option value="tip">先端</option>
+              <option value="middle">中央（PPTXと同じ）</option>
+            </select></label
+          >
+          <label
+            >画像の拡大<select id="sampling">
+              <option value="pixelated">ドットを保持</option>
+              <option value="smooth">なめらかに補間</option>
+            </select></label
+          >
+        </div>
+        <div class="section">
+          <p class="eyebrow">04 / RESOLUTION</p>
+          <label
+            >モザイクのセル幅 <output id="cell-value">1 px</output
+            ><input id="cell" type="range" min="1" max="128" value="1" /></label
+          ><label
+            >色の段階 <output id="levels-value">256</output
+            ><input
+              id="levels"
+              type="range"
+              min="2"
+              max="256"
+              value="256" /></label
+          ><button id="continuous" class="wide">ヒートマップを連続色に</button
+          ><label class="check"
+            ><input
+              id="value-labels"
+              type="checkbox"
+              checked
+            />数値ラベル</label
+          >
+          <p class="hint">
+            画像は保持した元画像から再計算します。モザイクで失われた細部の推測・復元ではありません。
+          </p>
+        </div>
+      </aside>
+    </main>
+    <dialog id="shelf-dialog">
+      <h2>クリップボード・シェルフ (Clipboard Shelf)</h2>
+      <p>クリップボードの画像・Base64・テキストデータを複数ストックし、選択して参照・コピー・キャンバス取り込みを行えます。</p>
+      <div class="shelf-actions">
+        <button id="shelf-paste-clip" class="primary">クリップボードから追加 ＋</button>
+        <button id="shelf-clear">シェルフをクリア</button>
+      </div>
+      <label>Base64 / data URI / テキストを入力して追加
+        <textarea id="shelf-input-text" rows="2" placeholder="data:image/png;base64,... または Raw Base64"></textarea>
+      </label>
+      <button id="shelf-add-text" class="wide">テキストを追加</button>
+      <p id="shelf-status" role="status"></p>
+      <div id="shelf-items-container" class="shelf-list"></div>
+      <form method="dialog"><button>閉じる</button></form>
+    </dialog>
+    <dialog id="base64-dialog">
+      <h2>Flutterなどへ画像を渡す</h2>
+      <p>PNGの標準Base64です。画像や元のシーンをサーバーへ送信しません。</p>
+      <label
+        >形式<select id="base64-mode">
+          <option value="dataUri">PNG data URI</option>
+          <option value="base64">Base64のみ</option>
+        </select></label
+      ><textarea
+        id="base64-text"
+        rows="7"
+        readonly
+        aria-label="Base64画像"
+      ></textarea>
+      <p id="base64-status" role="status"></p>
+      <button id="copy-base64">コピー</button
+      ><button id="download-base64">テキスト保存</button>
+      <form method="dialog"><button>閉じる</button></form>
+    </dialog>
+    <dialog id="error">
+      <h2>操作を完了できませんでした</h2>
+      <p id="error-text"></p>
+      <form method="dialog"><button>閉じる</button></form>
+    </dialog>
+  </body>
+</html>
+"""
+
+STYLE_CSS = r"""/* web-ui-bundle/1 commit=635f2f265ea64d41326772b6b55011d7ad82037c sha256=50a6d21af7b70250fc7e27a2dd372fedd4ef4b427ac2cba5be2de59d79bcf249 scripts/build_studio_css.py*/
+@layer base,components,theme;
+/* css/tokens.css */
+:root{--ui-bg:#0d1117;--ui-panel:#101820;--ui-fg:#d1f7c4;--ui-muted:#8b949e;--ui-border:#58a6ff;--ui-accent:#7ee787;--ui-danger:#cf222e;--ui-radius:0;--ui-text:16px;--ui-space:1rem;--ui-max:960px;--ui-font:Meiryo,メイリオ,sans-serif;--ui-font-mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
+/* auto: dark (the :root palette) unless the browser prefers light, then the github-like palette. */
+body[data-ui-theme="auto"]{color-scheme:dark light}@media(prefers-color-scheme:light){body[data-ui-theme="auto"]{--ui-bg:#ffffff;--ui-panel:#f6f8fa;--ui-fg:#1f2328;--ui-muted:#59636e;--ui-border:#d0d7de;--ui-accent:#0969da}}
+/* Candidate themes, token-only: palettes, no theme files (see theme_palettes()). */
+body[data-ui-theme="green"]{--ui-bg:#edf0ec;--ui-panel:#ffffff;--ui-fg:#163b3b;--ui-muted:#546a61;--ui-border:#ccdcd4;--ui-accent:#126d66;--ui-danger:#a73528;--ui-radius:.5rem;color-scheme:light}
+body[data-ui-theme="red"]{--ui-bg:#f6eeee;--ui-panel:#fdfcfc;--ui-fg:#6c4141;--ui-muted:#7e6363;--ui-border:#d4bfbf;--ui-accent:#c43131;--ui-danger:#d02525;--ui-radius:.5rem;color-scheme:light}
+body[data-ui-theme="blue"]{--ui-bg:#eef1f6;--ui-panel:#fcfcfd;--ui-fg:#41526c;--ui-muted:#636e7e;--ui-border:#bfc7d4;--ui-accent:#316cc4;--ui-danger:#d02525;--ui-radius:.5rem;color-scheme:light}
+body[data-ui-theme="purple"]{--ui-bg:#fffbfe;--ui-panel:#f7f2fa;--ui-fg:#1c1b1f;--ui-muted:#49454f;--ui-border:#cac4d0;--ui-accent:#6750a4;--ui-danger:#b3261e;--ui-radius:.5rem;color-scheme:light}
+body[data-ui-theme="terminal"]{--ui-bg:#0a0e10;--ui-panel:#11171a;--ui-fg:#d5dee0;--ui-muted:#7c8a8d;--ui-border:#2b3436;--ui-accent:#5fd7a7;--ui-danger:#ff8080;--ui-radius:0;--ui-font:var(--ui-font-mono);color-scheme:dark}
+/* css/base.css */
+@layer base{*{box-sizing:border-box}body{margin:0;background:var(--ui-bg);color:var(--ui-fg);font:var(--ui-text)/1.6 var(--ui-font)}pre,code,kbd,samp{font-family:var(--ui-font-mono)!important}.ui-page{max-width:var(--ui-max);margin:auto;padding:var(--ui-space)}a{color:inherit}.ui-print-only{display:none}@media print{body{background:#fff;color:#000}.ui-page{max-width:none;padding:0}.ui-no-print{display:none}.ui-print-only{display:block}a{text-decoration:none}}@media(prefers-reduced-motion:reduce){*,::before,::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}}
+/* css/components.css */
+@layer components{.ui-panel,.ui-card{background:var(--ui-panel);border:1px solid var(--ui-border);padding:var(--ui-space);margin:var(--ui-space) 0;border-radius:var(--ui-radius)}.ui-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.75rem}.ui-tag{display:inline-block;border:1px solid var(--ui-border);padding:.1rem .4rem}.ui-button,.ui-input,.ui-elements button,.ui-elements select,.ui-elements textarea,.ui-elements input:not([type=checkbox],[type=radio],[type=range],[type=color],[type=file]){font:inherit;background:var(--ui-panel);color:var(--ui-fg);border:1px solid var(--ui-border);padding:.6rem;border-radius:var(--ui-radius)}.ui-button,.ui-elements button{cursor:pointer}.ui-button:hover,.ui-elements button:hover{border-color:var(--ui-accent)}.ui-button:disabled,.ui-elements button:disabled{opacity:.4;cursor:default}.ui-elements input[type=range],.ui-elements input[type=checkbox],.ui-elements input[type=radio]{accent-color:var(--ui-accent)}.ui-elements label{color:var(--ui-muted)}.ui-muted{color:var(--ui-muted)}.ui-output{font:inherit;white-space:pre-wrap;overflow:auto;background:#d8dee4;color:#161b22;border:1px solid #8c959f;border-radius:4px;padding:.75rem}pre code,.ui-output code{font-family:inherit;color:inherit}pre.ui-output code{background:transparent}@media(max-width:480px){.ui-page{padding:.75rem}.ui-grid{grid-template-columns:1fr}.ui-card,.ui-panel{margin:.75rem 0;padding:.75rem}}.ui-lightbox{border:1px solid var(--ui-border);background:var(--ui-panel);color:var(--ui-fg);padding:1rem;max-width:min(96vw,960px);max-height:96vh;border-radius:var(--ui-radius)}.ui-lightbox::backdrop{background:rgba(0,0,0,.72)}.ui-lightbox img{display:block;max-width:100%;max-height:calc(96vh - 8rem);margin:auto}.ui-lightbox-bar{display:flex;gap:.5rem;justify-content:space-between;margin-top:.75rem}body:has(.ui-lightbox[open]){overflow:hidden}.ui-table,.ui-elements table{border-collapse:collapse;width:100%}.ui-table th,.ui-table td,.ui-elements th,.ui-elements td{border-bottom:1px solid var(--ui-border);padding:.25rem .5rem;text-align:left;vertical-align:top;overflow-wrap:anywhere}.ui-table th,.ui-elements th{color:var(--ui-muted);font-weight:500}.ui-table caption,.ui-elements caption{text-align:left;color:var(--ui-muted);padding:.25rem 0}.ui-pass{color:var(--ui-accent)}.ui-fail{color:var(--ui-danger)}.ui-changed{background:color-mix(in srgb,var(--ui-accent) 18%,transparent)}.ui-tag.ui-pass{border-color:var(--ui-accent)}.ui-tag.ui-fail{border-color:var(--ui-danger)}}
+/* studio layout */
+body:where([data-page~="studio"]){font-size:13px;line-height:1.5;margin:0}
+:where([data-page~="studio"]) header{min-height:76px;background:var(--ui-fg);color:#fff;padding:18px 26px;display:flex;align-items:center;justify-content:space-between;gap:20px}
+:where([data-page~="studio"]) .brand{display:flex;align-items:center;gap:12px;font-weight:800;letter-spacing:2px;font-size:19px;white-space:nowrap}
+:where([data-page~="studio"]) .brand span{font-weight:400;font-size:10px;display:block;letter-spacing:3px;margin:5px 0 0;color:#99c5bc}
+:where([data-page~="studio"]) .brand img{flex:none;image-rendering:pixelated}
+:where([data-page~="studio"]) .top-actions{display:flex;flex-wrap:wrap;gap:7px}
+:where([data-page~="studio"]) .top-actions>a{color:#c7f58a;align-self:center;padding:7px 3px;text-underline-offset:3px}
+:where([data-page~="studio"]) button,:where([data-page~="studio"]) .button{display:inline-flex;align-items:center;justify-content:center;gap:5px;text-decoration:none;min-height:38px;padding:10px 12px}
+:where([data-page~="studio"]) .button{font:inherit;cursor:pointer;background:var(--ui-panel);color:var(--ui-fg);border:1px solid var(--ui-border);border-radius:var(--ui-radius)}
+:where([data-page~="studio"]) button:hover,:where([data-page~="studio"]) .button:hover{border-color:var(--ui-accent);background:#ecf5ef}
+:where([data-page~="studio"]) .primary{background:#bdf06c;border-color:#bdf06c;font-weight:700}
+:where([data-page~="studio"]) header button,:where([data-page~="studio"]) header .button,:where([data-page~="studio"]) header select{border-color:#406261;background:#244a49;color:#fff}
+:where([data-page~="studio"]) header .primary{background:#c7f58a;color:#183b34;border-color:#c7f58a}
+:where([data-page~="studio"]) input[type=file]{display:none}
+:where([data-page~="studio"]) main{display:grid;grid-template-columns:250px minmax(0,1fr) 238px;min-height:calc(100vh - 76px)}
+:where([data-page~="studio"]) aside{padding:24px 20px;background:#fafbf8}
+:where([data-page~="studio"]) aside.tools{border-right:1px solid var(--ui-border)}
+:where([data-page~="studio"]) aside.inspector{border-left:1px solid var(--ui-border)}
+:where([data-page~="studio"]) h1{font-size:25px;line-height:1.55;letter-spacing:-1px;margin:12px 0}
+:where([data-page~="studio"]) h2{font-size:15px;line-height:1.6;margin:8px 0}
+:where([data-page~="studio"]) .eyebrow{font-size:10px;letter-spacing:2px;font-weight:800;color:var(--ui-muted);margin:0 0 12px}
+:where([data-page~="studio"]) .hint,:where([data-page~="studio"]) .note{font-size:11px;color:var(--ui-muted);line-height:1.85}
+:where([data-page~="studio"]) .note{margin-top:18px}
+:where([data-page~="studio"]) .tool-grid,:where([data-page~="studio"]) .two{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+:where([data-page~="studio"]) .tool-grid{margin:24px 0 18px}
+:where([data-page~="studio"]) .active{background:#d8eee3!important;border-color:#59937d!important;color:#0a544d!important;font-weight:700}
+:where([data-page~="studio"]) label{display:block;font-size:11px;margin:12px 0 7px}
+:where([data-page~="studio"]) input,:where([data-page~="studio"]) textarea,:where([data-page~="studio"]) select{display:block;width:100%;font-size:13px;padding:9px;margin-top:5px}
+:where([data-page~="studio"]) select{width:auto;max-width:100%;padding:8px}
+:where([data-page~="studio"]) input[type=color]{height:35px;padding:3px}
+:where([data-page~="studio"]) input[type=range]{padding:0}
+:where([data-page~="studio"]) input[type=checkbox]{display:inline;width:auto;margin:0 7px 0 0}
+:where([data-page~="studio"]) .check{display:flex;align-items:center}
+:where([data-page~="studio"]) .wide{width:100%;margin:6px 0}
+:where([data-page~="studio"]) .emojis{display:flex;flex-wrap:wrap;gap:4px}
+:where([data-page~="studio"]) .emojis button{font-size:21px;padding:5px 7px;border:none;background:transparent}
+:where([data-page~="studio"]) .kaomojis button{font-size:13px;padding:7px 4px}
+:where([data-page~="studio"]) .section{border-top:1px solid var(--ui-border);padding-top:20px;margin-top:22px}
+:where([data-page~="studio"]) .workspace{padding:30px;min-width:0}
+:where([data-page~="studio"]) .canvas-heading{display:flex;justify-content:space-between;align-items:end;gap:12px;margin:5px 0 24px}
+:where([data-page~="studio"]) .canvas-heading h2{font-size:22px;font-weight:500;letter-spacing:-.5px}
+:where([data-page~="studio"]) .canvas-heading span{font-size:11px;white-space:nowrap;color:var(--ui-muted)}
+:where([data-page~="studio"]) .board{position:relative;aspect-ratio:16/9;background:repeating-conic-gradient(#e4e9e2 0 25%,#f7f9f4 0 50%) 0/20px 20px;box-shadow:0 12px 45px #244d3c15;outline:none;touch-action:none}
+:where([data-page~="studio"]) .board svg{width:100%;height:100%;display:block;user-select:none}
+:where([data-page~="studio"]) .board g[data-layer]{cursor:move}
+:where([data-page~="studio"]) .board .selection{pointer-events:none}
+:where([data-page~="studio"]) .board .handle{pointer-events:all;cursor:nwse-resize}
+:where([data-page~="studio"]) .canvas-footer{display:flex;justify-content:space-between;gap:10px;font-size:10px;line-height:1.5;color:var(--ui-muted);margin:16px 0}
+:where([data-page~="studio"]) .examples{display:flex;flex-wrap:wrap;gap:8px;align-items:center;border-top:1px solid var(--ui-border);padding-top:24px;margin-top:30px}
+:where([data-page~="studio"]) .examples label{margin:0;max-width:76px}
+:where([data-page~="studio"]) .example-view{margin:16px 0 0}
+:where([data-page~="studio"]) .example-view img{display:block;max-width:100%;height:auto;border:1px solid var(--ui-border)}
+:where([data-page~="studio"]) .examples input[type=color]{width:45px}
+:where([data-page~="studio"]) .examples input[type=number]{width:68px}
+:where([data-page~="studio"]) .examples .check{max-width:none}
+:where([data-page~="studio"]) .layers{max-height:240px;overflow:auto;margin-bottom:12px}
+:where([data-page~="studio"]) .layers button{width:100%;justify-content:space-between;margin-bottom:5px;text-align:left}
+:where([data-page~="studio"]) .layers small{color:var(--ui-muted);font-size:9px}
+:where([data-page~="studio"]) output{float:right;color:var(--ui-accent)}
+:where([data-page~="studio"]) .inspector h2{font-size:14px;margin-bottom:20px}
+:where([data-page~="studio"]) dialog{border:1px solid var(--ui-border);border-radius:14px;max-width:480px;padding:30px;color:var(--ui-fg)}
+:where([data-page~="studio"]) dialog::backdrop{background:#123d3b66}
+:where([data-page~="studio"]) dialog textarea{max-width:100%;word-break:break-all}
+:where([data-page~="studio"]) #error-text{white-space:pre-wrap;line-height:1.8}
+:where([data-page~="studio"]) #shelf-dialog,:where([data-page~="studio"]) #base64-dialog{width:min(600px,92vw);max-width:600px}
+:where([data-page~="studio"]) .shelf-actions{display:flex;gap:10px;margin:12px 0}
+:where([data-page~="studio"]) .shelf-list{max-height:320px;overflow-y:auto;margin:15px 0;display:flex;flex-direction:column;gap:10px}
+:where([data-page~="studio"]) .shelf-card{display:flex;align-items:center;justify-content:space-between;background:#f4f7f4;border:1px solid var(--ui-border);border-radius:8px;padding:10px 14px;gap:12px}
+:where([data-page~="studio"]) .shelf-card-info{display:flex;align-items:center;gap:12px;overflow:hidden}
+:where([data-page~="studio"]) .shelf-thumb{width:48px;height:48px;object-fit:contain;background:repeating-conic-gradient(#e4e9e2 0 25%,#f7f9f4 0 50%) 0/10px 10px;border:1px solid var(--ui-border);border-radius:4px;flex-shrink:0}
+:where([data-page~="studio"]) .shelf-details{font-size:11px;overflow:hidden}
+:where([data-page~="studio"]) .shelf-details strong{display:block;font-size:12px;color:var(--ui-fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+:where([data-page~="studio"]) .shelf-details span{color:var(--ui-muted)}
+:where([data-page~="studio"]) .shelf-card-actions{display:flex;gap:6px;flex-shrink:0}
+:where([data-page~="studio"]) #base64-text{font:11px var(--ui-font-mono);resize:vertical}
+:where([data-page~="studio"]) #base64-dialog form{display:inline}
+:where([data-page~="studio"]) #base64-dialog p{font-size:12px;line-height:1.8}
+@media(min-width:1600px){:where([data-page~="studio"]) .workspace{padding:44px}}
+@media(max-width:1150px){:where([data-page~="studio"]) main{grid-template-columns:210px minmax(0,1fr)}:where([data-page~="studio"]) .inspector{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px}:where([data-page~="studio"]) .inspector>.eyebrow{display:none}:where([data-page~="studio"]) .inspector>.section{margin:0;border:0;padding:0}:where([data-page~="studio"]) .workspace{padding:22px}}
+@media(max-width:680px){:where([data-page~="studio"]) header{padding:14px;display:block}:where([data-page~="studio"]) .top-actions{margin-top:15px}:where([data-page~="studio"]) .top-actions button,:where([data-page~="studio"]) .top-actions .button{padding:7px;font-size:11px}:where([data-page~="studio"]) main{display:flex;flex-direction:column}:where([data-page~="studio"]) .workspace{order:-1;padding:18px}:where([data-page~="studio"]) .canvas-heading h2{font-size:17px}:where([data-page~="studio"]) .canvas-heading{margin-bottom:16px}:where([data-page~="studio"]) .canvas-footer{display:block}:where([data-page~="studio"]) .canvas-footer span{display:block;margin:5px 0}:where([data-page~="studio"]) .tools{display:block}:where([data-page~="studio"]) .tools h1,:where([data-page~="studio"]) .tools>.hint{display:none}:where([data-page~="studio"]) .tool-grid{margin:8px 0;grid-template-columns:repeat(3,1fr)}:where([data-page~="studio"]) .inspector{display:block}:where([data-page~="studio"]) .inspector>.section{margin-top:20px}:where([data-page~="studio"]) .examples{margin-top:20px;padding-top:15px}:where([data-page~="studio"]) .board{width:100%}:where([data-page~="studio"]) aside{padding:18px}:where([data-page~="studio"]) .tools>.section{margin-top:15px}}
+
+/* tools page layout */
+body:where([data-page~="tools"]){font-size:15px;line-height:1.65;margin:0}
+:where([data-page~="tools"]) a{color:var(--ui-accent);text-underline-offset:4px}
+:where([data-page~="tools"]) header{padding:24px 4vw;border-bottom:1px solid var(--ui-border);display:flex;justify-content:space-between;gap:24px;align-items:center;flex-wrap:wrap}
+:where([data-page~="tools"]) .brand{display:flex;align-items:center;gap:12px;font-weight:900;letter-spacing:.1em;text-decoration:none;color:inherit}
+:where([data-page~="tools"]) .brand img{flex:none;image-rendering:pixelated}
+:where([data-page~="tools"]) .brand-hero{display:block;max-width:100%;height:auto;image-rendering:pixelated}
+:where([data-page~="tools"]) nav,:where([data-page~="tools"]) .jump,:where([data-page~="tools"]) .exports,:where([data-page~="tools"]) .digest-options{display:flex;flex-wrap:wrap;gap:16px;align-items:center}
+:where([data-page~="tools"]) nav{font-size:13px}
+:where([data-page~="tools"]) main{max-width:1240px;margin:auto;padding:48px 28px}
+:where([data-page~="tools"]) .eyebrow,:where([data-page~="tools"]) .section-heading span{font-size:12px;letter-spacing:.15em;font-weight:800;color:var(--ui-muted)}
+:where([data-page~="tools"]) h1{font-size:clamp(38px,7vw,76px);letter-spacing:-.04em;line-height:1.12;margin:20px 0 28px}
+:where([data-page~="tools"]) h2{font-size:30px;letter-spacing:-.03em;margin:10px 0 25px}
+:where([data-page~="tools"]) .lead{font-size:18px;color:var(--ui-muted)}
+:where([data-page~="tools"]) .jump{margin:30px 0}
+:where([data-page~="tools"]) .jump a{background:var(--ui-panel);border:1px solid var(--ui-border);padding:10px 16px;border-radius:30px;text-decoration:none}
+:where([data-page~="tools"]) section{scroll-margin-top:20px;border-top:1px solid var(--ui-border);margin-top:52px;padding-top:28px}
+:where([data-page~="tools"]) .workspace{display:grid;grid-template-columns:310px minmax(0,1fr);gap:28px}
+:where([data-page~="tools"]) .controls,:where([data-page~="tools"]) .preview{background:var(--ui-panel);padding:24px;border:1px solid var(--ui-border);border-radius:18px}
+:where([data-page~="tools"]) .controls{display:flex;flex-direction:column;gap:14px}
+:where([data-page~="tools"]) label{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:650}
+:where([data-page~="tools"]) .pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+:where([data-page~="tools"]) button,:where([data-page~="tools"]) select,:where([data-page~="tools"]) input,:where([data-page~="tools"]) textarea{max-width:100%;min-width:0}
+:where([data-page~="tools"]) button,:where([data-page~="tools"]) select,:where([data-page~="tools"]) input[type=number],:where([data-page~="tools"]) textarea{padding:10px 12px}
+:where([data-page~="tools"]) button{font-weight:650}
+:where([data-page~="tools"]) button:hover{background:#eaf3ed}
+:where([data-page~="tools"]) .primary{background:var(--ui-accent);border-color:var(--ui-accent);color:#fff}
+:where([data-page~="tools"]) .primary:hover{background:#12554d}
+:where([data-page~="tools"]) .hint{color:var(--ui-muted);font-size:12px;font-weight:400;margin:0}
+:where([data-page~="tools"]) .preview{display:flex;flex-direction:column;gap:16px;justify-content:center;align-items:stretch}
+:where([data-page~="tools"]) .preview canvas{display:block;width:min(100%,480px);height:auto;image-rendering:pixelated;margin:auto;border:1px solid var(--ui-border);background:repeating-conic-gradient(#e1e8e3 0% 25%,#fff 0% 50%) 0 0/20px 20px;cursor:crosshair;touch-action:manipulation}
+:where([data-page~="tools"]) textarea{width:100%;font-size:11px;overflow-wrap:anywhere}
+:where([data-page~="tools"]) #grid-info{font-size:13px;color:var(--ui-muted)}
+:where([data-page~="tools"]) #message{border-left:3px solid var(--ui-accent);padding:8px 16px;min-height:42px;background:#e2eee7}
+:where([data-page~="tools"]) #message[data-error=true]{border-color:var(--ui-danger);color:#983c30}
+:where([data-page~="tools"]) .image-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-top:24px}
+:where([data-page~="tools"]) .image-list figure{margin:0;padding:14px;background:var(--ui-panel);border:1px solid var(--ui-border);border-radius:10px;overflow:hidden}
+:where([data-page~="tools"]) .image-list img{width:100%;height:160px;object-fit:contain}
+:where([data-page~="tools"]) .image-list figcaption{font-size:12px;overflow-wrap:anywhere}
+:where([data-page~="tools"]) .digest-options{margin:25px 0}
+:where([data-page~="tools"]) .table-wrap{overflow-x:auto}
+:where([data-page~="tools"]) table{background:var(--ui-panel);font-size:13px}
+:where([data-page~="tools"]) th,:where([data-page~="tools"]) td{padding:16px;min-width:180px}
+:where([data-page~="tools"]) th{background:#e4eee8}
+:where([data-page~="tools"]) footer{padding:30px;text-align:center;color:var(--ui-muted);font-size:12px;border-top:1px solid var(--ui-border)}
+@media(max-width:760px){:where([data-page~="tools"]) main{padding:30px 16px}:where([data-page~="tools"]) .workspace{grid-template-columns:1fr}:where([data-page~="tools"]) .controls,:where([data-page~="tools"]) .preview{padding:18px}:where([data-page~="tools"]) header{padding:18px}:where([data-page~="tools"]) h2{font-size:25px}:where([data-page~="tools"]) .exports{gap:8px}}
+
+/* brand gallery layout */
+body:where([data-page~="brand"]){line-height:1.7;margin:0}
+:where([data-page~="brand"]) a{color:var(--ui-accent);text-underline-offset:4px}
+:where([data-page~="brand"]) header{display:flex;align-items:center;gap:18px;background:#d8e6a3;padding:24px max(24px,calc((100vw - 1100px)/2))}
+:where([data-page~="brand"]) header p{margin:0}:where([data-page~="brand"]) header a{font-weight:bold;font-size:22px}
+:where([data-page~="brand"]) main{max-width:1100px;margin:auto;padding:28px 24px}
+:where([data-page~="brand"]) h1{font-size:clamp(26px,5vw,44px)}:where([data-page~="brand"]) h2{font-size:19px}
+:where([data-page~="brand"]) img{image-rendering:pixelated;max-width:100%;object-fit:contain}
+:where([data-page~="brand"]) .designs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin:30px 0}
+:where([data-page~="brand"]) .designs section{padding:22px;background:var(--ui-panel);border:1px solid var(--ui-border)}
+:where([data-page~="brand"]) .designs img{display:block;margin:auto}
+:where([data-page~="brand"]) .home{padding:24px;background:#dfe8df}
+:where([data-page~="brand"]) .print-logo{display:none}
+@media(max-width:700px){:where([data-page~="brand"]) .designs{grid-template-columns:repeat(2,minmax(0,1fr))}:where([data-page~="brand"]) .designs section{padding:14px}:where([data-page~="brand"]) .designs img{width:100%;height:auto}}
+@media print{:where([data-page~="brand"]) header,:where([data-page~="brand"]) .designs,:where([data-page~="brand"]) .home{display:none}:where([data-page~="brand"]) .print-logo{display:block}body:where([data-page~="brand"]){background:white;color:black}}
+
+/* slide studio panel (loaded after style.css) */
+:where([data-page~="slides"]) .slide-controls{padding:14px 24px;background:#e6f0e9;border-bottom:1px solid var(--ui-border)}
+:where([data-page~="slides"]) .slide-toolbar,:where([data-page~="slides"]) .slide-template{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+:where([data-page~="slides"]) .slide-toolbar select{width:auto;min-width:180px}
+:where([data-page~="slides"]) .slide-controls details{margin:14px 0}
+:where([data-page~="slides"]) .slide-controls summary{cursor:pointer;font-weight:650}
+:where([data-page~="slides"]) .slide-template{align-items:flex-end;margin-top:10px}
+:where([data-page~="slides"]) .slide-template label{min-width:180px;max-width:420px;flex:1}
+:where([data-page~="slides"]) .slide-template input,:where([data-page~="slides"]) .slide-template textarea,:where([data-page~="slides"]) .slide-template select{width:100%}
+:where([data-page~="slides"]) .slide-hint{font-size:12px;color:var(--ui-muted);margin:6px 0}
+:where([data-page~="slides"]) #deck-status{font-size:13px;margin:8px 0}
+:where([data-page~="slides"]) #deck-status[data-error=true]{color:var(--ui-danger)}
+:where([data-page~="slides"]) .slide-controls button{min-height:38px}
+@media(max-width:700px){:where([data-page~="slides"]) .slide-controls{padding:14px}:where([data-page~="slides"]) .slide-toolbar{gap:8px}:where([data-page~="slides"]) .slide-template{display:grid;grid-template-columns:1fr}:where([data-page~="slides"]) .slide-template label{max-width:none}:where([data-page~="slides"]) .slide-toolbar label{max-width:100%}:where([data-page~="slides"]) .slide-toolbar select{max-width:100%}}
+"""
+
+STUDIO_JS = r"""/* Ironmate studio: the one browser script for every page (studio, tools, slides; brand needs none).
    Models first (composition, pixel-grid tools, slide shell, Open XML writer), then each page's UI. */
 /* Composition model. Optional browser canvas metrics; no network/framework dependency. */
 const StudioCore = (function (root) {
@@ -2927,3 +3419,4 @@ if (typeof document !== "undefined" && document.body && (document.body.dataset.p
   }
 });
 })();
+"""

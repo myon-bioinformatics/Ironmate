@@ -2,7 +2,16 @@
 "use strict";
 const assert = require("node:assert/strict");
 const test = require("node:test");
-const C = require("../studio/studio.js");
+const C = (() => {
+  const fs = require("node:fs");
+  const Module = require("node:module");
+  const path = require("node:path");
+  const src = fs.readFileSync(path.join(__dirname, "../ironlib/studio_bundle.py"), "utf8");
+  const start = src.indexOf('STUDIO_JS = r"""') + 16;
+  const mod = new Module("studio.js");
+  mod._compile(src.slice(start, src.indexOf('"""', start)), path.join(__dirname, "../studio/studio.js"));
+  return mod.exports;
+})();
 const blank = () => ({schema:C.SCHEMA,width:64,height:64,background:"none",layers:[]});
 const history = () => {
   const h = new C.History(blank());

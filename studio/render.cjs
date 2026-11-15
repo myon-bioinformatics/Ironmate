@@ -1,7 +1,15 @@
 // The CLI uses the same validated SVG renderer as the static browser editor.
 "use strict";
 const fs = require("node:fs");
-const core = require("./studio.js");
+const core = (() => {
+  const Module = require("node:module");
+  const path = require("node:path");
+  const src = fs.readFileSync(path.join(__dirname, "../ironlib/studio_bundle.py"), "utf8");
+  const start = src.indexOf('STUDIO_JS = r"""') + 16;
+  const mod = new Module("studio.js");
+  mod._compile(src.slice(start, src.indexOf('"""', start)), path.join(__dirname, "studio.js"));
+  return mod.exports;
+})();
 function fail(tool, message, hint, jsonMode) {
   const text = String(message || "failed").trim() || "failed";
   if (jsonMode) {

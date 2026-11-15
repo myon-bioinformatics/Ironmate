@@ -29,7 +29,7 @@ def shell_script():
 
 
 START, END = '/* <slide-shell>', '/* </slide-shell> */'
-SCRIPT = ROOT / 'studio/studio.js'
+SCRIPT = ROOT / 'ironlib/studio_bundle.py'
 
 
 def shell_region(text=None):

@@ -12,7 +12,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def js(code, payload):
-    result = subprocess.run(['node', '-e', "const c=require('./studio/studio.js').tools;const input=JSON.parse(require('fs').readFileSync(0,'utf8'));" + code],
+    loader = "const c=(()=>{const f=require('fs').readFileSync('ironlib/studio_bundle.py','utf8'),s=f.indexOf('STUDIO_JS = r\"\"\"')+16,m=new(require('module'))('studio.js');m._compile(f.slice(s,f.indexOf('\"\"\"',s)),'studio.js');return m.exports})().tools;const input=JSON.parse(require('fs').readFileSync(0,'utf8'));"
+    result = subprocess.run(['node', '-e', loader + code],
                             input=json.dumps(payload), text=True, capture_output=True, check=True, cwd=ROOT)
     return json.loads(result.stdout)
 

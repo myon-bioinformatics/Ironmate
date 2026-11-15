@@ -64,8 +64,8 @@ jobs:
           node-version: "26"
       - name: Check the dependency-free client and build only public assets
         run: |
-          node --check studio/studio.js
           docker build --target artifact --output type=local,dest=build/studio-site -f Dockerfile.pages .
+          node --check build/studio-site/studio.js
       - name: Start the same static site in Docker
         run: |
           docker build --target runtime -t ironmate-pages:test -f Dockerfile.pages .

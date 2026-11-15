@@ -920,8 +920,12 @@ def test_studio_stylesheets_match_the_generator():
     assert '.ui-elements button,' in text and 'cdn.' not in text
     for page in ('studio', 'tools', 'brand', 'slides'):
         assert f':where([data-page~="{page}"])' in text, page  # page layout is scoped, with zero added specificity
-    for page, html in (('studio', 'studio/index.html'), ('tools', 'studio/tools/index.html'), ('brand', 'studio/brand/index.html')):
-        assert f'data-page="{page}"' in (ROOT / html).read_text(encoding='utf-8'), html
+    import image_studio
+    assets = image_studio.public_assets()
+    for page, html in (('studio', assets['index.html'].decode('utf-8')),
+                       ('tools', assets['tools/index.html'].decode('utf-8')),
+                       ('brand', assets['brand/index.html'].decode('utf-8'))):
+        assert f'data-page="{page}"' in html, page
     assert module.scoped('body{a:b}.x,y z{c:d}@media(max-width:1px){.w{e:f}}', 'p') == (
         'body:where([data-page~="p"]){a:b}:where([data-page~="p"]) .x,:where([data-page~="p"]) y z{c:d}'
         '@media(max-width:1px){:where([data-page~="p"]) .w{e:f}}')
@@ -930,12 +934,13 @@ def test_studio_stylesheets_match_the_generator():
 
 
 def test_studio_pages_opt_into_the_components_and_palette():
-    for name, page in (('studio/index.html', 'studio'), ('studio/tools/index.html', 'tools'), ('studio/brand/index.html', 'brand')):
-        html = (ROOT / name).read_text(encoding='utf-8')
+    import image_studio
+    assets = image_studio.public_assets()
+    for name, page in (('index.html', 'studio'), ('tools/index.html', 'tools'), ('brand/index.html', 'brand')):
+        html = assets[name].decode('utf-8')
         assert f'<body class="ui-elements" data-ui-theme="green" data-page="{page}">' in html, name
         assert ('href="style.css"' if page == 'studio' else 'href="../style.css"') in html, name  # one sheet for every page
-    import image_studio
-    slides = image_studio.public_assets()['slides/index.html'].decode('utf-8')
+    slides = assets['slides/index.html'].decode('utf-8')
     assert '<body class="ui-elements" data-ui-theme="green" data-page="studio slides" data-mode="slides">' in slides
     assert 'href="../style.css"' in slides and 'slides.css' not in slides
 
@@ -956,7 +961,8 @@ def test_build_site_contains_only_public_client_assets_and_relative_paths(tmp_pa
     assert {p.relative_to(target/'brand').as_posix() for p in (target/'brand').rglob('*')} == brand_files
     for name in brand_files:
         assert (target/'brand'/name).is_file()
-        assert (target/'brand'/name).read_bytes() == (ROOT/'studio/brand'/name).read_bytes()
+        expected = s.public_assets()['brand/index.html'] if name == 'index.html' else (ROOT/'studio/brand'/name).read_bytes()
+        assert (target/'brand'/name).read_bytes() == expected
     for page in ('index.html', 'tools/index.html', 'slides/index.html', 'brand/index.html'):
         html = (target/page).read_text()
         assert 'src="/' not in html and 'href="/' not in html
@@ -1280,7 +1286,7 @@ def test_studio_html_contains_unique_controls_used_by_initialization():
     import image_studio
     assets = image_studio.public_assets()
     for page, html in (("studio", (ROOT / "studio/index.html").read_text()),
-                       ("tools", (ROOT / "studio/tools/index.html").read_text()),
+                       ("tools", assets["tools/index.html"].decode("utf-8")),
                        ("slides", assets["slides/index.html"].decode("utf-8"))):
         pages = _Controls()
         pages.feed(html)

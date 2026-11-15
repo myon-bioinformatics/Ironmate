@@ -8,7 +8,6 @@ COPY ironlib/__init__.py ironlib/grid_output.py ./ironlib/
 COPY scripts/pages_catalog.py ./scripts/pages_catalog.py
 COPY studio/index.html studio/studio.js studio/style.css ./studio/
 COPY studio/brand/ ./studio/brand/
-COPY studio/tools/ ./studio/tools/
 RUN python -S image_studio.py --build-site /site/Ironmate
 
 # docker build --target artifact --output type=local,dest=build/pages -f Dockerfile.pages .

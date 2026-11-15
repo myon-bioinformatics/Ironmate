@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def js(code, payload):
-    result = subprocess.run(['node', '-e', "const c=require('./studio/tools/tools-core.js');const input=JSON.parse(require('fs').readFileSync(0,'utf8'));" + code],
+    result = subprocess.run(['node', '-e', "const c=require('./studio/tools/tools.js');const input=JSON.parse(require('fs').readFileSync(0,'utf8'));" + code],
                             input=json.dumps(payload), text=True, capture_output=True, check=True, cwd=ROOT)
     return json.loads(result.stdout)
 
@@ -48,15 +48,15 @@ def test_rejects_corrupt_import_and_escapes_filename_markup():
 def test_static_allowlist_excludes_private_scenes_and_generation_inputs(tmp_path):
     target = image_studio.build_site(tmp_path / 'Ironmate')
     assert {p.relative_to(target).as_posix() for p in target.rglob('*') if p.is_file()} == {
-        'index.html', 'style.css', 'core.js', 'studio.js', '.nojekyll',
-        'tools/index.html', 'tools/tools.css', 'tools/tools-core.js', 'tools/tools.js', 'tools/catalog.js',
-        'brand/index.html', 'brand/gallery.css', 'brand/mono.svg', 'brand/dark-green.svg',
+        'index.html', 'style.css', 'studio.js', '.nojekyll',
+        'tools/index.html', 'tools/tools.js', 'tools/catalog.js',
+        'brand/index.html', 'brand/mono.svg', 'brand/dark-green.svg',
         'brand/famicom.svg', 'brand/gameboy.svg', 'brand/pixel-3d.svg',
         'brand/manifest.webmanifest', 'brand/apple-touch-icon.png', 'brand/app-192.png',
         'brand/app-512.png', 'brand/app-maskable-512.png',
         'brand/icon.svg', 'brand/heatmap.svg', 'brand/hero.svg', 'brand/favicon.ico', 'brand/favicon-16.png',
         'brand/favicon-32.png', 'brand/favicon-48.png', 'brand/icon-192.png', 'brand/example-demo.gif', 'brand/example-stamp-demo.gif',
-        'slides/index.html', 'slides/package.js', 'slides/pptx.js', 'slides/slides.js', 'slides/slides.css'}
+        'slides/index.html', 'slides/package.js', 'slides/slides.js'}
     assert not list(target.rglob('*.py')) and not list(target.rglob('*.json'))
     assert 'href="tools/"' in (target / 'index.html').read_text()
     assert 'connect-src \'none\'' in (target / 'tools/index.html').read_text()

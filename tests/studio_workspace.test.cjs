@@ -2,7 +2,7 @@
 "use strict";
 const assert = require("node:assert/strict");
 const test = require("node:test");
-const C = require("../studio/core.js");
+const C = require("../studio/studio.js");
 const blank = () => ({schema:C.SCHEMA,width:64,height:64,background:"none",layers:[]});
 const history = () => {
   const h = new C.History(blank());

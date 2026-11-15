@@ -1,7 +1,7 @@
 // The CLI uses the same validated SVG renderer as the static browser editor.
 "use strict";
 const fs = require("node:fs");
-const core = require("./core.js");
+const core = require("./studio.js");
 function fail(tool, message, hint, jsonMode) {
   const text = String(message || "failed").trim() || "failed";
   if (jsonMode) {

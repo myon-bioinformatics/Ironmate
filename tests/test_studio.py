@@ -56,7 +56,7 @@ from vendor.ascii_artist import FLOW_MAX_INPUT as MAX_INPUT, flow_html, flow_mer
 def node(script, data=None):
     if not shutil.which('node'):
         pytest.skip('Node.js required for browser-independent JS core checks')
-    run = subprocess.run(['node', '-e', "const c=require('./studio/core.js');const fs=require('node:fs');const input=JSON.parse(fs.readFileSync(0,'utf8'));"+script],
+    run = subprocess.run(['node', '-e', "const c=require('./studio/studio.js');const fs=require('node:fs');const input=JSON.parse(fs.readFileSync(0,'utf8'));"+script],
                          cwd=ROOT, input=json.dumps(data), text=True, capture_output=True, timeout=30)
     assert run.returncode == 0, run.stderr
     return json.loads(run.stdout)
@@ -165,7 +165,7 @@ def test_loopback_server_exposes_only_fixed_assets_no_project_files_or_posts():
         with get(base) as r:
             assert 'Ironmate' in r.read().decode()
             assert "connect-src 'none'" in r.headers['Content-Security-Policy']
-        with get(base+'/core.js') as r:
+        with get(base+'/studio.js') as r:
             assert r.headers['Content-Type'].startswith('text/javascript')
         for path, mime in (('/brand/icon.svg', 'image/svg+xml'),
                            ('/brand/favicon-16.png', 'image/png'),
@@ -911,26 +911,33 @@ def test_studio_stylesheets_match_the_generator():
     import pysaiyanweboo
     module = _generator()
     bundles = module.bundles()
-    assert {p.relative_to(ROOT).as_posix() for p in bundles} == {
-        'studio/style.css', 'studio/tools/tools.css', 'studio/brand/gallery.css', 'studio/slides/slides.css'}
+    assert {p.relative_to(ROOT).as_posix() for p in bundles} == {'studio/style.css'}  # one sheet for every page
     for target, options in bundles.items():
         assert pysaiyanweboo.check_bundle(target, **options) == [], target.relative_to(ROOT)
         assert target.read_text(encoding='utf-8').startswith('/* web-ui-bundle/1 commit=')
-    for name in ('studio/style.css', 'studio/tools/tools.css', 'studio/brand/gallery.css'):
-        text = (ROOT / name).read_text(encoding='utf-8')
-        assert '/* css/components.css */' in text and 'body[data-ui-theme="ironmate"]{--ui-bg:#edf0ec;' in text
-        assert '.ui-elements button,' in text and 'cdn.' not in text
-    assert '/* css/' not in (ROOT / 'studio/slides/slides.css').read_text(encoding='utf-8')  # loaded after style.css
+    text = (ROOT / 'studio/style.css').read_text(encoding='utf-8')
+    assert '/* css/components.css */' in text and 'body[data-ui-theme="ironmate"]{--ui-bg:#edf0ec;' in text
+    assert '.ui-elements button,' in text and 'cdn.' not in text
+    for page in ('studio', 'tools', 'brand', 'slides'):
+        assert f':where([data-page~="{page}"])' in text, page  # page layout is scoped, with zero added specificity
+    for page, html in (('studio', 'studio/index.html'), ('tools', 'studio/tools/index.html'), ('brand', 'studio/brand/index.html')):
+        assert f'data-page="{page}"' in (ROOT / html).read_text(encoding='utf-8'), html
+    assert module.scoped('body{a:b}.x,y z{c:d}@media(max-width:1px){.w{e:f}}', 'p') == (
+        'body:where([data-page~="p"]){a:b}:where([data-page~="p"]) .x,:where([data-page~="p"]) y z{c:d}'
+        '@media(max-width:1px){:where([data-page~="p"]) .w{e:f}}')
     assert module.main(['--check']) == 0
     assert pysaiyanweboo.check_theme(module.IRONMATE) == []  # the brand palette reads at WCAG AA on both grounds
 
 
 def test_studio_pages_opt_into_the_components_and_palette():
-    for name in ('studio/index.html', 'studio/tools/index.html', 'studio/brand/index.html'):
-        assert '<body class="ui-elements" data-ui-theme="ironmate">' in (ROOT / name).read_text(encoding='utf-8'), name
+    for name, page in (('studio/index.html', 'studio'), ('studio/tools/index.html', 'tools'), ('studio/brand/index.html', 'brand')):
+        html = (ROOT / name).read_text(encoding='utf-8')
+        assert f'<body class="ui-elements" data-ui-theme="ironmate" data-page="{page}">' in html, name
+        assert ('href="style.css"' if page == 'studio' else 'href="../style.css"') in html, name  # one sheet for every page
     import image_studio
     slides = image_studio.public_assets()['slides/index.html'].decode('utf-8')
-    assert '<body class="ui-elements" data-ui-theme="ironmate" data-mode="slides">' in slides
+    assert '<body class="ui-elements" data-ui-theme="ironmate" data-page="studio slides" data-mode="slides">' in slides
+    assert 'href="../style.css"' in slides and 'slides.css' not in slides
 
 
 # ═══ · studio delivery ═══════════════════════════════════════════════════════════════════════════════════
@@ -938,9 +945,9 @@ def test_studio_pages_opt_into_the_components_and_palette():
 
 def test_build_site_contains_only_public_client_assets_and_relative_paths(tmp_path):
     target=s.build_site(tmp_path/'Ironmate')
-    assert {p.name for p in target.iterdir()}=={'index.html','core.js','studio.js','style.css','.nojekyll','tools','slides','brand'}
+    assert {p.name for p in target.iterdir()}=={'index.html','studio.js','style.css','.nojekyll','tools','slides','brand'}
     brand_files = {
-        'index.html', 'gallery.css', 'mono.svg', 'dark-green.svg', 'famicom.svg',
+        'index.html', 'mono.svg', 'dark-green.svg', 'famicom.svg',
         'gameboy.svg', 'pixel-3d.svg', 'manifest.webmanifest', 'apple-touch-icon.png',
         'app-192.png', 'app-512.png', 'app-maskable-512.png', 'icon.svg',
         'heatmap.svg', 'hero.svg', 'favicon.ico', 'favicon-16.png', 'favicon-32.png',
@@ -955,7 +962,7 @@ def test_build_site_contains_only_public_client_assets_and_relative_paths(tmp_pa
         assert 'src="/' not in html and 'href="/' not in html
     text=(target/'index.html').read_text()
     assert "Content-Security-Policy" in text and 'Base64 / 渡す' in text
-    for name in ('core.js','studio.js','style.css'):
+    for name in ('studio.js','style.css'):
         assert (target/name).read_bytes()==(ROOT/'studio'/name).read_bytes()
         assert f'"{name}"' in text
     assert 'src="/' not in text and 'href="/' not in text

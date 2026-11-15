@@ -56,7 +56,7 @@ from vendor.ascii_artist import FLOW_MAX_INPUT as MAX_INPUT, flow_html, flow_mer
 def node(script, data=None):
     if not shutil.which('node'):
         pytest.skip('Node.js required for browser-independent JS core checks')
-    run = subprocess.run(['node', '-e', "const c=require('./studio/core.js');const fs=require('node:fs');const input=JSON.parse(fs.readFileSync(0,'utf8'));"+script],
+    run = subprocess.run(['node', '-e', "const c=require('./studio/studio.js');const fs=require('node:fs');const input=JSON.parse(fs.readFileSync(0,'utf8'));"+script],
                          cwd=ROOT, input=json.dumps(data), text=True, capture_output=True, timeout=30)
     assert run.returncode == 0, run.stderr
     return json.loads(run.stdout)
@@ -165,7 +165,7 @@ def test_loopback_server_exposes_only_fixed_assets_no_project_files_or_posts():
         with get(base) as r:
             assert 'Ironmate' in r.read().decode()
             assert "connect-src 'none'" in r.headers['Content-Security-Policy']
-        with get(base+'/core.js') as r:
+        with get(base+'/studio.js') as r:
             assert r.headers['Content-Type'].startswith('text/javascript')
         for path, mime in (('/brand/icon.svg', 'image/svg+xml'),
                            ('/brand/favicon-16.png', 'image/png'),
@@ -943,7 +943,7 @@ def test_studio_pages_opt_into_the_components_and_palette():
 
 def test_build_site_contains_only_public_client_assets_and_relative_paths(tmp_path):
     target=s.build_site(tmp_path/'Ironmate')
-    assert {p.name for p in target.iterdir()}=={'index.html','core.js','studio.js','style.css','.nojekyll','tools','slides','brand'}
+    assert {p.name for p in target.iterdir()}=={'index.html','studio.js','style.css','.nojekyll','tools','slides','brand'}
     brand_files = {
         'index.html', 'mono.svg', 'dark-green.svg', 'famicom.svg',
         'gameboy.svg', 'pixel-3d.svg', 'manifest.webmanifest', 'apple-touch-icon.png',
@@ -960,7 +960,7 @@ def test_build_site_contains_only_public_client_assets_and_relative_paths(tmp_pa
         assert 'src="/' not in html and 'href="/' not in html
     text=(target/'index.html').read_text()
     assert "Content-Security-Policy" in text and 'Base64 / 渡す' in text
-    for name in ('core.js','studio.js','style.css'):
+    for name in ('studio.js','style.css'):
         assert (target/name).read_bytes()==(ROOT/'studio'/name).read_bytes()
         assert f'"{name}"' in text
     assert 'src="/' not in text and 'href="/' not in text

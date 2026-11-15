@@ -49,7 +49,7 @@ npm ci --ignore-scripts
 python -S scripts/build_slide_shell.py
 ```
 
-The browser's `pptx.js` assembles slide order, native text, shapes and image Open XML onto this skeleton and stores it in a standard ZIP with CRCs. Required parts and relationships are generated explicitly; no arbitrary XML, ZIP paths or external references are accepted from input JSON.
+The Open XML writer at the top of the browser's `slides.js` assembles slide order, native text, shapes and image Open XML onto this skeleton and stores it in a standard ZIP with CRCs. Required parts and relationships are generated explicitly; no arbitrary XML, ZIP paths or external references are accepted from input JSON.
 Only the generated XML, JS/CSS and editor screen are added to `image_studio.py --build-site` and Docker's public allowlist. User output such as PPTX and images is not included in the public build.
 
 ## Verification

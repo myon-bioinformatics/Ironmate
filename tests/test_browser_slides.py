@@ -12,7 +12,7 @@ NS = {'p':'http://schemas.openxmlformats.org/presentationml/2006/main',
 
 
 def node(code, *args):
-    return subprocess.run(['node','-e',"const D=require('./studio/slides/slides.js');"+code,*map(str,args)],
+    return subprocess.run(['node','-e',"const D=require('./studio/studio.js').slides;"+code,*map(str,args)],
                           cwd=ROOT, capture_output=True, text=True, check=True)
 
 
@@ -72,8 +72,8 @@ def test_deck_roundtrip_does_not_mutate_sources_and_preserves_bold():
 def test_generated_shell_matches_the_existing_locked_js_writer():
     if not (ROOT/'node_modules/pptxgenjs').is_dir():
         pytest.skip('npm ci is needed to regenerate the shell')
-    from scripts.build_slide_shell import shell_script
-    assert shell_script()==(ROOT/'studio/slides/package.js').read_text()
+    from scripts.build_slide_shell import shell_region, shell_script
+    assert shell_script()==shell_region()
 
 
 def test_rejects_fonts_outside_office_xml_range():

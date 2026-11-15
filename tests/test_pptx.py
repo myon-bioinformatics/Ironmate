@@ -1911,6 +1911,23 @@ def test_workbook_xml_round_trip(engine):
         assert 0 <= int(cell.get('s')) < len(xfs)
 
 
+@pytest.mark.parametrize('color, border', [
+    ('', 'thin'), ('<color/>', 'thin'), ('<color auto="1"/>', 'thin'), ('<color indexed="64"/>', 'thin'),
+    ('<color rgb="FFFF0000"/>', None),
+])
+def test_thin_border_without_a_color_reads_as_black(color, border):
+    spec = {'sheets': [{'name': 'S', 'rows': [[{'v': 1, 'border': 'thin'}]]}]}
+    payload = write_workbook(spec, 'min')
+    rebuilt = BytesIO()
+    with ZipFile(BytesIO(payload)) as source, ZipFile(rebuilt, 'w') as target:
+        for name in source.namelist():
+            data = source.read(name)
+            if name == 'xl/styles.xml':
+                data = data.replace(b'<color rgb="FF000000"/>', color.encode())
+            target.writestr(name, data)
+    assert read_spec(rebuilt.getvalue())['sheets'][0]['rows'][0][0].get('border') == border
+
+
 def test_empty_cells_keep_grid_borders():
     sheet = sheet_from_csv('S', 'a,b,\n1,2,\n', borders=True, autofilter=True)
     spec = workbook_from_sheets([sheet])

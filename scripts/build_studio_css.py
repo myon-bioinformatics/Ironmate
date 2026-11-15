@@ -1,6 +1,6 @@
-"""Regenerate the studio stylesheets from PySaiyanWeBoo (pysaiyanweboo).
+"""Regenerate the studio stylesheet from PySaiyanWeBoo (pysaiyanweboo).
 
-    uv run --group test python scripts/build_studio_css.py          # rewrite style.css, tools/tools.css, brand/gallery.css, slides/slides.css
+    uv run --group test python scripts/build_studio_css.py          # rewrite studio/style.css (one sheet for every page)
     uv run --group test python scripts/build_studio_css.py --check  # exit 1 when a committed file is stale
 
 Every sheet is ``pysaiyanweboo.write_bundle`` output: ``core_css()`` (tokens, base, components) + the ``ironmate`` palette
@@ -203,20 +203,54 @@ NOTE = "scripts/build_studio_css.py"
 BRAND = ("ironmate", IRONMATE)
 
 
+PAGES = (("studio", "STUDIO_RULES"), ("tools", "TOOLS_RULES"), ("brand", "GALLERY_RULES"), ("slides", "SLIDES_RULES"))
+
+
+def scoped(css: str, page: str) -> str:
+    """Prefix every selector with ``:where([data-page~="page"])`` (zero specificity, so the cascade is unchanged).
+
+    The rules are flat (selectors, declarations, ``@media`` blocks, comments); ``body`` keeps its place:
+    ``body{...}`` becomes ``body:where(...){...}`` and ``.x{...}`` becomes ``:where(...) .x{...}``.
+    """
+    guard = f':where([data-page~="{page}"])'
+
+    def selector(text: str) -> str:
+        text = text.strip()
+        if text.startswith(("html", ":root")):
+            return text
+        if text == "body" or (text.startswith("body") and not (text[4:5].isalnum() or text[4:5] in "-_")):
+            return "body" + guard + text[4:]
+        return guard + " " + text
+
+    out, i = [], 0
+    while i < len(css):
+        if css.startswith("/*", i):
+            end = css.index("*/", i) + 2
+            out.append(css[i:end]); i = end
+        elif css[i].isspace():
+            out.append(css[i]); i += 1
+        elif css.startswith("@media", i):
+            open_at = css.index("{", i)
+            depth, j = 1, open_at + 1
+            while depth:
+                depth += {"{": 1, "}": -1}.get(css[j], 0); j += 1
+            out.append(css[i:open_at + 1] + scoped(css[open_at + 1:j - 1], page) + "}"); i = j
+        else:
+            open_at = css.index("{", i); close = css.index("}", open_at)
+            out.append(",".join(selector(part) for part in css[i:open_at].split(",")) + css[open_at:close + 1]); i = close + 1
+    return "".join(out)
+
+
 def bundles() -> dict[Path, dict]:
-    """Each sheet's write_bundle / check_bundle arguments: the ironmate palette on core_css plus that page's layout.
-    slides.css is loaded after style.css, so it carries only its own rules (no second copy of the core)."""
-    return {
-        STUDIO / "style.css": {"brand": BRAND, "extra_css": STUDIO_RULES},
-        STUDIO / "tools" / "tools.css": {"brand": BRAND, "extra_css": TOOLS_RULES},
-        STUDIO / "brand" / "gallery.css": {"brand": BRAND, "extra_css": GALLERY_RULES},
-        STUDIO / "slides" / "slides.css": {"theme": None, "extra_css": SLIDES_RULES},
-    }
+    """One stylesheet for every studio page: the ironmate palette on core_css plus each page's layout,
+    scoped by ``<body data-page="...">`` (the slides page is ``data-page="studio slides"``)."""
+    rules = "\n".join(scoped(globals()[name], page) for page, name in PAGES)
+    return {STUDIO / "style.css": {"brand": BRAND, "extra_css": rules}}
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--check", action="store_true", help="exit 1 when a committed stylesheet is stale")
+    parser.add_argument("--check", action="store_true", help="exit 1 when the committed stylesheet is stale")
     args = parser.parse_args(argv)
     import pysaiyanweboo  # PySaiyanWeBoo, pinned in pyproject's test group
 

@@ -19,8 +19,6 @@ on:
       - tests/test_fetch_module.py
       - tests/test_cdn_pypdf_pages.py
       - .github/workflows/cdn-pypdf.yml
-  workflow_dispatch:
-
 permissions:
   contents: read
 

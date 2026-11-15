@@ -18,6 +18,10 @@ test = [
     # commit. Move it with: uv lock --upgrade-package pysaiyanweboo
     "pysaiyanweboo @ git+https://github.com/myon-bioinformatics/PySaiyanWeBoo@635f2f265ea64d41326772b6b55011d7ad82037c",
 ]
+stdlib-test = [
+    "pytest>=8",
+    "pyyaml>=6",
+]
 codecs = [
     "numpy>=1.26",
     "pillow>=10",

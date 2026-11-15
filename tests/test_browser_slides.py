@@ -11,8 +11,16 @@ NS = {'p':'http://schemas.openxmlformats.org/presentationml/2006/main',
       'r':'http://schemas.openxmlformats.org/package/2006/relationships'}
 
 
+_LOAD_STUDIO = (
+    "const fs=require('node:fs'),M=require('node:module'),p=require('node:path');"
+    "const s=fs.readFileSync('ironlib/studio_bundle.py','utf8'),i=s.indexOf('STUDIO_JS = r\"\"\"')+16;"
+    "const m=new M('ironlib/studio_bundle.py');m._compile(s.slice(i,s.indexOf('\"\"\"',i)),p.resolve('studio/studio.js'));"
+    "const C=m.exports,D=C.slides;"
+)
+
+
 def node(code, *args):
-    return subprocess.run(['node','-e',"const D=require('./studio/studio.js').slides;"+code,*map(str,args)],
+    return subprocess.run(['node','-e',_LOAD_STUDIO+code,*map(str,args)],
                           cwd=ROOT, capture_output=True, text=True, check=True)
 
 
@@ -82,7 +90,7 @@ def test_rejects_fonts_outside_office_xml_range():
 
 
 def test_wrapping_words_graphemes_explicit_breaks_and_legacy_behavior():
-    result = node(r"""const C=require('./studio/studio.js');
+    result = node(r"""
     const layout=(text,w,wrap=true)=>C.textLayout({text,w,wrap},s=>[...new Intl.Segmenter('ja',{granularity:'grapheme'}).segment(s)].length);
     const samples={exact:layout('hello world',5),words:layout('one two three',7),
       jp:layout('日本語の長い文章を折り返します。',6),
@@ -103,7 +111,7 @@ def test_wrapping_words_graphemes_explicit_breaks_and_legacy_behavior():
 
 def test_wrapping_pptx_uses_shared_layout_and_preserves_native_properties(tmp_path):
     output = tmp_path / 'wrapped.pptx'
-    result = node(r"""const C=require('./studio/studio.js');
+    result = node(r"""
     (async()=>{const scene=D.template();
     Object.assign(scene.layers[0],{text:'日本語の長い文章と English words repeat here.\n\nLast line\n',w:200,h:60,fontSize:32,bold:true,rotation:23});
     Object.assign(scene.layers[1],{text:'https://example.test/'+ 'longurl'.repeat(8),w:250,font:'mono',fontSize:24});
@@ -130,7 +138,7 @@ def test_wrapping_pptx_uses_shared_layout_and_preserves_native_properties(tmp_pa
 
 
 def test_legacy_decks_default_to_wrap_without_mutation_and_false_is_preserved():
-    result = node("""const C=require('./studio/studio.js'),scene=D.template();
+    result = node("""const scene=D.template();
     delete scene.layers[0].wrap;scene.layers[1].wrap=false;
     const source=JSON.stringify(scene),deck=D.parse(D.deckText({schema:D.SCHEMA,slides:[scene]}));
     let invalid=false;try{scene.layers[0].wrap='yes';C.validate(scene)}catch{invalid=true}

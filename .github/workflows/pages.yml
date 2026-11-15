@@ -6,6 +6,7 @@ on:
     paths:
       [
         "studio/**",
+        "ironlib/studio_bundle.py",
         "image_studio.py",
         "pixel_grid.py",
         "ironlib/grid_output.py",
@@ -22,6 +23,7 @@ on:
     paths:
       [
         "studio/**",
+        "ironlib/studio_bundle.py",
         "image_studio.py",
         "pixel_grid.py",
         "ironlib/grid_output.py",
@@ -34,7 +36,6 @@ on:
         "tests/test_browser_slides.py",
         ".github/workflows/pages.yml",
       ]
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -65,7 +66,7 @@ jobs:
           node-version: "26"
       - name: Check the dependency-free client and build only public assets
         run: |
-          node --check studio/studio.js
+          python3 -S -c "import ironlib.studio_bundle as b, subprocess; subprocess.run(['node', '--check', '-'], input=b.STUDIO_JS, text=True, check=True)"
           docker build --target artifact --output type=local,dest=build/studio-site -f Dockerfile.pages .
       - name: Start the same static site in Docker
         run: |

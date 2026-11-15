@@ -1,4 +1,4 @@
-"""Regenerate the PPTX package shell region of studio/studio.js with the existing pinned JS writer.
+"""Regenerate the PPTX package shell region of STUDIO_JS in ironlib/studio_bundle.py with the existing pinned JS writer.
 
 Only generated XML data is retained. No third-party JS runs in the browser.
 """

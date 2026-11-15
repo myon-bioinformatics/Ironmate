@@ -1,6 +1,6 @@
 """Regenerate the studio stylesheet from PySaiyanWeBoo (pysaiyanweboo).
 
-    uv run --group test python scripts/build_studio_css.py          # rewrite studio/style.css (one sheet for every page)
+    uv run --group test python scripts/build_studio_css.py          # rewrite STYLE_CSS in ironlib/studio_bundle.py (one sheet for every page)
     uv run --group test python scripts/build_studio_css.py --check  # exit 1 when a committed file is stale
 
 The sheet is ``pysaiyanweboo.write_bundle`` output: ``core_css()`` (tokens, base, components) with PySaiyanWeBoo's ``green`` theme

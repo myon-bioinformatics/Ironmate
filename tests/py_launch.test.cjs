@@ -103,7 +103,7 @@ test("flow_workspace functions are called by name and keep non-ASCII labels", ()
   assert.equal(workspace.schema, "ironmate-flow/1");
   assert.ok(workspace.spec && typeof workspace.spec === "object");
   assert.deepEqual(call(script, "patch_workspace", [workspace, []], WORKSPACE).spec, workspace.spec);
-  const value = "日本語ラベル & <text>";
+  const value = "日本語ラベル & é 🌱 <text>";
   const patched = call(script, "patch_workspace", [workspace, [{path: "/steps/0/title", value}]], WORKSPACE);
   assert.equal(patched.spec.steps[0].title, value);
   const state = call(script, "validate_workspace", [patched], WORKSPACE);

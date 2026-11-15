@@ -1,4 +1,4 @@
-"""Regenerate the PPTX package shell region of studio/studio.js with the existing pinned JS writer.
+"""Regenerate the PPTX package shell region of STUDIO_JS in ironlib/studio_bundle.py with the existing pinned JS writer.
 
 Only generated XML data is retained. No third-party JS runs in the browser.
 """
@@ -29,11 +29,11 @@ def shell_script():
 
 
 START, END = '/* <slide-shell>', '/* </slide-shell> */'
-SCRIPT = ROOT / 'studio/studio.js'
+SCRIPT = ROOT / 'ironlib/studio_bundle.py'
 
 
 def shell_region(text=None):
-    """The generated region of studio/studio.js, from the START marker through the END marker and its newline."""
+    """The generated region of STUDIO_JS in ironlib/studio_bundle.py, from the START marker through the END marker and its newline."""
     text = SCRIPT.read_text(encoding='utf-8') if text is None else text
     start = text.index(START)
     return text[start:text.index(END, start) + len(END) + 1]

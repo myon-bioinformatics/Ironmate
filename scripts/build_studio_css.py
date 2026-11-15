@@ -242,15 +242,26 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--check", action="store_true", help="exit 1 when the committed stylesheet is stale")
     args = parser.parse_args(argv)
+    import tempfile
     import pysaiyanweboo  # PySaiyanWeBoo, pinned in pyproject's test group
 
+    bundle_py = ROOT / "ironlib/studio_bundle.py"
+    src = bundle_py.read_text(encoding="utf-8")
+    marker = 'STYLE_CSS = r"""'
+    start = src.index(marker) + len(marker)
+    end = src.index('"""', start)
     problems = []
     for target, options in bundles().items():
-        if args.check:
-            problems += pysaiyanweboo.check_bundle(target, **options)
-        else:
-            fields = pysaiyanweboo.write_bundle(target, note=NOTE, **options)
-            print(f"{target.relative_to(ROOT)} pysaiyanweboo {fields['commit'][:8]}")
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_css = Path(tmp) / target.name
+            tmp_css.write_text(src[start:end], encoding="utf-8")
+            if args.check:
+                problems += pysaiyanweboo.check_bundle(tmp_css, **options)
+            else:
+                fields = pysaiyanweboo.write_bundle(tmp_css, note=NOTE, **options)
+                new_css = tmp_css.read_text(encoding="utf-8")
+                bundle_py.write_text(src[:start] + new_css + src[end:], encoding="utf-8")
+                print(f"{bundle_py.relative_to(ROOT)} (STYLE_CSS) pysaiyanweboo {fields['commit'][:8]}")
     for problem in problems:
         print(problem, file=sys.stderr)
     return 1 if problems else 0

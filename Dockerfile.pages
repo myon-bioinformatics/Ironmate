@@ -4,12 +4,9 @@
 FROM python:3.15-slim@sha256:94d3426f1def7db4a106a232ac121bfd975393e5dfd40a619b955fae45fe7913 AS build
 WORKDIR /src
 COPY image_studio.py pixel_grid.py ./
-COPY ironlib/__init__.py ironlib/grid_output.py ./ironlib/
+COPY ironlib/__init__.py ironlib/grid_output.py ironlib/studio_bundle.py ./ironlib/
 COPY scripts/pages_catalog.py ./scripts/pages_catalog.py
-COPY studio/index.html studio/studio.js studio/style.css ./studio/
 COPY studio/brand/ ./studio/brand/
-COPY studio/tools/ ./studio/tools/
-COPY studio/slides/ ./studio/slides/
 RUN python -S image_studio.py --build-site /site/Ironmate
 
 # docker build --target artifact --output type=local,dest=build/pages -f Dockerfile.pages .

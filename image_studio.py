@@ -116,9 +116,8 @@ def mosaic(artifact, cell=8, levels=256):
 
 def public_assets():
     """Explicit publication allowlist; no user scenes, globbing, or local images."""
-    names = ('index.html', 'studio.js', 'style.css',
-             'tools/index.html',
-             'brand/index.html', 'brand/mono.svg', 'brand/dark-green.svg',
+    from ironlib.studio_bundle import BRAND_HTML, SLIDES_PANEL_HTML, STUDIO_HTML, STUDIO_JS, STYLE_CSS, TOOLS_HTML
+    names = ('brand/mono.svg', 'brand/dark-green.svg',
              'brand/famicom.svg', 'brand/gameboy.svg', 'brand/pixel-3d.svg',
              'brand/manifest.webmanifest', 'brand/apple-touch-icon.png', 'brand/app-192.png',
              'brand/app-512.png', 'brand/app-maskable-512.png',
@@ -126,8 +125,13 @@ def public_assets():
              'brand/favicon-32.png', 'brand/favicon-48.png', 'brand/icon-192.png',
              'brand/example-demo.gif', 'brand/example-stamp-demo.gif')
     assets = {name: (ROOT / 'studio' / name).read_bytes() for name in names}
+    assets['index.html'] = STUDIO_HTML.encode('utf-8')
+    assets['studio.js'] = STUDIO_JS.encode('utf-8')
+    assets['style.css'] = STYLE_CSS.encode('utf-8')
     from scripts.pages_catalog import catalog_script
     assets['tools/catalog.js'] = catalog_script()
+    assets['tools/index.html'] = TOOLS_HTML.encode('utf-8')
+    assets['brand/index.html'] = BRAND_HTML.encode('utf-8')
     page = assets['index.html'].decode('utf-8')
     for name in ('style.css', 'studio.js', 'brand/icon.svg', 'brand/heatmap.svg', 'brand/favicon.ico',
                  'brand/manifest.webmanifest', 'brand/apple-touch-icon.png',
@@ -137,7 +141,7 @@ def public_assets():
     page = page.replace('<a href="slides/">スライド・PPTX作成 ↗</a>', '<a href="../">Image Studio ↗</a>')
     page = page.replace('<body class="ui-elements" data-ui-theme="green" data-page="studio">', '<body class="ui-elements" data-ui-theme="green" data-page="studio slides" data-mode="slides">').replace('画像にする。', 'スライドにする。')
     page = page.replace('IMAGE STUDIO / 01', 'SLIDE STUDIO / 03').replace('Ironmate — Image Studio', 'Ironmate — Slide Studio')
-    page = page.replace('</header>', '</header>' + (ROOT / 'studio/slides/panel.html').read_text())
+    page = page.replace('</header>', '</header>' + SLIDES_PANEL_HTML)
     assets['slides/index.html'] = page.encode('utf-8')
     return assets
 

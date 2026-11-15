@@ -2,6 +2,7 @@
 // installed Chrome and Node's built-in WebSocket (no Playwright/Puppeteer runtime dependency).
 "use strict";
 const fs = require("node:fs");
+const path = require("node:path");
 const { spawn } = require("node:child_process");
 const { pathToFileURL } = require("node:url");
 
@@ -73,7 +74,13 @@ if (argv.includes("--help") || argv.includes("-h")) {
     if (!request || typeof request !== "object" || Array.isArray(request) || !request.scene) {
       fail("studio/render.cjs", "JSON must be an object with a scene field", "see --help for the object shape", jsonMode);
     }
-    const core = require("./studio.js");
+    const Module = require("node:module");
+    const bundlePath = path.join(__dirname, "..", "ironlib", "studio_bundle.py");
+    const bundleSrc = fs.readFileSync(bundlePath, "utf8");
+    const jsStart = bundleSrc.indexOf('STUDIO_JS = r"""') + 'STUDIO_JS = r"""'.length;
+    const mod = new Module(bundlePath);
+    mod._compile(bundleSrc.slice(jsStart, bundleSrc.indexOf('"""', jsStart)), path.join(__dirname, "studio.js"));
+    const core = mod.exports;
     const scene = core.validate(request.scene);
     if (request.mode === undefined || request.mode === "svg") {
       process.stdout.write(core.svg(scene, undefined, request.scale ?? 1));

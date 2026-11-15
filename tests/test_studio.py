@@ -53,10 +53,18 @@ from vendor.ascii_artist import FLOW_MAX_INPUT as MAX_INPUT, flow_html, flow_mer
 # ═══ · image studio ══════════════════════════════════════════════════════════════════════════════════════
 # Cross-runtime color/mosaic oracles, editable data, local server and output contracts.
 
+_LOAD_STUDIO = (
+    "const fs=require('node:fs'),M=require('node:module'),p=require('node:path');"
+    "const s=fs.readFileSync('ironlib/studio_bundle.py','utf8'),i=s.indexOf('STUDIO_JS = r\"\"\"')+16;"
+    "const m=new M('ironlib/studio_bundle.py');m._compile(s.slice(i,s.indexOf('\"\"\"',i)),p.resolve('studio/studio.js'));"
+    "const c=m.exports;const input=JSON.parse(fs.readFileSync(0,'utf8'));"
+)
+
+
 def node(script, data=None):
     if not shutil.which('node'):
         pytest.skip('Node.js required for browser-independent JS core checks')
-    run = subprocess.run(['node', '-e', "const c=require('./studio/studio.js');const fs=require('node:fs');const input=JSON.parse(fs.readFileSync(0,'utf8'));"+script],
+    run = subprocess.run(['node', '-e', _LOAD_STUDIO+script],
                          cwd=ROOT, input=json.dumps(data), text=True, capture_output=True, timeout=30)
     assert run.returncode == 0, run.stderr
     return json.loads(run.stdout)
@@ -907,19 +915,24 @@ def _generator():
 
 def test_studio_stylesheets_match_the_generator():
     import pysaiyanweboo
+    from ironlib.studio_bundle import BRAND_HTML, STUDIO_HTML, STYLE_CSS, TOOLS_HTML
+    import tempfile
     module = _generator()
     bundles = module.bundles()
     assert {p.relative_to(ROOT).as_posix() for p in bundles} == {'studio/style.css'}  # one sheet for every page
     for target, options in bundles.items():
-        assert pysaiyanweboo.check_bundle(target, **options) == [], target.relative_to(ROOT)
-        assert target.read_text(encoding='utf-8').startswith('/* web-ui-bundle/1 commit=')
-    text = (ROOT / 'studio/style.css').read_text(encoding='utf-8')
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_css = Path(tmp) / target.name
+            tmp_css.write_text(STYLE_CSS, encoding='utf-8')
+            assert pysaiyanweboo.check_bundle(tmp_css, **options) == [], target.relative_to(ROOT)
+        assert STYLE_CSS.startswith('/* web-ui-bundle/1 commit=')
+    text = STYLE_CSS
     assert '/* css/components.css */' in text and 'body[data-ui-theme="green"]{' in text  # PySaiyanWeBoo's theme
     assert '.ui-elements button,' in text and 'cdn.' not in text
     for page in ('studio', 'tools', 'brand', 'slides'):
         assert f':where([data-page~="{page}"])' in text, page  # page layout is scoped, with zero added specificity
-    for page, html in (('studio', 'studio/index.html'), ('tools', 'studio/tools/index.html'), ('brand', 'studio/brand/index.html')):
-        assert f'data-page="{page}"' in (ROOT / html).read_text(encoding='utf-8'), html
+    for page, html in (('studio', STUDIO_HTML), ('tools', TOOLS_HTML), ('brand', BRAND_HTML)):
+        assert f'data-page="{page}"' in html, page
     assert module.scoped('body{a:b}.x,y z{c:d}@media(max-width:1px){.w{e:f}}', 'p') == (
         'body:where([data-page~="p"]){a:b}:where([data-page~="p"]) .x,:where([data-page~="p"]) y z{c:d}'
         '@media(max-width:1px){:where([data-page~="p"]) .w{e:f}}')
@@ -928,8 +941,8 @@ def test_studio_stylesheets_match_the_generator():
 
 
 def test_studio_pages_opt_into_the_components_and_palette():
-    for name, page in (('studio/index.html', 'studio'), ('studio/tools/index.html', 'tools'), ('studio/brand/index.html', 'brand')):
-        html = (ROOT / name).read_text(encoding='utf-8')
+    from ironlib.studio_bundle import BRAND_HTML, STUDIO_HTML, TOOLS_HTML
+    for name, html, page in (('STUDIO_HTML', STUDIO_HTML, 'studio'), ('TOOLS_HTML', TOOLS_HTML, 'tools'), ('BRAND_HTML', BRAND_HTML, 'brand')):
         assert f'<body class="ui-elements" data-ui-theme="green" data-page="{page}">' in html, name
         assert ('href="style.css"' if page == 'studio' else 'href="../style.css"') in html, name  # one sheet for every page
     import image_studio
@@ -952,16 +965,18 @@ def test_build_site_contains_only_public_client_assets_and_relative_paths(tmp_pa
         'favicon-48.png', 'icon-192.png', 'example-demo.gif', 'example-stamp-demo.gif',
     }
     assert {p.relative_to(target/'brand').as_posix() for p in (target/'brand').rglob('*')} == brand_files
+    from ironlib.studio_bundle import BRAND_HTML, STUDIO_JS, STYLE_CSS
     for name in brand_files:
         assert (target/'brand'/name).is_file()
-        assert (target/'brand'/name).read_bytes() == (ROOT/'studio/brand'/name).read_bytes()
+        expected = BRAND_HTML.encode('utf-8') if name == 'index.html' else (ROOT/'studio/brand'/name).read_bytes()
+        assert (target/'brand'/name).read_bytes() == expected
     for page in ('index.html', 'tools/index.html', 'slides/index.html', 'brand/index.html'):
         html = (target/page).read_text()
         assert 'src="/' not in html and 'href="/' not in html
     text=(target/'index.html').read_text()
     assert "Content-Security-Policy" in text and 'Base64 / 渡す' in text
-    for name in ('studio.js','style.css'):
-        assert (target/name).read_bytes()==(ROOT/'studio'/name).read_bytes()
+    for name, expected in (('studio.js', STUDIO_JS.encode('utf-8')), ('style.css', STYLE_CSS.encode('utf-8'))):
+        assert (target/name).read_bytes() == expected
         assert f'"{name}"' in text
     assert 'src="/' not in text and 'href="/' not in text
     (target/'keep.txt').write_text('local')
@@ -1267,8 +1282,9 @@ class _Controls(HTMLParser):
 
 
 def _page_ui(page):
-    """The part of studio/studio.js that runs on one page (each UI block is headed ``/* ... (data-page~="page")``)."""
-    script = (ROOT / "studio/studio.js").read_text()
+    """The part of STUDIO_JS that runs on one page (each UI block is headed ``/* ... (data-page~="page")``)."""
+    from ironlib.studio_bundle import STUDIO_JS
+    script = STUDIO_JS
     start = script.index(f'(data-page~="{page}")')
     following = [i for p in ("studio", "tools", "slides") if (i := script.find(f'(data-page~="{p}")')) > start]
     return script[start:min(following, default=len(script))]
@@ -1276,9 +1292,10 @@ def _page_ui(page):
 
 def test_studio_html_contains_unique_controls_used_by_initialization():
     import image_studio
+    from ironlib.studio_bundle import STUDIO_HTML, TOOLS_HTML
     assets = image_studio.public_assets()
-    for page, html in (("studio", (ROOT / "studio/index.html").read_text()),
-                       ("tools", (ROOT / "studio/tools/index.html").read_text()),
+    for page, html in (("studio", STUDIO_HTML),
+                       ("tools", TOOLS_HTML),
                        ("slides", assets["slides/index.html"].decode("utf-8"))):
         pages = _Controls()
         pages.feed(html)
@@ -1286,7 +1303,7 @@ def test_studio_html_contains_unique_controls_used_by_initialization():
         assert required, page
         assert all(len(pages.ids.get(name, [])) == 1 for name in required), (page, sorted(n for n in required if len(pages.ids.get(n, [])) != 1))
     parser = _Controls()
-    parser.feed((ROOT / "studio/index.html").read_text())
+    parser.feed(STUDIO_HTML)
     for name in ("save", "save-workspace", "trim-history"):
         assert parser.ids[name] == ["button"]
     assert parser.ids["open-workspace"] == ["input"]

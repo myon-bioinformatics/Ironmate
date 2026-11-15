@@ -11,8 +11,16 @@ from scripts.pages_catalog import SIZES, catalog_script
 ROOT = Path(__file__).resolve().parents[1]
 
 
+_LOAD_TOOLS = (
+    "const fs=require('node:fs'),M=require('node:module'),p=require('node:path');"
+    "const s=fs.readFileSync('ironlib/studio_bundle.py','utf8'),i=s.indexOf('STUDIO_JS = r\"\"\"')+16;"
+    "const m=new M('ironlib/studio_bundle.py');m._compile(s.slice(i,s.indexOf('\"\"\"',i)),p.resolve('studio/studio.js'));"
+    "const c=m.exports.tools;const input=JSON.parse(fs.readFileSync(0,'utf8'));"
+)
+
+
 def js(code, payload):
-    result = subprocess.run(['node', '-e', "const c=require('./studio/studio.js').tools;const input=JSON.parse(require('fs').readFileSync(0,'utf8'));" + code],
+    result = subprocess.run(['node', '-e', _LOAD_TOOLS + code],
                             input=json.dumps(payload), text=True, capture_output=True, check=True, cwd=ROOT)
     return json.loads(result.stdout)
 

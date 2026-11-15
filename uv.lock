@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.11"
 resolution-markers = [
     "python_full_version >= '3.12'",
@@ -126,6 +126,10 @@ preview = [
     { name = "playwright" },
     { name = "pypdf" },
 ]
+stdlib-test = [
+    { name = "pytest" },
+    { name = "pyyaml" },
+]
 test = [
     { name = "pysaiyanweboo" },
     { name = "pytest" },
@@ -151,6 +155,10 @@ dev = [
 preview = [
     { name = "playwright", specifier = ">=1.63.0" },
     { name = "pypdf", specifier = ">=6" },
+]
+stdlib-test = [
+    { name = "pytest", specifier = ">=8" },
+    { name = "pyyaml", specifier = ">=6" },
 ]
 test = [
     { name = "pysaiyanweboo", git = "https://github.com/myon-bioinformatics/PySaiyanWeBoo?rev=635f2f265ea64d41326772b6b55011d7ad82037c" },

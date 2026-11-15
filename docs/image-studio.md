@@ -198,7 +198,7 @@ On-screen export targets are PNG, SVG, JSON and PNG Base64. Sample PPTX generati
 |---|---|---|
 | Flutter photo studio `studio_document.dart` / `photo_studio_state.dart` | Frames and stamps independent of whether there is an image; separating edit state from history | SVG layer scenes, JSON history, PNG rendering. Dart code is not ported |
 | DRAgoWing `dragowing/figures.py::heatmap_figure` | Separating values from display colors; keeping missing values and labels | Importing values from a single heatmap JSON and custom color-step adjustment. Research values and rendering definitions are not replaced |
-| Ironmate `grid_tools.py` / `grid_png.py` | Pixel verification with fixed RGBA and PNG | Reused for Python mosaic input/output |
+| Ironmate `grid_tools.py` / `ironlib/grid_output.py` | Pixel verification with fixed RGBA and PNG | Reused for Python mosaic input/output |
 | Ironmate's PptxGenJS | PPTX generation using the existing pinned dependency | Inserts browser-output PNGs and verifies the media match |
 
 Reference points: the photo studio including Flutter main `13905a4d`, and DRAgoWing on Aoi main.

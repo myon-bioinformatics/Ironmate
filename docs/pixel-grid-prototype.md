@@ -107,7 +107,7 @@ Candidates are kept in this repo and spun out once demand and contracts from oth
 
 ## Future stages (not implemented)
 
-1. **Output and per-size design**: output from the JSON grid to PNG/SVG (prototyped in `grid_svg.py` and `grid_png.py`).
+1. **Output and per-size design**: output from the JSON grid to PNG/SVG (in `ironlib/grid_output.py`: `to_svg` and `to_png`).
    Prepare seeds or outline rules for each of 16/32/64 and compare with simple upscaling.
    Upscaling for viewing uses nearest neighbor to keep cell boundaries.
 2. **Character parts**: compose torso, head, eyes, mouth, limbs and equipment as layers.
@@ -253,17 +253,17 @@ Input formats: Base64 (raw or data URI) or an image file. Detected by the leadin
   regardless of whether Pillow is available.
 See the table in the README for per-format reasons and behavior. `tests/test_grid.py` verifies the table's behavior.
 
-#### PNG output (`grid_png.py`)
+#### PNG output (`grid_output.to_png`)
 
 `to_png(artifact, scale=1)` writes an 8-bit RGBA, non-interlaced, filter 0, zlib level 9
 PNG from the same grid JSON with the standard library (zlib+struct). No time or text chunks, so the same input gives the same bytes.
 `scale` (1–64) is integer nearest-neighbor upscaling, with output up to 4096×4096 pixels. Color index 0 is written as its RGBA (usually transparent).
-Use it via `--format png` in `photo_grid.py` and `pixel_grid.py` (lazy import) or the `grid_png.py` CLI.
+Use it via `--format png` in `photo_grid.py` and `pixel_grid.py` (lazy import) or `grid_tools.py load … --to png`.
 Tests confirm that reading back with the standard PNG decoder matches the original colors.
 
 #### Base64 output (reversibility)
 
-`--format base64` (`photo_grid.py`, `pixel_grid.py`, `grid_png.to_base64`) outputs the same bytes as `--format png`
+`--format base64` (`photo_grid.py`, `pixel_grid.py`, `grid_output.to_base64`) outputs the same bytes as `--format png`
 as Base64. `--data-uri` adds `data:image/png;base64,`. It follows `--scale` and `-o`.
 The output can be used directly as input to `photo_grid.py`.
 
@@ -283,7 +283,7 @@ Whitespace, CRLF newlines and a leading BOM are ignored. The `data:` scheme and 
 The data URI type must be omitted or one of `image/png`, `image/jpeg`, `image/jpg` and `image/webp`,
 and it is an error if it does not match the decoded bytes' format (e.g. `data:text/plain;base64,`, `data:image/svg+xml;base64,`).
 
-#### SVG output (`grid_svg.py`)
+#### SVG output (`grid_output.to_svg`)
 
 `to_svg(artifact, scale=8)` writes SVG with only the standard library from `ironmate-pixel-grid/1` JSON (shared by pixel_grid.py and photo_grid.py).
 Base64 → decode → grid → SVG can be done in one command

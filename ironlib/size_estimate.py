@@ -3,7 +3,7 @@
     python -c "from ironlib import size_estimate as s; print(s.estimate(width=1024, height=768, nbytes=900000, limit_chars=200000))"
     python -m grid_tools estimate photo.png --limit-chars 100000 --data-uri --verify
 
-Output PNGs are modelled as 8-bit RGBA written by grid_png (filter 0, zlib level 9), the format
+Output PNGs are modelled as 8-bit RGBA written by grid_output.to_png (filter 0, zlib level 9), the format
 grid_tools produces. Without ``verify`` the size is an estimate with explicit bounds and a
 confidence level; ``verify`` encodes the candidate and reports the actual size.
 
@@ -176,7 +176,7 @@ def _size(dim, r):
 
 
 def _meta_bytes(width, height, ncolors, restored):
-    """Exact tEXt chunk size grid_png writes for a canonical grid with ``ncolors`` colors."""
+    """Exact tEXt chunk size grid_output.to_png writes for a canonical grid with ``ncolors`` colors."""
     import json
     info = {'colors': ['#00000000'] * ncolors, 'height': height, 'schema': 'ironmate-pixel-grid/1',
             'width': width}

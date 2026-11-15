@@ -88,7 +88,7 @@ does not guarantee line connectivity, symmetry or legibility for arbitrary art. 
 
 Swap → rollback fully restores the original pixels, occupancy mask and artifact.
 A downscaled artifact → PNG/Base64 → artifact round-trips under the existing spec.
-PNG metadata keeps only the fields allowed by the existing `grid_png.header_info()`;
+PNG metadata keeps only the fields allowed by the existing `grid_output.header_info()`;
 arbitrary extra metadata is kept in JSON or the grid adapter.
 Color indices with duplicate RGBA map to the first index, as before.
 SVG draws color index 0 too when its alpha is nonzero, and visible RGBA is compared

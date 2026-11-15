@@ -1600,7 +1600,7 @@ def test_exact_limits():
 
 
 def test_png_and_both_base64_forms_have_identical_bytes(monkeypatch):
-    from grid_png import to_png
+    from ironlib.grid_output import to_png
     from grid_tools import make
     png = to_png(make('cloud','C01','shadow',16))
     fake_renderer(monkeypatch)

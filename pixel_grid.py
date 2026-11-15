@@ -356,13 +356,13 @@ def main(argv=None):
     except ValueError as exc:
         return fail(exc)
     if args.format == 'base64':
-        from grid_png import to_base64  # lazy: keeps import of this module inert
+        from ironlib.grid_output import to_base64  # lazy: keeps import of this module inert
         data = (to_base64(artifact, args.scale or 1, args.data_uri) + '\n').encode('ascii')
     elif args.format == 'png':
-        from grid_png import to_png
+        from ironlib.grid_output import to_png
         data = to_png(artifact, args.scale or 1)
     elif args.format == 'svg':
-        from grid_svg import to_svg
+        from ironlib.grid_output import to_svg
         data = to_svg(artifact, args.scale or 8).encode('utf-8')
     else:
         text = emoji(artifact) if args.format == 'emoji' else json.dumps(artifact, ensure_ascii=False)

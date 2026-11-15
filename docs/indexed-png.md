@@ -1,6 +1,6 @@
 # Optional reduced-bit PNG output
 
-`grid_png.to_png(artifact, indexed=True)` and `grid_png.py input.json --indexed` write
+`grid_output.to_png(artifact, indexed=True)` and `grid_tools.py load input.json --to png --indexed --no-meta` write
 lossless indexed PNG with the smallest palette depth (1, 2, 4, or 8 bits per pixel).
 `to_base64(..., indexed=True)` supports the same option. No new dependency is used.
 The default remains the original RGBA bytes. Palette order and alpha are retained;

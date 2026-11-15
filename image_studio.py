@@ -234,7 +234,7 @@ def raster_svg(svg, *, chrome=None):
     """Rasterize trusted, locally generated SVG using the Studio Chrome backend.
 
     This is not an arbitrary/untrusted SVG import API. Callers validate their
-    source and dimensions; remote HTTP(S) resources are blocked by raster.cjs.
+    source and dimensions; remote HTTP(S) resources are blocked by `render.cjs png`.
     """
     from xml.etree import ElementTree
     root = ElementTree.fromstring(svg)
@@ -248,7 +248,7 @@ def raster_svg(svg, *, chrome=None):
         directory = Path(temp)
         html = directory / 'render.html'
         html.write_bytes(b'<!doctype html><meta charset="utf-8"><style>html,body{margin:0;padding:0;overflow:hidden}svg{display:block}</style>' + svg)
-        command = [node, str(ROOT / 'studio' / 'raster.cjs'), _find_chrome(chrome),
+        command = [node, str(ROOT / 'studio' / 'render.cjs'), 'png', _find_chrome(chrome),
                    str(html), str(directory / 'profile'), str(width), str(height)]
         run = subprocess.run(command, capture_output=True, timeout=40)
         if run.returncode:

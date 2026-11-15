@@ -55,7 +55,7 @@ test("vendored py_launch.cjs matches vendor.lock.json", () => {
 
 test("no per-tool Node wrapper is left at the repository root", () => {
   const wrappers = fs.readdirSync(ROOT).filter((name) => /\.(cjs|d\.cts)$/.test(name));
-  assert.deepEqual(wrappers, ["ironmate_cli.cjs", "ironmate_cli.d.cts"]);
+  assert.deepEqual(wrappers, []);
 });
 
 test("flow_export.py runs from the launcher CLI with stdin, like the Python CLI", () => {

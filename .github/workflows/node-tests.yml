@@ -11,6 +11,7 @@ on:
       - "tests/fixtures/py_launch/**"
       - "package.json"
       - "flow_workspace.py"
+      - "studio_ingress.py"
       - ".github/workflows/node-tests.yml"
   push:
     branches: [main]
@@ -23,6 +24,7 @@ on:
       - "tests/fixtures/py_launch/**"
       - "package.json"
       - "flow_workspace.py"
+      - "studio_ingress.py"
       - ".github/workflows/node-tests.yml"
 
 jobs:

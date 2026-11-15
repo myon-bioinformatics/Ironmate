@@ -18,15 +18,15 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-from scripts import (
+from research import (
     bit_representation as r, boundary_synthesis as module, littlebit_jev_3way_survey as survey, stream_phase_report as s,
     survey_holdout as holdout,
 )
-from scripts.adaptive_fingerprint import masked_distance, reduce256
-from scripts.boundary_twins import audit_boundary_twins, evaluate_rule
-from scripts.observable_choice import ObservableChoice, Prototype
-from scripts.robust_observation import BoundedErrorChoice, temporal_prediction
-from scripts.stream_phase_report import csv_spins
+from research.adaptive_fingerprint import masked_distance, reduce256
+from research.boundary_twins import audit_boundary_twins, evaluate_rule
+from research.observable_choice import ObservableChoice, Prototype
+from research.robust_observation import BoundedErrorChoice, temporal_prediction
+from research.stream_phase_report import csv_spins
 
 
 # ═══ · bit representation ════════════════════════════════════════════════════════════════════════════════
@@ -442,7 +442,7 @@ __all__ = []
 import hashlib, json, random
 
 
-from scripts import quality_experiment as q
+from research import quality_experiment as q
 from ironlib.studio_image_quality import (invert_translation, metrics)
 
 
@@ -638,7 +638,7 @@ def test_validation_and_integer_core():
     with pytest.raises(ValueError): e.next_probe(0, 0, grid_width=0)
     with pytest.raises(ValueError): e.next_probe(0, 0, grid_width=3, costs={0: -1})
     with pytest.raises(ValueError): temporal_prediction(0, 0, 0, 0, width=0, height=1)
-    source = Path('scripts/robust_observation.py').read_text()
+    source = Path('research/robust_observation.py').read_text()
     assert not any(isinstance(n, ast.Mult) for n in ast.walk(ast.parse(source)))
 
 
@@ -975,7 +975,7 @@ def test_stdlib_cli_preserves_full_replayable_inputs_and_rejects_invalid_trial_c
 
 
 def test_import_does_not_execute_experiment(tmp_path):
-    code = f"import sys; sys.path.insert(0, {str(ROOT)!r}); from scripts import survey_holdout"
+    code = f"import sys; sys.path.insert(0, {str(ROOT)!r}); from research import survey_holdout"
     run = subprocess.run([sys.executable, "-S", "-c", code], cwd=tmp_path, capture_output=True, text=True)
     assert run.returncode == 0, run.stderr
     assert run.stdout == "" and list(tmp_path.iterdir()) == []

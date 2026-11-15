@@ -3,7 +3,7 @@
 Integer-only scoring; no multiplication in this module. No image, timing,
 arbitrary rotation, or statistical accuracy guarantee is implied.
 """
-from scripts.observable_choice import ObservableChoice
+from research.observable_choice import ObservableChoice
 
 
 def _natural(value):

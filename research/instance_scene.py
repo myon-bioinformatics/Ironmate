@@ -4,7 +4,7 @@ Regions are spatial evidence, not inferred copies of an OR fingerprint.
 Tracking is gated greedy assignment, not Hungarian or constant time.
 """
 from dataclasses import dataclass
-from scripts.observable_choice import ObservableChoice
+from research.observable_choice import ObservableChoice
 
 
 def components(board, width, height):

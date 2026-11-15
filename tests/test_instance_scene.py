@@ -1,7 +1,7 @@
 import ast, unittest
 from pathlib import Path
-from scripts.observable_choice import Prototype
-from scripts.instance_scene import components, quorum_scene, Detection, Tracker
+from research.observable_choice import Prototype
+from research.instance_scene import components, quorum_scene, Detection, Tracker
 
 
 class InstanceSceneTests(unittest.TestCase):
@@ -50,7 +50,7 @@ class InstanceSceneTests(unittest.TestCase):
         self.assertEqual(t.update([d(9)]), (3,))
 
     def test_core_has_no_multiply_or_float(self):
-        tree = ast.parse(Path('scripts/instance_scene.py').read_text())
+        tree = ast.parse(Path('research/instance_scene.py').read_text())
         self.assertFalse(any(isinstance(n, (ast.Mult, ast.Div, ast.Pow)) for n in ast.walk(tree)))
         self.assertFalse(any(isinstance(n, ast.Constant) and isinstance(n.value, float) for n in ast.walk(tree)))
 
@@ -74,7 +74,7 @@ class InstanceSceneTests(unittest.TestCase):
         import json
         import subprocess
         import sys
-        result = subprocess.run([sys.executable, '-S', '-m', 'scripts.instance_scene'],
+        result = subprocess.run([sys.executable, '-S', '-m', 'research.instance_scene'],
                                 input='{"frames": [[], []]}', text=True,
                                 capture_output=True, check=True, timeout=10)
         self.assertEqual(json.loads(result.stdout), {'track_ids': [[], []]})

@@ -4,8 +4,8 @@ from collections import deque; from pathlib import Path
 
 import pytest
 
-from scripts import littlebit_jev_5way_survey as s
-from scripts import littlebit_jev_3way_survey as legacy
+from research import littlebit_jev_5way_survey as s
+from research import littlebit_jev_3way_survey as legacy
 
 
 def oracle(board, w, h):

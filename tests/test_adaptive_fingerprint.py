@@ -1,6 +1,6 @@
 import ast, random, unittest
 from pathlib import Path
-from scripts import adaptive_fingerprint as f
+from research import adaptive_fingerprint as f
 
 
 class AdaptiveTests(unittest.TestCase):

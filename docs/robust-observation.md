@@ -1,13 +1,13 @@
 # Bounded-error sensing and temporal prediction (Layer 16 experiment)
 
-Opt-in API: `scripts.robust_observation.BoundedErrorChoice` accepts existing
+Opt-in API: `research.robust_observation.BoundedErrorChoice` accepts existing
 `observable_choice.Prototype` objects, but requires complete exact signatures.
 Existing Kleene / OR predicate routing and CSV output remain unchanged.
 No dependencies, workflow changes or production image integration are added.
 
 ```python
-from scripts.observable_choice import Prototype
-from scripts.robust_observation import BoundedErrorChoice, temporal_prediction
+from research.observable_choice import Prototype
+from research.robust_observation import BoundedErrorChoice, temporal_prediction
 
 engine = BoundedErrorChoice([Prototype('zero', 0, 7), Prototype('one', 7, 0)], 3)
 result = engine.query(active=1, observed=7, errors=1)

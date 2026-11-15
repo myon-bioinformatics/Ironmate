@@ -1,6 +1,6 @@
 # Layer 21 reference experiment
 
-`scripts/instance_scene.py` reuses `ObservableChoice`/`Prototype` validation.
+`research/instance_scene.py` reuses `ObservableChoice`/`Prototype` validation.
 It provides 4-connected LSB flood-fill, observed-mask 75% leaf quorum and
 velocity-predicted class-gated greedy multi-object assignment. All core scoring
 uses integers, bit operations, addition/subtraction and bit counts; this is not
@@ -33,6 +33,6 @@ quorum occlusion, shared ownership, births/deaths and a velocity crossing.
 This is not an integrated Layer 1–21 master engine or a physics rollout.
 
 Aoi can consume the JSON bridge without copying this implementation:
-`python -S -m scripts.instance_scene < stream.json` with working directory set
+`python -S -m research.instance_scene < stream.json` with working directory set
 to this repository. Input contains `frames` of Detection field dictionaries;
 output is `{"track_ids": [[...], ...]}`. No network or write side effects.

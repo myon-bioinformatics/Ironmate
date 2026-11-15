@@ -7,7 +7,7 @@ still makes the job fail. Neither suite uses `continue-on-error` or a shell succ
 fallback. Uploads and the dependent collector run with `always()`; a missing report
 is an incomplete collection, not a successful empty result.
 
-`tests/test_junit_failure_identity.py` runs real isolated child pytest twice,
+`tests/test_ironmate_junit_failure_identity.py` runs real isolated child pytest twice,
 with and without JUnit. Each child returns **1**: two parameterized assertion
 failures, one setup error, one pass and one skip. The outer regression succeeds
 only when return code, classifications and redaction match. The locked baseline
@@ -41,7 +41,7 @@ git clone https://github.com/myon-bioinformatics/xprobe.git build/xprobe-source
 git -C build/xprobe-source show 7e7015b2df69ad446b968f6fa49711b5b1dbdd3f:xprobe.py > build/xprobe.py
 mkdir -p build/shared
 cp build/xprobe.py build/shared/xprobe.py
-uv run --locked pytest -q tests/test_junit_failure_identity.py
+uv run --locked pytest -q tests/test_ironmate_junit_failure_identity.py
 ```
 
 For artifact reproduction set `FAILURE_EVIDENCE_DIR=build/controlled-failure`

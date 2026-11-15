@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from scripts import littlebit_jev_3way_survey as s
+from research import littlebit_jev_3way_survey as s
 
 
 def test_fwht_against_dense_sign_matrix_including_negative_rounding():

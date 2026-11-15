@@ -3,7 +3,7 @@
 Run the entire experiment from one Python file with no installed dependencies:
 
 ```sh
-python -S scripts/littlebit_jev_5way_survey.py --trials 25
+python -S research/littlebit_jev_5way_survey.py --trials 25
 uv run pytest -q tests/test_five_way_survey.py
 ```
 
@@ -259,7 +259,7 @@ three-edge cycle lock and false-hole diagonal rule are not carried forward.
 Neither are the O(1) topology claim, approximate inclusion described as a
 sufficient cause, or the old asymmetric Flux score presented as a validated
 accuracy measure. The reasons and replacements are documented above; the
-[original proposal source](https://github.com/myon-bioinformatics/Ironmate/blob/aff11622991b6fa3f75c8b9a9876fccb97edac8f/scripts/littlebit_jev_5way_survey.py)
+[original proposal source](https://github.com/myon-bioinformatics/Ironmate/blob/aff11622991b6fa3f75c8b9a9876fccb97edac8f/research/littlebit_jev_5way_survey.py)
 remains an immutable comparison reference rather than a second active engine.
 The standalone experimental API is not a drop-in compatibility layer for #156's
 return-field names; runtime evidence retains full support coordinates instead of
@@ -310,9 +310,9 @@ uses these builtins rather than a second arithmetic conversion implementation.
 Parsing/formatting cost grows with digit count; no speedup claim is made.
 
 ```sh
-python -S scripts/littlebit_jev_5way_survey.py --convert 16 8 0xff
+python -S research/littlebit_jev_5way_survey.py --convert 16 8 0xff
 # 0o377
-python -S scripts/littlebit_jev_5way_survey.py --convert 8 16 0o377
+python -S research/littlebit_jev_5way_survey.py --convert 8 16 0o377
 # 0xff
 ```
 
@@ -356,7 +356,7 @@ formatting/parsing in inference loops.
 
 ## Optional lossless representation adapters
 
-`scripts/bit_representation.py` is a standalone stdlib interchange layer, separate
+`research/bit_representation.py` is a standalone stdlib interchange layer, separate
 from the multiplication-free image kernel and its octal/hex CLI. No image
 threshold, detector, fingerprint algorithm, or inference path is changed.
 
@@ -390,7 +390,7 @@ threshold, detector, fingerprint algorithm, or inference path is changed.
   is implicit. For balanced trits, map -1/0/+1 to digit indices 0/1/2 first.
 
 ```python
-from scripts.bit_representation import (
+from research.bit_representation import (
     fingerprint64_to_bytes, fingerprint64_from_bytes,
     integer_to_digits, digits_to_integer, integer_to_balanced_ternary,
     rational_to_digits, rational_from_digits, digits_to_tokens,
@@ -454,7 +454,7 @@ error rather than silently clipping or wrapping. Pixel layout/width/height,
 row stride, color space and alpha semantics are caller metadata.
 
 ```python
-from scripts.bit_representation import (
+from research.bit_representation import (
     integer_to_u32_limbs, add_u32_limbs, u32_limbs_to_integer,
     fingerprints64_to_bytes, fingerprints64_from_bytes,
     rgb8_to_integer, rgb8_to_bytes, rgb8_from_bytes,
@@ -524,7 +524,7 @@ Reproduce: `uv run pytest -q tests/test_grid.py tests/test_studio.py`.
 
 ## Verified local distance-one boundary audit
 
-`scripts/boundary_twins.py` adds `evaluate_rule` for jointly evaluated AND,
+`research/boundary_twins.py` adds `evaluate_rule` for jointly evaluated AND,
 OR-mask, forbidden-bit and arbitrary 4-bit LUT clauses (including XOR/NAND).
 Overlapping clauses are allowed; impossible conjunctions remain impossible.
 `audit_boundary_twins(board, mutable_mask, predicate, oracle=...)` deterministically
@@ -544,7 +544,7 @@ complete report. Predicates/oracles must return bool and be deterministic.
 Runtime/memory grow with k, mask width and predicate cost; no microsecond claim.
 
 ```python
-from scripts.boundary_twins import evaluate_rule, audit_boundary_twins
+from research.boundary_twins import evaluate_rule, audit_boundary_twins
 rule = lambda b: evaluate_rule(b, must_and=2, pair_tables=((1, 2, 6),))
 report = audit_boundary_twins(3, 3, rule)
 assert [(p['positive'], p['negative']) for p in report['pairs']] == [(2, 3)]
@@ -580,7 +580,7 @@ The scene proposal is not integrated into detection or frozen evidence here.
 
 ## Symbolic global boundary prototype (stacked on #164)
 
-`scripts/boundary_synthesis.py` is an independent stdlib prototype; the local
+`research/boundary_synthesis.py` is an independent stdlib prototype; the local
 `audit_boundary_twins` API and external-oracle accounting are unchanged.
 ` synthesize_boundary_twins ` accepts the same conjunction grammar as
 `evaluate_rule`, a mutable mask, and a fixed background. It returns **one witness
@@ -617,7 +617,7 @@ Keep `audit_boundary_twins` as an explicit local fallback for unsupported rules
 or exhausted budgets; an empty local audit never proves global boundary absence.
 
 ```python
-from scripts.boundary_synthesis import synthesize_boundary_twins
+from research.boundary_synthesis import synthesize_boundary_twins
 report = synthesize_boundary_twins(3, must_and=2, pair_tables=((1, 2, 6),))
 assert {p['changed_bit'] for p in report['pairs']} == {1, 2}
 ```

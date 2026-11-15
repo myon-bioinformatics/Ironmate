@@ -1,12 +1,12 @@
 # Adaptive fingerprint proposal: bounded experimental API
 
-`scripts/adaptive_fingerprint.py` implements lazy 64/256-bit pair matching,
+`research/adaptive_fingerprint.py` implements lazy 64/256-bit pair matching,
 OR coarsening, all tied alignment offsets, masked distances and lossless
 64+64 bit interleaving. It is an opt-in API beside the existing two-shell
 5-Way phase rings; it does not change detection, calibration or frozen evidence.
 
 ```python
-from scripts.adaptive_fingerprint import adaptive_match, reduce256
+from research.adaptive_fingerprint import adaptive_match, reduce256
 ref, target = 1, 1 << 32
 report = adaptive_match(reduce256(ref), reduce256(target), lambda: (ref, target))
 assert report['coarse']['distance'] == 0

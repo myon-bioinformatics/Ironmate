@@ -1,6 +1,6 @@
 """All truth tables, independent operator semantics and context controls."""
 import unittest
-from scripts import littlebit_jev_5way_survey as s
+from research import littlebit_jev_5way_survey as s
 
 class TruthTables(unittest.TestCase):
     def test_all_functions(self):

@@ -291,7 +291,7 @@ To turn CSV into xlsx, use the [Excel workbook](docs/xlsx-exceljs.md). Encoding 
 
 📝 Docker was not available, so the Pages tree was built with the same `image_studio.py --build-site` step the Dockerfile runs. Firefox / WebKit not installed here.
 
-🔁 Re-record (the studio stylesheets come from PySaiyanWeBoo's `web_ui` via `scripts/build_studio_css.py`; `uv run --group test python scripts/build_studio_css.py` regenerates them):
+🔁 Re-record (the one studio stylesheet `studio/style.css` (every page, scoped by `data-page`) comes from PySaiyanWeBoo via `scripts/build_studio_css.py`; `uv run --group test python scripts/build_studio_css.py` regenerates it):
 
 ```sh
 python3 -S image_studio.py --build-site /tmp/site/Ironmate
@@ -305,20 +305,29 @@ into a "page × environment" comparison sheet (PNG, table, JSON). See the [compa
 
 ## Image digest page
 
-`image_digest.py` (`image_digest.cjs` from Node) builds a single lightweight HTML page with thumbnails and
+`image_digest.py` (from Node: `node vendor/py_launch.cjs --env-var IRONMATE_PYTHON -- image_digest.py …`) builds a single lightweight HTML page with thumbnails and
 a Markdown summary from a rows × columns set of images and pass/fail results. Thumbnails are shrunk by 1/4 at a time until it fits the size limit. See the [image digest page](docs/image-digest.md) for details.
 
 ## Python from Node (`py_launch`)
 
-`flow_export.cjs`, `flow_workspace.cjs` and `image_digest.cjs` leave the processing to Python and delegate only the launch
-to `vendor/py_launch.cjs` from the parent repository (Node.js 26+). When the API's `python` is omitted, each call briefly checks
-for 3.9+ and tries `IRONMATE_PYTHON` → `PYTHON` → `python3` → `python` (`py -3` on Windows)
-in that order. If `IRONMATE_PYTHON` or the API's `python` is given explicitly, only that is used, with no
-fallback if it is not found. `flow_workspace.cjs` uses `isolated` (CPython `-I`) to ignore the child process's `PYTHON*` environment,
-and `flow_export` etc. in the same directory are put on `sys.path` by the script itself. JSON requests are limited to 4 MiB; exceeding it gives
-`EINPUTTOOLARGE` (`maxInputBytes`) prefixed with `flow workspace Python process failed:`. `IRONMATE_PYTHON` only selects the
-interpreter on the Node side and is not subject to `-I`. For details see
-[flow export](docs/flow-export.md) and [image digest](docs/image-digest.md).
+There are no per-tool `.cjs` wrappers: Node runs the Python tools through the parent's `vendor/py_launch.cjs` (Node.js 26+).
+
+```bash
+node vendor/py_launch.cjs --env-var IRONMATE_PYTHON -- flow_export.py examples/flow.json --format mermaid   # 🧰 CLI
+```
+
+```js
+const {run, call} = require("./vendor/py_launch.cjs");
+const py = {envVar: "IRONMATE_PYTHON", noSite: true};
+const svg = run("flow_export.py", ["--format", "svg"], {...py, input: JSON.stringify(spec)}).stdout;          // CLI contract
+const workspace = call("flow_workspace.py", "import_flow", [text], {...py, isolated: true});                 // JSON in, JSON out
+```
+
+The interpreter is `IRONMATE_PYTHON` → `PYTHON` → `python3` → `python` (`py -3` on Windows), checked for 3.9+. An explicit
+`IRONMATE_PYTHON` or `python` option is used with no fallback. `isolated` (CPython `-I`) ignores the child's `PYTHON*`
+environment; the launcher still puts the script's directory on `sys.path`. Errors are the Python CLI's own messages and
+exit codes (2 for a fixable problem; `--json` writes it as one JSON object). See [flow export](docs/flow-export.md) and
+[image digest](docs/image-digest.md).
 
 ## Common JSON flow diagrams
 

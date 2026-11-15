@@ -65,12 +65,7 @@ jobs:
           node-version: "26"
       - name: Check the dependency-free client and build only public assets
         run: |
-          node --check studio/core.js
           node --check studio/studio.js
-          node --check studio/tools/tools-core.js
-          node --check studio/tools/tools.js
-          node --check studio/slides/pptx.js
-          node --check studio/slides/slides.js
           docker build --target artifact --output type=local,dest=build/studio-site -f Dockerfile.pages .
       - name: Start the same static site in Docker
         run: |
@@ -119,14 +114,14 @@ jobs:
           python -S - <<'PY'
           from pathlib import Path
           text = Path('/tmp/studio-index.html').read_text()
-          assert 'Base64 / 渡す' in text and 'core.js' in text
+          assert 'Base64 / 渡す' in text and 'studio.js' in text
           print('Published Image Studio HTML verified')
           PY
           curl --fail --location --retry 6 --retry-delay 3 --retry-all-errors "${{ steps.deployment.outputs.page_url }}tools/" --output /tmp/tools.html
           python -S - <<'PY'
           from pathlib import Path
           text = Path('/tmp/tools.html').read_text()
-          assert 'PIXEL GRID' in text and 'tools-core.js' in text and 'catalog.js' in text
+          assert 'PIXEL GRID' in text and '../studio.js' in text and 'catalog.js' in text
           print('Published browser tools HTML verified')
           PY
           curl --fail --location --retry 6 --retry-delay 3 --retry-all-errors "${{ steps.deployment.outputs.page_url }}slides/" --output /tmp/slides.html

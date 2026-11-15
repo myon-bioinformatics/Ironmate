@@ -12,7 +12,7 @@ NS = {'p':'http://schemas.openxmlformats.org/presentationml/2006/main',
 
 
 def node(code, *args):
-    return subprocess.run(['node','-e',"const D=require('./studio/slides/pptx.js');"+code,*map(str,args)],
+    return subprocess.run(['node','-e',"const D=require('./studio/studio.js').slides;"+code,*map(str,args)],
                           cwd=ROOT, capture_output=True, text=True, check=True)
 
 
@@ -72,8 +72,8 @@ def test_deck_roundtrip_does_not_mutate_sources_and_preserves_bold():
 def test_generated_shell_matches_the_existing_locked_js_writer():
     if not (ROOT/'node_modules/pptxgenjs').is_dir():
         pytest.skip('npm ci is needed to regenerate the shell')
-    from scripts.build_slide_shell import shell_script
-    assert shell_script()==(ROOT/'studio/slides/package.js').read_text()
+    from scripts.build_slide_shell import shell_region, shell_script
+    assert shell_script()==shell_region()
 
 
 def test_rejects_fonts_outside_office_xml_range():
@@ -82,7 +82,7 @@ def test_rejects_fonts_outside_office_xml_range():
 
 
 def test_wrapping_words_graphemes_explicit_breaks_and_legacy_behavior():
-    result = node(r"""const C=require('./studio/core.js');
+    result = node(r"""const C=require('./studio/studio.js');
     const layout=(text,w,wrap=true)=>C.textLayout({text,w,wrap},s=>[...new Intl.Segmenter('ja',{granularity:'grapheme'}).segment(s)].length);
     const samples={exact:layout('hello world',5),words:layout('one two three',7),
       jp:layout('日本語の長い文章を折り返します。',6),
@@ -103,7 +103,7 @@ def test_wrapping_words_graphemes_explicit_breaks_and_legacy_behavior():
 
 def test_wrapping_pptx_uses_shared_layout_and_preserves_native_properties(tmp_path):
     output = tmp_path / 'wrapped.pptx'
-    result = node(r"""const C=require('./studio/core.js');
+    result = node(r"""const C=require('./studio/studio.js');
     (async()=>{const scene=D.template();
     Object.assign(scene.layers[0],{text:'日本語の長い文章と English words repeat here.\n\nLast line\n',w:200,h:60,fontSize:32,bold:true,rotation:23});
     Object.assign(scene.layers[1],{text:'https://example.test/'+ 'longurl'.repeat(8),w:250,font:'mono',fontSize:24});
@@ -130,7 +130,7 @@ def test_wrapping_pptx_uses_shared_layout_and_preserves_native_properties(tmp_pa
 
 
 def test_legacy_decks_default_to_wrap_without_mutation_and_false_is_preserved():
-    result = node("""const C=require('./studio/core.js'),scene=D.template();
+    result = node("""const C=require('./studio/studio.js'),scene=D.template();
     delete scene.layers[0].wrap;scene.layers[1].wrap=false;
     const source=JSON.stringify(scene),deck=D.parse(D.deckText({schema:D.SCHEMA,slides:[scene]}));
     let invalid=false;try{scene.layers[0].wrap='yes';C.validate(scene)}catch{invalid=true}

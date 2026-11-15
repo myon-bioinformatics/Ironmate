@@ -42,15 +42,15 @@ Reading arbitrary existing PPTX and reproducing themes, PDF rendering, animation
 
 ## Implementation and regeneration
 
-An empty PPTX skeleton is generated from PptxGenJS 4.0.1, pinned by the existing `npm ci`, and `pptxgen_render.mjs`. The generated XML is kept in `studio/slides/package.js` with a fixed date for reproducibility. The browser loads no external libraries.
+An empty PPTX skeleton is generated from PptxGenJS 4.0.1, pinned by the existing `npm ci`, and `pptxgen_render.mjs`. The generated XML is kept in the `<slide-shell>` region of `studio/studio.js` (the one browser script) with a fixed date for reproducibility. The browser loads no external libraries.
 
 ```sh
 npm ci --ignore-scripts
 python -S scripts/build_slide_shell.py
 ```
 
-The browser's `pptx.js` assembles slide order, native text, shapes and image Open XML onto this skeleton and stores it in a standard ZIP with CRCs. Required parts and relationships are generated explicitly; no arbitrary XML, ZIP paths or external references are accepted from input JSON.
-Only the generated XML, JS/CSS and editor screen are added to `image_studio.py --build-site` and Docker's public allowlist. User output such as PPTX and images is not included in the public build.
+The Open XML writer in `studio/studio.js` (`IronmateSlides`) assembles slide order, native text, shapes and image Open XML onto this skeleton and stores it in a standard ZIP with CRCs. Required parts and relationships are generated explicitly; no arbitrary XML, ZIP paths or external references are accepted from input JSON.
+Only the generated XML, the one JS and CSS file, and the editor screen are added to `image_studio.py --build-site` and Docker's public allowlist. User output such as PPTX and images is not included in the public build.
 
 ## Verification
 

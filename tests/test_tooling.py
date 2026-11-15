@@ -1,4 +1,4 @@
-"""🧰 Tooling: apt setup, .d.cts declarations, the CLI contract, known-vulnerability checks, parent tools and pins, repository hygiene and the vendored files."""
+"""🧰 Tooling: apt setup, CLI-only .cjs scripts, the CLI contract, known-vulnerability checks, parent tools and pins, repository hygiene and the vendored files."""
 
 import hashlib
 import importlib.util
@@ -232,32 +232,15 @@ def test_workflow_restores_apt_downloads_everywhere_but_saves_them_only_from_mai
 
 
 # ═══ · cjs declarations ══════════════════════════════════════════════════════════════════════════════════
-# Every Node API (*.cjs that exports something) has a .d.cts declaring exactly its exports.
-#
-# Names only; CI type-checks the declarations themselves with tsc. CLI-only scripts
-# (studio/raster.cjs, studio/render.cjs) run on load and export nothing, so they are
-# never required here and must not have a declaration.
+# 🧩 Node calls Python through vendor/py_launch.cjs, so no repository *.cjs is a Node API:
+# each one is a CLI script that runs on load, exports nothing and has no .d.cts.
 
-ALL = sorted(p for p in [*ROOT.glob("*.cjs"), *ROOT.glob("studio/*.cjs"), *ROOT.glob("scripts/*.cjs")])
-MODULES = [p for p in ALL if "module.exports" in p.read_text(encoding="utf-8")]
-SCRIPTS = [p for p in ALL if p not in MODULES]
-
-
-@pytest.mark.skipif(shutil.which("node") is None, reason="node not installed")
-def test_declarations_match_exports():
-    script = "process.stdout.write(JSON.stringify(process.argv.slice(1).map(f => Object.keys(require(f)))))"
-    exports = json.loads(subprocess.run(["node", "-e", script, *map(str, MODULES)], capture_output=True, text=True,
-                                        timeout=60, check=True).stdout)
-    for script_path in SCRIPTS:
-        assert not script_path.with_suffix(".d.cts").exists(), f"{script_path.name} is a CLI script"
-    checked = 0
-    for module, names in zip(MODULES, exports):
-        types = module.with_suffix(".d.cts")
-        assert types.exists(), f"{module.relative_to(ROOT)} exports {names} but has no {types.name}"
-        declared = set(re.findall(r"^export (?:function|const) (\w+)", types.read_text(encoding="utf-8"), re.M))
-        assert declared == set(names), module.name
-        checked += 1
-    assert checked >= 4
+def test_repository_cjs_files_are_cli_scripts_without_declarations():
+    scripts = sorted(p for pattern in ("*.cjs", "studio/*.cjs", "scripts/*.cjs") for p in ROOT.glob(pattern))
+    assert scripts, "studio/render.cjs is expected"
+    for script_path in scripts:
+        assert "module.exports" not in script_path.read_text(encoding="utf-8"), script_path.name
+    assert not [p for pattern in ("*.d.cts", "studio/*.d.cts", "scripts/*.d.cts") for p in ROOT.glob(pattern)]
 
 
 # ═══ · cli contract ══════════════════════════════════════════════════════════════════════════════════════
@@ -294,10 +277,8 @@ def test_help_exits_zero_and_names_json():
         [PY, '-S', 'studio_ingress.py', '--help'],
         [PY, '-S', 'image_studio.py', '--help'],
         [PY, '-S', 'image_compare.py', '-h'],
-        ['node', 'image_digest.cjs', '--help'],
+        ['node', 'vendor/py_launch.cjs', '--env-var', 'IRONMATE_PYTHON', '--', 'image_digest.py', '--help'],
         ['node', 'studio/render.cjs', '--help'],
-        ['node', 'studio/raster.cjs', '--help'],
-        ['node', 'studio/ingress.cjs', '--help'],
     ]
     for argv in commands:
         completed = run(argv)
@@ -373,13 +354,14 @@ def test_image_tools_share_output_flags_and_node_digest(tmp_path):
     info = json.loads(py.stdout)
     assert info['passed'] == 1 and (digest_out / 'digest.html').is_file()
     node_out = tmp_path / 'digest-node'
-    node = run(['node', 'image_digest.cjs', str(spec_path), '--out', str(node_out), '--tile', '32x64'])
+    via_node = ['node', 'vendor/py_launch.cjs', '--env-var', 'IRONMATE_PYTHON', '--', 'image_digest.py']
+    node = run([*via_node, str(spec_path), '--out', str(node_out), '--tile', '32x64'])
     assert node.returncode == 0, node.stderr
     assert json.loads(node.stdout)['tile'] == [32, 64]
-    legacy = run(['node', 'image_digest.cjs', str(spec_path), str(tmp_path / 'legacy')])
+    legacy = run([*via_node, str(spec_path), str(tmp_path / 'legacy')])
     assert legacy.returncode == 0, legacy.stderr
-    missing = run(['node', 'image_digest.cjs', '--json'])
-    assert missing.returncode == 2 and b'"ok":false' in missing.stderr
+    missing = run([*via_node, '--json'])
+    assert missing.returncode == 2 and json.loads(missing.stderr)['ok'] is False
     assert b'Traceback' not in missing.stderr
 
 
@@ -411,11 +393,8 @@ def test_ironmate_image_and_ingress_round_trip(tmp_path):
     assert decoded.returncode == 0, decoded.stderr
     body = json.loads(decoded.stdout)
     assert body == {'ok': True, 'mime': 'image/png', 'bytes': len(raw)}
-    node = run(['node', 'studio/ingress.cjs', 'decode', str(encoded)])
-    assert node.returncode == 0, node.stderr
-    assert json.loads(node.stdout)['bytes'] == len(raw)
-    bad = run(['node', 'studio/ingress.cjs', '--json', 'decode', str(tmp_path / 'nope.txt')])
-    assert bad.returncode == 2 and b'"ok":false' in bad.stderr
+    bad = run([PY, '-S', 'studio_ingress.py', '--json', 'decode', str(tmp_path / 'nope.txt')])
+    assert bad.returncode == 2 and b'"ok": false' in bad.stderr and b'Traceback' not in bad.stderr
 
 
 def test_render_does_not_wait_on_a_terminal_and_validates_a_file(tmp_path):
@@ -466,9 +445,9 @@ def test_render_does_not_wait_on_a_terminal_and_validates_a_file(tmp_path):
 def test_raster_rejects_a_bad_argument_list_before_chrome():
     if shutil.which('node') is None:
         pytest.skip('node not installed')
-    missing = run(['node', 'studio/raster.cjs'])
+    missing = run(['node', 'studio/render.cjs', 'png'])
     assert missing.returncode == 2 and b'CHROME' in missing.stderr and b'Traceback' not in missing.stderr
-    bad = run(['node', 'studio/raster.cjs', 'chrome', 'page.html', 'profile', 'nope', '10'])
+    bad = run(['node', 'studio/render.cjs', 'png', 'chrome', 'page.html', 'profile', 'nope', '10'])
     assert bad.returncode == 2 and b'positive integers' in bad.stderr
 
 

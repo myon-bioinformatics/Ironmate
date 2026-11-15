@@ -17,7 +17,7 @@ from vendor.cli_args import pytest_command
 
 PYTHON_MARK = 'not heavy and not network'
 NODE = (
-    {'id': 'py-launch-wrappers', 'argv': ['node', '--test', 'tests/py_launch_wrappers.test.cjs'], 'needs': []},
+    {'id': 'py-launch', 'argv': ['node', '--test', 'tests/py_launch.test.cjs'], 'needs': []},
     {'id': 'studio-ingress', 'argv': ['node', '--test', 'tests/studio_ingress.test.cjs'], 'needs': []},
     {'id': 'studio-workspace', 'argv': ['node', '--test', 'tests/studio_workspace.test.cjs'], 'needs': []},
     {'id': 'image-digest', 'argv': ['node', '--test', 'tests/image_digest.test.cjs'], 'needs': ['DIGEST_PNG']},

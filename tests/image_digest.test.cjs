@@ -5,7 +5,18 @@ const {test} = require("node:test");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
-const {buildDigest} = require("../image_digest.cjs");
+const {run} = require("../vendor/py_launch.cjs");
+
+// image_digest.py called directly through the shared launcher; errors come back as the Python CLI's stderr.
+function buildDigest(spec, {base, out, tile = "64x128"}) {
+  try {
+    const result = run(path.join(__dirname, "..", "image_digest.py"), ["-", "--base", base, "--out", out, "--tile", tile],
+      {envVar: "IRONMATE_PYTHON", noSite: true, input: JSON.stringify(spec), timeout: 600000});
+    return JSON.parse(String(result.stdout));
+  } catch (error) {
+    throw Error(String(error.stderr || error.message));
+  }
+}
 
 test("Node builds the same one-page digest through the Python owner", (t) => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "digest-"));

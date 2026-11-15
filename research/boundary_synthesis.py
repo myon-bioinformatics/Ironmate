@@ -3,7 +3,7 @@
 Cubes are (required-one mask, required-zero mask). No board-space scan, random
 search, multiplication or floating point is used. Covers can grow exponentially.
 """
-from scripts.boundary_twins import _mask, evaluate_rule
+from research.boundary_twins import _mask, evaluate_rule
 
 
 def synthesize_boundary_twins(mutable_mask, *, fixed_board=0, must_and=0,

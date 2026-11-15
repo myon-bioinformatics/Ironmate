@@ -20,7 +20,7 @@ async function collect(page, out) {
   fs.copyFileSync(path.join(root,'docs/evidence/image-studio/demo.png'),path.join(out,'studio-demo.png'));
   fixtures.push({name:'studio-demo',seed:null,file:'studio-demo.png'});
   fs.writeFileSync(path.join(out,'fixtures.json'),JSON.stringify({browser:page.context().browser().version(),fixtures},null,2));
-  execFileSync(process.env.PYTHON || 'python', ['-S','scripts/quality_experiment.py','--fixtures',path.join(out,'fixtures.json'),'--out',out],{cwd:root,stdio:'inherit',timeout:600000});
+  execFileSync(process.env.PYTHON || 'python', ['-S','research/quality_experiment.py','--fixtures',path.join(out,'fixtures.json'),'--out',out],{cwd:root,stdio:'inherit',timeout:600000});
 }
 module.exports = collect;
 if (require.main === module) (async()=>{

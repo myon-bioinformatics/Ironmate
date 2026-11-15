@@ -8,7 +8,7 @@ The default remains the original RGBA bytes. Palette order and alpha are retaine
 
 ```sh
 python -S -m unittest discover -s tests -p test_grid_png_indexed.py -v
-python -S scripts/benchmark_indexed_png.py
+python -S research/benchmark_indexed_png.py
 ```
 
 The existing `pillow_min.open_bytes` stdlib decoder can read the output, including

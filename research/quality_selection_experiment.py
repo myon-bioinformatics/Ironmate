@@ -6,7 +6,7 @@ from collections import defaultdict; from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import image_compare as compare
-from scripts import quality_experiment as experiment
+from research import quality_experiment as experiment
 from ironlib.studio_candidate_selection import diagnostic_row, reference_key, summarize, rank_relations, enrich_sweep
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -113,7 +113,7 @@ def run(folder, out):
     totals = {m:{k:sum(g['rank_relations'][m][k] for g in groups)
                   for k in groups[0]['rank_relations'][m]} for m in groups[0]['rank_relations']}
     files = ['image_compare.py','ironlib/studio_candidate_selection.py','ironlib/studio_image_quality.py',
-             'scripts/quality_selection_experiment.py']
+             'research/quality_selection_experiment.py']
     report = {'schema':'ironmate-quality-selection/1', 'exploratory':True,
               'scope':'reference oracle; no perceptual preference or universal best candidate',
               'environment':{'python':sys.version,'platform':platform.platform()},

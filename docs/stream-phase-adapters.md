@@ -1,6 +1,6 @@
 # Standard library stream adapters and verified ladders
 
-`python -S scripts/stream_phase_report.py --image input.pgm` runs the existing
+`python -S research/stream_phase_report.py --image input.pgm` runs the existing
 CalibratedTernaryPatch / FiveWaySurveyEngine on binary P5 (maxval 255).
 For RAW use `--image input.raw --width 64 --height 64 --channels 1` (or 3).
 Dimensions must be positive multiples of eight; truncated or trailing pixels
@@ -9,7 +9,7 @@ The CLI reads the file once; the adapter borrows its pixel buffer via memoryview
 and yields descriptors. It is not an end-to-end zero-copy or constant-memory
 image pipeline. Pixel addressing still uses integer multiplication.
 
-`python -S scripts/stream_phase_report.py --csv seasons.csv --id-col team_season --columns rd bullpen_era`
+`python -S research/stream_phase_report.py --csv seasons.csv --id-col team_season --columns rd bullpen_era`
 streams JSON records with separate pos/neg masks plus interleaved spin_board.
 CSV requires a seekable, unchanged source: first pass calibrates min/max, second
 pass emits records. Hundredths are parsed exactly; missing, malformed or more

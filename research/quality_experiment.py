@@ -152,7 +152,7 @@ def run(fixtures, out, repeats=3):
                               'transform_cpu_ms':transform_ms,**result})
             print(f'{fixture["name"]} seed={fixture["seed"]} {w}x{h}',flush=True)
     root=Path(__file__).resolve().parents[1]
-    files=['ironlib/studio_image_quality.py','scripts/quality_experiment.py','tests/studio_fixtures.cjs','tests/studio_quality_browser.cjs']
+    files=['ironlib/studio_image_quality.py','research/quality_experiment.py','tests/studio_fixtures.cjs','tests/studio_quality_browser.cjs']
     report={'schema':'ironmate-studio-quality/1','exploratory':True,'environment':{'python':sys.version,'platform':platform.platform(),'machine':platform.machine(),'browser':manifest['browser']},
             'protocol':{'seeds':[20261018,20261019],'alpha_threshold':0,'foreground_threshold':32,'alignment_radius':2,'cpu_repeats':repeats,'memory':'tracemalloc peak per warmed API call; prebuilt pixels/masks/weights excluded; not RSS','energy':'reference-only integer forward RGB edge differences after white compositing; zero denominator -> null','sizes':'64 and 128 longest-side pixels; second seed 64 only; demo aspect preserved','timing':'process_time_ns median, untraced; one warmup; tracing in separate pass; input/mask construction, IO and PNG encoding excluded from API costs'},
             'source_sha256':{f:hashlib.sha256((root/f).read_bytes()).hexdigest() for f in files},'cases':cases}

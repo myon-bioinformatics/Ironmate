@@ -9,7 +9,7 @@ This experiment's output is a set of patch coordinates; it does not generate smo
 Runs on Python 3.10+ with only the standard library. No I/O at import time.
 
 ```sh
-python -S scripts/littlebit_jev_3way_survey.py --trials 40 --train-trials 4 --large-raster
+python -S research/littlebit_jev_3way_survey.py --trials 40 --train-trials 4 --large-raster
 uv run pytest -q tests/test_three_way_survey.py
 ```
 
@@ -140,13 +140,13 @@ the raw data's SHA-256. Re-runs can compare accuracy and prediction hashes, but 
 ## Additional holdout separating shapes and signal distributions
 
 Input families not in the existing 6 scenarios or the threshold search are verified with a separate
-`scripts/survey_holdout.py`. It imports the existing engine and fixes the first measurement's
+`research/survey_holdout.py`. It imports the existing engine and fixes the first measurement's
 `deadzone_shift=3, ub_threshold=64, min_links=2, max_diff=4` and stride 1/2/4.
 No re-tuning, and no replacing the original scenarios, counterexamples or measurement evidence.
 Separately from Aoi's exact FWHT, the integer rounding of H8//2 here is kept.
 
 ```sh
-python -S scripts/survey_holdout.py --trials 3 --output build/survey-holdout
+python -S research/survey_holdout.py --trials 3 --output build/survey-holdout
 uv run pytest -q tests/test_three_way_survey.py tests/test_research.py
 ```
 

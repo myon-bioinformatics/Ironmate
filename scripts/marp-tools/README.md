@@ -32,7 +32,7 @@ Run with Node 26:
 ```sh
 npm ci --prefix scripts/marp-tools --ignore-scripts
 npm audit --prefix scripts/marp-tools
-python -m pytest -q tests/test_junit_failure_identity.py -k marp_tools
+python -m pytest -q tests/test_ironmate_junit_failure_identity.py -k marp_tools
 IRONMATE_RUN_MARP_INTEGRATION=1 \
 IRONMATE_MARP_BIN="$PWD/scripts/marp-tools/node_modules/.bin/marp" \
 IRONMATE_MMDC_BIN="$PWD/scripts/marp-tools/node_modules/.bin/mmdc" \

@@ -909,26 +909,33 @@ def test_studio_stylesheets_match_the_generator():
     import pysaiyanweboo
     module = _generator()
     bundles = module.bundles()
-    assert {p.relative_to(ROOT).as_posix() for p in bundles} == {
-        'studio/style.css', 'studio/tools/tools.css', 'studio/brand/gallery.css', 'studio/slides/slides.css'}
+    assert {p.relative_to(ROOT).as_posix() for p in bundles} == {'studio/style.css'}  # one sheet for every page
     for target, options in bundles.items():
         assert pysaiyanweboo.check_bundle(target, **options) == [], target.relative_to(ROOT)
         assert target.read_text(encoding='utf-8').startswith('/* web-ui-bundle/1 commit=')
-    for name in ('studio/style.css', 'studio/tools/tools.css', 'studio/brand/gallery.css'):
-        text = (ROOT / name).read_text(encoding='utf-8')
-        assert '/* css/components.css */' in text and 'body[data-ui-theme="ironmate"]{--ui-bg:#edf0ec;' in text
-        assert '.ui-elements button,' in text and 'cdn.' not in text
-    assert '/* css/' not in (ROOT / 'studio/slides/slides.css').read_text(encoding='utf-8')  # loaded after style.css
+    text = (ROOT / 'studio/style.css').read_text(encoding='utf-8')
+    assert '/* css/components.css */' in text and 'body[data-ui-theme="ironmate"]{--ui-bg:#edf0ec;' in text
+    assert '.ui-elements button,' in text and 'cdn.' not in text
+    for page in ('studio', 'tools', 'brand', 'slides'):
+        assert f':where([data-page~="{page}"])' in text, page  # page layout is scoped, with zero added specificity
+    for page, html in (('studio', 'studio/index.html'), ('tools', 'studio/tools/index.html'), ('brand', 'studio/brand/index.html')):
+        assert f'data-page="{page}"' in (ROOT / html).read_text(encoding='utf-8'), html
+    assert module.scoped('body{a:b}.x,y z{c:d}@media(max-width:1px){.w{e:f}}', 'p') == (
+        'body:where([data-page~="p"]){a:b}:where([data-page~="p"]) .x,:where([data-page~="p"]) y z{c:d}'
+        '@media(max-width:1px){:where([data-page~="p"]) .w{e:f}}')
     assert module.main(['--check']) == 0
     assert pysaiyanweboo.check_theme(module.IRONMATE) == []  # the brand palette reads at WCAG AA on both grounds
 
 
 def test_studio_pages_opt_into_the_components_and_palette():
-    for name in ('studio/index.html', 'studio/tools/index.html', 'studio/brand/index.html'):
-        assert '<body class="ui-elements" data-ui-theme="ironmate">' in (ROOT / name).read_text(encoding='utf-8'), name
+    for name, page in (('studio/index.html', 'studio'), ('studio/tools/index.html', 'tools'), ('studio/brand/index.html', 'brand')):
+        html = (ROOT / name).read_text(encoding='utf-8')
+        assert f'<body class="ui-elements" data-ui-theme="ironmate" data-page="{page}">' in html, name
+        assert ('href="style.css"' if page == 'studio' else 'href="../style.css"') in html, name  # one sheet for every page
     import image_studio
     slides = image_studio.public_assets()['slides/index.html'].decode('utf-8')
-    assert '<body class="ui-elements" data-ui-theme="ironmate" data-mode="slides">' in slides
+    assert '<body class="ui-elements" data-ui-theme="ironmate" data-page="studio slides" data-mode="slides">' in slides
+    assert 'href="../style.css"' in slides and 'slides.css' not in slides
 
 
 # ═══ · studio delivery ═══════════════════════════════════════════════════════════════════════════════════
@@ -938,7 +945,7 @@ def test_build_site_contains_only_public_client_assets_and_relative_paths(tmp_pa
     target=s.build_site(tmp_path/'Ironmate')
     assert {p.name for p in target.iterdir()}=={'index.html','core.js','studio.js','style.css','.nojekyll','tools','slides','brand'}
     brand_files = {
-        'index.html', 'gallery.css', 'mono.svg', 'dark-green.svg', 'famicom.svg',
+        'index.html', 'mono.svg', 'dark-green.svg', 'famicom.svg',
         'gameboy.svg', 'pixel-3d.svg', 'manifest.webmanifest', 'apple-touch-icon.png',
         'app-192.png', 'app-512.png', 'app-maskable-512.png', 'icon.svg',
         'heatmap.svg', 'hero.svg', 'favicon.ico', 'favicon-16.png', 'favicon-32.png',

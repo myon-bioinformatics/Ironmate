@@ -117,15 +117,15 @@ def mosaic(artifact, cell=8, levels=256):
 def public_assets():
     """Explicit publication allowlist; no user scenes, globbing, or local images."""
     names = ('index.html', 'core.js', 'studio.js', 'style.css',
-             'tools/index.html', 'tools/tools.css', 'tools/tools-core.js', 'tools/tools.js',
-             'brand/index.html', 'brand/gallery.css', 'brand/mono.svg', 'brand/dark-green.svg',
+             'tools/index.html', 'tools/tools-core.js', 'tools/tools.js',
+             'brand/index.html', 'brand/mono.svg', 'brand/dark-green.svg',
              'brand/famicom.svg', 'brand/gameboy.svg', 'brand/pixel-3d.svg',
              'brand/manifest.webmanifest', 'brand/apple-touch-icon.png', 'brand/app-192.png',
              'brand/app-512.png', 'brand/app-maskable-512.png',
              'brand/icon.svg', 'brand/heatmap.svg', 'brand/hero.svg', 'brand/favicon.ico', 'brand/favicon-16.png',
              'brand/favicon-32.png', 'brand/favicon-48.png', 'brand/icon-192.png',
              'brand/example-demo.gif', 'brand/example-stamp-demo.gif',
-             'slides/package.js', 'slides/pptx.js', 'slides/slides.js', 'slides/slides.css')
+             'slides/package.js', 'slides/pptx.js', 'slides/slides.js')
     assets = {name: (ROOT / 'studio' / name).read_bytes() for name in names}
     from scripts.pages_catalog import catalog_script
     assets['tools/catalog.js'] = catalog_script()
@@ -136,9 +136,9 @@ def public_assets():
         page = page.replace('"' + name + '"', '"../' + name + '"')
     page = page.replace('href="tools/"', 'href="../tools/"')
     page = page.replace('<a href="slides/">スライド・PPTX作成 ↗</a>', '<a href="../">Image Studio ↗</a>')
-    page = page.replace('<body class="ui-elements" data-ui-theme="ironmate">', '<body class="ui-elements" data-ui-theme="ironmate" data-mode="slides">').replace('画像にする。', 'スライドにする。')
+    page = page.replace('<body class="ui-elements" data-ui-theme="ironmate" data-page="studio">', '<body class="ui-elements" data-ui-theme="ironmate" data-page="studio slides" data-mode="slides">').replace('画像にする。', 'スライドにする。')
     page = page.replace('IMAGE STUDIO / 01', 'SLIDE STUDIO / 03').replace('Ironmate — Image Studio', 'Ironmate — Slide Studio')
-    extra = '<link rel="stylesheet" href="slides.css">' + ''.join(
+    extra = ''.join(
         f'<script defer src="{name}"></script>' for name in ('package.js', 'pptx.js', 'slides.js'))
     page = page.replace('</head>', extra + '</head>')
     page = page.replace('</header>', '</header>' + (ROOT / 'studio/slides/panel.html').read_text())

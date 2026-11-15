@@ -36,9 +36,13 @@ def test_real_flow_formats_and_node_api():
     from xml.etree import ElementTree as ET
     box=[float(x) for x in ET.fromstring(outputs['svg']).attrib['viewBox'].split()]
     import math
-    assert decode_png(scaled,max_pixels=16777216)[:2]==(math.ceil(box[2]*2),math.ceil(box[3]*2))
-    script='const f=require("./flow_export.cjs");const fs=require("node:fs");process.stdout.write(f.renderFlow(JSON.parse(fs.readFileSync(0,"utf8")),JSON.parse(process.argv[1])));'
-    node_opts=dict(format='png',mmdc=opts['mmdc'],chrome=opts['chrome'],puppeteerConfig=opts['puppeteer_config'],python=sys.executable)
+    script = (
+        'const {run}=require("./vendor/py_launch.cjs");const fs=require("node:fs");'
+        'const opts=JSON.parse(process.argv[1]);'
+        'const res=run("flow_export.py",["--format",opts.format,"--scale",String(opts.scale||1),'
+        '"--mmdc",opts.mmdc,"--chrome",opts.chrome,"--puppeteer-config",opts.puppeteerConfig],'
+        '{input:fs.readFileSync(0),python:opts.python});process.stdout.write(res.stdout);'
+    )
     result=subprocess.run(['node','-e',script,json.dumps(node_opts)],input=json.dumps(spec).encode(),cwd=ROOT,capture_output=True,timeout=180)
     assert result.returncode==0,result.stderr
     assert result.stdout==outputs['png']
@@ -85,10 +89,12 @@ def test_retained_json_edit_regenerates_all_formats():
     assert outputs['data-uri']==b'data:image/png;base64,'+outputs['base64']
     from xml.etree import ElementTree as ET
     assert 'JSON edited /' in ''.join(ET.fromstring(outputs['svg']).itertext())
-    assert b'JSON edited /' in outputs['mermaid']
-    script='''const w=require('./flow_workspace.cjs');const fs=require('node:fs');
-const v=JSON.parse(fs.readFileSync(0,'utf8'));const r=w.patchAndRender(v.workspace,v.patch,v.options);
-process.stdout.write(r.image);'''
+    script = '''const {run}=require('./vendor/py_launch.cjs');const fs=require('node:fs');
+const v=JSON.parse(fs.readFileSync(0,'utf8'));
+const patchRes=run('flow_workspace.py',['patch','-'],{input:Buffer.from(JSON.stringify({workspace:v.workspace,patch:v.patch})),python:v.options.python});
+const next=JSON.parse(patchRes.stdout);
+const exportRes=run('flow_export.py',['--format',v.options.format,'--mmdc',v.options.mmdc,'--chrome',v.options.chrome,'--puppeteer-config',v.options.puppeteerConfig],{input:Buffer.from(JSON.stringify(next.spec)),python:v.options.python});
+process.stdout.write(exportRes.stdout);'''
     node_opts=dict(format='png',mmdc=opts['mmdc'],chrome=opts['chrome'],puppeteerConfig=opts['puppeteer_config'],python=sys.executable)
     result=subprocess.run(['node','-e',script],input=json.dumps(dict(workspace=original,patch=operations,options=node_opts)).encode(),
                           cwd=ROOT,capture_output=True,timeout=180)

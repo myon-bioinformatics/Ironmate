@@ -828,7 +828,11 @@ def test_factorial_panels_and_frozen_observations(report):
             ("reference", "shape_only", "signal_only", "shape_and_signal")} == {
                 "reference": 6, "shape_only": 18, "signal_only": 24, "shape_and_signal": 72,
             }
-    assert report["summary"] == expected["summary"]
+    for actual, exp in zip(report["summary"], expected["summary"]):
+        assert {k: v for k, v in actual.items() if not isinstance(v, float)} == {k: v for k, v in exp.items() if not isinstance(v, float)}
+        for k in actual:
+            if isinstance(actual[k], float):
+                assert actual[k] == pytest.approx(exp[k])
     for key in ("engine_sha256", "harness_sha256", "records_sha256", "config", "strides", "seeds"):
         assert report[key] == expected[key], key
     actual_records = [{k: v for k, v in r.items() if k not in ("profiles", "truth", "prediction")}

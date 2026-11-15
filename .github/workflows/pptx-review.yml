@@ -38,7 +38,6 @@ on:
       - scripts/pptxgen_render.mjs
       - scripts/pptxgen_allowlist.json
       - .github/workflows/pptx-review.yml
-  workflow_dispatch:
 
 permissions:
   contents: read

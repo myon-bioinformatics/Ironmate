@@ -232,32 +232,20 @@ def test_workflow_restores_apt_downloads_everywhere_but_saves_them_only_from_mai
 
 
 # ═══ · cjs declarations ══════════════════════════════════════════════════════════════════════════════════
-# Every Node API (*.cjs that exports something) has a .d.cts declaring exactly its exports.
-#
-# Names only; CI type-checks the declarations themselves with tsc. CLI-only scripts
-# (studio/raster.cjs, studio/render.cjs) run on load and export nothing, so they are
-# never required here and must not have a declaration.
+# Per-tool Node wrappers (*.cjs/*.d.cts in root) have been dropped in favor of direct
+# vendor/py_launch.cjs calls. Remaining .cjs files are CLI-only scripts (studio/render.cjs, studio/raster.cjs).
 
-ALL = sorted(p for p in [*ROOT.glob("*.cjs"), *ROOT.glob("studio/*.cjs"), *ROOT.glob("scripts/*.cjs")])
-MODULES = [p for p in ALL if "module.exports" in p.read_text(encoding="utf-8")]
-SCRIPTS = [p for p in ALL if p not in MODULES]
+SCRIPTS = sorted(ROOT.glob("studio/*.cjs"))
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not installed")
-def test_declarations_match_exports():
-    script = "process.stdout.write(JSON.stringify(process.argv.slice(1).map(f => Object.keys(require(f)))))"
-    exports = json.loads(subprocess.run(["node", "-e", script, *map(str, MODULES)], capture_output=True, text=True,
-                                        timeout=60, check=True).stdout)
+def test_no_per_tool_wrappers_and_cli_scripts():
+    assert not list(ROOT.glob("*.cjs")), "per-tool .cjs wrappers are dropped in favor of direct py_launch.cjs"
+    assert not list(ROOT.glob("*.d.cts")), "per-tool .d.cts declarations are dropped"
+    assert not (ROOT / "studio/ingress.cjs").exists()
+    assert not (ROOT / "studio/ingress.d.cts").exists()
     for script_path in SCRIPTS:
         assert not script_path.with_suffix(".d.cts").exists(), f"{script_path.name} is a CLI script"
-    checked = 0
-    for module, names in zip(MODULES, exports):
-        types = module.with_suffix(".d.cts")
-        assert types.exists(), f"{module.relative_to(ROOT)} exports {names} but has no {types.name}"
-        declared = set(re.findall(r"^export (?:function|const) (\w+)", types.read_text(encoding="utf-8"), re.M))
-        assert declared == set(names), module.name
-        checked += 1
-    assert checked >= 4
 
 
 # ═══ · cli contract ══════════════════════════════════════════════════════════════════════════════════════
@@ -274,6 +262,18 @@ def run(argv, *, stdin=None, timeout=30):
     return subprocess.run(
         argv, cwd=ROOT, input=stdin, capture_output=True, timeout=timeout, check=False,
     )
+
+
+def _node_supports_py_launch():
+    node = shutil.which("node")
+    if not node:
+        return False
+    try:
+        out = subprocess.run([node, "--version"], capture_output=True, text=True, timeout=5).stdout
+        match = re.match(r"v(\d+)", out.strip())
+        return bool(match and int(match.group(1)) >= 26)
+    except Exception:
+        return False
 
 
 def test_help_exits_zero_and_names_json():
@@ -294,11 +294,11 @@ def test_help_exits_zero_and_names_json():
         [PY, '-S', 'studio_ingress.py', '--help'],
         [PY, '-S', 'image_studio.py', '--help'],
         [PY, '-S', 'image_compare.py', '-h'],
-        ['node', 'image_digest.cjs', '--help'],
         ['node', 'studio/render.cjs', '--help'],
         ['node', 'studio/raster.cjs', '--help'],
-        ['node', 'studio/ingress.cjs', '--help'],
     ]
+    if _node_supports_py_launch():
+        commands.append(['node', 'vendor/py_launch.cjs', '--env-var', 'IRONMATE_PYTHON', '--', 'image_digest.py', '--help'])
     for argv in commands:
         completed = run(argv)
         assert completed.returncode == 0, (argv, completed.stderr.decode())
@@ -371,16 +371,16 @@ def test_image_tools_share_output_flags_and_node_digest(tmp_path):
     py = run([PY, '-S', 'image_digest.py', str(spec_path), '--output', str(digest_out)])
     assert py.returncode == 0, py.stderr
     info = json.loads(py.stdout)
-    assert info['passed'] == 1 and (digest_out / 'digest.html').is_file()
-    node_out = tmp_path / 'digest-node'
-    node = run(['node', 'image_digest.cjs', str(spec_path), '--out', str(node_out), '--tile', '32x64'])
-    assert node.returncode == 0, node.stderr
-    assert json.loads(node.stdout)['tile'] == [32, 64]
-    legacy = run(['node', 'image_digest.cjs', str(spec_path), str(tmp_path / 'legacy')])
-    assert legacy.returncode == 0, legacy.stderr
-    missing = run(['node', 'image_digest.cjs', '--json'])
-    assert missing.returncode == 2 and b'"ok":false' in missing.stderr
-    assert b'Traceback' not in missing.stderr
+    if _node_supports_py_launch():
+        node_out = tmp_path / 'digest-node'
+        node = run(['node', 'vendor/py_launch.cjs', '--env-var', 'IRONMATE_PYTHON', '--', 'image_digest.py', str(spec_path), '--out', str(node_out), '--tile', '32x64'])
+        assert node.returncode == 0, node.stderr
+        assert json.loads(node.stdout)['tile'] == [32, 64]
+        legacy = run(['node', 'vendor/py_launch.cjs', '--env-var', 'IRONMATE_PYTHON', '--', 'image_digest.py', str(spec_path), str(tmp_path / 'legacy')])
+        assert legacy.returncode == 0, legacy.stderr
+        missing = run(['node', 'vendor/py_launch.cjs', '--env-var', 'IRONMATE_PYTHON', '--', 'image_digest.py', '--json'])
+        assert missing.returncode == 2 and b'"ok":false' in missing.stderr
+        assert b'Traceback' not in missing.stderr
 
 
 def test_ironmate_image_and_ingress_round_trip(tmp_path):
@@ -411,11 +411,12 @@ def test_ironmate_image_and_ingress_round_trip(tmp_path):
     assert decoded.returncode == 0, decoded.stderr
     body = json.loads(decoded.stdout)
     assert body == {'ok': True, 'mime': 'image/png', 'bytes': len(raw)}
-    node = run(['node', 'studio/ingress.cjs', 'decode', str(encoded)])
-    assert node.returncode == 0, node.stderr
-    assert json.loads(node.stdout)['bytes'] == len(raw)
-    bad = run(['node', 'studio/ingress.cjs', '--json', 'decode', str(tmp_path / 'nope.txt')])
-    assert bad.returncode == 2 and b'"ok":false' in bad.stderr
+    if _node_supports_py_launch():
+        node = run(['node', 'vendor/py_launch.cjs', '--env-var', 'IRONMATE_PYTHON', '--', 'studio_ingress.py', 'decode', str(encoded)])
+        assert node.returncode == 0, node.stderr
+        assert json.loads(node.stdout)['bytes'] == len(raw)
+        bad = run(['node', 'vendor/py_launch.cjs', '--env-var', 'IRONMATE_PYTHON', '--', 'studio_ingress.py', '--json', 'decode', str(tmp_path / 'nope.txt')])
+        assert bad.returncode == 2 and b'"ok":false' in bad.stderr
 
 
 def test_render_does_not_wait_on_a_terminal_and_validates_a_file(tmp_path):
@@ -487,7 +488,10 @@ def test_test_catalog_lists_pytest_and_runs_ingress():
     assert text.returncode == 0 and b'pytest' in text.stdout and b'studio-ingress' not in text.stdout
     assert b'node --test tests/studio_ingress.test.cjs' in text.stdout
     ran = run([PY, '-S', 'ironmate_tests.py', 'run', 'studio-ingress'], timeout=60)
-    assert ran.returncode == 0, ran.stdout + ran.stderr
+    if _node_supports_py_launch():
+        assert ran.returncode == 0, ran.stdout + ran.stderr
+    else:
+        assert ran.returncode != 0 and b'Node 26' in (ran.stdout + ran.stderr)
     blocked = run([PY, '-S', 'ironmate_tests.py', 'run', 'image-digest'])
     assert blocked.returncode == 2 and b'DIGEST_PNG' in blocked.stderr
     unknown = run([PY, '-S', 'ironmate_tests.py', 'run', 'no-such-id'])

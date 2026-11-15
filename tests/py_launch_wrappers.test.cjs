@@ -71,7 +71,7 @@ test("vendored run maps responseMaxBytes overflow to ERESPONSETOOLARGE", () => {
 });
 
 test("ironmate mapLaunchError relabels EINPUTTOOLARGE for flow export", () => {
-  const {mapLaunchError} = require(path.join(ROOT, "ironmate_cli.cjs"));
+  const {mapLaunchError} = require(path.join(ROOT, "vendor/py_launch.cjs"));
   const err = Object.assign(
     new Error("py_launch: input exceeds maxInputBytes (100; got 200 bytes)"),
     {code: "EINPUTTOOLARGE"},
@@ -84,7 +84,7 @@ test("ironmate mapLaunchError relabels EINPUTTOOLARGE for flow export", () => {
 });
 
 test("ironmate mapLaunchError relabels ERESPONSETOOLARGE for flow export", () => {
-  const {mapLaunchError} = require(path.join(ROOT, "ironmate_cli.cjs"));
+  const {mapLaunchError} = require(path.join(ROOT, "vendor/py_launch.cjs"));
   const err = Object.assign(
     new Error("py_launch: response exceeds responseMaxBytes (1024)"),
     {code: "ERESPONSETOOLARGE"},
@@ -96,16 +96,100 @@ test("ironmate mapLaunchError relabels ERESPONSETOOLARGE for flow export", () =>
   );
 });
 
-test("wrappers share ironmate_cli.cjs", () => {
-  for (const name of ["flow_export.cjs", "flow_workspace.cjs", "image_digest.cjs"]) {
-    const src = fs.readFileSync(path.join(ROOT, name), "utf8");
-    assert.match(src, /require\("\.\/ironmate_cli\.cjs"\)/);
-    assert.match(src, /require\("\.\/vendor\/py_launch\.cjs"\)/);
+const PY_LAUNCH = {envVar: "IRONMATE_PYTHON", noSite: true};
+
+function renderFlow(spec, options = {}) {
+  const {format = "svg", scale = 1, background, mmdc, chrome, puppeteerConfig, python} = options;
+  const input = Buffer.from(JSON.stringify(spec), "utf8");
+  const args = ["--format", format];
+  for (const [key, value] of [["--scale", scale], ["--background", background],
+    ["--mmdc", mmdc], ["--chrome", chrome], ["--puppeteer-config", puppeteerConfig]]) {
+    if (value !== undefined && value !== null) args.push(key, String(value));
+  }
+  try {
+    const {run} = require(path.join(ROOT, "vendor/py_launch.cjs"));
+    return run(path.join(ROOT, "flow_export.py"), args, {
+      ...PY_LAUNCH,
+      python,
+      input,
+      timeout: 180000,
+    }).stdout;
+  } catch (error) {
+    const {mapLaunchError} = require(path.join(ROOT, "vendor/py_launch.cjs"));
+    throw mapLaunchError("flow Python process failed: ", error);
+  }
+}
+
+function importFlow(raw, options = {}) {
+  const input = Buffer.from(typeof raw === "string" ? raw : JSON.stringify(raw), "utf8");
+  try {
+    const {run} = require(path.join(ROOT, "vendor/py_launch.cjs"));
+    const res = run(path.join(ROOT, "flow_workspace.py"), ["import", "-"], {
+      ...PY_LAUNCH,
+      python: options.python,
+      input,
+      maxInputBytes: 256 * 1024,
+      timeout: 30000,
+    });
+    return JSON.parse(res.stdout);
+  } catch (error) {
+    const {mapLaunchError} = require(path.join(ROOT, "vendor/py_launch.cjs"));
+    throw mapLaunchError("flow workspace Python process failed: ", error);
+  }
+}
+
+function patchWorkspace(workspace, operations, options = {}) {
+  const input = Buffer.from(JSON.stringify({workspace, patch: operations}), "utf8");
+  try {
+    const {run} = require(path.join(ROOT, "vendor/py_launch.cjs"));
+    const res = run(path.join(ROOT, "flow_workspace.py"), ["patch", "-"], {
+      ...PY_LAUNCH,
+      python: options.python,
+      input,
+      timeout: 30000,
+    });
+    return JSON.parse(res.stdout);
+  } catch (error) {
+    const {mapLaunchError} = require(path.join(ROOT, "vendor/py_launch.cjs"));
+    throw mapLaunchError("flow workspace Python process failed: ", error);
+  }
+}
+
+function buildDigest(spec, options = {}) {
+  const {base, out, tile, python} = options;
+  if (!out) throw Error("out directory required");
+  const args = ["-", "--out", out];
+  if (base) args.push("--base", base);
+  if (tile) args.push("--tile", Array.isArray(tile) ? tile.join("x") : String(tile));
+  const input = Buffer.from(JSON.stringify(spec), "utf8");
+  try {
+    const {run} = require(path.join(ROOT, "vendor/py_launch.cjs"));
+    const res = run(path.join(ROOT, "image_digest.py"), args, {
+      ...PY_LAUNCH,
+      python,
+      input,
+      timeout: 30000,
+    });
+    return JSON.parse(res.stdout);
+  } catch (error) {
+    const {mapLaunchError} = require(path.join(ROOT, "vendor/py_launch.cjs"));
+    throw mapLaunchError("image digest Python process failed: ", error);
+  }
+}
+
+test("per-tool wrappers are dropped in favor of direct vendor/py_launch.cjs", () => {
+  for (const name of [
+    "flow_export.cjs", "flow_export.d.cts",
+    "flow_workspace.cjs", "flow_workspace.d.cts",
+    "image_digest.cjs", "image_digest.d.cts",
+    "ironmate_cli.cjs", "ironmate_cli.d.cts",
+    "studio/ingress.cjs", "studio/ingress.d.cts",
+  ]) {
+    assert.ok(!fs.existsSync(path.join(ROOT, name)), `${name} should not exist`);
   }
 });
 
 test("flow_export maps missing interpreter to flow Python process failed", () => {
-  const {renderFlow} = require(path.join(ROOT, "flow_export.cjs"));
   assert.throws(
     () => renderFlow({}, {format: "mermaid", python: "/missing/ironmate-python"}),
     (err) => err.message.startsWith("flow Python process failed: ") && /ENOENT|spawnSync/.test(err.message),
@@ -113,7 +197,6 @@ test("flow_export maps missing interpreter to flow Python process failed", () =>
 });
 
 test("image_digest maps missing interpreter to image digest Python process failed", () => {
-  const {buildDigest} = require(path.join(ROOT, "image_digest.cjs"));
   assert.throws(
     () => buildDigest({schema: "ironmate-image-digest-input/1", rows: [], cols: [], cells: []},
       {base: ROOT, out: os.tmpdir(), python: "/missing/ironmate-python"}),
@@ -122,7 +205,6 @@ test("image_digest maps missing interpreter to image digest Python process faile
 });
 
 test("flow_workspace maps missing interpreter to flow workspace Python process failed", () => {
-  const {importFlow} = require(path.join(ROOT, "flow_workspace.cjs"));
   const raw = fs.readFileSync(path.join(ROOT, "examples/flow.json"), "utf8");
   assert.throws(
     () => importFlow(raw, {python: "/missing/ironmate-python"}),
@@ -130,8 +212,8 @@ test("flow_workspace maps missing interpreter to flow workspace Python process f
   );
 });
 
-test("flow_export CLI exits 2 when IRONMATE_PYTHON is unusable", () => {
-  const result = spawnSync(process.execPath, [path.join(ROOT, "flow_export.cjs"), "--format", "mermaid"],
+test("direct py_launch exits 2 when IRONMATE_PYTHON is unusable", () => {
+  const result = spawnSync(process.execPath, [path.join(ROOT, "vendor/py_launch.cjs"), "--env-var", "IRONMATE_PYTHON", "--", path.join(ROOT, "flow_export.py"), "--format", "mermaid"],
     {env: {...process.env, IRONMATE_PYTHON: "/missing/ironmate-python"}, input: "{}"});
   assert.equal(result.status, 2);
 });
@@ -150,7 +232,6 @@ test("IRONMATE_PYTHON is used before system python3 for flow_export", (t) => {
     if (prev === undefined) delete process.env.IRONMATE_PYTHON;
     else process.env.IRONMATE_PYTHON = prev;
   });
-  const {renderFlow} = require(path.join(ROOT, "flow_export.cjs"));
   try {
     renderFlow(JSON.parse(fs.readFileSync(path.join(ROOT, "examples/flow.json"), "utf8")), {format: "mermaid"});
   } catch {
@@ -169,7 +250,6 @@ test("IRONMATE_PYTHON on Windows resolves to a real python.exe without .cmd shim
   assert.ok(real.toLowerCase().endsWith(".exe"));
   assert.ok(!/\.(cmd|bat)$/i.test(real));
   const {resolvePython} = require(path.join(ROOT, "vendor/py_launch.cjs"));
-  const {PY_LAUNCH} = require(path.join(ROOT, "ironmate_cli.cjs"));
   const prev = process.env.IRONMATE_PYTHON;
   process.env.IRONMATE_PYTHON = real;
   t.after(() => {
@@ -181,7 +261,6 @@ test("IRONMATE_PYTHON on Windows resolves to a real python.exe without .cmd shim
 });
 
 test("flow_workspace rejects oversize stdin with EINPUTTOOLARGE", () => {
-  const {importFlow} = require(path.join(ROOT, "flow_workspace.cjs"));
   const chunk = "x".repeat(4 * 1024 * 1024);
   assert.throws(
     () => importFlow(chunk),
@@ -198,15 +277,13 @@ test("flow_workspace ignores PYTHONPATH shadowing of stdlib xml under isolated m
   const raw = fs.readFileSync(path.join(ROOT, "examples/flow.json"), "utf8");
   const child = spawnSync(
     process.execPath,
-    ["-e", `const {importFlow} = require(${JSON.stringify(path.join(ROOT, "flow_workspace.cjs"))});
-importFlow(${JSON.stringify(raw)});`],
-    {env: {...process.env, PYTHONPATH: shadowDir}, encoding: "utf8"},
+    [path.join(ROOT, "vendor/py_launch.cjs"), "--env-var", "IRONMATE_PYTHON", "--", path.join(ROOT, "flow_workspace.py"), "import", "-"],
+    {env: {...process.env, PYTHONPATH: shadowDir}, input: raw, encoding: "utf8"},
   );
   assert.equal(child.status, 0, child.stderr || child.stdout);
 });
 
 test("flow_workspace isolated mode still imports sibling Ironmate modules", () => {
-  const {importFlow, patchWorkspace} = require(path.join(ROOT, "flow_workspace.cjs"));
   const raw = fs.readFileSync(path.join(ROOT, "examples/flow.json"), "utf8");
   const workspace = importFlow(raw);
   assert.equal(workspace.schema, "ironmate-flow/1");
@@ -217,7 +294,6 @@ test("flow_workspace isolated mode still imports sibling Ironmate modules", () =
 });
 
 test("flow_workspace patch preserves non-ASCII labels through isolated utf-8 child", () => {
-  const {importFlow, patchWorkspace} = require(path.join(ROOT, "flow_workspace.cjs"));
   const raw = fs.readFileSync(path.join(ROOT, "examples/flow.json"), "utf8");
   const workspace = importFlow(raw);
   const value = "日本語ラベル & <text>";
@@ -246,7 +322,6 @@ test("IRONMATE_PYTHON interpreter choice is unaffected by isolated child PYTHONP
     if (prevPythonPath === undefined) delete process.env.PYTHONPATH;
     else process.env.PYTHONPATH = prevPythonPath;
   });
-  const {importFlow} = require(path.join(ROOT, "flow_workspace.cjs"));
   const raw = fs.readFileSync(path.join(ROOT, "examples/flow.json"), "utf8");
   try {
     importFlow(raw);

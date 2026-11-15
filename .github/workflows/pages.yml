@@ -34,7 +34,6 @@ on:
         "tests/test_browser_slides.py",
         ".github/workflows/pages.yml",
       ]
-  workflow_dispatch:
 
 permissions:
   contents: read

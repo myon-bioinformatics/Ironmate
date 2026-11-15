@@ -14,6 +14,8 @@ ROOT = Path(__file__).resolve().parents[1]
 @pytest.fixture
 def xprobe():
     path = ROOT / "build/shared/xprobe.py"
+    if not path.is_file():
+        pytest.skip("build/shared/xprobe.py not present (requires checkout in build/shared)")
     data = path.read_bytes()
     blob = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
     assert blob == "dbc5b7d55005d6288c072a7612584d6170c216f4"

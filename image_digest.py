@@ -14,7 +14,7 @@ Every image becomes a thumbnail embedded as a data URI, so the page is one file 
 open. Thumbnails start at ``--tile`` (default 64x128) and are halved in each direction (a
 quarter of the pixels) until the page fits ``--max-bytes``; the size used is printed on the
 page and in ``digest.json``. Status drives only colour and counts; it is never inferred from
-pixels. Standard library only; image_digest.cjs is the Node entry point.
+pixels. Standard library only; vendor/py_launch.cjs launches it from Node if needed.
 
     python -S image_digest.py input.json --out digest/ [--max-bytes 1000000] [--tile 64x128]
     python -S image_digest.py input.json -o digest/          # -o and --output are the same as --out

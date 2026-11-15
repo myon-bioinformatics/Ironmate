@@ -5,7 +5,27 @@ const {test} = require("node:test");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
-const {buildDigest} = require("../image_digest.cjs");
+const {run} = require("../vendor/py_launch.cjs");
+const ROOT = path.resolve(__dirname, "..");
+const PY_SCRIPT = path.join(ROOT, "image_digest.py");
+
+function buildDigest(spec, options = {}) {
+  const {base, out, tile, python} = options;
+  if (!out) throw Error("out directory required");
+  const args = ["-", "--out", out];
+  if (base) args.push("--base", base);
+  if (tile) args.push("--tile", Array.isArray(tile) ? tile.join("x") : String(tile));
+  const input = Buffer.from(JSON.stringify(spec), "utf8");
+  const res = run(PY_SCRIPT, args, {
+    envVar: "IRONMATE_PYTHON",
+    noSite: true,
+    python,
+    input,
+    timeout: 30000,
+  });
+  if (res.status !== 0) throw Error(res.stderr || "image_digest failed");
+  return JSON.parse(res.stdout);
+}
 
 test("Node builds the same one-page digest through the Python owner", (t) => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "digest-"));

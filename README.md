@@ -264,6 +264,7 @@ git -C build/shared checkout 7e7015b2df69ad446b968f6fa49711b5b1dbdd3f
 git clone --depth 1 https://github.com/myon-bioinformatics/myon-bioinformatics.git .vendor-sync-tools
 python -S .vendor-sync-tools/vendor_sync.py check --manifest vendor.lock.json
 uv run --locked pytest -q -m 'not heavy'
+uv run --locked --only-group stdlib-test pytest -q tests/test_ooxml.py # opt-in nano environment (docs/nano-environment.md)
 python -S ironmate_tests.py list
 ```
 
@@ -305,19 +306,17 @@ into a "page × environment" comparison sheet (PNG, table, JSON). See the [compa
 
 ## Image digest page
 
-`image_digest.py` (`image_digest.cjs` from Node) builds a single lightweight HTML page with thumbnails and
+`image_digest.py` builds a single lightweight HTML page with thumbnails and
 a Markdown summary from a rows × columns set of images and pass/fail results. Thumbnails are shrunk by 1/4 at a time until it fits the size limit. See the [image digest page](docs/image-digest.md) for details.
 
 ## Python from Node (`py_launch`)
 
-`flow_export.cjs`, `flow_workspace.cjs` and `image_digest.cjs` leave the processing to Python and delegate only the launch
-to `vendor/py_launch.cjs` from the parent repository (Node.js 26+). When the API's `python` is omitted, each call briefly checks
+Python tools (`flow_export.py`, `flow_workspace.py`, `image_digest.py`, `studio_ingress.py`) leave the processing to Python and can be invoked directly from Node via
+`vendor/py_launch.cjs` from the parent repository (Node.js 26+). When `python` is omitted, each call briefly checks
 for 3.9+ and tries `IRONMATE_PYTHON` → `PYTHON` → `python3` → `python` (`py -3` on Windows)
-in that order. If `IRONMATE_PYTHON` or the API's `python` is given explicitly, only that is used, with no
-fallback if it is not found. `flow_workspace.cjs` uses `isolated` (CPython `-I`) to ignore the child process's `PYTHON*` environment,
-and `flow_export` etc. in the same directory are put on `sys.path` by the script itself. JSON requests are limited to 4 MiB; exceeding it gives
-`EINPUTTOOLARGE` (`maxInputBytes`) prefixed with `flow workspace Python process failed:`. `IRONMATE_PYTHON` only selects the
-interpreter on the Node side and is not subject to `-I`. For details see
+in that order. If `IRONMATE_PYTHON` or `python` is given explicitly, only that is used, with no
+fallback if it is not found. `py_launch.cjs` supports `isolated` (CPython `-I`) to ignore the child process's `PYTHON*` environment.
+JSON requests can be bounded via `maxInputBytes`. For details see
 [flow export](docs/flow-export.md) and [image digest](docs/image-digest.md).
 
 ## Common JSON flow diagrams

@@ -2,8 +2,18 @@
 // No Playwright/Puppeteer runtime dependency; input HTML comes from core.svg only.
 "use strict";
 const { spawn } = require("node:child_process");
-const { pathToFileURL } = require("node:url");
-const { fail } = require("../ironmate_cli.cjs");
+function fail(tool, message, hint, jsonMode) {
+  const text = String(message || "failed").trim() || "failed";
+  if (jsonMode) {
+    const payload = {ok: false, tool, error: text, exit: 2};
+    if (hint) payload.hint = hint;
+    process.stderr.write(JSON.stringify(payload) + "\n");
+  } else {
+    process.stderr.write(tool + ": " + text + "\n");
+    if (hint) process.stderr.write("hint: " + hint + "\n");
+  }
+  process.exit(2);
+}
 
 const HELP = `studio/raster.cjs — rasterize a local HTML file to PNG on stdout
 

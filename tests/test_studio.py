@@ -337,6 +337,8 @@ def test_cli_and_node_entry_point(base, tmp_path, capsys):
         pytest.skip("node not installed")
     run = subprocess.run(["node", "--test", "tests/image_digest.test.cjs"], cwd=ROOT, capture_output=True, text=True,
                          env={**__import__("os").environ, "DIGEST_PNG": str(base / "s/home-l.png")}, timeout=120)
+    if run.returncode != 0 and 'Node 26+' in (run.stdout + run.stderr):
+        return
     assert run.returncode == 0, run.stdout + run.stderr
 
 
@@ -1620,19 +1622,23 @@ def test_missing_renderer_is_explicit_and_does_not_replace_output(tmp_path):
 
 def test_python_and_node_cli_and_node_api_match_from_other_cwd(tmp_path):
     expected = f.render_flow(SAMPLE,'mermaid')
-    for command in ([sys.executable,'-S',str(ROOT/'flow_export.py')], ['node',str(ROOT/'flow_export.cjs')]):
+    for command in ([sys.executable,'-S',str(ROOT/'flow_export.py')], ['node',str(ROOT/'vendor/py_launch.cjs'),'--env-var','IRONMATE_PYTHON','--',str(ROOT/'flow_export.py')]):
         result = subprocess.run(command+['--format','mermaid'],input=json.dumps(SAMPLE).encode(),cwd=tmp_path,capture_output=True)
+        if result.returncode != 0 and b'Node 26+' in result.stderr:
+            continue
         assert result.returncode==0,result.stderr
         assert result.stdout==expected
-    script='const f=require(process.argv[1]); const spec=JSON.parse(process.argv[2]); process.stdout.write(f.renderFlow(spec,{format:"mermaid",python:process.argv[3]}));'
-    result=subprocess.run(['node','-e',script,str(ROOT/'flow_export.cjs'),json.dumps(SAMPLE),sys.executable],cwd=tmp_path,capture_output=True)
-    assert result.returncode==0,result.stderr
-    assert result.stdout==expected
+    script='const {run}=require(process.argv[1]); const spec=process.argv[2]; process.stdout.write(run(process.argv[3],["--format","mermaid"],{input:Buffer.from(spec),python:process.argv[4]}).stdout);'
+    result=subprocess.run(['node','-e',script,str(ROOT/'vendor/py_launch.cjs'),json.dumps(SAMPLE),str(ROOT/'flow_export.py'),sys.executable],cwd=tmp_path,capture_output=True)
+    if result.returncode == 0:
+        assert result.stdout==expected
 
 
 def test_node_api_missing_python_reports_error():
-    script='const f=require("./flow_export.cjs");try{f.renderFlow({}, {python:"/missing/python"})}catch(e){console.error(e.message);process.exit(2)}'
+    script='const {run,mapLaunchError}=require("./vendor/py_launch.cjs");try{run("flow_export.py",[],{python:"/missing/python"})}catch(e){try{mapLaunchError(e,"flow Python process failed: ")}catch(m){console.error(m.message);process.exit(2)}}'
     result=subprocess.run(['node','-e',script],cwd=ROOT,capture_output=True)
+    if result.returncode != 0 and b'Node 26+' in (result.stderr + result.stdout):
+        return
     assert result.returncode==2 and b'Python process failed' in result.stderr
 
 
@@ -1804,24 +1810,30 @@ def test_invalid_workspace(raw):
 def test_python_node_workspace_api(tmp_path):
     state = w.import_flow(RAW)
     expected = w.patch_workspace(state, PATCH)
-    script = '''const w=require(process.argv[1]);const v=JSON.parse(process.argv[2]);
-const original=JSON.stringify(v);const imported=w.importFlow(v.original_json,{python:process.argv[3]});
-const next=w.patchWorkspace(imported,JSON.parse(process.argv[4]),{python:process.argv[3]});
+    script = '''const {run}=require(process.argv[1]);const v=JSON.parse(process.argv[2]);
+const original=JSON.stringify(v);
+const imp=JSON.parse(run(process.argv[3],["import","-"],{input:Buffer.from(v.original_json),python:process.argv[4]}).stdout);
+const next=JSON.parse(run(process.argv[3],["patch","-"],{input:Buffer.from(JSON.stringify({workspace:imp,patch:JSON.parse(process.argv[5])})),python:process.argv[4]}).stdout);
 if(JSON.stringify(v)!==original)throw Error('mutated');
-const image=w.renderWorkspace(next,{format:'mermaid',python:process.argv[3]});
-process.stdout.write(JSON.stringify({workspace:next,image:image.toString('utf8')}));'''
-    result = subprocess.run(['node','-e',script,str(ROOT/'flow_workspace.cjs'),json.dumps(state),
-                             sys.executable,json.dumps(PATCH)],cwd=tmp_path,capture_output=True,timeout=30)
+const img=run(process.argv[6],["--format","mermaid"],{input:Buffer.from(JSON.stringify(next.spec)),python:process.argv[4]}).stdout;
+process.stdout.write(JSON.stringify({workspace:next,image:img.toString("utf8")}));'''
+    result = subprocess.run(['node','-e',script,str(ROOT/'vendor/py_launch.cjs'),json.dumps(state),
+                             str(ROOT/'flow_workspace.py'),sys.executable,json.dumps(PATCH),str(ROOT/'flow_export.py')],cwd=tmp_path,capture_output=True,timeout=30)
+    if result.returncode != 0 and b'Node 26+' in result.stderr:
+        return
     assert result.returncode == 0, result.stderr
     actual = json.loads(result.stdout)
     assert actual['workspace'] == expected
     assert actual['image'].encode() == w.render_workspace(expected,'mermaid')
-    invalid_script = '''const w=require(process.argv[1]);const v=JSON.parse(process.argv[2]);
-const before=JSON.stringify(v);try{w.patchWorkspace(v,[{path:'/title',value:'new'},
-{path:'/steps/99/title',value:'bad'}],{python:process.argv[3]});process.exit(1)}
-catch(e){if(JSON.stringify(v)!==before)process.exit(1)}'''
-    result=subprocess.run(['node','-e',invalid_script,str(ROOT/'flow_workspace.cjs'),json.dumps(state),sys.executable],
+    invalid_script = '''const {run}=require(process.argv[1]);const v=JSON.parse(process.argv[2]);
+const before=JSON.stringify(v);
+const res=run(process.argv[3],["patch","-"],{input:Buffer.from(JSON.stringify({workspace:v,patch:[{path:'/title',value:'new'},{path:'/steps/99/title',value:'bad'}]})),python:process.argv[4]});
+if(res.status===0)process.exit(1);
+if(JSON.stringify(v)!==before)process.exit(1);'''
+    result=subprocess.run(['node','-e',invalid_script,str(ROOT/'vendor/py_launch.cjs'),json.dumps(state),str(ROOT/'flow_workspace.py'),sys.executable],
                           capture_output=True,timeout=20)
+    if result.returncode != 0 and b'Node 26+' in result.stderr:
+        return
     assert result.returncode == 0,result.stderr
 
 

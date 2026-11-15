@@ -8,7 +8,6 @@ on:
       - scripts/vendor_enrollment_audit.py
       - scripts/parent_vendor_tools_resolve.py
       - .github/workflows/vendor-catalog-audit.yml
-  workflow_dispatch:
 
 permissions:
   contents: read

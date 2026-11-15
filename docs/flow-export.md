@@ -30,7 +30,7 @@ python -S flow_export.py examples/flow.json --format svg --mmdc /path/to/mmdc -o
 python -S flow_export.py examples/flow.json --format png --mmdc /path/to/mmdc --chrome /path/to/chrome -o flow.png
 python -S flow_export.py examples/flow.json --format base64 --mmdc /path/to/mmdc -o flow.base64.txt
 python -S flow_export.py examples/flow.json --format data-uri --mmdc /path/to/mmdc -o flow.data-uri.txt
-node flow_export.cjs examples/flow.json --format mermaid -o flow.md
+node vendor/py_launch.cjs -- flow_export.py examples/flow.json --format mermaid -o flow.md
 ```
 
 Omit the input path to read stdin. Output goes to stdout unless `-o` is supplied.
@@ -59,16 +59,16 @@ Path('flow.png').write_bytes(render_flow(spec, 'png', mmdc='/path/to/mmdc',
 ```
 
 ```js
-const {renderFlow} = require('./flow_export.cjs');
-const spec = require('./examples/flow.json');
-const png = renderFlow(spec, {format: 'png', mmdc: '/path/to/mmdc',
-                              chrome: '/path/to/chrome', python: 'python3'});
-require('node:fs').writeFileSync('flow.png', png);
+const {run} = require('./vendor/py_launch.cjs');
+const spec = JSON.stringify(require('./examples/flow.json'));
+const res = run('flow_export.py', ['--format', 'png', '--mmdc', '/path/to/mmdc',
+                                  '--chrome', '/path/to/chrome'],
+                {input: Buffer.from(spec), envVar: 'IRONMATE_PYTHON'});
+require('node:fs').writeFileSync('flow.png', res.stdout);
 ```
 
-The Node API is a synchronous, bounded Buffer-returning **Python wrapper**, not a
-second implementation. It delegates process launch to the vendored parent
-`vendor/py_launch.cjs` (shared with `flow_workspace.cjs` and `image_digest.cjs`).
+When invoked from Node, process launch delegates to the vendored parent
+`vendor/py_launch.cjs`.
 
 **Interpreter resolution (Node wrappers):** each call runs a short Python 3.9+
 version probe before spawning the tool. The launcher is pinned to parent commit
@@ -113,7 +113,7 @@ rendering.
 
 ## Retained JSON workspace: import → patch → regenerate
 
-`flow_workspace.py` / `flow_workspace.cjs` add a reproducible **structural JSON**
+`flow_workspace.py` adds a reproducible **structural JSON**
 editing path. This is separate from the Image Studio pixel canvas: editing an
 imported PNG there does not update flow labels, and a PNG cannot recover the source
 JSON. A visual Studio scene importer is still outside this path.
@@ -126,8 +126,7 @@ new source creates a new workspace. Workspace files are bounded to 2MiB, origina
 JSON to 256KiB, and patch documents including the working spec to 320KiB.
 
 Editing runs the byte-identical `vendor/ascii_artist.py flow-patch` in an isolated
-Python process (`-I -S -X utf8`). The Node workspace API wraps this same Python path;
-there is no second (Node) patcher or validator. The module and the sample are pinned
+Python process (`-I -S -X utf8`). The module and the sample are pinned
 together to merged ascii_artist `001de63c23396e3ea6333867a169df2c60a50244`, and the
 child lock records commit, Git blob and SHA-256 for each. Do not edit these vendor bytes.
 
@@ -140,8 +139,8 @@ python -S flow_workspace.py render edited.flow.json --format png -o edited.png
 python -S flow_workspace.py render edited.flow.json --format base64 -o edited.base64.txt
 python -S flow_workspace.py original edited.flow.json -o original.json
 python -S flow_workspace.py spec edited.flow.json -o edited.json
-# Same CLI, including renderer options:
-node flow_workspace.cjs render edited.flow.json --format mermaid -o edited.md
+# Run via Node through shared py_launch:
+node vendor/py_launch.cjs -- flow_workspace.py render edited.flow.json --format mermaid -o edited.md
 ```
 
 Supported operations are exactly ascii_artist's array of `{path,value}` entries:
@@ -161,15 +160,6 @@ updated, svg = patch_and_render(workspace,
 # Only receive replacement state and image after both patch and drawing succeed.
 Path('edited.flow.json').write_bytes(workspace_bytes(updated))
 Path('edited.svg').write_bytes(svg)
-```
-
-```js
-const {importFlow, patchAndRender} = require('./flow_workspace.cjs');
-const fs = require('node:fs');
-const original = importFlow(fs.readFileSync('examples/flow.json', 'utf8'));
-const {workspace, image} = patchAndRender(original,
-  [{path:'/steps/0/note', value:'reviewed'}], {format:'png', mmdc:'/path/to/mmdc'});
-// workspace is detached; image is the existing Buffer-returning PNG export.
 ```
 
 Invalid patches and renderer failures leave caller state untouched. CLI output is

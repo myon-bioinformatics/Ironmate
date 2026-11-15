@@ -8,20 +8,14 @@ when the full output is too large to download conveniently, as with browser-test
 ```sh
 python -S image_digest.py input.json --out digest/            # image paths are relative to input.json
 python -S image_digest.py input.json -o digest/               # -o and --output are the same as --out
-node image_digest.cjs input.json digest/                       # from Node (Python does the work)
-node image_digest.cjs input.json --out digest/ --tile 64x128   # same flags as Python
-node image_digest.cjs --help
+node vendor/py_launch.cjs -- image_digest.py input.json --out digest/ # from Node (via shared py_launch)
 ```
 
 Unfixable input exits with code 2. With `--json`, that failure becomes a single JSON object on stderr; stdout on success is unchanged. Missing arguments print usage without waiting.
 
-Types for the Node API (`buildDigest`) are in `image_digest.d.cts`. The other Node APIs (`flow_export.cjs`,
-`flow_workspace.cjs`, `studio/ingress.cjs`) also have `.d.cts` files of the same name; the implementations stay JavaScript.
-
-The Node wrapper launches Python with `vendor/py_launch.cjs`, inherited from the parent. When the API's `python` is omitted,
+Python tools leave the processing to Python and can be invoked directly or via `vendor/py_launch.cjs` (Node.js 26+). When `python` is omitted,
 each call runs a short version check for 3.9+ and then tries, in order, `IRONMATE_PYTHON` → `PYTHON` → `python3` →
-`python` (`py -3` on Windows). The API's `python` or a set `IRONMATE_PYTHON` does not fall back.
-Launch failures give `image digest Python process failed: …` (library) or CLI exit code `2`.
+`python` (`py -3` on Windows). Explicit `python` or `IRONMATE_PYTHON` does not fall back.
 Details are the same as [Node launch for flow export](flow-export.md).
 
 Input is `ironmate-image-digest-input/1`:

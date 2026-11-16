@@ -63,7 +63,7 @@ def _decode_png(data, backend):
     # The reduced-bit writer emits palette PNG; use the existing bounded
     # stdlib decoder for that format while retaining the legacy RGBA path.
     if len(data) >= 26 and data[24] in (1, 2, 4, 8) and data[25] == 3:
-        from pillow_min import decode_png_rgba
+        from vendor.pillow_min import decode_png_rgba
         return decode_png_rgba(data, max_pixels=photo_grid.MAX_PIXELS)
     return photo_grid.decode_png(data)
 

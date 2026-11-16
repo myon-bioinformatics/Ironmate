@@ -3,7 +3,7 @@ import hashlib, json, platform, statistics, sys, time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import pillow_min
+from vendor import pillow_min
 import pixel_grid
 from ironlib import grid_output
 

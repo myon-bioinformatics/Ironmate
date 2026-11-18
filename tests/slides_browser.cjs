@@ -330,6 +330,22 @@ print('Long Japanese/English: visible SVG lines match native PPTX, explicit para
     assert.deepEqual((await state()).deck.slides[1].layers.map((l) => l.kind), ["rect", "arrow"]);
     await act("redo");
     assert.deepEqual((await state()).deck.slides[1].layers.map((l) => l.kind), ["rect", "arrow", "text"]);
+    // 🖼️ a 6MP photo is not refused: StudioCore.picture shrinks it to 1920 on the long side, then ↩️ takes it back
+    const photo = await mobile.evaluate(() => {
+      const c = Object.assign(document.createElement("canvas"), { width: 3000, height: 2000 });
+      c.getContext("2d").fillRect(0, 0, 8, 8);
+      return c.toDataURL("image/png").split(",")[1];
+    });
+    await mobile.setInputFiles('[data-file="image"]', { name: "photo.png", mimeType: "image/png", buffer: Buffer.from(photo, "base64") });
+    await mobile.waitForFunction(() => IronmatePhone.deck.slides[1].layers.length === 4);
+    assert.deepEqual(await mobile.evaluate(async () => {
+      const img = new Image();
+      img.src = IronmatePhone.deck.slides[1].layers[3].src;
+      await img.decode();
+      return [img.naturalWidth, img.naturalHeight];
+    }), [1920, 1280]);
+    await act("undo");
+    assert.deepEqual((await state()).deck.slides[1].layers.map((l) => l.kind), ["rect", "arrow", "text"]);
     // 💾 autosave survives a reload
     await mobile.reload();
     await mobile.waitForFunction(() => !!window.IronmatePhone);

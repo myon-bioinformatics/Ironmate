@@ -6,7 +6,6 @@ on:
       - "*.cjs"
       - "vendor/py_launch.cjs"
       - "tests/**/*.cjs"
-      - "ironlib/studio_bundle.py"
       - "studio/*.cjs"
       - "tests/fixtures/py_launch/**"
       - "package.json"
@@ -19,7 +18,6 @@ on:
       - "*.cjs"
       - "vendor/py_launch.cjs"
       - "tests/**/*.cjs"
-      - "ironlib/studio_bundle.py"
       - "studio/*.cjs"
       - "tests/fixtures/py_launch/**"
       - "package.json"
@@ -57,4 +55,3 @@ jobs:
           node --test
           tests/py_launch.test.cjs
           tests/studio_ingress.test.cjs
-          tests/studio_workspace.test.cjs

@@ -1045,6 +1045,35 @@ const StudioCore = (function (root) {
     next.index = record.index;
     return next;
   }
+  // 💾 ブラウザでファイルを保存（Blob・文字列・バイト列）。どのページもこの 1 つを使う
+  function save(name, data, type) {
+    const url = URL.createObjectURL(data instanceof Blob ? data : new Blob([data], { type })),
+      a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+  }
+  // 🖼️ 画像ファイル → 長辺 longest までの PNG。4MP 超は断る（fit なら 4MP まで縮める: スマホの写真）
+  async function picture(file, longest = Infinity, fit = false) {
+    const url = URL.createObjectURL(file),
+      img = new Image();
+    try {
+      img.src = url;
+      await img.decode();
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+    const w = img.naturalWidth,
+      h = img.naturalHeight;
+    if (w * h > 4194304 && !fit) fail("1画像4MP以下です。");
+    const k = Math.min(1, longest / Math.max(w, h), Math.sqrt(4194304 / (w * h))),
+      canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(w * k));
+    canvas.height = Math.max(1, Math.round(h * k));
+    canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+    return { canvas, src: canvas.toDataURL("image/png"), w: canvas.width, h: canvas.height };
+  }
   const api = {
     SCHEMA,
     WORKSPACE_SCHEMA,
@@ -1067,6 +1096,8 @@ const StudioCore = (function (root) {
     History,
     workspaceText,
     workspaceHistory,
+    save,
+    picture,
   };
   return api;
 })(typeof globalThis !== "undefined" ? globalThis : this);
@@ -2149,14 +2180,7 @@ $("canvas-size").onclick = guarded(() =>
   }),
 );
 function download(name, data, type) {
-  const url = URL.createObjectURL(
-    data instanceof Blob ? data : new Blob([data], { type }),
-  );
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = name;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 10000);
+  C.save(name, data, type);
   message(`${name}を書き出しました`);
 }
 $("save-workspace").onclick = guarded(async () => {
@@ -2930,14 +2954,7 @@ if (typeof document !== "undefined" && document.body && (document.body.dataset.p
       "Python版のプリセットから生成しました。クリックで色番号を編集できます。",
     );
   }
-  const save = (data, type, name) => {
-    const url = URL.createObjectURL(new Blob([data], { type }));
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = name;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 30000);
-  };
+  const { save, picture } = StudioCore;
   async function png() {
     const scale = Number($("scale").value),
       g = C.canonical(grid),
@@ -3008,21 +3025,13 @@ if (typeof document !== "undefined" && document.body && (document.body.dataset.p
     }
   });
   action("grid-json", () =>
-    save(
-      JSON.stringify(grid, null, 2),
-      "application/json",
-      "ironmate-grid.json",
-    ),
+    save("ironmate-grid.json", JSON.stringify(grid, null, 2), "application/json"),
   );
   action("grid-svg", () =>
-    save(
-      C.svg(grid, Number($("scale").value)),
-      "image/svg+xml",
-      "ironmate-grid.svg",
-    ),
+    save("ironmate-grid.svg", C.svg(grid, Number($("scale").value)), "image/svg+xml"),
   );
   action("grid-png", async () =>
-    save(await png(), "image/png", "ironmate-grid.png"),
+    save("ironmate-grid.png", await png(), "image/png"),
   );
   action("grid-base64", async () => {
     const blob = await png(),
@@ -3090,31 +3099,8 @@ if (typeof document !== "undefined" && document.body && (document.body.dataset.p
       for (const file of files) {
         if (!["image/png", "image/jpeg", "image/webp"].includes(file.type))
           throw Error("PNG / JPEG / WebPを選んでください。");
-        const url = URL.createObjectURL(file),
-          image = new Image();
-        try {
-          image.src = url;
-          await image.decode();
-          if (image.naturalWidth * image.naturalHeight > 4194304)
-            throw Error("1画像4MP以下です。");
-          const ratio = Math.min(
-              1,
-              512 / Math.max(image.naturalWidth, image.naturalHeight),
-            ),
-            canvas = document.createElement("canvas");
-          canvas.width = Math.max(1, Math.round(image.naturalWidth * ratio));
-          canvas.height = Math.max(1, Math.round(image.naturalHeight * ratio));
-          canvas
-            .getContext("2d")
-            .drawImage(image, 0, 0, canvas.width, canvas.height);
-          next.push({
-            name: file.name,
-            src: canvas.toDataURL("image/png"),
-            canvas,
-          });
-        } finally {
-          URL.revokeObjectURL(url);
-        }
+        const { src, canvas } = await picture(file, 512);
+        next.push({ name: file.name, src, canvas });
       }
       if (generation !== imageGeneration) return;
       images = next;
@@ -3170,12 +3156,12 @@ if (typeof document !== "undefined" && document.body && (document.body.dataset.p
       canvas.toBlob(resolve, "image/png"),
     );
     if (!blob) throw Error("一覧PNGを生成できませんでした。");
-    save(blob, "image/png", "ironmate-digest.png");
+    save("ironmate-digest.png", blob, "image/png");
   });
   action("digest-html", () => {
     const columns = Number($("columns").value),
       html = `<!doctype html><html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; base-uri 'none'"><title>Ironmate Image Digest</title><style>body{font:14px system-ui;background:#f2f6f3;color:#183d42;margin:24px}.grid{display:grid;grid-template-columns:repeat(${columns},minmax(0,1fr));gap:16px}figure{margin:0;padding:16px;background:white;overflow-wrap:anywhere}img{width:100%;height:210px;object-fit:contain}@media(max-width:600px){.grid{grid-template-columns:1fr}}</style><h1>Ironmate Image Digest</h1><div class="grid">${images.map((i) => `<figure><img src="${i.src}" alt="${C.esc(i.name)}"><figcaption>${C.esc(i.name)}</figcaption></figure>`).join("")}</div></html>`;
-    save(html, "text/html", "ironmate-digest.html");
+    save("ironmate-digest.html", html, "text/html");
   });
   generate();
   window.IronmateWorkbench = {
@@ -3248,14 +3234,7 @@ if (typeof document !== "undefined" && document.body && (document.body.dataset.p
       }
     });
   }
-  function save(name, data, mime) {
-    const url = URL.createObjectURL(new Blob([data], { type: mime })),
-      a = document.createElement("a");
-    a.href = url;
-    a.download = name;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 30000);
-  }
+  const save = C.save;
   async function imageForLayer(layer, scene) {
     return D.layerPng(layer, await E.imageSource(scene)); // 📱 スマホ版と同じ（IronmateSlides.layerPng）
   }
@@ -3644,31 +3623,6 @@ function shape(kind) {
   return (s) => ({ id: uid(kind), kind, name: kind, x: s.width * 0.375, y: s.height * 0.375, w: s.width * 0.25, h: s.height * 0.25,
     rotation: 0, opacity: 1, fill: "#18A7A1", stroke: "#183C42", strokeWidth: 4 });
 }
-async function picture(file) {
-  const img = new Image(),
-    url = URL.createObjectURL(file);
-  try {
-    img.src = url;
-    await img.decode();
-  } finally {
-    URL.revokeObjectURL(url);
-  }
-  // 🖼️ PNG に直して 4MP・長辺 1920 まで（写真もそのまま書き出せる）
-  const k = Math.min(1, 1920 / Math.max(img.naturalWidth, img.naturalHeight), Math.sqrt(4194304 / (img.naturalWidth * img.naturalHeight))),
-    canvas = document.createElement("canvas");
-  canvas.width = Math.max(1, Math.round(img.naturalWidth * k));
-  canvas.height = Math.max(1, Math.round(img.naturalHeight * k));
-  canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
-  return { src: canvas.toDataURL("image/png"), w: canvas.width, h: canvas.height };
-}
-function save(name, data, mime) {
-  const url = URL.createObjectURL(new Blob([data], { type: mime })),
-    a = document.createElement("a");
-  a.href = url;
-  a.download = name;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 30000);
-}
 function scaleText(next) {
   // 🔽 🔄 🔼 すべてのページの文字を同じ倍率で（タイトルと本文の比は保つ）
   if (!scales[next] || next === level) return;
@@ -3752,17 +3706,17 @@ const acts = {
     level = plain;
     selected = null;
   }),
-  save: () => save("ironmate-slides.json", D.deckText(deck), "application/json"),
+  save: () => C.save("ironmate-slides.json", D.deckText(deck), "application/json"),
   async pptx() {
     note("📤 …");
     const result = await D.exportPptx(deck, (l) => D.layerPng(l, (x) => x.src));
-    save("ironmate-slides.pptx", result.data, "application/vnd.openxmlformats-officedocument.presentationml.presentation");
+    C.save("ironmate-slides.pptx", result.data, "application/vnd.openxmlformats-officedocument.presentationml.presentation");
     note(`📤 ✅ ${result.slides}📄`);
   },
 };
 const files = {
   async image(file) {
-    const p = await picture(file),
+    const p = await C.picture(file, 1920, true), // 🖼️ 写真は 4MP・長辺 1920 まで縮めて PNG に
       before = place((s) => {
         const k = Math.min((s.width * 0.6) / p.w, (s.height * 0.6) / p.h);
         return { id: uid("image"), kind: "image", name: "image", x: (s.width - p.w * k) / 2, y: (s.height - p.h * k) / 2,

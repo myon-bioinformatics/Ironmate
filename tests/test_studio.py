@@ -929,7 +929,7 @@ def test_studio_stylesheets_match_the_generator():
     text = STYLE_CSS
     assert '/* css/components.css */' in text and 'body[data-ui-theme="green"]{' in text  # PySaiyanWeBoo's theme
     assert '.ui-elements button,' in text and 'cdn.' not in text
-    for page in ('studio', 'tools', 'brand', 'slides'):
+    for page in ('studio', 'tools', 'brand', 'slides', 'phone'):
         assert f':where([data-page~="{page}"])' in text, page  # page layout is scoped, with zero added specificity
     for page, html in (('studio', STUDIO_HTML), ('tools', TOOLS_HTML), ('brand', BRAND_HTML)):
         assert f'data-page="{page}"' in html, page
@@ -970,7 +970,7 @@ def test_build_site_contains_only_public_client_assets_and_relative_paths(tmp_pa
         assert (target/'brand'/name).is_file()
         expected = BRAND_HTML.encode('utf-8') if name == 'index.html' else (ROOT/'studio/brand'/name).read_bytes()
         assert (target/'brand'/name).read_bytes() == expected
-    for page in ('index.html', 'tools/index.html', 'slides/index.html', 'brand/index.html'):
+    for page in ('index.html', 'tools/index.html', 'slides/index.html', 'slides/phone/index.html', 'brand/index.html'):
         html = (target/page).read_text()
         assert 'src="/' not in html and 'href="/' not in html
     text=(target/'index.html').read_text()
@@ -982,6 +982,47 @@ def test_build_site_contains_only_public_client_assets_and_relative_paths(tmp_pa
     (target/'keep.txt').write_text('local')
     with pytest.raises(FileExistsError): s.build_site(target)
     assert (target/'keep.txt').read_text()=='local'
+
+
+def test_phone_page_is_emoji_only_and_every_control_is_bound():
+    """📱 slides/phone/: the slide is pinned on top; each control shows only its emoji (the words are aria-label/title),
+    the D-pad turns pages, and the one browser script handles every data-act."""
+    import re
+    from html.parser import HTMLParser
+    from ironlib import studio_bundle as b
+    html = image_studio.public_assets()['slides/phone/index.html'].decode('utf-8')
+    assert html == b.PHONE_HTML and 'data-page="phone"' in html and "connect-src 'none'" in html
+    assert '"../../style.css"' in html and '"../../studio.js"' in html and 'src="/' not in html and 'href="/' not in html
+
+    class Controls(HTMLParser):
+        def __init__(self):
+            super().__init__(); self.items, self.open = [], None
+        def handle_starttag(self, tag, attrs):
+            a = dict(attrs)
+            if 'data-act' in a or 'data-go' in a:
+                self.open = {'tag': tag, **a, 'face': ''}; self.items.append(self.open)
+        def handle_endtag(self, tag):
+            if self.open and tag == self.open['tag']:
+                self.open = None
+        def handle_data(self, data):
+            if self.open:
+                self.open['face'] += data.strip()
+    parser = Controls(); parser.feed(html)
+    acts = [i['data-act'] for i in parser.items if 'data-act' in i]
+    assert acts == [act for row in b.PHONE_TOOLS for act, _e, _w in row]
+    words = re.compile(r'[\u3040-\u30ff\u4e00-\u9fffA-Za-z0-9]')
+    for item in parser.items:
+        assert item['face'] and not words.search(item['face']), item  # 🙅 no words on the face
+        assert item['aria-label'] and item['title'] == item['aria-label'], item
+    assert sorted(i['data-dir'] for i in parser.items if 'data-go' in i) == ['down', 'left', 'right', 'up']
+    script = b.STUDIO_JS[b.STUDIO_JS.index('/* Phone slides UI'):]
+    for act in acts:
+        if act in ('studio', 'home'):
+            continue  # plain links
+        assert re.search(rf'(^|[\s{{,])("{re.escape(act)}"|{re.escape(act)})(\(|:)', script, re.M), act  # acts.x / files.x
+    assert 1 in b.PHONE_TEXT['scale'] and b.PHONE_TEXT['size'] % 8 == 0
+    assert f'data-text-scale="{" ".join(f"{v:g}" for v in b.PHONE_TEXT["scale"])}"' in html
+    assert 'href="slides/phone/"' in b.STUDIO_HTML and 'href="phone/"' in image_studio.public_assets()['slides/index.html'].decode()
 
 
 def test_base64_payload_is_standard_padded_png_and_existing_decoder_accepts_it():
@@ -1286,7 +1327,7 @@ def _page_ui(page):
     from ironlib.studio_bundle import STUDIO_JS
     script = STUDIO_JS
     start = script.index(f'(data-page~="{page}")')
-    following = [i for p in ("studio", "tools", "slides") if (i := script.find(f'(data-page~="{p}")')) > start]
+    following = [i for p in ("studio", "tools", "slides", "phone") if (i := script.find(f'(data-page~="{p}")')) > start]
     return script[start:min(following, default=len(script))]
 
 
@@ -1296,10 +1337,11 @@ def test_studio_html_contains_unique_controls_used_by_initialization():
     assets = image_studio.public_assets()
     for page, html in (("studio", STUDIO_HTML),
                        ("tools", TOOLS_HTML),
-                       ("slides", assets["slides/index.html"].decode("utf-8"))):
+                       ("slides", assets["slides/index.html"].decode("utf-8")),
+                       ("phone", assets["slides/phone/index.html"].decode("utf-8"))):
         pages = _Controls()
         pages.feed(html)
-        required = set(re.findall(r'(?:\$|byId)\("([a-z][a-z0-9-]*)"\)', _page_ui(page)))  # studio/tools use $(...), slides byId(...)
+        required = set(re.findall(r'(?:\$|byId)\("([a-z][a-z0-9-]*)"\)', _page_ui(page)))  # studio/tools/phone use $(...), slides byId(...)
         assert required, page
         assert all(len(pages.ids.get(name, [])) == 1 for name in required), (page, sorted(n for n in required if len(pages.ids.get(n, [])) != 1))
     parser = _Controls()

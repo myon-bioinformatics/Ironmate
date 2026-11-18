@@ -24,6 +24,7 @@ STUDIO_HTML = r"""<!doctype html>
       <div class="brand"><img src="brand/heatmap.svg" width="48" height="48" alt="I’m — 🔰がアポストロフィのIronmateロゴ" /><div>IRONMATE <span>IMAGE STUDIO / 01</span></div></div>
       <div class="top-actions">
         <a href="slides/">スライド・PPTX作成 ↗</a>
+        <a href="slides/phone/" title="スマホで作るスライド">📱 スマホ ↗</a>
         <a href="tools/">ドット絵・画像一覧 ↗</a>
         <a href="https://myon-bioinformatics.github.io/#ironmate">ポートフォリオ ↗</a>
         <button id="undo-2" data-steps="2" title="2つ戻す" aria-label="2つ戻す">⏪</button>
@@ -313,7 +314,7 @@ STUDIO_HTML = r"""<!doctype html>
 </html>
 """
 
-STYLE_CSS = r"""/* web-ui-bundle/1 commit=635f2f265ea64d41326772b6b55011d7ad82037c sha256=50a6d21af7b70250fc7e27a2dd372fedd4ef4b427ac2cba5be2de59d79bcf249 scripts/build_studio_css.py*/
+STYLE_CSS = r"""/* web-ui-bundle/1 commit=635f2f265ea64d41326772b6b55011d7ad82037c sha256=3ab567dc348dc389eb51e23a7ca42acb5558521d57531f95399fb2bca903cf93 scripts/build_studio_css.py*/
 @layer base,components,theme;
 /* css/tokens.css */
 :root{--ui-bg:#0d1117;--ui-panel:#101820;--ui-fg:#d1f7c4;--ui-muted:#8b949e;--ui-border:#58a6ff;--ui-accent:#7ee787;--ui-danger:#cf222e;--ui-radius:0;--ui-text:16px;--ui-space:1rem;--ui-max:960px;--ui-font:Meiryo,メイリオ,sans-serif;--ui-font-mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
@@ -488,6 +489,31 @@ body:where([data-page~="brand"]){line-height:1.7;margin:0}
 :where([data-page~="slides"]) #deck-status[data-error=true]{color:var(--ui-danger)}
 :where([data-page~="slides"]) .slide-controls button{min-height:38px}
 @media(max-width:700px){:where([data-page~="slides"]) .slide-controls{padding:14px}:where([data-page~="slides"]) .slide-toolbar{gap:8px}:where([data-page~="slides"]) .slide-template{display:grid;grid-template-columns:1fr}:where([data-page~="slides"]) .slide-template label{max-width:none}:where([data-page~="slides"]) .slide-toolbar label{max-width:100%}:where([data-page~="slides"]) .slide-toolbar select{max-width:100%}}
+
+/* 📱 phone slides: the slide is pinned on top and the emoji controls scroll under it (landscape: beside it) */
+body:where([data-page~="phone"]){margin:0;background:#dfe8df}
+:where([data-page~="phone"]) input[type=file]{display:none}
+:where([data-page~="phone"]) .button{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;cursor:pointer;text-decoration:none;background:var(--ui-panel);color:var(--ui-fg);border:1px solid var(--ui-border);border-radius:var(--ui-radius)}
+:where([data-page~="phone"]) .phone{display:flex;flex-direction:column;height:100dvh;max-width:960px;margin:0 auto}
+:where([data-page~="phone"]) .phone-stage{position:relative;flex:none;width:min(100%,calc(64dvh*16/9));align-self:center;aspect-ratio:16/9;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,.16);overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+:where([data-page~="phone"]) .phone-svg,:where([data-page~="phone"]) .phone-svg svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+:where([data-page~="phone"]) .phone-pick{position:absolute;box-sizing:border-box;border:2px dashed #126fef;pointer-events:none}
+:where([data-page~="phone"]) .phone-pick[hidden],:where([data-page~="phone"]) .phone-edit[hidden]{display:none}
+:where([data-page~="phone"]) .phone-grip{position:absolute;right:-16px;bottom:-16px;width:32px;height:32px;display:grid;place-items:center;border-radius:50%;background:#126fef;color:#fff;font-size:16px;pointer-events:auto;touch-action:none}
+:where([data-page~="phone"]) .phone-edit{flex:1 1 100%;box-sizing:border-box;margin:0;min-height:88px;padding:8px;font-size:16px;line-height:1.5;border:2px solid #126fef;resize:vertical}
+:where([data-page~="phone"]) .phone-deck{flex:1;min-height:0;overflow:auto;display:flex;flex-wrap:wrap;align-items:flex-start;align-content:flex-start;gap:16px;padding:16px}
+:where([data-page~="phone"]) .phone-dpad{flex:none;display:grid;grid-template-columns:repeat(3,48px);grid-auto-rows:48px;gap:8px}
+:where([data-page~="phone"]) .phone-dpad button{min-width:48px;min-height:48px;padding:0;font-size:20px;line-height:1;touch-action:manipulation}
+:where([data-page~="phone"]) .phone-dpad [data-dir=up]{grid-column:2;grid-row:1}:where([data-page~="phone"]) .phone-dpad [data-dir=left]{grid-column:1;grid-row:2}
+:where([data-page~="phone"]) .phone-dpad [data-dir=right]{grid-column:3;grid-row:2}:where([data-page~="phone"]) .phone-dpad [data-dir=down]{grid-column:2;grid-row:3}
+:where([data-page~="phone"]) .phone-dpad output{grid-column:2;grid-row:2;display:grid;place-items:center;font-weight:700;font-size:16px}
+:where([data-page~="phone"]) .phone-tools{flex:1 1 328px;min-width:0;display:flex;flex-direction:column;gap:8px}
+:where([data-page~="phone"]) .phone-row{display:flex;flex-wrap:wrap;gap:8px}
+:where([data-page~="phone"]) .phone-tools button,:where([data-page~="phone"]) .phone-tools .button{min-width:48px;min-height:48px;padding:0 8px;font-size:24px;line-height:1;touch-action:manipulation}
+:where([data-page~="phone"]) .phone-tools button:disabled{opacity:.32}
+:where([data-page~="phone"]) .phone-status{flex:1 1 128px;margin:0;align-self:center;min-height:24px;font-size:16px;overflow-wrap:anywhere}
+:where([data-page~="phone"]) .phone-status[data-error=true]{color:var(--ui-danger)}
+@media(orientation:landscape) and (max-height:560px){:where([data-page~="phone"]) .phone{flex-direction:row;max-width:none}:where([data-page~="phone"]) .phone-stage{height:100dvh;width:auto;max-width:72vw}:where([data-page~="phone"]) .phone-deck{flex-direction:column;flex-wrap:nowrap}:where([data-page~="phone"]) .phone-tools,:where([data-page~="phone"]) .phone-status{flex:none}}
 """
 
 STUDIO_JS = r"""/* Ironmate studio: the one browser script for every page (studio, tools, slides; brand needs none).
@@ -1552,6 +1578,33 @@ const IronmateSlides = (function (root) {
       slides: deck.slides.length,
     };
   }
+  const bytesFromData = (uri) =>
+    Uint8Array.from(atob(uri.split(",")[1]), (c) => c.charCodeAt(0));
+  async function layerPng(layer, imageSource = (x) => x.src) {
+    // Browser only: PNG bytes for a layer PPTX keeps as a picture (images, clocks, heatmaps, 🔰 arrows).
+    if (layer.kind === "image" && !layer.mono)
+      return bytesFromData(imageSource(layer));
+    const l = { ...layer, x: 0, y: 0, rotation: 0, opacity: 1 },
+      scale = Math.min(2, Math.sqrt(4194304 / (l.w * l.h))),
+      canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(l.w * scale));
+    canvas.height = Math.max(1, Math.round(l.h * scale));
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${canvas.width}" height="${canvas.height}" viewBox="0 0 ${l.w} ${l.h}">${C.layerSVG(l, imageSource)}</svg>`;
+    const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" })),
+      image = new Image();
+    try {
+      image.src = url;
+      await image.decode();
+      canvas.getContext("2d").drawImage(image, 0, 0);
+      const blob = await new Promise((resolve) =>
+        canvas.toBlob(resolve, "image/png"),
+      );
+      if (!blob) throw Error("画像レイヤーを出力できませんでした。");
+      return new Uint8Array(await blob.arrayBuffer());
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
   const api = {
     SCHEMA,
     LIMIT,
@@ -1562,6 +1615,7 @@ const IronmateSlides = (function (root) {
     zip,
     isNative,
     exportPptx,
+    layerPng,
   };
   return api;
 })(globalThis);
@@ -3204,32 +3258,8 @@ if (typeof document !== "undefined" && document.body && (document.body.dataset.p
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 30000);
   }
-  const bytesFromData = (uri) =>
-    Uint8Array.from(atob(uri.split(",")[1]), (c) => c.charCodeAt(0));
   async function imageForLayer(layer, scene) {
-    const imageSource = await E.imageSource(scene);
-    if (layer.kind === "image" && !layer.mono)
-      return bytesFromData(imageSource(layer));
-    const l = { ...layer, x: 0, y: 0, rotation: 0, opacity: 1 },
-      scale = Math.min(2, Math.sqrt(4194304 / (l.w * l.h))),
-      canvas = document.createElement("canvas");
-    canvas.width = Math.max(1, Math.round(l.w * scale));
-    canvas.height = Math.max(1, Math.round(l.h * scale));
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${canvas.width}" height="${canvas.height}" viewBox="0 0 ${l.w} ${l.h}">${C.layerSVG(l, imageSource)}</svg>`;
-    const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" })),
-      image = new Image();
-    try {
-      image.src = url;
-      await image.decode();
-      canvas.getContext("2d").drawImage(image, 0, 0);
-      const blob = await new Promise((resolve) =>
-        canvas.toBlob(resolve, "image/png"),
-      );
-      if (!blob) throw Error("画像レイヤーを出力できませんでした。");
-      return new Uint8Array(await blob.arrayBuffer());
-    } finally {
-      URL.revokeObjectURL(url);
-    }
+    return D.layerPng(layer, await E.imageSource(scene)); // 📱 スマホ版と同じ（IronmateSlides.layerPng）
   }
   await E.ready;
   await E.replaceScene(deck.slides[0]);
@@ -3418,6 +3448,401 @@ if (typeof document !== "undefined" && document.body && (document.body.dataset.p
     status.dataset.error = true;
   }
 });
+})();/* Phone slides UI (data-page~="phone"): browser only. The slide stays pinned on top, every control is an emoji
+   (its words are in aria-label/title), the D-pad turns pages, and the deck is the same JSON / PPTX as Slide Studio. */
+if (typeof document !== "undefined" && document.body && (document.body.dataset.page || "").split(" ").includes("phone")) (function () {
+"use strict";
+const C = window.StudioCore,
+  D = window.IronmateSlides,
+  $ = (id) => document.getElementById(id),
+  stage = $("phone-stage"),
+  edit = $("phone-edit"),
+  STORE = "ironmate-phone-deck",
+  textSize = Number(document.body.dataset.textSize),
+  scales = document.body.dataset.textScale.split(" ").map(Number),
+  plain = scales.indexOf(1);
+const blank = (w = 1280, h = 720) => ({ schema: C.SCHEMA, width: w, height: h, background: "#FFFFFF", layers: [] });
+let deck = { schema: D.SCHEMA, title: "Ironmate", slides: [blank()] },
+  active = 0,
+  level = plain,
+  selected = null,
+  editing = null,
+  editBefore = null,
+  drag = null,
+  frame = 0,
+  serial = 0,
+  past = [],
+  future = [];
+const slide = () => deck.slides[active],
+  picked = () => slide().layers.find((l) => l.id === selected),
+  uid = (kind) => `${kind}-${Date.now().toString(36)}-${++serial}`,
+  pct = (v, of) => `${(v / of) * 100}%`,
+  state = () => JSON.stringify({ deck, active, level });
+function note(text, error = false) {
+  const s = $("phone-status");
+  s.textContent = text;
+  s.dataset.error = error;
+}
+function restore(text) {
+  const saved = JSON.parse(text);
+  deck = D.validate(saved.deck);
+  active = Math.min(Math.max(0, saved.active | 0), deck.slides.length - 1);
+  level = scales[saved.level] ? saved.level : plain;
+}
+function keep() {
+  try {
+    localStorage.setItem(STORE, state());
+  } catch {
+    note("⚠️ 💾", true); // 端末の自動保存がいっぱい（画像が大きいとき）。💾 で JSON に保存できる
+  }
+}
+function record(before) {
+  if (before === state()) return;
+  past.push(before);
+  if (past.length > 64) past.shift();
+  future = [];
+  keep();
+}
+function change(fn) {
+  const before = state();
+  fn();
+  D.validate(deck);
+  record(before);
+  render();
+}
+function fit(l, least = 0) {
+  // 📏 文字は箱の幅で折り返し、高さは行数に合わせて伸ばす（書き出しと同じ 1.3 行送り）
+  if (l.kind === "text") l.h = Math.max(least, Math.ceil(C.textLayout(l).flat().length * l.fontSize * 1.3));
+}
+function render() {
+  const s = slide();
+  $("phone-svg").innerHTML = C.svg(s, (l) => l.src); // 👀 打っている文字もそのままスライドに出る
+  $("phone-page").textContent = `${active + 1}/${deck.slides.length}`;
+  const box = $("phone-pick"),
+    l = picked();
+  box.hidden = !l;
+  if (l)
+    Object.assign(box.style, { left: pct(l.x, s.width), top: pct(l.y, s.height), width: pct(l.w, s.width), height: pct(l.h, s.height) });
+  const off = { edit: l?.kind !== "text", delete: !l, undo: !past.length, redo: !future.length,
+    "slide-delete": deck.slides.length < 2, smaller: level === 0, bigger: level === scales.length - 1, reset: level === plain };
+  for (const [act, disabled] of Object.entries(off)) document.querySelector(`[data-act="${act}"]`).disabled = disabled;
+  for (const b of document.querySelectorAll("[data-go]"))
+    b.disabled = active + Number(b.dataset.go) < 0 || active + Number(b.dataset.go) >= deck.slides.length;
+}
+function later() {
+  if (!frame) frame = requestAnimationFrame(() => ((frame = 0), render()));
+}
+function startEdit(before = state()) {
+  const l = picked();
+  if (!l || l.kind !== "text") return;
+  editing = l.id;
+  editBefore = before;
+  edit.value = l.text;
+  edit.hidden = false; // ⌨️ 固定したスライドのすぐ下で打つ（16 px なのでスマホが拡大しない）
+  edit.dataset.least = l.h;
+  render();
+  edit.focus();
+}
+function finishEdit() {
+  if (!editing) return;
+  const s = slide(),
+    l = s.layers.find((x) => x.id === editing);
+  editing = null;
+  edit.hidden = true;
+  if (l) {
+    l.text = edit.value.slice(0, 2000);
+    if (l.text.trim()) fit(l, Number(edit.dataset.least));
+    else {
+      s.layers = s.layers.filter((x) => x !== l); // 空のまま閉じた箱は残さない
+      selected = null;
+    }
+  }
+  record(editBefore);
+  render();
+}
+edit.addEventListener("input", () => {
+  const l = slide().layers.find((x) => x.id === editing);
+  if (!l) return;
+  l.text = edit.value.slice(0, 2000);
+  fit(l, Number(edit.dataset.least));
+  later();
+});
+edit.addEventListener("blur", finishEdit);
+new ResizeObserver(() => stage.style.setProperty("--k", stage.clientWidth / slide().width)).observe(stage);
+
+/* 👆 選ぶ・動かす・↘ で大きさ。選んだ文字をもう一度タップすると編集（後からいつでも直せる） */
+function point(e) {
+  const r = stage.getBoundingClientRect(),
+    s = slide();
+  return { x: ((e.clientX - r.left) / r.width) * s.width, y: ((e.clientY - r.top) / r.height) * s.height };
+}
+function hit(p) {
+  const layers = slide().layers;
+  for (let i = layers.length - 1; i >= 0; i--) {
+    const l = layers[i];
+    if (p.x >= l.x && p.x <= l.x + l.w && p.y >= l.y && p.y <= l.y + l.h) return l;
+  }
+  return null;
+}
+stage.addEventListener("pointerdown", (e) => {
+  if (e.target === edit) return;
+  const p = point(e),
+    grip = !!e.target.closest("[data-grip]"),
+    l = grip ? picked() : hit(p),
+    before = state(),
+    again = !!l && l.id === selected;
+  finishEdit();
+  selected = l ? l.id : null;
+  if (l) {
+    drag = { id: l.id, grip, again, before, start: p, x: l.x, y: l.y, w: l.w, h: l.h, moved: false };
+    stage.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  }
+  render();
+});
+stage.addEventListener("pointermove", (e) => {
+  const l = drag && picked();
+  if (!l) return;
+  const p = point(e),
+    dx = p.x - drag.start.x,
+    dy = p.y - drag.start.y;
+  if (!drag.moved && Math.hypot(dx, dy) < slide().width / 160) return; // 指のぶれ（1280 なら 8）は動かさない
+  drag.moved = true;
+  if (drag.grip) {
+    l.w = Math.max(16, drag.w + dx);
+    l.h = Math.max(16, drag.h + dy);
+    fit(l, l.h);
+  } else {
+    l.x = drag.x + dx;
+    l.y = drag.y + dy;
+  }
+  later();
+});
+stage.addEventListener("pointerup", () => {
+  if (!drag) return;
+  const d = drag;
+  drag = null;
+  if (d.moved) record(d.before);
+  else if (d.again && picked()?.kind === "text") startEdit();
+  render();
+});
+stage.addEventListener("pointercancel", () => {
+  if (drag?.moved) record(drag.before);
+  drag = null;
+});
+
+/* ➕ 置くもの（白紙に足すだけ。図形・矢印・画像は Slide Studio と同じ形） */
+function place(make) {
+  const before = state(),
+    s = slide(),
+    l = make(s);
+  if (s.layers.length >= 100) throw Error("⚠️ 100");
+  s.layers.push(l);
+  selected = l.id;
+  D.validate(deck);
+  return before;
+}
+function shape(kind) {
+  return (s) => ({ id: uid(kind), kind, name: kind, x: s.width * 0.375, y: s.height * 0.375, w: s.width * 0.25, h: s.height * 0.25,
+    rotation: 0, opacity: 1, fill: "#18A7A1", stroke: "#183C42", strokeWidth: 4 });
+}
+async function picture(file) {
+  const img = new Image(),
+    url = URL.createObjectURL(file);
+  try {
+    img.src = url;
+    await img.decode();
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+  // 🖼️ PNG に直して 4MP・長辺 1920 まで（写真もそのまま書き出せる）
+  const k = Math.min(1, 1920 / Math.max(img.naturalWidth, img.naturalHeight), Math.sqrt(4194304 / (img.naturalWidth * img.naturalHeight))),
+    canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(img.naturalWidth * k));
+  canvas.height = Math.max(1, Math.round(img.naturalHeight * k));
+  canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+  return { src: canvas.toDataURL("image/png"), w: canvas.width, h: canvas.height };
+}
+function save(name, data, mime) {
+  const url = URL.createObjectURL(new Blob([data], { type: mime })),
+    a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
+}
+function scaleText(next) {
+  // 🔽 🔄 🔼 すべてのページの文字を同じ倍率で（タイトルと本文の比は保つ）
+  if (!scales[next] || next === level) return;
+  const r = scales[next] / scales[level];
+  change(() => {
+    for (const s of deck.slides)
+      for (const l of s.layers)
+        if (l.kind === "text") {
+          l.fontSize = Math.min(512, Math.max(4, Math.round(l.fontSize * r * 10) / 10));
+          fit(l);
+        }
+    level = next;
+  });
+}
+function go(delta) {
+  finishEdit();
+  const next = active + delta;
+  if (next < 0 || next >= deck.slides.length) return;
+  active = next;
+  selected = null;
+  keep();
+  render();
+}
+const acts = {
+  text() {
+    const size = textSize * scales[level],
+      before = place((s) => ({ id: uid("text"), kind: "text", name: "text", x: s.width * 0.1,
+        y: Math.min(s.height - size * 1.3, s.height * 0.08 + s.layers.filter((l) => l.kind === "text").length * size * 2),
+        w: s.width * 0.8, h: Math.ceil(size * 1.3), rotation: 0, opacity: 1, text: "", fill: "#000000",
+        fontSize: size, font: "sans", mono: false, bold: false, wrap: true }));
+    startEdit(before); // ⌨️ そのまま打てる
+  },
+  rect: () => record(place(shape("rect"))),
+  ellipse: () => record(place(shape("ellipse"))),
+  triangle: () => record(place(shape("triangle"))),
+  arrow: () => record(place((s) => ({ id: uid("arrow"), kind: "arrow", name: "arrow", x: s.width * 0.25, y: s.height * 0.45,
+    w: s.width * 0.5, h: s.height * 0.1, rotation: 0, opacity: 1, fill: "#000000", stroke: "#000000", strokeWidth: 4,
+    headSize: 28, headPlacement: "tip", headStyle: "triangle" }))),
+  edit: () => startEdit(),
+  delete: () => change(() => {
+    slide().layers = slide().layers.filter((l) => l.id !== selected);
+    selected = null;
+  }),
+  undo() {
+    if (!past.length) return;
+    future.push(state());
+    restore(past.pop());
+    selected = null;
+    keep();
+  },
+  redo() {
+    if (!future.length) return;
+    past.push(state());
+    restore(future.pop());
+    selected = null;
+    keep();
+  },
+  smaller: () => scaleText(level - 1),
+  reset: () => scaleText(plain),
+  bigger: () => scaleText(level + 1),
+  "slide-add": () => change(() => {
+    if (deck.slides.length >= 20) throw Error("⚠️ 20");
+    deck.slides.splice(active + 1, 0, blank(slide().width, slide().height));
+    active += 1;
+    selected = null;
+  }),
+  "slide-copy": () => change(() => {
+    if (deck.slides.length >= 20) throw Error("⚠️ 20");
+    deck.slides.splice(active + 1, 0, C.clone(slide()));
+    active += 1;
+  }),
+  "slide-delete": () => change(() => {
+    if (deck.slides.length < 2) return;
+    deck.slides.splice(active, 1);
+    active = Math.min(active, deck.slides.length - 1);
+    selected = null;
+  }),
+  new: () => change(() => {
+    deck = { schema: D.SCHEMA, title: "Ironmate", slides: [blank()] };
+    active = 0;
+    level = plain;
+    selected = null;
+  }),
+  save: () => save("ironmate-slides.json", D.deckText(deck), "application/json"),
+  async pptx() {
+    note("📤 …");
+    const result = await D.exportPptx(deck, (l) => D.layerPng(l, (x) => x.src));
+    save("ironmate-slides.pptx", result.data, "application/vnd.openxmlformats-officedocument.presentationml.presentation");
+    note(`📤 ✅ ${result.slides}📄`);
+  },
+};
+const files = {
+  async image(file) {
+    const p = await picture(file),
+      before = place((s) => {
+        const k = Math.min((s.width * 0.6) / p.w, (s.height * 0.6) / p.h);
+        return { id: uid("image"), kind: "image", name: "image", x: (s.width - p.w * k) / 2, y: (s.height - p.h * k) / 2,
+          w: p.w * k, h: p.h * k, rotation: 0, opacity: 1, src: p.src, cell: 1, levels: 256, sampling: "smooth" };
+      });
+    record(before);
+  },
+  async open(file) {
+    const before = state(),
+      next = D.parse(await file.text()); // Slide Studio の「全スライドJSON」もそのまま開ける
+    deck = next;
+    active = 0;
+    level = plain;
+    selected = null;
+    record(before);
+  },
+};
+let busy = false;
+async function run(fn) {
+  if (busy) return;
+  busy = true;
+  try {
+    await fn();
+    if (!/^📤/.test($("phone-status").textContent)) note("");
+  } catch (e) {
+    note(e.message, true);
+  } finally {
+    busy = false;
+    render();
+  }
+}
+for (const b of document.querySelectorAll("button[data-act], [data-go]"))
+  b.addEventListener("pointerdown", (e) => e.preventDefault()); // 編集中に押しても入力欄が先に閉じない（閉じて並びがずれ、押し外さない）
+for (const b of document.querySelectorAll("button[data-act]"))
+  b.addEventListener("click", () => {
+    const act = acts[b.dataset.act];
+    if (b.dataset.act !== "edit") finishEdit();
+    run(act);
+  });
+for (const input of document.querySelectorAll("input[data-file]"))
+  input.addEventListener("change", () => {
+    const file = input.files[0];
+    input.value = "";
+    finishEdit();
+    if (file) run(() => files[input.dataset.file](file));
+  });
+for (const b of document.querySelectorAll("[data-go]")) b.addEventListener("click", () => go(Number(b.dataset.go)));
+document.addEventListener("keydown", (e) => {
+  if (editing || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+  const step = { ArrowLeft: -1, ArrowUp: -1, ArrowRight: 1, ArrowDown: 1 }[e.key];
+  if (step) {
+    e.preventDefault();
+    go(step);
+  } else if ((e.key === "Delete" || e.key === "Backspace") && selected) run(acts.delete);
+  else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") run(e.shiftKey ? acts.redo : acts.undo);
+});
+try {
+  const saved = localStorage.getItem(STORE);
+  if (saved) restore(saved);
+} catch {
+  deck = { schema: D.SCHEMA, title: "Ironmate", slides: [blank()] };
+}
+stage.style.setProperty("--k", stage.clientWidth / slide().width);
+render();
+window.IronmatePhone = {
+  get deck() {
+    return C.clone(deck);
+  },
+  get active() {
+    return active;
+  },
+  get selected() {
+    return selected;
+  },
+  get level() {
+    return level;
+  },
+};
 })();
 """
 
@@ -3482,6 +3907,60 @@ SLIDES_PANEL_HTML = r"""<section class="slide-controls" aria-label="スライド
   </p>
 </section>
 """
+
+# 📱 Phone slides (slides/phone/): the slide stays pinned on top and every control is an emoji; the words live in
+# aria-label / title only. Each row is (data-act, emoji, words); the browser script binds data-act by name.
+PHONE_TOOLS = (
+    (("text", "🔤", "テキストボックスを追加"), ("rect", "🟦", "四角を追加"), ("ellipse", "⚪", "丸を追加"),
+     ("triangle", "🔺", "三角を追加"), ("arrow", "➡️", "矢印を追加"), ("image", "🖼️", "画像を追加")),
+    (("smaller", "🔽", "文字をすべて小さく"), ("reset", "🔄", "文字をすべて元の大きさに"), ("bigger", "🔼", "文字をすべて大きく")),
+    (("edit", "✏️", "選んだ文字を編集（選んだ文字をもう一度タップしても編集）"), ("delete", "🗑️", "選んだものを削除"),
+     ("undo", "↩️", "戻す"), ("redo", "↪️", "やり直す")),
+    (("slide-add", "➕📄", "白紙のページを追加"), ("slide-copy", "📑", "ページを複製"), ("slide-delete", "✖️📄", "ページを削除"),
+     ("new", "🆕", "最初から（白紙 1 枚）")),
+    (("save", "💾", "全スライドJSONで保存（Slide Studio でも開ける）"), ("open", "📂", "全スライドJSONを開く"),
+     ("pptx", "📤", "PPTXを書き出す"), ("studio", "🖥️", "Slide Studio（PC 向け）"), ("home", "🏠", "Image Studio")),
+)
+# 🔽 🔄 🔼 multiply every text box by the next / plain / previous step; new boxes are 32 px on the 1280×720 slide.
+PHONE_TEXT = {"size": 32, "scale": (0.5, 0.75, 1, 1.25, 1.5, 2, 2.5)}
+# ▲ ◀ = previous page, ▶ ▼ = next page (as PowerPoint's arrow keys); the middle shows "page/pages".
+PHONE_DPAD = (("up", "-1", "▲"), ("left", "-1", "◀"), ("right", "1", "▶"), ("down", "1", "▼"))
+
+
+def _phone_html() -> str:
+    from html import escape
+
+    def control(act: str, emoji: str, words: str) -> str:
+        label = f'aria-label="{escape(words)}" title="{escape(words)}"'
+        if act in ("image", "open"):
+            accept = "image/png,image/jpeg,image/webp" if act == "image" else ".json,application/json"
+            return f'<label class="button" data-act="{act}" {label}>{emoji}<input type="file" data-file="{act}" accept="{accept}" /></label>'
+        if act in ("studio", "home"):
+            return f'<a class="button" href="{"../" if act == "studio" else "../../"}" data-act="{act}" {label}>{emoji}</a>'
+        return f'<button type="button" data-act="{act}" {label}>{emoji}</button>'
+
+    rows = "".join('<div class="phone-row">' + "".join(control(*tool) for tool in row) + "</div>" for row in PHONE_TOOLS)
+    pad = "".join(f'<button type="button" data-dir="{d}" data-go="{step}" aria-label="{"前" if step == "-1" else "次"}のページ" '
+                  f'title="{"前" if step == "-1" else "次"}のページ">{glyph}</button>' for d, step, glyph in PHONE_DPAD)
+    head = STUDIO_HTML[:STUDIO_HTML.index("</head>")]
+    for name in ("style.css", "studio.js", "brand/manifest.webmanifest", "brand/apple-touch-icon.png", "brand/favicon.ico",
+                 "brand/icon.svg"):
+        head = head.replace(f'"{name}"', f'"../../{name}"')
+    head = head.replace("Ironmate — Image Studio", "Ironmate — Phone Slides")
+    scale = " ".join(f"{v:g}" for v in PHONE_TEXT["scale"])
+    return (head + "</head>\n"
+            f'  <body class="ui-elements" data-ui-theme="green" data-page="phone" data-text-size="{PHONE_TEXT["size"]}" data-text-scale="{scale}">\n'
+            '    <main class="phone">\n'
+            '      <div id="phone-stage" class="phone-stage" aria-label="スライド"><div id="phone-svg" class="phone-svg"></div>'
+            '<div id="phone-pick" class="phone-pick" hidden><span class="phone-grip" data-grip aria-hidden="true">↘</span></div></div>\n'
+            '      <div class="phone-deck"><textarea id="phone-edit" class="phone-edit" hidden aria-label="文字" rows="3" spellcheck="false"></textarea>'
+            f'<div class="phone-dpad" role="group" aria-label="ページ移動">{pad}<output id="phone-page" aria-live="polite">1/1</output></div>'
+            '<p id="phone-status" class="phone-status" role="status"></p>'
+            f'<div class="phone-tools" role="toolbar" aria-label="道具">{rows}</div></div>\n'
+            "    </main>\n  </body>\n</html>\n")
+
+
+PHONE_HTML = _phone_html()
 
 TOOLS_HTML = r"""<!doctype html>
 <html lang="ja">

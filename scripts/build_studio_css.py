@@ -189,11 +189,38 @@ SLIDES_RULES = """/* slide studio panel (loaded after style.css) */
 @media(max-width:700px){.slide-controls{padding:14px}.slide-toolbar{gap:8px}.slide-template{display:grid;grid-template-columns:1fr}.slide-template label{max-width:none}.slide-toolbar label{max-width:100%}.slide-toolbar select{max-width:100%}}
 """
 
+PHONE_RULES = """/* 📱 phone slides: the slide is pinned on top and the emoji controls scroll under it (landscape: beside it) */
+body{margin:0;background:#dfe8df}
+input[type=file]{display:none}
+.button{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;cursor:pointer;text-decoration:none;background:var(--ui-panel);color:var(--ui-fg);border:1px solid var(--ui-border);border-radius:var(--ui-radius)}
+.phone{display:flex;flex-direction:column;height:100dvh;max-width:960px;margin:0 auto}
+.phone-stage{position:relative;flex:none;width:min(100%,calc(64dvh*16/9));align-self:center;aspect-ratio:16/9;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,.16);overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.phone-svg,.phone-svg svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.phone-pick{position:absolute;box-sizing:border-box;border:2px dashed #126fef;pointer-events:none}
+.phone-pick[hidden],.phone-edit[hidden]{display:none}
+.phone-grip{position:absolute;right:-16px;bottom:-16px;width:32px;height:32px;display:grid;place-items:center;border-radius:50%;background:#126fef;color:#fff;font-size:16px;pointer-events:auto;touch-action:none}
+.phone-edit{flex:1 1 100%;box-sizing:border-box;margin:0;min-height:88px;padding:8px;font-size:16px;line-height:1.5;border:2px solid #126fef;resize:vertical}
+.phone-deck{flex:1;min-height:0;overflow:auto;display:flex;flex-wrap:wrap;align-items:flex-start;align-content:flex-start;gap:16px;padding:16px}
+.phone-dpad{flex:none;display:grid;grid-template-columns:repeat(3,48px);grid-auto-rows:48px;gap:8px}
+.phone-dpad button{min-width:48px;min-height:48px;padding:0;font-size:20px;line-height:1;touch-action:manipulation}
+.phone-dpad [data-dir=up]{grid-column:2;grid-row:1}.phone-dpad [data-dir=left]{grid-column:1;grid-row:2}
+.phone-dpad [data-dir=right]{grid-column:3;grid-row:2}.phone-dpad [data-dir=down]{grid-column:2;grid-row:3}
+.phone-dpad output{grid-column:2;grid-row:2;display:grid;place-items:center;font-weight:700;font-size:16px}
+.phone-tools{flex:1 1 328px;min-width:0;display:flex;flex-direction:column;gap:8px}
+.phone-row{display:flex;flex-wrap:wrap;gap:8px}
+.phone-tools button,.phone-tools .button{min-width:48px;min-height:48px;padding:0 8px;font-size:24px;line-height:1;touch-action:manipulation}
+.phone-tools button:disabled{opacity:.32}
+.phone-status{flex:1 1 128px;margin:0;align-self:center;min-height:24px;font-size:16px;overflow-wrap:anywhere}
+.phone-status[data-error=true]{color:var(--ui-danger)}
+@media(orientation:landscape) and (max-height:560px){.phone{flex-direction:row;max-width:none}.phone-stage{height:100dvh;width:auto;max-width:72vw}.phone-deck{flex-direction:column;flex-wrap:nowrap}.phone-tools,.phone-status{flex:none}}
+"""
+
 
 NOTE = "scripts/build_studio_css.py"
 
 
-PAGES = (("studio", "STUDIO_RULES"), ("tools", "TOOLS_RULES"), ("brand", "GALLERY_RULES"), ("slides", "SLIDES_RULES"))
+PAGES = (("studio", "STUDIO_RULES"), ("tools", "TOOLS_RULES"), ("brand", "GALLERY_RULES"), ("slides", "SLIDES_RULES"),
+         ("phone", "PHONE_RULES"))
 
 
 def scoped(css: str, page: str) -> str:

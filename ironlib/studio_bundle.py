@@ -314,7 +314,7 @@ STUDIO_HTML = r"""<!doctype html>
 </html>
 """
 
-STYLE_CSS = r"""/* web-ui-bundle/1 commit=635f2f265ea64d41326772b6b55011d7ad82037c sha256=3ab567dc348dc389eb51e23a7ca42acb5558521d57531f95399fb2bca903cf93 scripts/build_studio_css.py*/
+STYLE_CSS = r"""/* web-ui-bundle/1 commit=635f2f265ea64d41326772b6b55011d7ad82037c sha256=df2b42a8532a5f42ef57f1714ed2dac96cfce6e6b2fd3030b1e208d7a4fc770d scripts/build_studio_css.py*/
 @layer base,components,theme;
 /* css/tokens.css */
 :root{--ui-bg:#0d1117;--ui-panel:#101820;--ui-fg:#d1f7c4;--ui-muted:#8b949e;--ui-border:#58a6ff;--ui-accent:#7ee787;--ui-danger:#cf222e;--ui-radius:0;--ui-text:16px;--ui-space:1rem;--ui-max:960px;--ui-font:Meiryo,メイリオ,sans-serif;--ui-font-mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
@@ -502,11 +502,9 @@ body:where([data-page~="phone"]){margin:0;background:#dfe8df}
 :where([data-page~="phone"]) .phone-grip{position:absolute;right:-16px;bottom:-16px;width:32px;height:32px;display:grid;place-items:center;border-radius:50%;background:#126fef;color:#fff;font-size:16px;pointer-events:auto;touch-action:none}
 :where([data-page~="phone"]) .phone-edit{flex:1 1 100%;box-sizing:border-box;margin:0;min-height:88px;padding:8px;font-size:16px;line-height:1.5;border:2px solid #126fef;resize:vertical}
 :where([data-page~="phone"]) .phone-deck{flex:1;min-height:0;overflow:auto;display:flex;flex-wrap:wrap;align-items:flex-start;align-content:flex-start;gap:16px;padding:16px}
-:where([data-page~="phone"]) .phone-dpad{flex:none;display:grid;grid-template-columns:repeat(3,48px);grid-auto-rows:48px;gap:8px}
-:where([data-page~="phone"]) .phone-dpad button{min-width:48px;min-height:48px;padding:0;font-size:20px;line-height:1;touch-action:manipulation}
-:where([data-page~="phone"]) .phone-dpad [data-dir=up]{grid-column:2;grid-row:1}:where([data-page~="phone"]) .phone-dpad [data-dir=left]{grid-column:1;grid-row:2}
-:where([data-page~="phone"]) .phone-dpad [data-dir=right]{grid-column:3;grid-row:2}:where([data-page~="phone"]) .phone-dpad [data-dir=down]{grid-column:2;grid-row:3}
-:where([data-page~="phone"]) .phone-dpad output{grid-column:2;grid-row:2;display:grid;place-items:center;font-weight:700;font-size:16px}
+:where([data-page~="phone"]) .phone-pages{flex:none;display:flex;align-items:center;gap:8px}
+:where([data-page~="phone"]) .phone-pages button{min-width:48px;min-height:48px;padding:0 8px;font-size:24px;line-height:1;touch-action:manipulation}
+:where([data-page~="phone"]) .phone-pages output{min-width:48px;text-align:center;font-weight:700;font-size:16px}
 :where([data-page~="phone"]) .phone-tools{flex:1 1 328px;min-width:0;display:flex;flex-direction:column;gap:8px}
 :where([data-page~="phone"]) .phone-row{display:flex;flex-wrap:wrap;gap:8px}
 :where([data-page~="phone"]) .phone-tools button,:where([data-page~="phone"]) .phone-tools .button{min-width:48px;min-height:48px;padding:0 8px;font-size:24px;line-height:1;touch-action:manipulation}
@@ -3449,7 +3447,7 @@ if (typeof document !== "undefined" && document.body && (document.body.dataset.p
   }
 });
 })();/* Phone slides UI (data-page~="phone"): browser only. The slide stays pinned on top, every control is an emoji
-   (its words are in aria-label/title), the D-pad turns pages, and the deck is the same JSON / PPTX as Slide Studio. */
+   (its words are in aria-label/title), ⬅️ ➡️ turn pages, and the deck is the same JSON / PPTX as Slide Studio. */
 if (typeof document !== "undefined" && document.body && (document.body.dataset.page || "").split(" ").includes("phone")) (function () {
 "use strict";
 const C = window.StudioCore,
@@ -3912,7 +3910,7 @@ SLIDES_PANEL_HTML = r"""<section class="slide-controls" aria-label="スライド
 # aria-label / title only. Each row is (data-act, emoji, words); the browser script binds data-act by name.
 PHONE_TOOLS = (
     (("text", "🔤", "テキストボックスを追加"), ("rect", "🟦", "四角を追加"), ("ellipse", "⚪", "丸を追加"),
-     ("triangle", "🔺", "三角を追加"), ("arrow", "➡️", "矢印を追加"), ("image", "🖼️", "画像を追加")),
+     ("triangle", "🔺", "三角を追加"), ("arrow", "↗️", "矢印を追加"), ("image", "🖼️", "画像を追加")),
     (("smaller", "🔽", "文字をすべて小さく"), ("reset", "🔄", "文字をすべて元の大きさに"), ("bigger", "🔼", "文字をすべて大きく")),
     (("edit", "✏️", "選んだ文字を編集（選んだ文字をもう一度タップしても編集）"), ("delete", "🗑️", "選んだものを削除"),
      ("undo", "↩️", "戻す"), ("redo", "↪️", "やり直す")),
@@ -3923,8 +3921,8 @@ PHONE_TOOLS = (
 )
 # 🔽 🔄 🔼 multiply every text box by the next / plain / previous step; new boxes are 32 px on the 1280×720 slide.
 PHONE_TEXT = {"size": 32, "scale": (0.5, 0.75, 1, 1.25, 1.5, 2, 2.5)}
-# ▲ ◀ = previous page, ▶ ▼ = next page (as PowerPoint's arrow keys); the middle shows "page/pages".
-PHONE_DPAD = (("up", "-1", "▲"), ("left", "-1", "◀"), ("right", "1", "▶"), ("down", "1", "▼"))
+# ⬅️ previous page, ➡️ next page; the middle shows "page/pages" (keyboard ← ↑ / → ↓ do the same).
+PHONE_PAGES = (("-1", "⬅️", "前のページ"), ("1", "➡️", "次のページ"))
 
 
 def _phone_html() -> str:
@@ -3940,8 +3938,8 @@ def _phone_html() -> str:
         return f'<button type="button" data-act="{act}" {label}>{emoji}</button>'
 
     rows = "".join('<div class="phone-row">' + "".join(control(*tool) for tool in row) + "</div>" for row in PHONE_TOOLS)
-    pad = "".join(f'<button type="button" data-dir="{d}" data-go="{step}" aria-label="{"前" if step == "-1" else "次"}のページ" '
-                  f'title="{"前" if step == "-1" else "次"}のページ">{glyph}</button>' for d, step, glyph in PHONE_DPAD)
+    back, ahead = (f'<button type="button" data-go="{step}" aria-label="{words}" title="{words}">{glyph}</button>'
+                   for step, glyph, words in PHONE_PAGES)
     head = STUDIO_HTML[:STUDIO_HTML.index("</head>")]
     for name in ("style.css", "studio.js", "brand/manifest.webmanifest", "brand/apple-touch-icon.png", "brand/favicon.ico",
                  "brand/icon.svg"):
@@ -3954,7 +3952,7 @@ def _phone_html() -> str:
             '      <div id="phone-stage" class="phone-stage" aria-label="スライド"><div id="phone-svg" class="phone-svg"></div>'
             '<div id="phone-pick" class="phone-pick" hidden><span class="phone-grip" data-grip aria-hidden="true">↘</span></div></div>\n'
             '      <div class="phone-deck"><textarea id="phone-edit" class="phone-edit" hidden aria-label="文字" rows="3" spellcheck="false"></textarea>'
-            f'<div class="phone-dpad" role="group" aria-label="ページ移動">{pad}<output id="phone-page" aria-live="polite">1/1</output></div>'
+            f'<div class="phone-pages" role="group" aria-label="ページ移動">{back}<output id="phone-page" aria-live="polite">1/1</output>{ahead}</div>'
             '<p id="phone-status" class="phone-status" role="status"></p>'
             f'<div class="phone-tools" role="toolbar" aria-label="道具">{rows}</div></div>\n'
             "    </main>\n  </body>\n</html>\n")

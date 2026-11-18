@@ -233,7 +233,7 @@ print('Long Japanese/English: visible SVG lines match native PPTX, explicit para
 `], { encoding: "utf8" });
     assert.equal(wrapped.status, 0, wrapped.stderr);
     console.log(wrapped.stdout.trim());
-    // 📱 Phone slides: the slide stays pinned on top, emoji controls, D-pad pages, text editable later.
+    // 📱 Phone slides: the slide stays pinned on top, emoji controls, ⬅️ ➡️ pages, text editable later.
     const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, acceptDownloads: true }),
       mobile = await phone.newPage(),
       shots = [];
@@ -306,25 +306,25 @@ print('Long Japanese/English: visible SVG lines match native PPTX, explicit para
     await act("smaller");
     assert.equal((await state()).deck.slides[0].layers[0].fontSize, 24);
     await act("reset");
-    // ➕📄 pages and the D-pad
+    // ➕📄 pages and ⬅️ ➡️
     await act("slide-add");
     assert.equal(await mobile.textContent("#phone-page"), "2/2");
     await act("rect");
     await act("arrow");
     await act("text");
     await mobile.keyboard.type("2 ページ目");
-    await mobile.tap('[data-dir="left"]');
+    await mobile.tap('[data-go="-1"]');
     assert.equal(await mobile.textContent("#phone-page"), "1/2");
-    await mobile.tap('[data-dir="down"]');
+    await mobile.tap('[data-go="1"]');
     assert.equal(await mobile.textContent("#phone-page"), "2/2");
     s = await state();
     assert.deepEqual(s.deck.slides[1].layers.map((l) => l.kind), ["rect", "arrow", "text"]);
     await snap("page-2");
-    await mobile.tap('[data-dir="up"]');
+    await mobile.tap('[data-go="-1"]');
     assert.equal(await mobile.textContent("#phone-page"), "1/2");
-    await snap("dpad-back");
-    assert.ok(await mobile.locator('[data-dir="up"]').isDisabled());
-    await mobile.tap('[data-dir="right"]');
+    await snap("page-back");
+    assert.ok(await mobile.locator('[data-go="-1"]').isDisabled());
+    await mobile.tap('[data-go="1"]');
     // ↩️ undo the last box, ↪️ redo it
     await act("undo");
     assert.deepEqual((await state()).deck.slides[1].layers.map((l) => l.kind), ["rect", "arrow"]);

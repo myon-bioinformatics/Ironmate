@@ -986,7 +986,7 @@ def test_build_site_contains_only_public_client_assets_and_relative_paths(tmp_pa
 
 def test_phone_page_is_emoji_only_and_every_control_is_bound():
     """📱 slides/phone/: the slide is pinned on top; each control shows only its emoji (the words are aria-label/title),
-    the D-pad turns pages, and the one browser script handles every data-act."""
+    ⬅️ ➡️ turn pages, and the one browser script handles every data-act."""
     import re
     from html.parser import HTMLParser
     from ironlib import studio_bundle as b
@@ -1014,7 +1014,7 @@ def test_phone_page_is_emoji_only_and_every_control_is_bound():
     for item in parser.items:
         assert item['face'] and not words.search(item['face']), item  # 🙅 no words on the face
         assert item['aria-label'] and item['title'] == item['aria-label'], item
-    assert sorted(i['data-dir'] for i in parser.items if 'data-go' in i) == ['down', 'left', 'right', 'up']
+    assert [(i['data-go'], i['face']) for i in parser.items if 'data-go' in i] == [('-1', '⬅️'), ('1', '➡️')]
     script = b.STUDIO_JS[b.STUDIO_JS.index('/* Phone slides UI'):]
     for act in acts:
         if act in ('studio', 'home'):

@@ -149,21 +149,36 @@ def test_clipboard_workflow_uses_matching_browsers_with_version_floors_and_keeps
     node_index = next(i for i, step in enumerate(steps) if step.get("uses", "").startswith("actions/setup-node@"))
     assert steps[node_index]["with"]["node-version"] == ">=26"
     install_index = names.index("Install isolated test-only Playwright")
+    restore_index = names.index("Restore WebKit apt downloads (written only by main)")
     apt_index = names.index("Bound apt dependency setup")
     deps_index = names.index("Install clipboard browser OS dependencies")
     browser_index = names.index("Install browser matching the resolved Playwright package")
     verify_index = names.index("Verify clipboard ingress in the static Pages build")
     upload_index = names.index("Preserve clipboard browser evidence")
-    assert node_index < install_index < apt_index < deps_index < browser_index < verify_index < upload_index
-    install, apt, deps, browser, verify, upload = (steps[i] for i in (
-        install_index, apt_index, deps_index, browser_index, verify_index, upload_index,
+    assert node_index < install_index < restore_index < apt_index < deps_index < browser_index < verify_index < upload_index
+    install, restore, apt, deps, browser, verify, upload = (steps[i] for i in (
+        install_index, restore_index, apt_index, deps_index, browser_index, verify_index, upload_index,
     ))
     assert install["timeout-minutes"] == 5
     assert shlex.split(install["run"]) == [
         "npm", "install", "--prefix", "build/clipboard-tools", "--no-save",
         "--ignore-scripts", "--package-lock=false", "--no-audit", "--no-fund", "playwright@>=1.64.1",
     ]
+    assert restore["if"] == "matrix.browser == 'webkit'"
+    assert restore["timeout-minutes"] == 2
+    assert restore["uses"].startswith("actions/cache/restore@")
+    mcp_jobs = yaml.safe_load((ROOT / ".github/workflows/mcp-tests.yml").read_text())["jobs"]
+    mcp_steps = mcp_jobs["studio-clipboard"]["steps"]
+    producer = next(step for step in mcp_steps if step.get("name") == "Save apt downloads (main only, when they changed)")
+    sibling_restore = next(step for step in mcp_steps if step.get("name") == "Restore apt downloads (written only by main)")
+    assert restore["with"] == sibling_restore["with"]
+    assert restore["with"]["path"] == producer["with"]["path"] == "${{ runner.temp }}/apt-archives"
+    assert restore["with"]["key"] == producer["with"]["key"]
+    assert all(not step.get("uses", "").startswith(("actions/cache@", "actions/cache/save@")) for step in steps)
     assert apt["timeout-minutes"] == 2
+    assert apt["env"]["CLIPBOARD_BROWSER"] == "${{ matrix.browser }}"
+    assert '[ "$CLIPBOARD_BROWSER" = webkit ]' in apt["run"]
+    assert '--archives "$RUNNER_TEMP/apt-archives"' in apt["run"]
     assert "sudo python3 -S scripts/configure_ci_apt.py" in apt["run"]
     assert "sudo apt-config dump" in apt["run"]
     cli = "node build/clipboard-tools/node_modules/playwright/cli.js"

@@ -37,7 +37,9 @@ not a guarantee of faithfully reproducing edited PPTX in HTML.
 
 ## Create slides in the browser
 
-[Open Slide Studio](https://myon-bioinformatics.github.io/Ironmate/slides/). Place titles, body text and arrows with the same operations as Image Studio, and save multiple slides to PPTX. Text and ordinary shapes are output in a form editable in PowerPoint. [Usage and scope](docs/slide-studio.md).
+[Open Slide Studio](https://myon-bioinformatics.github.io/Ironmate/slides/). Place titles, body text and arrows with the same operations as Image Studio, and save multiple slides to PPTX. Text and ordinary shapes are output in a form editable in PowerPoint. [Usage and scope](docs/slide-studio.md). On a phone, [📱 Phone slides](https://myon-bioinformatics.github.io/Ironmate/slides/phone/) keeps the slide pinned on top with emoji-only controls and ⬅️ ➡️ for pages ([usage](docs/slide-studio.md#-phone-slides)).
+
+<img src="docs/assets/phone-slides.gif" width="240" alt="Phone slides: a blank slide pinned on top, adding a text box, editing it later, making every text bigger, a second page with a rectangle and an arrow, and turning pages with ⬅️ ➡️">
 
 ## PPTX conversion and editing
 

@@ -233,6 +233,187 @@ print('Long Japanese/English: visible SVG lines match native PPTX, explicit para
 `], { encoding: "utf8" });
     assert.equal(wrapped.status, 0, wrapped.stderr);
     console.log(wrapped.stdout.trim());
+    // 📱 Phone slides: the slide stays pinned on top, emoji controls, ⬅️ ➡️ pages, text editable later.
+    const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, acceptDownloads: true }),
+      mobile = await phone.newPage(),
+      shots = [];
+    mobile.on("pageerror", (e) => errors.push(e.message));
+    mobile.on("request", (r) => requests.push(r.url()));
+    const snap = async (name) => {
+      const file = path.join(out, `phone-${String(shots.length + 1).padStart(2, "0")}-${name}.png`);
+      await mobile.screenshot({ path: file });
+      shots.push(file);
+    };
+    const state = () => mobile.evaluate(() => ({ deck: IronmatePhone.deck, active: IronmatePhone.active, level: IronmatePhone.level, selected: IronmatePhone.selected }));
+    const act = (name) => mobile.tap(`[data-act="${name}"]`);
+    const stageAt = async (fx, fy) => {
+      const box = await mobile.locator("#phone-stage").boundingBox();
+      return { x: box.x + box.width * fx, y: box.y + box.height * fy };
+    };
+    await mobile.goto(url + "phone/");
+    await mobile.waitForFunction(() => !!window.IronmatePhone);
+    const stageBox = await mobile.locator("#phone-stage").boundingBox();
+    assert.equal(Math.round(stageBox.y), 0); // 📌 pinned at the top, full width, 16:9
+    assert.equal(Math.round(stageBox.width), 390);
+    assert.ok(Math.abs(stageBox.height - (390 * 9) / 16) < 2);
+    assert.deepEqual((await state()).deck.slides[0].layers, []); // ⬜ starts blank
+    for (const label of await mobile.$$eval("[data-act]", (nodes) => nodes.map((n) => n.textContent.trim())))
+      assert.ok(!/[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}A-Za-z]/u.test(label), label); // emoji only on the face
+    await snap("blank");
+    await act("text");
+    assert.ok(await mobile.locator("#phone-edit").isVisible());
+    assert.equal(await mobile.evaluate(() => document.activeElement.id), "phone-edit"); // ⌨️ ready to type
+    await mobile.keyboard.type("こんにちは Ironmate");
+    await snap("typing");
+    let p = await stageAt(0.5, 0.9);
+    await mobile.touchscreen.tap(p.x, p.y); // tap outside → the box is kept
+    let s = await state();
+    assert.equal(s.deck.slides[0].layers.length, 1);
+    assert.equal(s.deck.slides[0].layers[0].text, "こんにちは Ironmate");
+    assert.equal(s.deck.slides[0].layers[0].fontSize, 32);
+    // ✏️ later: tap to select, tap again to edit the same box
+    const layer = s.deck.slides[0].layers[0];
+    p = await stageAt((layer.x + 40) / 1280, (layer.y + layer.h / 2) / 720);
+    await mobile.touchscreen.tap(p.x, p.y);
+    assert.equal((await state()).selected, layer.id);
+    await mobile.touchscreen.tap(p.x, p.y);
+    assert.ok(await mobile.locator("#phone-edit").isVisible());
+    assert.equal(await mobile.inputValue("#phone-edit"), "こんにちは Ironmate");
+    await mobile.fill("#phone-edit", "あとから編集した文字\n2 行目");
+    await snap("edit-later");
+    p = await stageAt(0.5, 0.9);
+    await mobile.touchscreen.tap(p.x, p.y);
+    s = await state();
+    assert.equal(s.deck.slides[0].layers[0].text, "あとから編集した文字\n2 行目");
+    assert.ok(s.deck.slides[0].layers[0].h >= 2 * 32 * 1.3 - 1); // 📏 grows with its lines
+    // 👆 drag moves the box
+    const before = s.deck.slides[0].layers[0];
+    const from = await stageAt((before.x + 40) / 1280, (before.y + 20) / 720),
+      to = await stageAt((before.x + 40) / 1280, (before.y + 20 + 160) / 720);
+    await mobile.mouse.move(from.x, from.y);
+    await mobile.mouse.down();
+    await mobile.mouse.move(to.x, to.y, { steps: 8 });
+    await mobile.mouse.up();
+    s = await state();
+    assert.ok(Math.abs(s.deck.slides[0].layers[0].y - (before.y + 160)) < 8, JSON.stringify(s.deck.slides[0].layers[0]));
+    // 🔼 🔄 🔽 every text box together
+    await act("bigger");
+    await act("bigger");
+    assert.equal((await state()).deck.slides[0].layers[0].fontSize, 48);
+    await snap("bigger");
+    await act("reset");
+    assert.equal((await state()).deck.slides[0].layers[0].fontSize, 32);
+    await act("smaller");
+    assert.equal((await state()).deck.slides[0].layers[0].fontSize, 24);
+    await act("reset");
+    // ➕📄 pages and ⬅️ ➡️
+    await act("slide-add");
+    assert.equal(await mobile.textContent("#phone-page"), "2/2");
+    await act("rect");
+    await act("arrow");
+    await act("text");
+    await mobile.keyboard.type("2 ページ目");
+    await mobile.tap('[data-go="-1"]');
+    assert.equal(await mobile.textContent("#phone-page"), "1/2");
+    await mobile.tap('[data-go="1"]');
+    assert.equal(await mobile.textContent("#phone-page"), "2/2");
+    s = await state();
+    assert.deepEqual(s.deck.slides[1].layers.map((l) => l.kind), ["rect", "arrow", "text"]);
+    await snap("page-2");
+    await mobile.tap('[data-go="-1"]');
+    assert.equal(await mobile.textContent("#phone-page"), "1/2");
+    await snap("page-back");
+    assert.ok(await mobile.locator('[data-go="-1"]').isDisabled());
+    await mobile.tap('[data-go="1"]');
+    // ↩️ undo the last box, ↪️ redo it
+    await act("undo");
+    assert.deepEqual((await state()).deck.slides[1].layers.map((l) => l.kind), ["rect", "arrow"]);
+    await act("redo");
+    assert.deepEqual((await state()).deck.slides[1].layers.map((l) => l.kind), ["rect", "arrow", "text"]);
+    // 💾 autosave survives a reload
+    await mobile.reload();
+    await mobile.waitForFunction(() => !!window.IronmatePhone);
+    s = await state();
+    assert.equal(s.deck.slides.length, 2);
+    assert.equal(s.deck.slides[0].layers[0].text, "あとから編集した文字\n2 行目");
+    // 📤 PPTX and 💾 JSON (the same all-slide JSON Slide Studio opens)
+    const [pptx] = await Promise.all([mobile.waitForEvent("download"), act("pptx")]);
+    await pptx.saveAs(path.join(out, "phone.pptx"));
+    const [json] = await Promise.all([mobile.waitForEvent("download"), act("save")]);
+    await json.saveAs(path.join(out, "phone.json"));
+    await snap("saved");
+    const phoneCheck = spawnSync(process.env.PYTHON || "python", ["-S", "-c", `
+from pathlib import Path
+from zipfile import ZipFile
+from xml.etree import ElementTree as E
+from ironlib.pptx_ooxml import require_package, ordered_slide_members
+p=Path('build/pages-evidence/phone.pptx')
+assert require_package(p)==2
+ns={'a':'http://schemas.openxmlformats.org/drawingml/2006/main'}
+with ZipFile(p) as z:
+    texts=[[t.text for t in E.fromstring(z.read(m)).findall('.//a:t',ns)] for m in ordered_slide_members(z)]
+assert texts==[['あとから編集した文字','2 行目'],['2 ページ目']], texts
+print('📱 phone: 2 slides, native text kept')
+`], { encoding: "utf8" });
+    assert.equal(phoneCheck.status, 0, phoneCheck.stderr);
+    console.log(phoneCheck.stdout.trim());
+    await page.setInputFiles("#deck-open", path.join(out, "phone.json"));
+    await page.waitForFunction(() => IronmateSlideEditor.deck.slides.length === 2);
+    assert.equal((await page.evaluate(() => IronmateSlideEditor.deck)).slides[0].layers[0].text, "あとから編集した文字\n2 行目");
+    fs.writeFileSync(path.join(out, "phone-frames.json"), JSON.stringify(shots.map((f) => path.basename(f)), null, 2));
+    // The same multiplier is bounded by the largest font, then reversed across a reload.
+    const openPhone = async (deck) => {
+      await mobile.setInputFiles('input[data-file="open"]', {
+        name: "test.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(deck)),
+      });
+      await mobile.waitForFunction((title) => IronmatePhone.deck.title === title, deck.title);
+    };
+    const scaleDeck = s.deck;
+    scaleDeck.title = "font bounds";
+    scaleDeck.slides[0].layers[0].fontSize = 320;
+    scaleDeck.slides[1].layers.find((l) => l.kind === "text").fontSize = 160;
+    await openPhone(scaleDeck);
+    const fonts = async () => (await state()).deck.slides.flatMap((slide) =>
+      slide.layers.filter((l) => l.kind === "text").map((l) => l.fontSize));
+    for (let i = 0; i < 4; i++) await act("bigger");
+    assert.deepEqual(await fonts(), [512, 256]);
+    await mobile.reload();
+    await mobile.waitForFunction(() => !!window.IronmatePhone);
+    await act("reset");
+    assert.deepEqual(await fonts(), [320, 160]);
+
+    // A storage failure must remain visible after the action and clear on the next successful write.
+    const storageKey = "ironmate-phone-deck";
+    const stored = await mobile.evaluate((key) => localStorage.getItem(key), storageKey);
+    await mobile.evaluate(() => {
+      window.restoreStorage = Storage.prototype.setItem;
+      Storage.prototype.setItem = () => { throw new DOMException("full", "QuotaExceededError"); };
+    });
+    await act("rect");
+    await mobile.waitForFunction(() => document.querySelector("#phone-status").textContent.includes("⚠️ 💾"));
+    assert.equal(await mobile.evaluate((key) => localStorage.getItem(key), storageKey), stored);
+    await mobile.evaluate(() => { Storage.prototype.setItem = window.restoreStorage; });
+    await act("undo");
+    await mobile.waitForFunction(() => !document.querySelector("#phone-status").textContent.includes("⚠️ 💾"));
+
+    // A rejected duplicate must not alter the active page or create a history entry.
+    // This synthetic payload exercises the 32MiB deck validator, not image decoding.
+    const image = { id: "big", kind: "image", x: 0, y: 0, w: 128, h: 128, rotation: 0, opacity: 1,
+      src: "data:image/png;base64," + "A".repeat(9_000_000), cell: 1, levels: 256 };
+    const largeDeck = { ...scaleDeck, title: "deck bounds",
+      slides: [{ ...scaleDeck.slides[0], layers: [image, { ...image, id: "big2" }] }] };
+    await openPhone(largeDeck);
+    await act("slide-copy");
+    await mobile.waitForFunction(() => document.querySelector("#phone-status").textContent.includes("32MiB"));
+    assert.equal(await mobile.textContent("#phone-page"), "1/1");
+    assert.equal(await mobile.evaluate(() => IronmatePhone.active), 0);
+    assert.ok(await mobile.locator('[data-act="redo"]').isDisabled());
+    const [stillExportable] = await Promise.all([mobile.waitForEvent("download"), act("save")]);
+    assert.equal(await stillExportable.failure(), null);
+    await act("undo");
+    await mobile.waitForFunction(() => IronmatePhone.deck.title === "font bounds");
+    await phone.close();
+    assert(requests.every((r) => r.startsWith(new URL(url).origin + "/") || /^(blob|data):/.test(r)));
     assert.deepEqual(errors, []);
   } finally {
     await browser.close();

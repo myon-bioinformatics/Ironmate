@@ -116,7 +116,7 @@ def mosaic(artifact, cell=8, levels=256):
 
 def public_assets():
     """Explicit publication allowlist; no user scenes, globbing, or local images."""
-    from ironlib.studio_bundle import BRAND_HTML, SLIDES_PANEL_HTML, STUDIO_HTML, STUDIO_JS, STYLE_CSS, TOOLS_HTML
+    from ironlib.studio_bundle import BRAND_HTML, PHONE_HTML, SLIDES_PANEL_HTML, STUDIO_HTML, STUDIO_JS, STYLE_CSS, TOOLS_HTML
     names = ('brand/mono.svg', 'brand/dark-green.svg',
              'brand/famicom.svg', 'brand/gameboy.svg', 'brand/pixel-3d.svg',
              'brand/manifest.webmanifest', 'brand/apple-touch-icon.png', 'brand/app-192.png',
@@ -137,12 +137,13 @@ def public_assets():
                  'brand/manifest.webmanifest', 'brand/apple-touch-icon.png',
                  'brand/example-demo.gif', 'brand/example-stamp-demo.gif'):
         page = page.replace('"' + name + '"', '"../' + name + '"')
-    page = page.replace('href="tools/"', 'href="../tools/"')
+    page = page.replace('href="tools/"', 'href="../tools/"').replace('href="slides/phone/"', 'href="phone/"')
     page = page.replace('<a href="slides/">スライド・PPTX作成 ↗</a>', '<a href="../">Image Studio ↗</a>')
     page = page.replace('<body class="ui-elements" data-ui-theme="green" data-page="studio">', '<body class="ui-elements" data-ui-theme="green" data-page="studio slides" data-mode="slides">').replace('画像にする。', 'スライドにする。')
     page = page.replace('IMAGE STUDIO / 01', 'SLIDE STUDIO / 03').replace('Ironmate — Image Studio', 'Ironmate — Slide Studio')
     page = page.replace('</header>', '</header>' + SLIDES_PANEL_HTML)
     assets['slides/index.html'] = page.encode('utf-8')
+    assets['slides/phone/index.html'] = PHONE_HTML.encode('utf-8')  # 📱 the same deck JSON / PPTX on a phone
     return assets
 
 
@@ -275,7 +276,7 @@ class StudioHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         assets = cached_public_assets()
         route = self.path.split('?', 1)[0]
-        filename = {'/': 'index.html', '/tools/': 'tools/index.html', '/slides/': 'slides/index.html', '/brand/': 'brand/index.html'}.get(route, route.lstrip('/'))
+        filename = {'/': 'index.html', '/tools/': 'tools/index.html', '/slides/': 'slides/index.html', '/slides/phone/': 'slides/phone/index.html', '/brand/': 'brand/index.html'}.get(route, route.lstrip('/'))
         if filename not in assets:
             self.send_error(404)
             return

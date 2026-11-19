@@ -19,9 +19,9 @@ Unsaved changes are confirmed when leaving the page. There is no autosave or re-
 
 https://myon-bioinformatics.github.io/Ironmate/slides/phone/
 
-<img src="assets/phone-slides.gif" width="240" alt="Phone slides in a 390×844 browser: blank slide, text box, editing later, bigger text, page 2, ⬅️ back to page 1">
+<img src="assets/phone-slides.gif" width="240" alt="Phone slides in a 390×844 browser: blank slide, text box, editing later, bigger text, page 2, ⬅️ back to page 1, then 🧭 through the six pager shapes">
 
-A phone-first page for the same deck. The slide stays pinned at the top while you work, and every control is an emoji (its words are only in the tooltip / screen-reader label). Landscape puts the controls beside the slide.
+A phone-first page for the same deck. The slide stays pinned at the top while you work, and every control is an emoji (its words are only in the tooltip / screen-reader label). Landscape puts the controls beside the slide. The pinned slide and the page controls are PySaiyanWeBoo's `stage` and `pager` components (`scripts/build_studio_css.py` writes them from the pinned commit).
 
 | | |
 | --- | --- |
@@ -29,12 +29,13 @@ A phone-first page for the same deck. The slide stays pinned at the top while yo
 | 🔤 🟦 ⚪ 🔺 ↗️ 🖼️ | Add a text box (type right away), a rectangle, circle, triangle, arrow or picture (photos become PNG, at most 4 MP and 1920 px on the long side) |
 | 👆 ↘ | Tap to select, drag to move, drag ↘ to resize. Tap a selected text box again (or ✏️) to edit it later; the editor sits under the slide at 16 px so phones do not zoom, and the slide updates as you type. A box left empty is removed |
 | 🔽 🔄 🔼 | Every text box on every slide together: 0.5, 0.75, 1, 1.25, 1.5, 2, 2.5 × (titles keep their ratio to body text). New boxes start at 32 px × the current step |
-| ⬅️ ➡️ | Previous / next page, right under the slide; the middle shows page / pages. Keyboard ← ↑ / → ↓ do the same |
+| ⬅️ ➡️ | Previous / next page, right under the slide; the middle shows page / pages. Keyboard ← / → (Home / End: first / last) do the same |
+| 🧭 | The shape of the page controls, one tap each, no reload (kept on this device): ⬅️ 1/N ➡️ → ● dots → 🎚️ slider → 🎛️ dial → ✚ cross-key (⬆️ first, ⬇️ last) → ⏮️ ⬅️ 1/N ➡️ ⏭️ |
 | ➕📄 📑 ✖️📄 🆕 | Add a blank page, duplicate, delete, start over |
 | 🗑️ ↩️ ↪️ | Delete the selection, undo, redo (64 steps) |
 | 💾 📂 📤 | All-slide JSON save / open (the same file Slide Studio opens, so arrows, images and fonts can be finished on a PC) and PPTX export |
 
-The GIF is the frames `tests/slides_browser.cjs` saves (`build/pages-evidence/phone-*.png`, 390×844) at 1.4 s each.
+The GIF is the frames `tests/slides_browser.cjs` saves (`build/pages-evidence/phone-*.png`, 390×844; `phone-frames.json` lists them) at 1.4 s each, 0.9 s for the 🧭 shapes.
 
 The deck is also kept in the browser's local storage, so a reload or a killed tab comes back where it was. Nothing is sent anywhere. If the local storage is full (large pictures), the status shows ⚠️ 💾; save with 💾.
 

@@ -1,7 +1,7 @@
-"""Regenerate the studio stylesheet from PySaiyanWeBoo (pysaiyanweboo).
+"""Regenerate the studio stylesheet and the PySaiyanWeBoo parts from PySaiyanWeBoo (pysaiyanweboo).
 
-    uv run --group test python scripts/build_studio_css.py          # rewrite studio/style.css (one sheet for every page)
-    uv run --group test python scripts/build_studio_css.py --check  # exit 1 when a committed file is stale
+    uv run --group test python scripts/build_studio_css.py          # rewrite STYLE_CSS and the pysaiyanweboo parts in ironlib/studio_bundle.py
+    uv run --group test python scripts/build_studio_css.py --check  # exit 1 when either is stale
 
 The sheet is ``pysaiyanweboo.write_bundle`` output: ``core_css()`` (tokens, base, components) with PySaiyanWeBoo's ``green`` theme
 (``CANDIDATE_THEMES``) + the rules below, which are only this studio's layout: header and brand, the three-column
@@ -9,10 +9,14 @@ workspace, the board and its handles, the shelf cards, the inspector. Buttons, i
 tables take the component look through ``class="ui-elements"`` on ``<body>``; nothing generic lives here.
 The file is committed (the studio is served as static files and image_studio.py is stdlib-only), and
 ``tests/test_studio.py`` (``pysaiyanweboo.check_bundle``) fails when it drifts.
+
+The 📱 page's 🖼️ stage and 🧭 pager are PySaiyanWeBoo components too (``pswb_parts()``): their stylesheets join the sheet, their
+markup is ``PSWB_PHONE`` and their modules ride in studio.js as one classic script, each written here from the pinned commit.
 """
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 from pathlib import Path
 
@@ -189,28 +193,25 @@ SLIDES_RULES = """/* slide studio panel (loaded after style.css) */
 @media(max-width:700px){.slide-controls{padding:14px}.slide-toolbar{gap:8px}.slide-template{display:grid;grid-template-columns:1fr}.slide-template label{max-width:none}.slide-toolbar label{max-width:100%}.slide-toolbar select{max-width:100%}}
 """
 
-PHONE_RULES = """/* 📱 phone slides: the slide is pinned on top and the emoji controls scroll under it (landscape: beside it) */
+PHONE_RULES = """/* 📱 phone slides: the slide is pinned on top (PySaiyanWeBoo's .ui-stage) and the emoji controls scroll under it (landscape: beside it) */
 body{margin:0;background:#dfe8df}
 input[type=file]{display:none}
 .button{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;cursor:pointer;text-decoration:none;background:var(--ui-panel);color:var(--ui-fg);border:1px solid var(--ui-border);border-radius:var(--ui-radius)}
 .phone{display:flex;flex-direction:column;height:100dvh;max-width:960px;margin:0 auto}
-.phone-stage{position:relative;flex:none;width:min(100%,calc(64dvh*16/9));align-self:center;aspect-ratio:16/9;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,.16);overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
-.phone-svg,.phone-svg svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.ui-stage{background:#fff;border:0;box-shadow:0 8px 24px rgba(0,0,0,.16);touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.phone-svg svg{position:absolute;inset:0;width:100%;height:100%;display:block}
 .phone-pick{position:absolute;box-sizing:border-box;border:2px dashed #126fef;pointer-events:none}
 .phone-pick[hidden],.phone-edit[hidden]{display:none}
 .phone-grip{position:absolute;right:-16px;bottom:-16px;width:32px;height:32px;display:grid;place-items:center;border-radius:50%;background:#126fef;color:#fff;font-size:16px;pointer-events:auto;touch-action:none}
 .phone-edit{flex:1 1 100%;box-sizing:border-box;margin:0;min-height:88px;padding:8px;font-size:16px;line-height:1.5;border:2px solid #126fef;resize:vertical}
 .phone-deck{flex:1;min-height:0;overflow:auto;display:flex;flex-wrap:wrap;align-items:flex-start;align-content:flex-start;gap:16px;padding:16px}
-.phone-pages{flex:none;display:flex;align-items:center;gap:8px}
-.phone-pages button{min-width:48px;min-height:48px;padding:0 8px;font-size:24px;line-height:1;touch-action:manipulation}
-.phone-pages output{min-width:48px;text-align:center;font-weight:700;font-size:16px}
 .phone-tools{flex:1 1 328px;min-width:0;display:flex;flex-direction:column;gap:8px}
 .phone-row{display:flex;flex-wrap:wrap;gap:8px}
 .phone-tools button,.phone-tools .button{min-width:48px;min-height:48px;padding:0 8px;font-size:24px;line-height:1;touch-action:manipulation}
 .phone-tools button:disabled{opacity:.32}
 .phone-status{flex:1 1 128px;margin:0;align-self:center;min-height:24px;font-size:16px;overflow-wrap:anywhere}
 .phone-status[data-error=true]{color:var(--ui-danger)}
-@media(orientation:landscape) and (max-height:560px){.phone{flex-direction:row;max-width:none}.phone-stage{height:100dvh;width:auto;max-width:72vw}.phone-deck{flex-direction:column;flex-wrap:nowrap}.phone-tools,.phone-status{flex:none}}
+@media(orientation:landscape) and (max-height:560px){.phone{flex-direction:row;max-width:none}.ui-stage{max-width:72vw}.phone-deck{flex-direction:column;flex-wrap:nowrap}.phone-tools,.phone-status{flex:none}}
 """
 
 
@@ -257,10 +258,44 @@ def scoped(css: str, page: str) -> str:
 
 
 def bundles() -> dict[Path, dict]:
-    """One stylesheet for every studio page: PySaiyanWeBoo's green theme on core_css plus each page's layout,
-    scoped by ``<body data-page="...">`` (the slides page is ``data-page="studio slides"``)."""
+    """One stylesheet for every studio page: PySaiyanWeBoo's green theme on core_css, the components pswb_parts() uses, then
+    each page's layout scoped by ``<body data-page="...">`` (the slides page is ``data-page="studio slides"``)."""
+    import pysaiyanweboo
+    sheets = dict.fromkeys(sheet for name in PSWB for sheet in pysaiyanweboo.COMPONENTS[name]["css"])
     rules = "\n".join(scoped(globals()[name], page) for page, name in PAGES)
-    return {STUDIO / "style.css": {"theme": THEME, "extra_css": rules}}
+    return {STUDIO / "style.css": {"theme": THEME, "extra_css": "\n".join([*map(pysaiyanweboo.css_source, sheets), rules])}}
+
+
+PSWB = ("stage", "pager")  # 🧩 the PySaiyanWeBoo components the 📱 page uses
+
+
+def pswb_parts() -> dict[str, str]:
+    """🧩 What the 📱 page takes from PySaiyanWeBoo: the 🖼️ stage (``{slide}`` marks where the slide goes), the 🧭 pager (one page; the
+    browser keeps it in step with the deck) and the components' modules as one classic script, because the pages' CSP allows script
+    files and no inline module: ``export`` dropped, wrapped, and ``pagerSet`` / ``pagerIndex`` left on ``globalThis.PySaiyanWeBoo``."""
+    import pysaiyanweboo
+    words = {"first": "最初のページ", "prev": "前のページ", "next": "次のページ", "last": "最後のページ", "page": "ページ"}
+    modules = "".join(pysaiyanweboo.js_source(m) for name in PSWB for m in pysaiyanweboo.COMPONENTS[name]["js"])
+    classic = re.sub(r"^export function ", "function ", modules, flags=re.M)
+    assert not re.search(r"^\s*(import|export)\b", classic, flags=re.M), "a module PySaiyanWeBoo ships now imports or exports otherwise"
+    commit = pysaiyanweboo.source_commit() or "unknown"
+    return {"stage": pysaiyanweboo.stage_html("{slide}", label="スライド", id="phone-stage"),
+            "pager": pysaiyanweboo.pager_html(1, label="ページ移動", words=words, keys=True, id="phone-pager"),
+            "js": (f"/* ⬇️ pysaiyanweboo {commit[:8]} ({', '.join(PSWB)}): written by {NOTE} from the pinned commit; --check fails when it drifts */\n"
+                   f"(() => {{\n{classic}globalThis.PySaiyanWeBoo = {{ pagerSet, pagerIndex }};\n}})();\n/* ⬆️ pysaiyanweboo */\n")}
+
+
+def with_parts(src: str) -> str:
+    """studio_bundle.py's source with the pysaiyanweboo regions (``PSWB_PHONE`` and the classic script in STUDIO_JS) rewritten."""
+    parts = pswb_parts()
+    lines = lambda html: "".join(f"\n        {part!r}" for part in re.split(r"(?<=>)(?=<)", html))
+    block = (f"# ⬇️ pysaiyanweboo: {NOTE} writes PSWB_PHONE from the pinned commit (--check fails when it drifts)\n"
+             f"PSWB_PHONE = {{\n    \"stage\": ({lines(parts['stage'])}),\n    \"pager\": ({lines(parts['pager'])}),\n}}\n# ⬆️ pysaiyanweboo\n")
+    for begin, end, body in (("# ⬇️ pysaiyanweboo", "# ⬆️ pysaiyanweboo\n", block), ("/* ⬇️ pysaiyanweboo", "/* ⬆️ pysaiyanweboo */\n", parts["js"])):
+        i = src.index(begin)
+        j = src.index(end, i) + len(end)
+        src = src[:i] + body + src[j:]
+    return src
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -282,11 +317,13 @@ def main(argv: list[str] | None = None) -> int:
             tmp_css.write_text(src[start:end], encoding="utf-8")
             if args.check:
                 problems += pysaiyanweboo.check_bundle(tmp_css, **options)
+                if with_parts(src) != src:
+                    problems.append(f"{bundle_py.relative_to(ROOT)}: the pysaiyanweboo parts (PSWB_PHONE, studio.js) are stale; run {NOTE}")
             else:
                 fields = pysaiyanweboo.write_bundle(tmp_css, note=NOTE, **options)
                 new_css = tmp_css.read_text(encoding="utf-8")
-                bundle_py.write_text(src[:start] + new_css + src[end:], encoding="utf-8")
-                print(f"{bundle_py.relative_to(ROOT)} (STYLE_CSS) pysaiyanweboo {fields['commit'][:8]}")
+                bundle_py.write_text(with_parts(src[:start] + new_css + src[end:]), encoding="utf-8")
+                print(f"{bundle_py.relative_to(ROOT)} (STYLE_CSS, PSWB_PHONE, studio.js) pysaiyanweboo {fields['commit'][:8]}")
     for problem in problems:
         print(problem, file=sys.stderr)
     return 1 if problems else 0

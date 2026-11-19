@@ -278,7 +278,11 @@ jobs:
         env:
           IRONMATE_BROWSERS: ${{ matrix.browser }}
           IRONMATE_PLAYWRIGHT_MODULE: ${{ github.workspace }}/build/clipboard-tools/node_modules/playwright
-        run: node tests/studio_clipboard.cjs
+        run: |
+          # Firefox requires HOME to be owned by the browser process user.
+          browser_home="$(mktemp -d)"
+          trap 'rm -rf -- "$browser_home"' EXIT
+          HOME="$browser_home" node tests/studio_clipboard.cjs
       - name: Preserve clipboard browser evidence
         if: always()
         uses: actions/upload-artifact@v7

@@ -124,7 +124,7 @@ def test_workflow_keeps_suite_failure_and_exact_reports(tmp_path):
         reports.append(upload['with']['name'] + '/' +
                        ('junit.xml' if path.endswith('/') else Path(path).name))
     collector = jobs['failure-identity']
-    assert collector['needs'] == ['test', 'marp-integration']
+    assert collector['needs'] == ['test', 'marp-integration', 'studio-clipboard']
     assert collector['if'] == 'always()'
     assert collector['uses'].endswith('@9e3da7ae1846e9604ebc24bb5178f7de094a4e77')
     marp_steps = jobs['marp-integration']['steps']
@@ -135,8 +135,62 @@ def test_workflow_keeps_suite_failure_and_exact_reports(tmp_path):
     assert marp_upload['with']['if-no-files-found'] == 'error'
     assert marp_upload['with']['path'] == 'build/test-results/marp.xml'
     reports.append(marp_upload['with']['name'] + '/marp.xml')
-    assert json.loads(collector['with']['expected-reports']) == reports
+    assert json.loads(collector['with']['expected-reports'])[:len(reports)] == reports
     assert collector['with']['artifact-pattern'] == 'junit-*'
+
+
+@pytest.mark.parametrize("workflow", ["ci.yml", "mcp-tests.yml"])
+def test_setup_junit_runs_before_tests_and_is_collected(workflow):
+    import yaml
+
+    jobs = yaml.load((ROOT / ".github" / "workflows" / workflow).read_text(),
+                     Loader=yaml.BaseLoader)["jobs"]
+    expected = []
+    for job, first_test in (
+        ("test", "Verify vendor/pillow_min.py runs standalone under python -S"),
+        ("marp-integration", "Run real Markdown to Marp to PPTX integration"),
+        ("studio-clipboard", "Verify clipboard ingress in the static Pages build"),
+    ):
+        steps = jobs[job]["steps"]
+        index = next(i for i, step in enumerate(steps) if step.get("name") == first_test)
+        record, upload = steps[index - 2:index]
+        assert record["name"] == "Record setup JUnit before tests"
+        assert upload["name"] == "Preserve setup JUnit before tests"
+        assert record["if"] == upload["if"] == "${{ !cancelled() }}"
+        assert record["run"].endswith(" " + upload["with"]["path"])
+        tracked = [step["id"] for step in steps[:index - 2] if "id" in step]
+        assert [line.partition(".outcome")[0].split("steps.", 1)[1]
+                for line in record["env"]["SETUP_OUTCOMES"].splitlines()] == tracked
+        artifact = upload["with"]["name"]
+        filename = Path(upload["with"]["path"]).name
+        if job == "studio-clipboard":
+            expected.extend(artifact.replace("${{ matrix.browser }}", browser) + "/" + filename
+                            for browser in jobs[job]["strategy"]["matrix"]["browser"])
+        else:
+            expected.append(artifact + "/" + filename)
+    collector = jobs["failure-identity"]
+    assert collector["needs"] == ["test", "marp-integration", "studio-clipboard"]
+    assert json.loads(collector["with"]["expected-reports"])[-len(expected):] == expected
+
+
+def test_failed_setup_is_imported_as_an_error(tmp_path, xprobe):
+    from xml.etree import ElementTree
+
+    result = tmp_path / "setup.xml"
+    subprocess.run(
+        [sys.executable, "-S", str(ROOT / "scripts/ci_setup_junit.py"), "setup", str(result)],
+        env=dict(os.environ, SETUP_OUTCOMES="uv=success\nApt & fonts=failure\nbrowser=skipped\n"),
+        check=True,
+    )
+    xml = result.read_text()
+    suite = ElementTree.fromstring(xml)
+    assert suite.attrib == dict(name="setup", tests="3", errors="1", failures="0", skipped="1")
+    report = xprobe.cases_from_junit(
+        xml, repository="myon-bioinformatics/Ironmate", commit_sha=None, report_id="setup"
+    )
+    assert [(case["value"]["test"], case["value"]["kind"]) for case in report["cases"]] == [
+        ("Apt & fonts", "error")
+    ]
 
 
 @pytest.mark.parametrize("workflow", ["ci.yml", "mcp-tests.yml"])

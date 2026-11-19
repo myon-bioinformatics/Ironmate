@@ -47,6 +47,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        id: setup_uv
         with:
           version: "latest"
           python-version: "3.15"
@@ -59,11 +60,13 @@ jobs:
           prune-cache: true
           activate-environment: true
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        id: setup_node
         with:
           node-version: "26"
       # `uv run --locked` below would sync the environment on its first call and hide the cost
       # inside the pytest step. Doing it here, once, puts the install time and the sizes in the log.
       - name: Install the locked Python environment
+        id: python_env
         run: |
           time uv sync --locked
           du -sk .venv "$(uv cache dir)"
@@ -75,6 +78,7 @@ jobs:
           set -euo pipefail
           python -S scripts/parent_vendor_tools_resolve.py --emit-github-actions
       - name: Fetch shared vendor tool at resolved parent main
+        id: vendor_tool
         uses: actions/checkout@v7
         with:
           repository: myon-bioinformatics/myon-bioinformatics
@@ -82,14 +86,18 @@ jobs:
           path: .vendor-sync-tools
           persist-credentials: false
       - name: Verify checked-in vendor copies
+        id: verify_vendor
         run: python -S .vendor-sync-tools/vendor_sync.py check --manifest vendor.lock.json
       - name: Recreate locked vendor files from GitHub
+        id: recreate_vendor
         shell: bash
         run: |
           python -S .vendor-sync-tools/vendor_sync.py recreate --manifest vendor.lock.json
       - name: Install pinned pptxgenjs and ExcelJS
+        id: npm_packages
         run: npm ci
       - name: Check out pinned test-only JUnit importer
+        id: junit_importer
         uses: actions/checkout@v7
         with:
           repository: myon-bioinformatics/xprobe
@@ -102,6 +110,29 @@ jobs:
         id: compile
         run: |
           git ls-files '*.py' -z | xargs -0 python -m py_compile
+      - name: Record setup JUnit before tests
+        if: ${{ !cancelled() }}
+        env:
+          SETUP_OUTCOMES: |
+            setup-uv=${{ steps.setup_uv.outcome }}
+            setup-node=${{ steps.setup_node.outcome }}
+            Install the locked Python environment=${{ steps.python_env.outcome }}
+            Resolve parent main for shared vendor tools=${{ steps.parent-vendor-tools.outcome }}
+            Fetch shared vendor tool at resolved parent main=${{ steps.vendor_tool.outcome }}
+            Verify checked-in vendor copies=${{ steps.verify_vendor.outcome }}
+            Recreate locked vendor files from GitHub=${{ steps.recreate_vendor.outcome }}
+            Install pinned pptxgenjs and ExcelJS=${{ steps.npm_packages.outcome }}
+            Check out pinned test-only JUnit importer=${{ steps.junit_importer.outcome }}
+            Compile all tracked Python sources before test collection=${{ steps.compile.outcome }}
+        run: python3 -S scripts/ci_setup_junit.py test build/test-results/setup.xml
+      - name: Preserve setup JUnit before tests
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: junit-setup-test
+          path: build/test-results/setup.xml
+          if-no-files-found: error
+          retention-days: 14
       - name: Verify vendor/pillow_min.py runs standalone under python -S
         if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
         run: python -S vendor/pillow_min.py
@@ -153,6 +184,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        id: setup_uv
         with:
           version: "latest"
           python-version: "3.15"
@@ -162,9 +194,11 @@ jobs:
           prune-cache: true
           activate-environment: true
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        id: setup_node
         with:
           node-version: "26"
       - name: Install the locked Python environment
+        id: python_env
         run: |
           time uv sync --locked
           du -sk .venv "$(uv cache dir)"
@@ -172,24 +206,28 @@ jobs:
       # their transitive packages come from scripts/marp-tools/package-lock.json, not a live
       # resolution: a floating peer once selected a puppeteer before its puppeteer-core existed.
       - name: Install pinned Node packages and the locked Marp CLI tools
+        id: marp_tools
         run: |
           npm ci
           npm ci --prefix scripts/marp-tools --ignore-scripts --no-audit --no-fund
       # apt downloads (fonts/LibreOffice/browser libraries) are restored from a cache that only
       # main writes; apt still checks each .deb against the signed indexes.
       - name: Restore apt downloads (written only by main)
+        id: apt_restore
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ runner.temp }}/apt-archives
           key: apt-${{ runner.os }}-marp-${{ github.run_id }}
           restore-keys: apt-${{ runner.os }}-marp-
       - name: Bound apt dependency setup
+        id: apt_config
         run: |
           sudo python3 -S scripts/configure_ci_apt.py --archives "$RUNNER_TEMP/apt-archives"
           sudo apt-config dump Acquire::Retries Acquire::http::Timeout Acquire::https::Timeout APT::Update::Error-Mode Dir::Cache::Archives
       # Package names live in scripts/apt-ci-*.txt; shell: bash adds pipefail so a
       # missing or empty list fails the step instead of installing nothing.
       - name: Install Japanese fonts for diagram evidence
+        id: japanese_fonts
         timeout-minutes: 5
         shell: bash
         run: |
@@ -198,6 +236,7 @@ jobs:
           fc-match ':lang=ja'
       # Test lane only: UNO is LibreOffice's own API (see scripts/apt-ci-uno.txt).
       - name: Install minimal LibreOffice for the UNO check
+        id: libreoffice
         timeout-minutes: 5
         shell: bash
         run: |
@@ -209,15 +248,41 @@ jobs:
         shell: bash  # pipefail: a failed --finish must fail the step, not be hidden by tee
         run: sudo python3 -S scripts/configure_ci_apt.py --finish "$RUNNER_TEMP/apt-archives" | tee -a "$GITHUB_OUTPUT"
       - name: Save apt downloads (main only, when they changed)
+        id: apt_save
         if: steps.apt_cache.outputs.changed == 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ runner.temp }}/apt-archives
           key: apt-${{ runner.os }}-marp-${{ github.run_id }}
       - name: Locate browser
+        id: locate_browser
         shell: bash
         run: |
           command -v google-chrome || command -v chromium || command -v chromium-browser
+      - name: Record setup JUnit before tests
+        if: ${{ !cancelled() }}
+        env:
+          SETUP_OUTCOMES: |
+            setup-uv=${{ steps.setup_uv.outcome }}
+            setup-node=${{ steps.setup_node.outcome }}
+            Install the locked Python environment=${{ steps.python_env.outcome }}
+            Install pinned Node packages and the locked Marp CLI tools=${{ steps.marp_tools.outcome }}
+            Restore apt downloads (written only by main)=${{ steps.apt_restore.outcome }}
+            Bound apt dependency setup=${{ steps.apt_config.outcome }}
+            Install Japanese fonts for diagram evidence=${{ steps.japanese_fonts.outcome }}
+            Install minimal LibreOffice for the UNO check=${{ steps.libreoffice.outcome }}
+            Make apt downloads cacheable (main only)=${{ steps.apt_cache.outcome }}
+            Save apt downloads (main only, when they changed)=${{ steps.apt_save.outcome }}
+            Locate browser=${{ steps.locate_browser.outcome }}
+        run: python3 -S scripts/ci_setup_junit.py marp build/test-results/setup.xml
+      - name: Preserve setup JUnit before tests
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: junit-setup-marp
+          path: build/test-results/setup.xml
+          if-no-files-found: error
+          retention-days: 14
       - name: Run real Markdown to Marp to PPTX integration
         env:
           IRONMATE_RUN_MARP_INTEGRATION: "1"
@@ -282,27 +347,32 @@ jobs:
         with:
           persist-credentials: false
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        id: setup_uv
         with:
           version: "latest"
           python-version: "3.15"
           activate-environment: true
           enable-cache: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        id: setup_node
         with:
           node-version: "26"
       # apt downloads (fonts/LibreOffice/browser libraries) are restored from a cache that only
       # main writes; apt still checks each .deb against the signed indexes.
       - name: Restore apt downloads (written only by main)
+        id: apt_restore
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ runner.temp }}/apt-archives
           key: apt-${{ runner.os }}-clipboard-${{ matrix.browser }}-${{ github.run_id }}
           restore-keys: apt-${{ runner.os }}-clipboard-${{ matrix.browser }}-
       - name: Bound apt dependency setup
+        id: apt_config
         run: |
           sudo python3 -S scripts/configure_ci_apt.py --archives "$RUNNER_TEMP/apt-archives"
           sudo apt-config dump Acquire::Retries Acquire::http::Timeout Acquire::https::Timeout APT::Update::Error-Mode Dir::Cache::Archives
       - name: Install isolated test-only Playwright and browser
+        id: playwright
         timeout-minutes: 10
         run: |
           npm ci --ignore-scripts --no-audit --no-fund
@@ -313,11 +383,32 @@ jobs:
         shell: bash  # pipefail: a failed --finish must fail the step, not be hidden by tee
         run: sudo python3 -S scripts/configure_ci_apt.py --finish "$RUNNER_TEMP/apt-archives" | tee -a "$GITHUB_OUTPUT"
       - name: Save apt downloads (main only, when they changed)
+        id: apt_save
         if: steps.apt_cache.outputs.changed == 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ runner.temp }}/apt-archives
           key: apt-${{ runner.os }}-clipboard-${{ matrix.browser }}-${{ github.run_id }}
+      - name: Record setup JUnit before tests
+        if: ${{ !cancelled() }}
+        env:
+          SETUP_OUTCOMES: |
+            setup-uv=${{ steps.setup_uv.outcome }}
+            setup-node=${{ steps.setup_node.outcome }}
+            Restore apt downloads (written only by main)=${{ steps.apt_restore.outcome }}
+            Bound apt dependency setup=${{ steps.apt_config.outcome }}
+            Install isolated test-only Playwright and browser=${{ steps.playwright.outcome }}
+            Make apt downloads cacheable (main only)=${{ steps.apt_cache.outcome }}
+            Save apt downloads (main only, when they changed)=${{ steps.apt_save.outcome }}
+        run: python3 -S scripts/ci_setup_junit.py clipboard-${{ matrix.browser }} build/test-results/setup.xml
+      - name: Preserve setup JUnit before tests
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: junit-setup-clipboard-${{ matrix.browser }}
+          path: build/test-results/setup.xml
+          if-no-files-found: error
+          retention-days: 14
       - name: Verify clipboard ingress in the static Pages build
         env:
           IRONMATE_BROWSERS: ${{ matrix.browser }}
@@ -332,7 +423,7 @@ jobs:
           retention-days: 14
 
   failure-identity:
-    needs: [test, marp-integration]
+    needs: [test, marp-integration, studio-clipboard]
     if: always()
     permissions:
       contents: read
@@ -340,6 +431,6 @@ jobs:
     uses: myon-bioinformatics/myon-bioinformatics/.github/workflows/reusable-junit-identity.yml@9e3da7ae1846e9604ebc24bb5178f7de094a4e77
     with:
       commit-sha: ${{ github.event.pull_request.head.sha || github.sha }}
-      expected-reports: '["junit-py3.15/pytest-3.15.xml","junit-controlled-py3.15/junit.xml","junit-marp/marp.xml"]'
+      expected-reports: '["junit-py3.15/pytest-3.15.xml","junit-controlled-py3.15/junit.xml","junit-marp/marp.xml","junit-setup-test/setup.xml","junit-setup-marp/setup.xml","junit-setup-clipboard-chromium/setup.xml","junit-setup-clipboard-firefox/setup.xml","junit-setup-clipboard-webkit/setup.xml"]'
       artifact-pattern: "junit-*"
       output-artifact: "failure-identity"

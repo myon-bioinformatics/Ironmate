@@ -106,25 +106,31 @@ def test_acquire_and_update_settings_are_bounded_and_fail_closed():
 def test_workflow_keeps_coverage_budgets_and_setup_failure_visibility():
     workflow = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text())
     jobs = workflow["jobs"]
-    setup_runs = []
-    for job_id, budget, install_name, setup_budget in [
-        ("marp-integration", 15, "Install Japanese fonts for diagram evidence", 5),
-        ("studio-clipboard", 25, "Install isolated test-only Playwright and browser", 10),
-    ]:
-        job = jobs[job_id]
-        assert job["timeout-minutes"] == budget
-        steps = job["steps"]
-        setup_index = next(i for i, s in enumerate(steps) if s.get("name") == "Bound apt dependency setup")
-        install_index = next(i for i, s in enumerate(steps) if s.get("name") == install_name)
-        assert setup_index < install_index
-        assert steps[install_index]["timeout-minutes"] == setup_budget
-        setup_runs.append(steps[setup_index]["run"])
-        assert all(not step.get("continue-on-error", False) for step in steps)
-    assert setup_runs[0] == setup_runs[1]
-    assert "sudo python3 -S scripts/configure_ci_apt.py" in setup_runs[0]
-    assert "sudo apt-config dump" in setup_runs[0]
-    marp_steps = jobs["marp-integration"]["steps"]
-    fonts = next(s for s in marp_steps if s.get("name") == "Install Japanese fonts for diagram evidence")
+    marp = jobs["marp-integration"]
+    assert marp["timeout-minutes"] == 15
+    marp_steps = marp["steps"]
+    setup_index = next(i for i, step in enumerate(marp_steps) if step.get("name") == "Bound apt dependency setup")
+    fonts_index = next(i for i, step in enumerate(marp_steps)
+                       if step.get("name") == "Install Japanese fonts for diagram evidence")
+    restore_index = next(i for i, step in enumerate(marp_steps)
+                         if step.get("name") == "Restore apt downloads (written only by main)")
+    assert restore_index < setup_index < fonts_index
+    restore = marp_steps[restore_index]
+    mcp = yaml.safe_load((ROOT / ".github/workflows/mcp-tests.yml").read_text())["jobs"]["marp-integration"]["steps"]
+    sibling_restore = next(step for step in mcp if step.get("name") == restore["name"])
+    producer = next(step for step in mcp if step.get("name") == "Save apt downloads (main only, when they changed)")
+    assert restore["timeout-minutes"] == 2 and "if" not in restore
+    assert restore["uses"] == sibling_restore["uses"] and restore["uses"].startswith("actions/cache/restore@")
+    assert restore["with"] == sibling_restore["with"]
+    assert restore["with"]["path"] == producer["with"]["path"] == "${{ runner.temp }}/apt-archives"
+    assert restore["with"]["key"] == producer["with"]["key"]
+    assert all(not step.get("uses", "").startswith(("actions/cache@", "actions/cache/save@")) for step in marp_steps)
+    setup_run = marp_steps[setup_index]["run"]
+    assert 'sudo python3 -S scripts/configure_ci_apt.py --archives "$RUNNER_TEMP/apt-archives"' in setup_run
+    assert "sudo apt-config dump" in setup_run and "Dir::Cache::Archives" in setup_run
+    assert all(not step.get("continue-on-error", False) for step in marp_steps)
+    fonts = marp_steps[fonts_index]
+    assert fonts["timeout-minutes"] == 5
     # shell: bash adds pipefail, so a missing or empty list fails the step instead of installing nothing.
     assert fonts["shell"] == "bash"
     assert "scripts/apt-ci-fonts.txt" in fonts["run"] and "--no-install-recommends" in fonts["run"]
@@ -140,11 +146,74 @@ def test_workflow_keeps_coverage_budgets_and_setup_failure_visibility():
     assert any(s.get("env", {}).get("IRONMATE_RUN_UNO_INTEGRATION") == "1"
                and "tests/test_uno_roundtrip.py" in s.get("run", "") for s in marp_steps)
     assert any(s.get("env", {}).get("IRONMATE_FLOW_REQUIRE_CJK") == "1" for s in marp_steps)
-    clipboard = jobs["studio-clipboard"]
+
+def test_clipboard_workflow_uses_matching_browsers_with_version_floors_and_keeps_coverage():
+    workflow = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text())
+    clipboard = workflow["jobs"]["studio-clipboard"]
+    assert clipboard["timeout-minutes"] == 25
+    assert not clipboard.get("continue-on-error", False)
     assert clipboard["strategy"]["matrix"]["browser"] == ["chromium", "firefox", "webkit"]
     assert clipboard["strategy"]["fail-fast"] is False
-    assert any("install --with-deps ${{ matrix.browser }}" in s.get("run", "")
-               for s in clipboard["steps"])
+    assert "container" not in clipboard
+    steps = clipboard["steps"]
+    names = [step.get("name") for step in steps]
+    assert all(not step.get("continue-on-error", False) for step in steps)
+    node_index = next(i for i, step in enumerate(steps) if step.get("uses", "").startswith("actions/setup-node@"))
+    assert steps[node_index]["with"]["node-version"] == ">=26"
+    install_index = names.index("Install isolated test-only Playwright")
+    restore_index = names.index("Restore WebKit apt downloads (written only by main)")
+    apt_index = names.index("Bound apt dependency setup")
+    deps_index = names.index("Install clipboard browser OS dependencies")
+    browser_index = names.index("Install browser matching the resolved Playwright package")
+    verify_index = names.index("Verify clipboard ingress in the static Pages build")
+    upload_index = names.index("Preserve clipboard browser evidence")
+    assert node_index < install_index < restore_index < apt_index < deps_index < browser_index < verify_index < upload_index
+    install, restore, apt, deps, browser, verify, upload = (steps[i] for i in (
+        install_index, restore_index, apt_index, deps_index, browser_index, verify_index, upload_index,
+    ))
+    assert install["timeout-minutes"] == 5
+    assert shlex.split(install["run"]) == [
+        "npm", "install", "--prefix", "build/clipboard-tools", "--no-save",
+        "--ignore-scripts", "--package-lock=false", "--no-audit", "--no-fund", "playwright@>=1.64.1",
+    ]
+    assert restore["if"] == "matrix.browser == 'webkit'"
+    assert restore["timeout-minutes"] == 2
+    assert restore["uses"].startswith("actions/cache/restore@")
+    mcp_jobs = yaml.safe_load((ROOT / ".github/workflows/mcp-tests.yml").read_text())["jobs"]
+    mcp_steps = mcp_jobs["studio-clipboard"]["steps"]
+    producer = next(step for step in mcp_steps if step.get("name") == "Save apt downloads (main only, when they changed)")
+    sibling_restore = next(step for step in mcp_steps if step.get("name") == "Restore apt downloads (written only by main)")
+    assert restore["with"] == sibling_restore["with"]
+    assert restore["with"]["path"] == producer["with"]["path"] == "${{ runner.temp }}/apt-archives"
+    assert restore["with"]["key"] == producer["with"]["key"]
+    assert all(not step.get("uses", "").startswith(("actions/cache@", "actions/cache/save@")) for step in steps)
+    assert apt["timeout-minutes"] == 2
+    assert apt["env"]["CLIPBOARD_BROWSER"] == "${{ matrix.browser }}"
+    assert '[ "$CLIPBOARD_BROWSER" = webkit ]' in apt["run"]
+    assert '--archives "$RUNNER_TEMP/apt-archives"' in apt["run"]
+    assert "sudo python3 -S scripts/configure_ci_apt.py" in apt["run"]
+    assert "sudo apt-config dump" in apt["run"]
+    cli = "node build/clipboard-tools/node_modules/playwright/cli.js"
+    assert deps["timeout-minutes"] == 15
+    assert deps["run"] == f"{cli} install-deps ${{{{ matrix.browser }}}}"
+    assert browser["timeout-minutes"] == 5
+    assert f"{cli} install ${{{{ matrix.browser }}}}" in browser["run"]
+    assert browser["env"]["PLAYWRIGHT_BROWSERS_PATH"] == verify["env"]["PLAYWRIGHT_BROWSERS_PATH"] == (
+        "${{ runner.temp }}/ironmate-playwright-browsers"
+    )
+    assert all("if" not in step for step in (install, apt, deps, browser, verify))
+    assert verify["env"]["IRONMATE_BROWSERS"] == "${{ matrix.browser }}"
+    assert verify["env"]["IRONMATE_PLAYWRIGHT_MODULE"] == (
+        "${{ github.workspace }}/build/clipboard-tools/node_modules/playwright"
+    )
+    assert "node tests/studio_clipboard.cjs" in verify["run"]
+    assert upload["if"] == "always()" and upload["uses"].startswith("actions/upload-artifact@")
+    assert upload["with"] == {
+        "name": "studio-clipboard-${{ matrix.browser }}",
+        "path": "build/studio-clipboard/",
+        "if-no-files-found": "warn",
+        "retention-days": 14,
+    }
 
 
 def run_list_reader(path):

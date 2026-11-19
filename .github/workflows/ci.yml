@@ -245,6 +245,10 @@ jobs:
 
   studio-clipboard:
     runs-on: ubuntu-latest
+    container:
+      # Keep the image and npm Playwright versions aligned.
+      image: mcr.microsoft.com/playwright:v1.64.1-resolute@sha256:fd5d1ec99fefe25c4d0a5cfeeee8eb1dc8ef61e79482c1b0f6e1a017feec39fb
+      options: --ipc=host
     timeout-minutes: 25
     strategy:
       fail-fast: false
@@ -266,15 +270,10 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "26"
-      - name: Bound apt dependency setup
-        run: |
-          sudo python3 -S scripts/configure_ci_apt.py
-          sudo apt-config dump Acquire::Retries Acquire::http::Timeout Acquire::https::Timeout APT::Update::Error-Mode
-      - name: Install isolated test-only Playwright and browser
+      - name: Install isolated test-only Playwright
         timeout-minutes: 10
-        run: |
+        run: >-
           npm install --prefix build/clipboard-tools --no-save --ignore-scripts --package-lock=false playwright@1.64.1
-          node build/clipboard-tools/node_modules/playwright/cli.js install --with-deps ${{ matrix.browser }}
       - name: Verify clipboard ingress in the static Pages build
         env:
           IRONMATE_BROWSERS: ${{ matrix.browser }}

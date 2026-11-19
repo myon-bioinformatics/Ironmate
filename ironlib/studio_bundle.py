@@ -3463,6 +3463,7 @@ const blank = (w = 1280, h = 720) => ({ schema: C.SCHEMA, width: w, height: h, b
 let deck = { schema: D.SCHEMA, title: "Ironmate", slides: [blank()] },
   active = 0,
   level = plain,
+  textFactor = 1,
   selected = null,
   editing = null,
   editBefore = null,
@@ -3475,24 +3476,31 @@ const slide = () => deck.slides[active],
   picked = () => slide().layers.find((l) => l.id === selected),
   uid = (kind) => `${kind}-${Date.now().toString(36)}-${++serial}`,
   pct = (v, of) => `${(v / of) * 100}%`,
-  state = () => JSON.stringify({ deck, active, level });
-function note(text, error = false) {
+  state = () => JSON.stringify({ deck, active, level, textFactor });
+let status = "", statusError = false, saveFailed = false;
+function note(text = status, error = statusError) {
+  status = text;
+  statusError = error;
   const s = $("phone-status");
-  s.textContent = text;
-  s.dataset.error = error;
+  s.textContent = [text, saveFailed && "⚠️ 💾"].filter(Boolean).join(" ");
+  s.dataset.error = error || saveFailed;
 }
 function restore(text) {
   const saved = JSON.parse(text);
   deck = D.validate(saved.deck);
   active = Math.min(Math.max(0, saved.active | 0), deck.slides.length - 1);
   level = scales[saved.level] ? saved.level : plain;
+  textFactor = Number.isFinite(saved.textFactor) && saved.textFactor >= Math.min(...scales)
+    && saved.textFactor <= Math.max(...scales) ? saved.textFactor : scales[level];
 }
 function keep() {
   try {
     localStorage.setItem(STORE, state());
+    saveFailed = false;
   } catch {
-    note("⚠️ 💾", true); // 端末の自動保存がいっぱい（画像が大きいとき）。💾 で JSON に保存できる
+    saveFailed = true; // 端末の自動保存がいっぱい（画像が大きいとき）。💾 で JSON に保存できる
   }
+  note();
 }
 function record(before) {
   if (before === state()) return;
@@ -3501,11 +3509,20 @@ function record(before) {
   future = [];
   keep();
 }
+function validatedEdit(fn) {
+  const before = state(), previousSelection = selected;
+  try {
+    fn();
+    D.validate(deck);
+  } catch (e) {
+    restore(before);
+    selected = previousSelection;
+    throw e;
+  }
+  return before;
+}
 function change(fn) {
-  const before = state();
-  fn();
-  D.validate(deck);
-  record(before);
+  record(validatedEdit(fn));
   render();
 }
 function fit(l, least = 0) {
@@ -3631,14 +3648,13 @@ stage.addEventListener("pointercancel", () => {
 
 /* ➕ 置くもの（白紙に足すだけ。図形・矢印・画像は Slide Studio と同じ形） */
 function place(make) {
-  const before = state(),
-    s = slide(),
-    l = make(s);
-  if (s.layers.length >= 100) throw Error("⚠️ 100");
-  s.layers.push(l);
-  selected = l.id;
-  D.validate(deck);
-  return before;
+  return validatedEdit(() => {
+    const s = slide();
+    if (s.layers.length >= 100) throw Error("⚠️ 100");
+    const l = make(s);
+    s.layers.push(l);
+    selected = l.id;
+  });
 }
 function shape(kind) {
   return (s) => ({ id: uid(kind), kind, name: kind, x: s.width * 0.375, y: s.height * 0.375, w: s.width * 0.25, h: s.height * 0.25,
@@ -3672,14 +3688,17 @@ function save(name, data, mime) {
 function scaleText(next) {
   // 🔽 🔄 🔼 すべてのページの文字を同じ倍率で（タイトルと本文の比は保つ）
   if (!scales[next] || next === level) return;
-  const r = scales[next] / scales[level];
   change(() => {
-    for (const s of deck.slides)
-      for (const l of s.layers)
-        if (l.kind === "text") {
-          l.fontSize = Math.min(512, Math.max(4, Math.round(l.fontSize * r * 10) / 10));
-          fit(l);
-        }
+    const layers = deck.slides.flatMap((s) => s.layers.filter((l) => l.kind === "text"));
+    // Restrict the shared multiplier, not individual sizes, so reset can reverse it.
+    let r = scales[next] / textFactor;
+    for (const l of layers)
+      r = r > 1 ? Math.min(r, 512 / l.fontSize) : Math.max(r, 4 / l.fontSize);
+    for (const l of layers) {
+      l.fontSize = Math.min(512, Math.max(4, l.fontSize * r)); // absorb float error at the bounds
+      fit(l);
+    }
+    textFactor = Math.min(Math.max(...scales), Math.max(Math.min(...scales), textFactor * r));
     level = next;
   });
 }
@@ -3694,7 +3713,7 @@ function go(delta) {
 }
 const acts = {
   text() {
-    const size = textSize * scales[level],
+    const size = textSize * textFactor,
       before = place((s) => ({ id: uid("text"), kind: "text", name: "text", x: s.width * 0.1,
         y: Math.min(s.height - size * 1.3, s.height * 0.08 + s.layers.filter((l) => l.kind === "text").length * size * 2),
         w: s.width * 0.8, h: Math.ceil(size * 1.3), rotation: 0, opacity: 1, text: "", fill: "#000000",
@@ -3750,6 +3769,7 @@ const acts = {
     deck = { schema: D.SCHEMA, title: "Ironmate", slides: [blank()] };
     active = 0;
     level = plain;
+    textFactor = 1;
     selected = null;
   }),
   save: () => save("ironmate-slides.json", D.deckText(deck), "application/json"),
@@ -3776,6 +3796,7 @@ const files = {
     deck = next;
     active = 0;
     level = plain;
+    textFactor = 1;
     selected = null;
     record(before);
   },
@@ -3786,7 +3807,7 @@ async function run(fn) {
   busy = true;
   try {
     await fn();
-    if (!/^📤/.test($("phone-status").textContent)) note("");
+    if (!/^📤/.test(status)) note("");
   } catch (e) {
     note(e.message, true);
   } finally {

@@ -361,6 +361,57 @@ print('📱 phone: 2 slides, native text kept')
     await page.waitForFunction(() => IronmateSlideEditor.deck.slides.length === 2);
     assert.equal((await page.evaluate(() => IronmateSlideEditor.deck)).slides[0].layers[0].text, "あとから編集した文字\n2 行目");
     fs.writeFileSync(path.join(out, "phone-frames.json"), JSON.stringify(shots.map((f) => path.basename(f)), null, 2));
+    // The same multiplier is bounded by the largest font, then reversed across a reload.
+    const openPhone = async (deck) => {
+      await mobile.setInputFiles('input[data-file="open"]', {
+        name: "test.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(deck)),
+      });
+      await mobile.waitForFunction((title) => IronmatePhone.deck.title === title, deck.title);
+    };
+    const scaleDeck = s.deck;
+    scaleDeck.title = "font bounds";
+    scaleDeck.slides[0].layers[0].fontSize = 320;
+    scaleDeck.slides[1].layers.find((l) => l.kind === "text").fontSize = 160;
+    await openPhone(scaleDeck);
+    const fonts = async () => (await state()).deck.slides.flatMap((slide) =>
+      slide.layers.filter((l) => l.kind === "text").map((l) => l.fontSize));
+    for (let i = 0; i < 4; i++) await act("bigger");
+    assert.deepEqual(await fonts(), [512, 256]);
+    await mobile.reload();
+    await mobile.waitForFunction(() => !!window.IronmatePhone);
+    await act("reset");
+    assert.deepEqual(await fonts(), [320, 160]);
+
+    // A storage failure must remain visible after the action and clear on the next successful write.
+    const storageKey = "ironmate-phone-deck";
+    const stored = await mobile.evaluate((key) => localStorage.getItem(key), storageKey);
+    await mobile.evaluate(() => {
+      window.restoreStorage = Storage.prototype.setItem;
+      Storage.prototype.setItem = () => { throw new DOMException("full", "QuotaExceededError"); };
+    });
+    await act("rect");
+    await mobile.waitForFunction(() => document.querySelector("#phone-status").textContent.includes("⚠️ 💾"));
+    assert.equal(await mobile.evaluate((key) => localStorage.getItem(key), storageKey), stored);
+    await mobile.evaluate(() => { Storage.prototype.setItem = window.restoreStorage; });
+    await act("undo");
+    await mobile.waitForFunction(() => !document.querySelector("#phone-status").textContent.includes("⚠️ 💾"));
+
+    // A rejected duplicate must not alter the active page or create a history entry.
+    // This synthetic payload exercises the 32MiB deck validator, not image decoding.
+    const image = { id: "big", kind: "image", x: 0, y: 0, w: 128, h: 128, rotation: 0, opacity: 1,
+      src: "data:image/png;base64," + "A".repeat(9_000_000), cell: 1, levels: 256 };
+    const largeDeck = { ...scaleDeck, title: "deck bounds",
+      slides: [{ ...scaleDeck.slides[0], layers: [image, { ...image, id: "big2" }] }] };
+    await openPhone(largeDeck);
+    await act("slide-copy");
+    await mobile.waitForFunction(() => document.querySelector("#phone-status").textContent.includes("32MiB"));
+    assert.equal(await mobile.textContent("#phone-page"), "1/1");
+    assert.equal(await mobile.evaluate(() => IronmatePhone.active), 0);
+    assert.ok(await mobile.locator('[data-act="redo"]').isDisabled());
+    const [stillExportable] = await Promise.all([mobile.waitForEvent("download"), act("save")]);
+    assert.equal(await stillExportable.failure(), null);
+    await act("undo");
+    await mobile.waitForFunction(() => IronmatePhone.deck.title === "font bounds");
     await phone.close();
     assert(requests.every((r) => r.startsWith(new URL(url).origin + "/") || /^(blob|data):/.test(r)));
     assert.deepEqual(errors, []);

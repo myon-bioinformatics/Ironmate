@@ -167,10 +167,19 @@ jobs:
         run: |
           npm ci
           npm ci --prefix scripts/marp-tools --ignore-scripts --no-audit --no-fund
+      # The sibling MCP workflow writes this archive cache on main only.
+      # APT still checks each .deb against the current signed indexes.
+      - name: Restore apt downloads (written only by main)
+        timeout-minutes: 2
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/apt-archives
+          key: apt-${{ runner.os }}-marp-${{ github.run_id }}
+          restore-keys: apt-${{ runner.os }}-marp-
       - name: Bound apt dependency setup
         run: |
-          sudo python3 -S scripts/configure_ci_apt.py
-          sudo apt-config dump Acquire::Retries Acquire::http::Timeout Acquire::https::Timeout APT::Update::Error-Mode
+          sudo python3 -S scripts/configure_ci_apt.py --archives "$RUNNER_TEMP/apt-archives"
+          sudo apt-config dump Acquire::Retries Acquire::http::Timeout Acquire::https::Timeout APT::Update::Error-Mode Dir::Cache::Archives
       # Package names live in scripts/apt-ci-*.txt; shell: bash adds pipefail so a
       # missing or empty list fails the step instead of installing nothing.
       - name: Install Japanese fonts for diagram evidence

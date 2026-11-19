@@ -112,10 +112,22 @@ def test_workflow_keeps_coverage_budgets_and_setup_failure_visibility():
     setup_index = next(i for i, step in enumerate(marp_steps) if step.get("name") == "Bound apt dependency setup")
     fonts_index = next(i for i, step in enumerate(marp_steps)
                        if step.get("name") == "Install Japanese fonts for diagram evidence")
-    assert setup_index < fonts_index
+    restore_index = next(i for i, step in enumerate(marp_steps)
+                         if step.get("name") == "Restore apt downloads (written only by main)")
+    assert restore_index < setup_index < fonts_index
+    restore = marp_steps[restore_index]
+    mcp = yaml.safe_load((ROOT / ".github/workflows/mcp-tests.yml").read_text())["jobs"]["marp-integration"]["steps"]
+    sibling_restore = next(step for step in mcp if step.get("name") == restore["name"])
+    producer = next(step for step in mcp if step.get("name") == "Save apt downloads (main only, when they changed)")
+    assert restore["timeout-minutes"] == 2 and "if" not in restore
+    assert restore["uses"] == sibling_restore["uses"] and restore["uses"].startswith("actions/cache/restore@")
+    assert restore["with"] == sibling_restore["with"]
+    assert restore["with"]["path"] == producer["with"]["path"] == "${{ runner.temp }}/apt-archives"
+    assert restore["with"]["key"] == producer["with"]["key"]
+    assert all(not step.get("uses", "").startswith(("actions/cache@", "actions/cache/save@")) for step in marp_steps)
     setup_run = marp_steps[setup_index]["run"]
-    assert "sudo python3 -S scripts/configure_ci_apt.py" in setup_run
-    assert "sudo apt-config dump" in setup_run
+    assert 'sudo python3 -S scripts/configure_ci_apt.py --archives "$RUNNER_TEMP/apt-archives"' in setup_run
+    assert "sudo apt-config dump" in setup_run and "Dir::Cache::Archives" in setup_run
     assert all(not step.get("continue-on-error", False) for step in marp_steps)
     fonts = marp_steps[fonts_index]
     assert fonts["timeout-minutes"] == 5

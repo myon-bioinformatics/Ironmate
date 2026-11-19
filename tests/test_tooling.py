@@ -106,25 +106,19 @@ def test_acquire_and_update_settings_are_bounded_and_fail_closed():
 def test_workflow_keeps_coverage_budgets_and_setup_failure_visibility():
     workflow = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text())
     jobs = workflow["jobs"]
-    setup_runs = []
-    for job_id, budget, install_name, setup_budget in [
-        ("marp-integration", 15, "Install Japanese fonts for diagram evidence", 5),
-        ("studio-clipboard", 25, "Install isolated test-only Playwright and browser", 10),
-    ]:
-        job = jobs[job_id]
-        assert job["timeout-minutes"] == budget
-        steps = job["steps"]
-        setup_index = next(i for i, s in enumerate(steps) if s.get("name") == "Bound apt dependency setup")
-        install_index = next(i for i, s in enumerate(steps) if s.get("name") == install_name)
-        assert setup_index < install_index
-        assert steps[install_index]["timeout-minutes"] == setup_budget
-        setup_runs.append(steps[setup_index]["run"])
-        assert all(not step.get("continue-on-error", False) for step in steps)
-    assert setup_runs[0] == setup_runs[1]
-    assert "sudo python3 -S scripts/configure_ci_apt.py" in setup_runs[0]
-    assert "sudo apt-config dump" in setup_runs[0]
-    marp_steps = jobs["marp-integration"]["steps"]
-    fonts = next(s for s in marp_steps if s.get("name") == "Install Japanese fonts for diagram evidence")
+    marp = jobs["marp-integration"]
+    assert marp["timeout-minutes"] == 15
+    marp_steps = marp["steps"]
+    setup_index = next(i for i, step in enumerate(marp_steps) if step.get("name") == "Bound apt dependency setup")
+    fonts_index = next(i for i, step in enumerate(marp_steps)
+                       if step.get("name") == "Install Japanese fonts for diagram evidence")
+    assert setup_index < fonts_index
+    setup_run = marp_steps[setup_index]["run"]
+    assert "sudo python3 -S scripts/configure_ci_apt.py" in setup_run
+    assert "sudo apt-config dump" in setup_run
+    assert all(not step.get("continue-on-error", False) for step in marp_steps)
+    fonts = marp_steps[fonts_index]
+    assert fonts["timeout-minutes"] == 5
     # shell: bash adds pipefail, so a missing or empty list fails the step instead of installing nothing.
     assert fonts["shell"] == "bash"
     assert "scripts/apt-ci-fonts.txt" in fonts["run"] and "--no-install-recommends" in fonts["run"]
@@ -140,11 +134,50 @@ def test_workflow_keeps_coverage_budgets_and_setup_failure_visibility():
     assert any(s.get("env", {}).get("IRONMATE_RUN_UNO_INTEGRATION") == "1"
                and "tests/test_uno_roundtrip.py" in s.get("run", "") for s in marp_steps)
     assert any(s.get("env", {}).get("IRONMATE_FLOW_REQUIRE_CJK") == "1" for s in marp_steps)
-    clipboard = jobs["studio-clipboard"]
+
+def test_clipboard_workflow_uses_version_aligned_prebuilt_browsers_and_keeps_coverage():
+    workflow = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text())
+    clipboard = workflow["jobs"]["studio-clipboard"]
+    assert clipboard["timeout-minutes"] == 25
+    assert not clipboard.get("continue-on-error", False)
     assert clipboard["strategy"]["matrix"]["browser"] == ["chromium", "firefox", "webkit"]
     assert clipboard["strategy"]["fail-fast"] is False
-    assert any("install --with-deps ${{ matrix.browser }}" in s.get("run", "")
-               for s in clipboard["steps"])
+    image = re.fullmatch(
+        r"mcr\.microsoft\.com/playwright:v(\d+\.\d+\.\d+)-[a-z]+@sha256:[0-9a-f]{64}",
+        clipboard["container"]["image"],
+    )
+    assert image, "use the official Playwright image pinned by release tag and digest"
+    steps = clipboard["steps"]
+    names = [step.get("name") for step in steps]
+    assert "Bound apt dependency setup" not in names
+    assert all(not step.get("continue-on-error", False) for step in steps)
+    assert not any(re.search(r"configure_ci_apt\.py|\bapt(?:-get)?\s|--with-deps|playwright/cli\.js\s+install",
+                             step.get("run", "")) for step in steps)
+    node_index = next(i for i, step in enumerate(steps) if step.get("uses", "").startswith("actions/setup-node@"))
+    assert steps[node_index]["with"]["node-version"] == "26"
+    install_index = names.index("Install isolated test-only Playwright")
+    verify_index = names.index("Verify clipboard ingress in the static Pages build")
+    upload_index = names.index("Preserve clipboard browser evidence")
+    assert node_index < install_index < verify_index < upload_index
+    install, verify, upload = steps[install_index], steps[verify_index], steps[upload_index]
+    assert install["timeout-minutes"] == 10
+    assert shlex.split(install["run"]) == [
+        "npm", "install", "--prefix", "build/clipboard-tools", "--no-save",
+        "--ignore-scripts", "--package-lock=false", f"playwright@{image[1]}",
+    ]
+    assert "if" not in install and "if" not in verify
+    assert verify["env"]["IRONMATE_BROWSERS"] == "${{ matrix.browser }}"
+    assert verify["env"]["IRONMATE_PLAYWRIGHT_MODULE"] == (
+        "${{ github.workspace }}/build/clipboard-tools/node_modules/playwright"
+    )
+    assert "node tests/studio_clipboard.cjs" in verify["run"]
+    assert upload["if"] == "always()" and upload["uses"].startswith("actions/upload-artifact@")
+    assert upload["with"] == {
+        "name": "studio-clipboard-${{ matrix.browser }}",
+        "path": "build/studio-clipboard/",
+        "if-no-files-found": "warn",
+        "retention-days": 14,
+    }
 
 
 def run_list_reader(path):

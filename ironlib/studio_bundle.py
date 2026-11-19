@@ -314,7 +314,7 @@ STUDIO_HTML = r"""<!doctype html>
 </html>
 """
 
-STYLE_CSS = r"""/* web-ui-bundle/1 commit=207ceb767170a9ed44a883255fc1a2d0672cabec sha256=28676aeb90c2b0fa1a7d12a166918ecb43ac0290208a18b5f2b976f6bfdd0af3 scripts/build_studio_css.py*/
+STYLE_CSS = r"""/* web-ui-bundle/1 commit=2f34c96a3e273774b4e3298cbe3b56ec199bc122 sha256=28676aeb90c2b0fa1a7d12a166918ecb43ac0290208a18b5f2b976f6bfdd0af3 scripts/build_studio_css.py*/
 @layer base,components,theme;
 /* css/tokens.css */
 :root{--ui-bg:#0d1117;--ui-panel:#101820;--ui-fg:#d1f7c4;--ui-muted:#8b949e;--ui-border:#58a6ff;--ui-accent:#7ee787;--ui-danger:#cf222e;--ui-radius:0;--ui-text:16px;--ui-space:1rem;--ui-max:960px;--ui-font:Meiryo,メイリオ,sans-serif;--ui-font-mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
@@ -3426,7 +3426,7 @@ if (typeof document !== "undefined" && document.body && (document.body.dataset.p
   }
 });
 })();
-/* ⬇️ pysaiyanweboo 207ceb76 (stage, pager): written by scripts/build_studio_css.py from the pinned commit; --check fails when it drifts */
+/* ⬇️ pysaiyanweboo 2f34c96a (stage, pager): written by scripts/build_studio_css.py from the pinned commit; --check fails when it drifts */
 (() => {
 /* A rotary dial over a range input (dial_html): drag around its centre, turn the wheel, or use the range's own keys. Value and events stay the input's. */
 function dialAngle(value,min,max){const span=max-min;const t=span>0?(Number(value)-min)/span:0;return -135+270*Math.min(1,Math.max(0,t))}

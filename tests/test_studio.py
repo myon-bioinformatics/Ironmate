@@ -983,8 +983,8 @@ def test_build_site_contains_only_public_client_assets_and_relative_paths(tmp_pa
 
 
 def test_phone_page_is_emoji_only_and_every_control_is_bound():
-    """📱 slides/phone/: the slide is pinned on top; each control shows only its emoji (the words are aria-label/title),
-    ⬅️ ➡️ turn pages, and the one browser script handles every data-act."""
+    """📱 slides/phone/: the slide is pinned on top (PySaiyanWeBoo's 🖼️ stage); each control shows only its emoji (the words are
+    aria-label/title), PySaiyanWeBoo's 🧭 pager turns pages, and the one browser script handles every data-act."""
     import re
     from html.parser import HTMLParser
     from ironlib import studio_bundle as b
@@ -997,7 +997,7 @@ def test_phone_page_is_emoji_only_and_every_control_is_bound():
             super().__init__(); self.items, self.open = [], None
         def handle_starttag(self, tag, attrs):
             a = dict(attrs)
-            if 'data-act' in a or 'data-go' in a:
+            if {'data-act', 'data-ui-pager-go', 'data-ui-pager-to'} & set(a):
                 self.open = {'tag': tag, **a, 'face': ''}; self.items.append(self.open)
         def handle_endtag(self, tag):
             if self.open and tag == self.open['tag']:
@@ -1012,7 +1012,12 @@ def test_phone_page_is_emoji_only_and_every_control_is_bound():
     for item in parser.items:
         assert item['face'] and not words.search(item['face']), item  # 🙅 no words on the face
         assert item['aria-label'] and item['title'] == item['aria-label'], item
-    assert [(i['data-go'], i['face']) for i in parser.items if 'data-go' in i] == [('-1', '⬅️'), ('1', '➡️')]
+    assert [(i['data-ui-pager-go'], i['face']) for i in parser.items if 'data-ui-pager-go' in i] == [
+        ('first', '⬆️'), ('first', '⏮️'), ('prev', '⬅️'), ('next', '➡️'), ('last', '⏭️'), ('last', '⬇️')]   # every shape is in the markup
+    assert b.PSWB_PHONE['pager'] in html and 'data-ui-pager="arrows"' in html and 'data-ui-pager-keys' in html   # ⬅️ 1/N ➡️ first, ← → too
+    assert b.PSWB_PHONE['stage'].split('{slide}')[0] + '<div id="phone-svg" class="phone-svg" data-ui-fill>' in html
+    assert ' style="' not in html                                                                 # the CSP allows no inline style
+    assert "globalThis.PySaiyanWeBoo = { pagerSet, pagerIndex }" in b.STUDIO_JS and not re.search(r"^\s*(import|export) ", b.STUDIO_JS, re.M)  # a classic script
     script = b.STUDIO_JS[b.STUDIO_JS.index('/* Phone slides UI'):]
     for act in acts:
         if act in ('studio', 'home'):

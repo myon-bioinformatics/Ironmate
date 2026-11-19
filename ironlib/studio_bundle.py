@@ -314,7 +314,7 @@ STUDIO_HTML = r"""<!doctype html>
 </html>
 """
 
-STYLE_CSS = r"""/* web-ui-bundle/1 commit=635f2f265ea64d41326772b6b55011d7ad82037c sha256=df2b42a8532a5f42ef57f1714ed2dac96cfce6e6b2fd3030b1e208d7a4fc770d scripts/build_studio_css.py*/
+STYLE_CSS = r"""/* web-ui-bundle/1 commit=2f34c96a3e273774b4e3298cbe3b56ec199bc122 sha256=28676aeb90c2b0fa1a7d12a166918ecb43ac0290208a18b5f2b976f6bfdd0af3 scripts/build_studio_css.py*/
 @layer base,components,theme;
 /* css/tokens.css */
 :root{--ui-bg:#0d1117;--ui-panel:#101820;--ui-fg:#d1f7c4;--ui-muted:#8b949e;--ui-border:#58a6ff;--ui-accent:#7ee787;--ui-danger:#cf222e;--ui-radius:0;--ui-text:16px;--ui-space:1rem;--ui-max:960px;--ui-font:Meiryo,メイリオ,sans-serif;--ui-font-mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
@@ -330,6 +330,9 @@ body[data-ui-theme="terminal"]{--ui-bg:#0a0e10;--ui-panel:#11171a;--ui-fg:#d5dee
 @layer base{*{box-sizing:border-box}body{margin:0;background:var(--ui-bg);color:var(--ui-fg);font:var(--ui-text)/1.6 var(--ui-font)}pre,code,kbd,samp{font-family:var(--ui-font-mono)!important}.ui-page{max-width:var(--ui-max);margin:auto;padding:var(--ui-space)}a{color:inherit}.ui-print-only{display:none}@media print{body{background:#fff;color:#000}.ui-page{max-width:none;padding:0}.ui-no-print{display:none}.ui-print-only{display:block}a{text-decoration:none}}@media(prefers-reduced-motion:reduce){*,::before,::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}}
 /* css/components.css */
 @layer components{.ui-panel,.ui-card{background:var(--ui-panel);border:1px solid var(--ui-border);padding:var(--ui-space);margin:var(--ui-space) 0;border-radius:var(--ui-radius)}.ui-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.75rem}.ui-tag{display:inline-block;border:1px solid var(--ui-border);padding:.1rem .4rem}.ui-button,.ui-input,.ui-elements button,.ui-elements select,.ui-elements textarea,.ui-elements input:not([type=checkbox],[type=radio],[type=range],[type=color],[type=file]){font:inherit;background:var(--ui-panel);color:var(--ui-fg);border:1px solid var(--ui-border);padding:.6rem;border-radius:var(--ui-radius)}.ui-button,.ui-elements button{cursor:pointer}.ui-button:hover,.ui-elements button:hover{border-color:var(--ui-accent)}.ui-button:disabled,.ui-elements button:disabled{opacity:.4;cursor:default}.ui-elements input[type=range],.ui-elements input[type=checkbox],.ui-elements input[type=radio]{accent-color:var(--ui-accent)}.ui-elements label{color:var(--ui-muted)}.ui-muted{color:var(--ui-muted)}.ui-output{font:inherit;white-space:pre-wrap;overflow:auto;background:#d8dee4;color:#161b22;border:1px solid #8c959f;border-radius:4px;padding:.75rem}pre code,.ui-output code{font-family:inherit;color:inherit}pre.ui-output code{background:transparent}@media(max-width:480px){.ui-page{padding:.75rem}.ui-grid{grid-template-columns:1fr}.ui-card,.ui-panel{margin:.75rem 0;padding:.75rem}}.ui-lightbox{border:1px solid var(--ui-border);background:var(--ui-panel);color:var(--ui-fg);padding:1rem;max-width:min(96vw,960px);max-height:96vh;border-radius:var(--ui-radius)}.ui-lightbox::backdrop{background:rgba(0,0,0,.72)}.ui-lightbox img{display:block;max-width:100%;max-height:calc(96vh - 8rem);margin:auto}.ui-lightbox-bar{display:flex;gap:.5rem;justify-content:space-between;margin-top:.75rem}body:has(.ui-lightbox[open]){overflow:hidden}.ui-table,.ui-elements table{border-collapse:collapse;width:100%}.ui-table th,.ui-table td,.ui-elements th,.ui-elements td{border-bottom:1px solid var(--ui-border);padding:.25rem .5rem;text-align:left;vertical-align:top;overflow-wrap:anywhere}.ui-table th,.ui-elements th{color:var(--ui-muted);font-weight:500}.ui-table caption,.ui-elements caption{text-align:left;color:var(--ui-muted);padding:.25rem 0}.ui-pass{color:var(--ui-accent)}.ui-fail{color:var(--ui-danger)}.ui-changed{background:color-mix(in srgb,var(--ui-accent) 18%,transparent)}.ui-tag.ui-pass{border-color:var(--ui-accent)}.ui-tag.ui-fail{border-color:var(--ui-danger)}}
+@layer components{.ui-stage{--ui-stage-w:16;--ui-stage-h:9;--ui-stage-room:64dvh;position:relative;flex:none;align-self:center;box-sizing:border-box;margin:0 auto;width:min(100%,calc(var(--ui-stage-room) * var(--ui-stage-w) / var(--ui-stage-h)));aspect-ratio:var(--ui-stage-w)/var(--ui-stage-h);overflow:hidden;background:var(--ui-panel);border:1px solid var(--ui-border)}.ui-stage[data-ui-stage=pinned]{position:sticky;top:0;z-index:1}.ui-stage>:is(svg,img,canvas,video,[data-ui-fill]){position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:contain}@media(orientation:landscape) and (max-height:560px){.ui-stage{--ui-stage-room:100dvh}}}
+@layer components{.ui-pager{display:inline-flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;max-width:100%}.ui-pager button{box-sizing:border-box;min-width:48px;min-height:48px;padding:0 8px;font-size:24px;line-height:1;color:var(--ui-fg);background:var(--ui-panel);border:1px solid var(--ui-border);border-radius:var(--ui-radius);cursor:pointer;touch-action:manipulation}.ui-pager button:disabled{opacity:.32;cursor:default}.ui-pager button:focus-visible{outline:2px solid var(--ui-accent);outline-offset:2px}.ui-pager output{min-width:48px;text-align:center;font-weight:700;font-variant-numeric:tabular-nums}.ui-pager>[data-ui-pager-part=dots]{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;max-width:100%}.ui-pager>[data-ui-pager-part=dots] button{min-width:32px;min-height:32px;padding:0;font-size:16px;color:var(--ui-accent)}.ui-pager>input[type=range]{width:160px;max-width:100%;min-height:48px;margin:0;accent-color:var(--ui-accent)}.ui-pager[data-ui-pager=dpad]{display:inline-grid;grid-template-columns:repeat(3,48px);grid-template-rows:repeat(3,48px)}[data-ui-pager=dpad]>[data-ui-pager-part=up]{grid-area:1/2}[data-ui-pager=dpad]>[data-ui-pager-part=prev]{grid-area:2/1}[data-ui-pager=dpad]>[data-ui-pager-part=page]{grid-area:2/2;place-self:center}[data-ui-pager=dpad]>[data-ui-pager-part=next]{grid-area:2/3}[data-ui-pager=dpad]>[data-ui-pager-part=down]{grid-area:3/2}.ui-pager[data-ui-pager=dpad]>:not([data-ui-pager-in~=dpad]),.ui-pager[data-ui-pager=ends]>:not([data-ui-pager-in~=ends]),.ui-pager[data-ui-pager=arrows]>:not([data-ui-pager-in~=arrows]),.ui-pager[data-ui-pager=dots]>:not([data-ui-pager-in~=dots]),.ui-pager[data-ui-pager=slider]>:not([data-ui-pager-in~=slider]),.ui-pager[data-ui-pager=dial]>:not([data-ui-pager-in~=dial]){display:none}}
+@layer components{.ui-dial{position:relative;display:inline-block;width:48px;height:48px;border-radius:50%;border:2px solid var(--ui-border);background:var(--ui-panel);box-sizing:border-box;touch-action:none;cursor:grab;vertical-align:middle}.ui-dial[data-ui-dial-drag]{cursor:grabbing}.ui-dial::after{content:"";position:absolute;left:50%;top:4px;width:4px;height:16px;border-radius:2px;background:var(--ui-accent);transform-origin:50% 18px;transform:translateX(-50%) rotate(var(--ui-dial-angle,-135deg))}.ui-dial>input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;pointer-events:none}.ui-dial:focus-within{outline:2px solid var(--ui-accent);outline-offset:2px}}
 /* studio layout */
 body:where([data-page~="studio"]){font-size:13px;line-height:1.5;margin:0}
 :where([data-page~="studio"]) header{min-height:76px;background:var(--ui-fg);color:#fff;padding:18px 26px;display:flex;align-items:center;justify-content:space-between;gap:20px}
@@ -490,28 +493,25 @@ body:where([data-page~="brand"]){line-height:1.7;margin:0}
 :where([data-page~="slides"]) .slide-controls button{min-height:38px}
 @media(max-width:700px){:where([data-page~="slides"]) .slide-controls{padding:14px}:where([data-page~="slides"]) .slide-toolbar{gap:8px}:where([data-page~="slides"]) .slide-template{display:grid;grid-template-columns:1fr}:where([data-page~="slides"]) .slide-template label{max-width:none}:where([data-page~="slides"]) .slide-toolbar label{max-width:100%}:where([data-page~="slides"]) .slide-toolbar select{max-width:100%}}
 
-/* 📱 phone slides: the slide is pinned on top and the emoji controls scroll under it (landscape: beside it) */
+/* 📱 phone slides: the slide is pinned on top (PySaiyanWeBoo's .ui-stage) and the emoji controls scroll under it (landscape: beside it) */
 body:where([data-page~="phone"]){margin:0;background:#dfe8df}
 :where([data-page~="phone"]) input[type=file]{display:none}
 :where([data-page~="phone"]) .button{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;cursor:pointer;text-decoration:none;background:var(--ui-panel);color:var(--ui-fg);border:1px solid var(--ui-border);border-radius:var(--ui-radius)}
 :where([data-page~="phone"]) .phone{display:flex;flex-direction:column;height:100dvh;max-width:960px;margin:0 auto}
-:where([data-page~="phone"]) .phone-stage{position:relative;flex:none;width:min(100%,calc(64dvh*16/9));align-self:center;aspect-ratio:16/9;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,.16);overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
-:where([data-page~="phone"]) .phone-svg,:where([data-page~="phone"]) .phone-svg svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+:where([data-page~="phone"]) .ui-stage{background:#fff;border:0;box-shadow:0 8px 24px rgba(0,0,0,.16);touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+:where([data-page~="phone"]) .phone-svg svg{position:absolute;inset:0;width:100%;height:100%;display:block}
 :where([data-page~="phone"]) .phone-pick{position:absolute;box-sizing:border-box;border:2px dashed #126fef;pointer-events:none}
 :where([data-page~="phone"]) .phone-pick[hidden],:where([data-page~="phone"]) .phone-edit[hidden]{display:none}
 :where([data-page~="phone"]) .phone-grip{position:absolute;right:-16px;bottom:-16px;width:32px;height:32px;display:grid;place-items:center;border-radius:50%;background:#126fef;color:#fff;font-size:16px;pointer-events:auto;touch-action:none}
 :where([data-page~="phone"]) .phone-edit{flex:1 1 100%;box-sizing:border-box;margin:0;min-height:88px;padding:8px;font-size:16px;line-height:1.5;border:2px solid #126fef;resize:vertical}
 :where([data-page~="phone"]) .phone-deck{flex:1;min-height:0;overflow:auto;display:flex;flex-wrap:wrap;align-items:flex-start;align-content:flex-start;gap:16px;padding:16px}
-:where([data-page~="phone"]) .phone-pages{flex:none;display:flex;align-items:center;gap:8px}
-:where([data-page~="phone"]) .phone-pages button{min-width:48px;min-height:48px;padding:0 8px;font-size:24px;line-height:1;touch-action:manipulation}
-:where([data-page~="phone"]) .phone-pages output{min-width:48px;text-align:center;font-weight:700;font-size:16px}
 :where([data-page~="phone"]) .phone-tools{flex:1 1 328px;min-width:0;display:flex;flex-direction:column;gap:8px}
 :where([data-page~="phone"]) .phone-row{display:flex;flex-wrap:wrap;gap:8px}
 :where([data-page~="phone"]) .phone-tools button,:where([data-page~="phone"]) .phone-tools .button{min-width:48px;min-height:48px;padding:0 8px;font-size:24px;line-height:1;touch-action:manipulation}
 :where([data-page~="phone"]) .phone-tools button:disabled{opacity:.32}
 :where([data-page~="phone"]) .phone-status{flex:1 1 128px;margin:0;align-self:center;min-height:24px;font-size:16px;overflow-wrap:anywhere}
 :where([data-page~="phone"]) .phone-status[data-error=true]{color:var(--ui-danger)}
-@media(orientation:landscape) and (max-height:560px){:where([data-page~="phone"]) .phone{flex-direction:row;max-width:none}:where([data-page~="phone"]) .phone-stage{height:100dvh;width:auto;max-width:72vw}:where([data-page~="phone"]) .phone-deck{flex-direction:column;flex-wrap:nowrap}:where([data-page~="phone"]) .phone-tools,:where([data-page~="phone"]) .phone-status{flex:none}}
+@media(orientation:landscape) and (max-height:560px){:where([data-page~="phone"]) .phone{flex-direction:row;max-width:none}:where([data-page~="phone"]) .ui-stage{max-width:72vw}:where([data-page~="phone"]) .phone-deck{flex-direction:column;flex-wrap:nowrap}:where([data-page~="phone"]) .phone-tools,:where([data-page~="phone"]) .phone-status{flex:none}}
 """
 
 STUDIO_JS = r"""/* Ironmate studio: the one browser script for every page (studio, tools, slides; brand needs none).
@@ -3425,8 +3425,59 @@ if (typeof document !== "undefined" && document.body && (document.body.dataset.p
     status.dataset.error = true;
   }
 });
-})();/* Phone slides UI (data-page~="phone"): browser only. The slide stays pinned on top, every control is an emoji
-   (its words are in aria-label/title), ⬅️ ➡️ turn pages, and the deck is the same JSON / PPTX as Slide Studio. */
+})();
+/* ⬇️ pysaiyanweboo 2f34c96a (stage, pager): written by scripts/build_studio_css.py from the pinned commit; --check fails when it drifts */
+(() => {
+/* A rotary dial over a range input (dial_html): drag around its centre, turn the wheel, or use the range's own keys. Value and events stay the input's. */
+function dialAngle(value,min,max){const span=max-min;const t=span>0?(Number(value)-min)/span:0;return -135+270*Math.min(1,Math.max(0,t))}
+function dialValue(angle,min,max,step){const t=(Math.min(135,Math.max(-135,angle))+135)/270,raw=min+t*(max-min),s=step>0?step:1;
+ const v=min+Math.round((raw-min)/s)*s;return Math.min(max,Math.max(min,Number(v.toFixed(6))))}
+function bindDial(root=document){
+ for(const dial of root.querySelectorAll("[data-ui-dial]")){const input=dial.querySelector('input[type="range"]');if(!input||dial.dataset.uiDialBound)continue;dial.dataset.uiDialBound="";
+  const num=k=>Number(input[k])||0,paint=()=>dial.style.setProperty("--ui-dial-angle",dialAngle(input.value,num("min"),num("max"))+"deg");
+  const turn=(x,y)=>{const r=dial.getBoundingClientRect(),a=Math.atan2(x-(r.left+r.width/2),(r.top+r.height/2)-y)*180/Math.PI;
+   const v=dialValue(a,num("min"),num("max"),Number(input.step)||0);if(String(v)===input.value)return;input.value=v;input.dispatchEvent(new Event("input",{bubbles:true}));input.dispatchEvent(new Event("change",{bubbles:true}))};
+  dial.addEventListener("pointerdown",e=>{if(e.button)return;e.preventDefault();dial.setPointerCapture(e.pointerId);dial.dataset.uiDialDrag="";input.focus({preventScroll:true});turn(e.clientX,e.clientY)});
+  dial.addEventListener("pointermove",e=>{if("uiDialDrag"in dial.dataset)turn(e.clientX,e.clientY)});
+  for(const t of["pointerup","pointercancel","lostpointercapture"])dial.addEventListener(t,()=>{delete dial.dataset.uiDialDrag});
+  dial.addEventListener("wheel",e=>{e.preventDefault();e.deltaY<0?input.stepUp():input.stepDown();input.dispatchEvent(new Event("input",{bubbles:true}));input.dispatchEvent(new Event("change",{bubbles:true}))},{passive:false});
+  input.addEventListener("input",paint);paint()}}
+if(typeof document!=="undefined")bindDial();
+/* 🧭 Page controls (pager_html): every variant is in the markup and the stylesheet shows one, so data-ui-pager switches it with no reload.
+ pagerIndex takes pager_index's steps; a change sends ui-pager {index, count}; pagerSet(el, index, count) follows a change the page made itself. */
+function pagerIndex(index,count,action,wrap=false){const last=Math.max(0,count-1);
+ if(typeof action==="number")return Math.min(last,Math.max(0,Math.trunc(action)));
+ if(action==="first"||action==="last")return action==="first"?0:last;
+ if(action!=="prev"&&action!=="next")throw Error("unknown pager action: "+action);
+ const target=index+(action==="next"?1:-1);return wrap&&count>0?((target%count)+count)%count:Math.min(last,Math.max(0,target))}
+function pagerSet(el,index=Number(el.dataset.uiPagerIndex)||0,count=Number(el.dataset.uiPagerCount)||1){
+ count=Math.max(1,Math.trunc(count));index=pagerIndex(0,count,index);const wrap="uiPagerWrap"in el.dataset;el.dataset.uiPagerIndex=index;el.dataset.uiPagerCount=count;
+ for(const b of el.querySelectorAll("[data-ui-pager-go]"))b.disabled=pagerIndex(index,count,b.dataset.uiPagerGo,wrap)===index;
+ for(const o of el.querySelectorAll('output[data-ui-pager-part="page"]'))o.textContent=`${index+1}/${count}`;
+ for(const dots of el.querySelectorAll('[data-ui-pager-part="dots"]')){const word=dots.dataset.uiPagerWord||"Page";
+  while(dots.children.length<count)dots.append(Object.assign(document.createElement("button"),{type:"button"}));
+  while(dots.children.length>count)dots.lastElementChild.remove();
+  [...dots.children].forEach((d,i)=>{d.dataset.uiPagerTo=i;d.textContent=i===index?"●":"○";d.title=`${word} ${i+1}`;d.setAttribute("aria-label",d.title);
+   i===index?d.setAttribute("aria-current","page"):d.removeAttribute("aria-current")})}
+ for(const r of el.querySelectorAll('input[type="range"]')){r.max=Math.max(2,count);r.disabled=count<2;
+  if(r.value!==String(index+1)){r.value=index+1;r.dispatchEvent(new Event("input"))}}}
+function bindPager(root=document){
+ for(const el of root.querySelectorAll("[data-ui-pager]")){if("uiPagerBound"in el.dataset)continue;el.dataset.uiPagerBound="";
+  const go=action=>{const index=Number(el.dataset.uiPagerIndex)||0,count=Number(el.dataset.uiPagerCount)||1,next=pagerIndex(index,count,action,"uiPagerWrap"in el.dataset);
+   pagerSet(el,next,count);if(next!==index)el.dispatchEvent(new CustomEvent("ui-pager",{bubbles:true,detail:{index:next,count}}))};
+  el.addEventListener("pointerdown",e=>{if(e.target.closest("button"))e.preventDefault()});
+  el.addEventListener("click",e=>{const b=e.target.closest("[data-ui-pager-go],[data-ui-pager-to]");if(b&&!b.disabled)go(b.dataset.uiPagerGo??Number(b.dataset.uiPagerTo))});
+  el.addEventListener("input",e=>{if(e.target.type==="range")go(Number(e.target.value)-1)});
+  if("uiPagerKeys"in el.dataset)document.addEventListener("keydown",e=>{const action={ArrowLeft:"prev",ArrowRight:"next",Home:"first",End:"last"}[e.key];
+   if(!action||e.defaultPrevented||e.altKey||e.ctrlKey||e.metaKey||!el.isConnected||e.target.closest?.("input,textarea,select,[contenteditable]"))return;e.preventDefault();go(action)});
+  pagerSet(el)}}
+if(typeof document!=="undefined")bindPager();
+globalThis.PySaiyanWeBoo = { pagerSet, pagerIndex };
+})();
+/* ⬆️ pysaiyanweboo */
+/* Phone slides UI (data-page~="phone"): browser only. The slide stays pinned on top (PySaiyanWeBoo's 🖼️ stage), every control is
+   an emoji (its words are in aria-label/title), PySaiyanWeBoo's 🧭 pager turns pages (🧭 switches its shape), and the deck is the same
+   JSON / PPTX as Slide Studio. */
 if (typeof document !== "undefined" && document.body && (document.body.dataset.page || "").split(" ").includes("phone")) (function () {
 "use strict";
 const C = window.StudioCore,
@@ -3434,6 +3485,8 @@ const C = window.StudioCore,
   $ = (id) => document.getElementById(id),
   stage = $("phone-stage"),
   edit = $("phone-edit"),
+  pages = $("phone-pager"), // 🧭 PySaiyanWeBoo's pager: every shape is in the markup, data-ui-pager picks one
+  shapes = [...new Set([...pages.children].flatMap((c) => c.dataset.uiPagerIn.split(" ")))],
   STORE = "ironmate-phone-deck",
   textSize = Number(document.body.dataset.textSize),
   scales = document.body.dataset.textScale.split(" ").map(Number),
@@ -3511,7 +3564,7 @@ function fit(l, least = 0) {
 function render() {
   const s = slide();
   $("phone-svg").innerHTML = C.svg(s, (l) => l.src); // 👀 打っている文字もそのままスライドに出る
-  $("phone-page").textContent = `${active + 1}/${deck.slides.length}`;
+  PySaiyanWeBoo.pagerSet(pages, active, deck.slides.length);
   const box = $("phone-pick"),
     l = picked();
   box.hidden = !l;
@@ -3520,8 +3573,6 @@ function render() {
   const off = { edit: l?.kind !== "text", delete: !l, undo: !past.length, redo: !future.length,
     "slide-delete": deck.slides.length < 2, smaller: level === 0, bigger: level === scales.length - 1, reset: level === plain };
   for (const [act, disabled] of Object.entries(off)) document.querySelector(`[data-act="${act}"]`).disabled = disabled;
-  for (const b of document.querySelectorAll("[data-go]"))
-    b.disabled = active + Number(b.dataset.go) < 0 || active + Number(b.dataset.go) >= deck.slides.length;
 }
 function later() {
   if (!frame) frame = requestAnimationFrame(() => ((frame = 0), render()));
@@ -3656,15 +3707,13 @@ function scaleText(next) {
     level = next;
   });
 }
-function go(delta) {
+pages.addEventListener("ui-pager", (e) => {
   finishEdit();
-  const next = active + delta;
-  if (next < 0 || next >= deck.slides.length) return;
-  active = next;
+  active = e.detail.index;
   selected = null;
   keep();
   render();
-}
+});
 const acts = {
   text() {
     const size = textSize * textFactor,
@@ -3726,6 +3775,13 @@ const acts = {
     textFactor = 1;
     selected = null;
   }),
+  pager() {
+    // 🧭 the next shape of the pager (⬅️➡️ → ● → 🎚️ → 🎛️ → ✚ → ⏮️⏭️); a view setting, so not in ↩️ and not in the deck
+    pages.dataset.uiPager = shapes[(shapes.indexOf(pages.dataset.uiPager) + 1) % shapes.length];
+    try {
+      localStorage.setItem(STORE + ":pager", pages.dataset.uiPager);
+    } catch {}
+  },
   save: () => C.save("ironmate-slides.json", D.deckText(deck), "application/json"),
   async pptx() {
     note("📤 …");
@@ -3769,7 +3825,7 @@ async function run(fn) {
     render();
   }
 }
-for (const b of document.querySelectorAll("button[data-act], [data-go]"))
+for (const b of document.querySelectorAll("button[data-act]"))
   b.addEventListener("pointerdown", (e) => e.preventDefault()); // 編集中に押しても入力欄が先に閉じない（閉じて並びがずれ、押し外さない）
 for (const b of document.querySelectorAll("button[data-act]"))
   b.addEventListener("click", () => {
@@ -3784,14 +3840,9 @@ for (const input of document.querySelectorAll("input[data-file]"))
     finishEdit();
     if (file) run(() => files[input.dataset.file](file));
   });
-for (const b of document.querySelectorAll("[data-go]")) b.addEventListener("click", () => go(Number(b.dataset.go)));
 document.addEventListener("keydown", (e) => {
-  if (editing || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
-  const step = { ArrowLeft: -1, ArrowUp: -1, ArrowRight: 1, ArrowDown: 1 }[e.key];
-  if (step) {
-    e.preventDefault();
-    go(step);
-  } else if ((e.key === "Delete" || e.key === "Backspace") && selected) run(acts.delete);
+  if (editing || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return; // ← → Home End: the pager's own keys
+  if ((e.key === "Delete" || e.key === "Backspace") && selected) run(acts.delete);
   else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") run(e.shiftKey ? acts.redo : acts.undo);
 });
 try {
@@ -3800,6 +3851,10 @@ try {
 } catch {
   deck = { schema: D.SCHEMA, title: "Ironmate", slides: [blank()] };
 }
+try {
+  const shape = localStorage.getItem(STORE + ":pager"); // 🧭 the shape picked last time
+  if (shapes.includes(shape)) pages.dataset.uiPager = shape;
+} catch {}
 stage.style.setProperty("--k", stage.clientWidth / slide().width);
 render();
 window.IronmatePhone = {
@@ -3814,6 +3869,9 @@ window.IronmatePhone = {
   },
   get level() {
     return level;
+  },
+  get pager() {
+    return pages.dataset.uiPager;
   },
 };
 })();
@@ -3890,14 +3948,38 @@ PHONE_TOOLS = (
     (("edit", "✏️", "選んだ文字を編集（選んだ文字をもう一度タップしても編集）"), ("delete", "🗑️", "選んだものを削除"),
      ("undo", "↩️", "戻す"), ("redo", "↪️", "やり直す")),
     (("slide-add", "➕📄", "白紙のページを追加"), ("slide-copy", "📑", "ページを複製"), ("slide-delete", "✖️📄", "ページを削除"),
-     ("new", "🆕", "最初から（白紙 1 枚）")),
+     ("new", "🆕", "最初から（白紙 1 枚）"), ("pager", "🧭", "ページ移動の形を切り替え（矢印・十字キー・端まで・点・スライダー・ダイヤル）")),
     (("save", "💾", "全スライドJSONで保存（Slide Studio でも開ける）"), ("open", "📂", "全スライドJSONを開く"),
      ("pptx", "📤", "PPTXを書き出す"), ("studio", "🖥️", "Slide Studio（PC 向け）"), ("home", "🏠", "Image Studio")),
 )
 # 🔽 🔄 🔼 multiply every text box by the next / plain / previous step; new boxes are 32 px on the 1280×720 slide.
 PHONE_TEXT = {"size": 32, "scale": (0.5, 0.75, 1, 1.25, 1.5, 2, 2.5)}
-# ⬅️ previous page, ➡️ next page; the middle shows "page/pages" (keyboard ← ↑ / → ↓ do the same).
-PHONE_PAGES = (("-1", "⬅️", "前のページ"), ("1", "➡️", "次のページ"))
+# 🖼️ the stage and 🧭 the pager (⬅️ 1/N ➡️ by default; ← → Home End too) are PySaiyanWeBoo's, written below from the pinned commit.
+# ⬇️ pysaiyanweboo: scripts/build_studio_css.py writes PSWB_PHONE from the pinned commit (--check fails when it drifts)
+PSWB_PHONE = {
+    "stage": (
+        '<div class="ui-stage" role="region" aria-label="スライド" data-ui-stage="pinned" id="phone-stage">{slide}</div>'),
+    "pager": (
+        '<div class="ui-pager" role="group" aria-label="ページ移動" data-ui-pager="arrows" data-ui-pager-index="0" data-ui-pager-count="1" data-ui-pager-keys id="phone-pager">'
+        '<button type="button" data-ui-pager-part="up" data-ui-pager-in="dpad" data-ui-pager-go="first" aria-label="最初のページ" title="最初のページ" disabled>⬆️</button>'
+        '<button type="button" data-ui-pager-part="first" data-ui-pager-in="ends" data-ui-pager-go="first" aria-label="最初のページ" title="最初のページ" disabled>⏮️</button>'
+        '<button type="button" data-ui-pager-part="prev" data-ui-pager-in="arrows ends dpad" data-ui-pager-go="prev" aria-label="前のページ" title="前のページ" disabled>⬅️</button>'
+        '<span data-ui-pager-part="dots" data-ui-pager-in="dots" data-ui-pager-word="ページ">'
+        '<button type="button" data-ui-pager-to="0" aria-label="ページ 1" title="ページ 1" aria-current="page">●</button>'
+        '</span>'
+        '<input type="range" data-ui-pager-part="slider" data-ui-pager-in="slider" min="1" max="2" step="1" value="1" aria-label="ページ" disabled>'
+        '<span data-ui-pager-part="dial" data-ui-pager-in="dial">'
+        '<span class="ui-dial" data-ui-dial>'
+        '<input type="range" name="page" min="1" max="2" step="1" value="1" aria-label="ページ" disabled>'
+        '</span>'
+        '</span>'
+        '<output data-ui-pager-part="page" data-ui-pager-in="arrows ends dpad dots slider dial" aria-live="polite">1/1</output>'
+        '<button type="button" data-ui-pager-part="next" data-ui-pager-in="arrows ends dpad" data-ui-pager-go="next" aria-label="次のページ" title="次のページ" disabled>➡️</button>'
+        '<button type="button" data-ui-pager-part="last" data-ui-pager-in="ends" data-ui-pager-go="last" aria-label="最後のページ" title="最後のページ" disabled>⏭️</button>'
+        '<button type="button" data-ui-pager-part="down" data-ui-pager-in="dpad" data-ui-pager-go="last" aria-label="最後のページ" title="最後のページ" disabled>⬇️</button>'
+        '</div>'),
+}
+# ⬆️ pysaiyanweboo
 
 
 def _phone_html() -> str:
@@ -3913,8 +3995,8 @@ def _phone_html() -> str:
         return f'<button type="button" data-act="{act}" {label}>{emoji}</button>'
 
     rows = "".join('<div class="phone-row">' + "".join(control(*tool) for tool in row) + "</div>" for row in PHONE_TOOLS)
-    back, ahead = (f'<button type="button" data-go="{step}" aria-label="{words}" title="{words}">{glyph}</button>'
-                   for step, glyph, words in PHONE_PAGES)
+    slide = ('<div id="phone-svg" class="phone-svg" data-ui-fill></div>'
+             '<div id="phone-pick" class="phone-pick" hidden><span class="phone-grip" data-grip aria-hidden="true">↘</span></div>')
     head = STUDIO_HTML[:STUDIO_HTML.index("</head>")]
     for name in ("style.css", "studio.js", "brand/manifest.webmanifest", "brand/apple-touch-icon.png", "brand/favicon.ico",
                  "brand/icon.svg"):
@@ -3924,10 +4006,9 @@ def _phone_html() -> str:
     return (head + "</head>\n"
             f'  <body class="ui-elements" data-ui-theme="green" data-page="phone" data-text-size="{PHONE_TEXT["size"]}" data-text-scale="{scale}">\n'
             '    <main class="phone">\n'
-            '      <div id="phone-stage" class="phone-stage" aria-label="スライド"><div id="phone-svg" class="phone-svg"></div>'
-            '<div id="phone-pick" class="phone-pick" hidden><span class="phone-grip" data-grip aria-hidden="true">↘</span></div></div>\n'
+            f'      {PSWB_PHONE["stage"].replace("{slide}", slide)}\n'
             '      <div class="phone-deck"><textarea id="phone-edit" class="phone-edit" hidden aria-label="文字" rows="3" spellcheck="false"></textarea>'
-            f'<div class="phone-pages" role="group" aria-label="ページ移動">{back}<output id="phone-page" aria-live="polite">1/1</output>{ahead}</div>'
+            f'{PSWB_PHONE["pager"]}'
             '<p id="phone-status" class="phone-status" role="status"></p>'
             f'<div class="phone-tools" role="toolbar" aria-label="道具">{rows}</div></div>\n'
             "    </main>\n  </body>\n</html>\n")

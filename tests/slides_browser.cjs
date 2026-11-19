@@ -233,7 +233,7 @@ print('Long Japanese/English: visible SVG lines match native PPTX, explicit para
 `], { encoding: "utf8" });
     assert.equal(wrapped.status, 0, wrapped.stderr);
     console.log(wrapped.stdout.trim());
-    // 📱 Phone slides: the slide stays pinned on top, emoji controls, ⬅️ ➡️ pages, text editable later.
+    // 📱 Phone slides: the slide stays pinned on top, emoji controls, 🧭 PySaiyanWeBoo's pager in every shape, text editable later.
     const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, acceptDownloads: true }),
       mobile = await phone.newPage(),
       shots = [];
@@ -246,6 +246,7 @@ print('Long Japanese/English: visible SVG lines match native PPTX, explicit para
     };
     const state = () => mobile.evaluate(() => ({ deck: IronmatePhone.deck, active: IronmatePhone.active, level: IronmatePhone.level, selected: IronmatePhone.selected }));
     const act = (name) => mobile.tap(`[data-act="${name}"]`);
+    const pageNo = () => mobile.textContent("#phone-pager output"); // 🧭 PySaiyanWeBoo's pager: n/N in every shape
     const stageAt = async (fx, fy) => {
       const box = await mobile.locator("#phone-stage").boundingBox();
       return { x: box.x + box.width * fx, y: box.y + box.height * fy };
@@ -308,23 +309,63 @@ print('Long Japanese/English: visible SVG lines match native PPTX, explicit para
     await act("reset");
     // ➕📄 pages and ⬅️ ➡️
     await act("slide-add");
-    assert.equal(await mobile.textContent("#phone-page"), "2/2");
+    assert.equal(await pageNo(), "2/2");
     await act("rect");
     await act("arrow");
     await act("text");
     await mobile.keyboard.type("2 ページ目");
-    await mobile.tap('[data-go="-1"]');
-    assert.equal(await mobile.textContent("#phone-page"), "1/2");
-    await mobile.tap('[data-go="1"]');
-    assert.equal(await mobile.textContent("#phone-page"), "2/2");
+    await mobile.tap('[data-ui-pager-go="prev"]');
+    assert.equal(await pageNo(), "1/2");
+    await mobile.tap('[data-ui-pager-go="next"]');
+    assert.equal(await pageNo(), "2/2");
     s = await state();
     assert.deepEqual(s.deck.slides[1].layers.map((l) => l.kind), ["rect", "arrow", "text"]);
     await snap("page-2");
-    await mobile.tap('[data-go="-1"]');
-    assert.equal(await mobile.textContent("#phone-page"), "1/2");
+    await mobile.tap('[data-ui-pager-go="prev"]');
+    assert.equal(await pageNo(), "1/2");
     await snap("page-back");
-    assert.ok(await mobile.locator('[data-go="-1"]').isDisabled());
-    await mobile.tap('[data-go="1"]');
+    assert.ok(await mobile.locator('[data-ui-pager-go="prev"]').isDisabled());
+    await mobile.tap('[data-ui-pager-go="next"]');
+    // 🧭 one tap per shape, no reload: each fits the phone with nothing overlapping, and each turns the page its own way
+    const shapes = [];
+    const there = async (shape, tap) => {
+      await tap();
+      assert.equal(await pageNo(), "1/2", shape);
+      assert.equal((await state()).active, 0, shape);
+    };
+    for (let i = 0; i < 6; i++) {
+      await act("pager");
+      const shape = await mobile.evaluate(() => IronmatePhone.pager),
+        parts = await mobile.$$eval("#phone-pager > *", (cs) =>
+          cs.filter((c) => c.checkVisibility()).map((c) => [c.dataset.uiPagerPart, ...Object.values(c.getBoundingClientRect().toJSON()).slice(0, 4)]));
+      shapes.push(shape);
+      for (const [name, x, , w] of parts) assert.ok(x >= 0 && x + w <= 390, `${shape}: ${name} leaves the screen`);
+      for (let a = 0; a < parts.length; a++)
+        for (let b = 0; b < a; b++) {
+          const [n1, x1, y1, w1, h1] = parts[a], [n2, x2, y2, w2, h2] = parts[b];
+          assert.ok(!(x1 < x2 + w2 && x2 < x1 + w1 && y1 < y2 + h2 && y2 < y1 + h1), `${shape}: ${n1} overlaps ${n2}`);
+        }
+      if (shape === "dots") {
+        await there(shape, () => mobile.tap('[data-ui-pager-to="0"]'));
+        await mobile.tap('[data-ui-pager-to="1"]');
+      } else if (shape === "slider") {
+        await there(shape, () => mobile.fill('#phone-pager input[data-ui-pager-part="slider"]', "1"));
+        await mobile.fill('#phone-pager input[data-ui-pager-part="slider"]', "2");
+      } else if (shape === "dial") {
+        await mobile.focus("#phone-pager .ui-dial input");
+        await there(shape, () => mobile.keyboard.press("ArrowLeft"));
+        await mobile.keyboard.press("ArrowRight");
+        await mobile.evaluate(() => document.activeElement.blur());
+      } else if (shape === "dpad" || shape === "ends") {
+        await there(shape, () => mobile.tap(`[data-ui-pager-part="${shape === "dpad" ? "up" : "first"}"]`));
+        await mobile.tap(`[data-ui-pager-part="${shape === "dpad" ? "down" : "last"}"]`);
+      }
+      assert.equal(await pageNo(), "2/2", shape);
+      assert.equal((await state()).active, 1, shape);
+      await snap(`pager-${shape}`);
+    }
+    assert.deepEqual(shapes, ["dots", "slider", "dial", "dpad", "ends", "arrows"]); // 🧭 comes back to ⬅️ 1/N ➡️
+    await act("pager"); // ● dots, kept across the reload below
     // ↩️ undo the last box, ↪️ redo it
     await act("undo");
     assert.deepEqual((await state()).deck.slides[1].layers.map((l) => l.kind), ["rect", "arrow"]);
@@ -352,6 +393,7 @@ print('Long Japanese/English: visible SVG lines match native PPTX, explicit para
     s = await state();
     assert.equal(s.deck.slides.length, 2);
     assert.equal(s.deck.slides[0].layers[0].text, "あとから編集した文字\n2 行目");
+    assert.equal(await mobile.evaluate(() => IronmatePhone.pager), "dots"); // 🧭 the shape survives the reload too
     // 📤 PPTX and 💾 JSON (the same all-slide JSON Slide Studio opens)
     const [pptx] = await Promise.all([mobile.waitForEvent("download"), act("pptx")]);
     await pptx.saveAs(path.join(out, "phone.pptx"));
@@ -421,7 +463,7 @@ print('📱 phone: 2 slides, native text kept')
     await openPhone(largeDeck);
     await act("slide-copy");
     await mobile.waitForFunction(() => document.querySelector("#phone-status").textContent.includes("32MiB"));
-    assert.equal(await mobile.textContent("#phone-page"), "1/1");
+    assert.equal(await pageNo(), "1/1");
     assert.equal(await mobile.evaluate(() => IronmatePhone.active), 0);
     assert.ok(await mobile.locator('[data-act="redo"]').isDisabled());
     const [stillExportable] = await Promise.all([mobile.waitForEvent("download"), act("save")]);

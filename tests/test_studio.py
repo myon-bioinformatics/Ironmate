@@ -57,17 +57,22 @@ _LOAD_STUDIO = (
     "const fs=require('node:fs'),M=require('node:module'),p=require('node:path');"
     "const s=fs.readFileSync('ironlib/studio_bundle.py','utf8'),i=s.indexOf('STUDIO_JS = r\"\"\"')+16;"
     "const m=new M('ironlib/studio_bundle.py');m._compile(s.slice(i,s.indexOf('\"\"\"',i)),p.resolve('studio/studio.js'));"
-    "const c=m.exports;const input=JSON.parse(fs.readFileSync(0,'utf8'));"
+    "const c=m.exports,C=c,D=c.slides,T=c.tools,input=JSON.parse(fs.readFileSync(0,'utf8'));"
 )
 
 
-def node(script, data=None):
+def node(script, data=None, *args):
+    """🟨 STUDIO_JS を Node で読んでから script を走らせる、テスト共通の 1 つの入口。
+
+    c / C = StudioCore、D = slides、T = tools、input = data（stdin の JSON）、process.argv[1:] = args。
+    script が JSON を出せばそれを返す（何も出さなければ None）。test_browser_slides / test_pages_tools もこれを使う。
+    """
     if not shutil.which('node'):
         pytest.skip('Node.js required for browser-independent JS core checks')
-    run = subprocess.run(['node', '-e', _LOAD_STUDIO+script],
-                         cwd=ROOT, input=json.dumps(data), text=True, capture_output=True, timeout=30)
+    run = subprocess.run(['node', '-e', _LOAD_STUDIO + script, *map(str, args)],
+                         cwd=ROOT, input=json.dumps(data), text=True, capture_output=True, timeout=60)
     assert run.returncode == 0, run.stderr
-    return json.loads(run.stdout)
+    return json.loads(run.stdout) if run.stdout.strip() else None
 
 
 def test_heatmap_keeps_values_gaps_labels_and_source_across_python_js():
@@ -916,16 +921,10 @@ def _generator():
 def test_studio_stylesheets_match_the_generator():
     import pysaiyanweboo
     from ironlib.studio_bundle import BRAND_HTML, STUDIO_HTML, STYLE_CSS, TOOLS_HTML
-    import tempfile
     module = _generator()
-    bundles = module.bundles()
-    assert {p.relative_to(ROOT).as_posix() for p in bundles} == {'studio/style.css'}  # one sheet for every page
-    for target, options in bundles.items():
-        with tempfile.TemporaryDirectory() as tmp:
-            tmp_css = Path(tmp) / target.name
-            tmp_css.write_text(STYLE_CSS, encoding='utf-8')
-            assert pysaiyanweboo.check_bundle(tmp_css, **options) == [], target.relative_to(ROOT)
-        assert STYLE_CSS.startswith('/* web-ui-bundle/1 commit=')
+    assert {p.relative_to(ROOT).as_posix() for p in module.bundles()} == {'studio/style.css'}  # one sheet for every page
+    assert module.main(['--check']) == 0  # pysaiyanweboo.check_bundle on STYLE_CSS, once (the generator's own check)
+    assert STYLE_CSS.startswith('/* web-ui-bundle/1 commit=')
     text = STYLE_CSS
     assert '/* css/components.css */' in text and 'body[data-ui-theme="green"]{' in text  # PySaiyanWeBoo's theme
     assert '.ui-elements button,' in text and 'cdn.' not in text
@@ -936,7 +935,6 @@ def test_studio_stylesheets_match_the_generator():
     assert module.scoped('body{a:b}.x,y z{c:d}@media(max-width:1px){.w{e:f}}', 'p') == (
         'body:where([data-page~="p"]){a:b}:where([data-page~="p"]) .x,:where([data-page~="p"]) y z{c:d}'
         '@media(max-width:1px){:where([data-page~="p"]) .w{e:f}}')
-    assert module.main(['--check']) == 0
     assert module.THEME in pysaiyanweboo.CANDIDATE_THEMES and pysaiyanweboo.check_theme(pysaiyanweboo.theme_palettes()[module.THEME]) == []
 
 
@@ -1351,12 +1349,44 @@ def test_studio_html_contains_unique_controls_used_by_initialization():
     assert parser.ids["open-workspace"] == ["input"]
 
 
-def test_shared_workspace_contracts_in_node():
-    if not shutil.which("node"):
-        pytest.skip("Node.js required for browser-independent workspace contracts")
-    result = subprocess.run(["node", "--test", "tests/studio_workspace.test.cjs"],
-                            cwd=ROOT, capture_output=True, text=True, timeout=60)
-    assert result.returncode == 0, result.stdout + result.stderr
+_WORKSPACE = ("const assert=require('node:assert/strict'),"
+              "blank=()=>({schema:c.SCHEMA,width:64,height:64,background:'none',layers:[]}),"
+              "history=()=>{const h=new c.History(blank()),next=h.current;next.background='#123456';h.commit(next);h.undo();return h};")
+WORKSPACE_CASES = {  # 🗂️ 作業履歴（c.History / workspaceText / workspaceHistory）の約束を Node で
+    'restores_index_redo_unicode_and_detaches': """const h=history();h.items[1].source={note:'🌱日本語'};
+        const text=c.workspaceText(h),restored=c.workspaceHistory(text);
+        assert.equal(restored.index,0);assert.deepEqual(restored.current,h.current);assert.deepEqual(restored.redo(),h.items[1]);
+        restored.items[1].source.note='changed';assert.equal(h.items[1].source.note,'🌱日本語');
+        assert.equal(new TextEncoder().encode(text).length,new Blob([text]).size);""",
+    'undo_redo_take_steps_and_stop_at_both_ends': """const h=new c.History(blank());
+        for(const background of ['#111111','#222222','#333333'])h.commit({...h.current,background});
+        assert.equal(h.undo(2).background,'#111111');assert.equal(h.redo(2).background,'#333333');
+        assert.equal(h.undo(9).background,'none');assert.equal(h.redo(9).background,'#333333');
+        assert.equal(h.undo().background,'#222222');""",
+    'validates_index_schema_count_and_every_scene': """const record=JSON.parse(c.workspaceText(history()));
+        for(const patch of [{schema:'wrong'},{index:-1},{index:2},{index:0.5},{items:[]},
+          {items:Array(41).fill(blank())},{items:[blank(),{...blank(),width:-1}]}])
+          assert.throws(()=>c.workspaceHistory(JSON.stringify({...record,...patch})));
+        assert.throws(()=>c.workspaceText({items:[blank()],index:1}));assert.throws(()=>c.workspaceHistory(null));""",
+    'reader_limit_is_32mib_of_utf8_not_js_chars': """const text=c.workspaceText(history());
+        const exact=text+' '.repeat(c.WORKSPACE_MAX_BYTES-Buffer.byteLength(text));
+        assert.equal(Buffer.byteLength(exact),c.WORKSPACE_MAX_BYTES);assert.deepEqual(c.workspaceHistory(exact).current,blank());
+        assert.throws(()=>c.workspaceHistory(exact+' '),/32MiB/);
+        const large=JSON.parse(text);large.items[0].source='🌱'.repeat(8_388_608);const multibyte=JSON.stringify(large);
+        assert(multibyte.length<c.WORKSPACE_MAX_BYTES);assert(Buffer.byteLength(multibyte)>c.WORKSPACE_MAX_BYTES);
+        assert.throws(()=>c.workspaceHistory(multibyte),/32MiB/);""",
+    'writer_rejects_repeated_images_over_budget_and_keeps_trimmed': """const scene=blank();
+        scene.layers.push({id:'img',kind:'image',x:0,y:0,w:64,h:64,rotation:0,opacity:1,
+          src:'data:image/png;base64,'+'A'.repeat(8_000_000),cell:1,levels:256});  // the scene-string contract, not a decoder
+        const h=new c.History(scene);h.items=Array(5).fill(scene);h.index=2;
+        assert.throws(()=>c.workspaceText(h),/32MiB/);assert.equal(h.items.length,5);
+        const trimmed=new c.History(h.current);assert.deepEqual(c.workspaceHistory(c.workspaceText(trimmed)).current,h.current);""",
+}
+
+
+@pytest.mark.parametrize('body', WORKSPACE_CASES.values(), ids=WORKSPACE_CASES)
+def test_workspace_history_contract_in_node(body):
+    assert node(_WORKSPACE + body) is None
 
 
 # ═══ · browser matrix ════════════════════════════════════════════════════════════════════════════════════

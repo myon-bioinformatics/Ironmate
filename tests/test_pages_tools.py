@@ -1,5 +1,5 @@
 """Independent Python/JS parity and static publication boundary checks."""
-import json, subprocess
+import json
 from pathlib import Path
 
 import pytest
@@ -7,22 +7,9 @@ import grid_tools
 import image_studio
 import pixel_grid
 from scripts.pages_catalog import SIZES, catalog_script
+from tests.test_studio import node as js  # 🟨 STUDIO_JS loader shared with test_studio (T = tools)
 
 ROOT = Path(__file__).resolve().parents[1]
-
-
-_LOAD_TOOLS = (
-    "const fs=require('node:fs'),M=require('node:module'),p=require('node:path');"
-    "const s=fs.readFileSync('ironlib/studio_bundle.py','utf8'),i=s.indexOf('STUDIO_JS = r\"\"\"')+16;"
-    "const m=new M('ironlib/studio_bundle.py');m._compile(s.slice(i,s.indexOf('\"\"\"',i)),p.resolve('studio/studio.js'));"
-    "const c=m.exports.tools;const input=JSON.parse(fs.readFileSync(0,'utf8'));"
-)
-
-
-def js(code, payload):
-    result = subprocess.run(['node', '-e', _LOAD_TOOLS + code],
-                            input=json.dumps(payload), text=True, capture_output=True, check=True, cwd=ROOT)
-    return json.loads(result.stdout)
 
 
 def test_catalog_matches_python_for_every_preset():
@@ -38,7 +25,7 @@ def test_catalog_matches_python_for_every_preset():
 def test_nearest_grid_indices_match_python_including_odd_and_nonsquare_sizes():
     grid = pixel_grid.render('cloud', 'C02', 'shadow', 23)
     cases = [[w, h] for w, h in [(1, 1), (7, 9), (31, 16), (64, 46), (256, 1)]]
-    result = js('console.log(JSON.stringify(input.sizes.map(([w,h])=>c.resize(input.grid,w,h))))', {'grid': grid, 'sizes': cases})
+    result = js('console.log(JSON.stringify(input.sizes.map(([w,h])=>T.resize(input.grid,w,h))))', {'grid': grid, 'sizes': cases})
     for got, (w, h) in zip(result, cases):
         want = grid_tools.resize(grid, w, h, backend='stdlib')
         assert got['pixels'] == want['pixels'] and got['colors'] == want['colors']
@@ -48,9 +35,9 @@ def test_nearest_grid_indices_match_python_including_odd_and_nonsquare_sizes():
 def test_rejects_corrupt_import_and_escapes_filename_markup():
     grid = pixel_grid.render('circle', size=16)
     grid['pixels'][0][0] = -1
-    assert js('try { c.canonical(input); console.log(false) } catch { console.log(true) }', grid)
-    assert js('console.log(JSON.stringify(c.esc(input)))', '<img src=x onerror="alert(1)">') == '&lt;img src=x onerror=&quot;alert(1)&quot;&gt;'
-    assert js('console.log(JSON.stringify([c.base64Length(input),c.base64Length(input,true)]))', 7) == [12, 34]
+    assert js('try { T.canonical(input); console.log(false) } catch { console.log(true) }', grid)
+    assert js('console.log(JSON.stringify(T.esc(input)))', '<img src=x onerror="alert(1)">') == '&lt;img src=x onerror=&quot;alert(1)&quot;&gt;'
+    assert js('console.log(JSON.stringify([T.base64Length(input),T.base64Length(input,true)]))', 7) == [12, 34]
 
 
 def test_static_allowlist_excludes_private_scenes_and_generation_inputs(tmp_path):

@@ -6,12 +6,15 @@ on:
       - "*.cjs"
       - "vendor/py_launch.cjs"
       - "tests/**/*.cjs"
+      - "tests/test_studio.py"
       - "ironlib/studio_bundle.py"
       - "studio/*.cjs"
       - "tests/fixtures/py_launch/**"
       - "package.json"
       - "flow_workspace.py"
       - "studio_ingress.py"
+      - "pyproject.toml"
+      - "uv.lock"
       - ".github/workflows/node-tests.yml"
   push:
     branches: [main]
@@ -19,12 +22,15 @@ on:
       - "*.cjs"
       - "vendor/py_launch.cjs"
       - "tests/**/*.cjs"
+      - "tests/test_studio.py"
       - "ironlib/studio_bundle.py"
       - "studio/*.cjs"
       - "tests/fixtures/py_launch/**"
       - "package.json"
       - "flow_workspace.py"
       - "studio_ingress.py"
+      - "pyproject.toml"
+      - "uv.lock"
       - ".github/workflows/node-tests.yml"
 
 jobs:
@@ -57,4 +63,7 @@ jobs:
           node --test
           tests/py_launch.test.cjs
           tests/studio_ingress.test.cjs
-          tests/studio_workspace.test.cjs
+      - name: Run workspace history contracts
+        run: >-
+          uv run --locked --only-group stdlib-test
+          python -m pytest -q tests/test_studio.py -k workspace_history_contract_in_node

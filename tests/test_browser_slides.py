@@ -1,27 +1,15 @@
 """PPTX ZIP, relationship, native-object and serialization contracts."""
-import json, posixpath, subprocess
+import posixpath
 from pathlib import Path; from xml.etree import ElementTree as ET; from zipfile import ZipFile
 
 import pytest
 from ironlib.pptx_ooxml import require_package, ordered_slide_members
+from tests.test_studio import node  # 🟨 STUDIO_JS loader shared with test_studio (C, D = slides)
 
 ROOT = Path(__file__).resolve().parents[1]
 NS = {'p':'http://schemas.openxmlformats.org/presentationml/2006/main',
       'a':'http://schemas.openxmlformats.org/drawingml/2006/main',
       'r':'http://schemas.openxmlformats.org/package/2006/relationships'}
-
-
-_LOAD_STUDIO = (
-    "const fs=require('node:fs'),M=require('node:module'),p=require('node:path');"
-    "const s=fs.readFileSync('ironlib/studio_bundle.py','utf8'),i=s.indexOf('STUDIO_JS = r\"\"\"')+16;"
-    "const m=new M('ironlib/studio_bundle.py');m._compile(s.slice(i,s.indexOf('\"\"\"',i)),p.resolve('studio/studio.js'));"
-    "const C=m.exports,D=C.slides;"
-)
-
-
-def node(code, *args):
-    return subprocess.run(['node','-e',_LOAD_STUDIO+code,*map(str,args)],
-                          cwd=ROOT, capture_output=True, text=True, check=True)
 
 
 def verify_package(path, expected_slides):
@@ -51,7 +39,7 @@ def test_native_multiple_slides_text_format_geometry_and_package_relationships(t
     node("""const first=D.template(1280,720,'Title <>&','本文\\nSecond line');
     first.layers[0].opacity=.5;
     first.layers.push({id:'arrow',kind:'arrow',name:'Arrow',x:200,y:400,w:600,h:100,rotation:30,opacity:1,fill:'#000000',stroke:'#000000',strokeWidth:4,headStyle:'triangle',headPlacement:'middle',headSize:28});
-    D.exportPptx({schema:D.SCHEMA,title:'My deck',slides:[first,D.template(1280,720,'Second','Editable')]}).then(r=>require('fs').writeFileSync(process.argv[1],r.data));""",output)
+    D.exportPptx({schema:D.SCHEMA,title:'My deck',slides:[first,D.template(1280,720,'Second','Editable')]}).then(r=>require('fs').writeFileSync(process.argv[1],r.data));""",None,output)
     slides=verify_package(output,2)
     assert [n.text for n in slides[0].findall('.//a:t',NS)]==['Title <>&','本文','Second line']
     title=slides[0].find('.//p:sp/p:txBody/a:p/a:r/a:rPr',NS)
@@ -69,12 +57,12 @@ def test_invalid_decks_and_xml_control_characters_fail_without_a_pptx(tmp_path):
     cases=node("""const base={schema:D.SCHEMA,slides:[D.template()]};const failures=[];
     for(const value of [{...base,slides:[]},{...base,slides:Array(21).fill(D.template())},{...base,slides:[D.template(),D.template(640,480)]}]){try{D.validate(value);failures.push(false)}catch{failures.push(true)}}
     base.slides[0].layers[0].text='bad\\0text';D.exportPptx(base).then(()=>failures.push(false)).catch(()=>failures.push(true)).finally(()=>console.log(JSON.stringify(failures)));""")
-    assert json.loads(cases.stdout)==[True]*4
+    assert cases==[True]*4
 
 
 def test_deck_roundtrip_does_not_mutate_sources_and_preserves_bold():
     result=node("""const first=D.template(),before=JSON.stringify(first);const deck={schema:D.SCHEMA,title:'日本語',slides:[first,first]};const restored=D.parse(D.deckText(deck));restored.slides[0].layers[0].text='changed';console.log(JSON.stringify({same:JSON.stringify(first)===before,other:restored.slides[1].layers[0].text,bold:restored.slides[1].layers[0].bold}));""")
-    assert json.loads(result.stdout)=={'same':True,'other':'スライドのタイトル','bold':True}
+    assert result=={'same':True,'other':'スライドのタイトル','bold':True}
 
 
 def test_generated_shell_matches_the_existing_locked_js_writer():
@@ -86,7 +74,7 @@ def test_generated_shell_matches_the_existing_locked_js_writer():
 
 def test_rejects_fonts_outside_office_xml_range():
     result=node("""(async()=>{const results=[];for(const [w,h,fontSize] of [[4096,1024,4],[64,64,512]]){const scene=D.template(w,h);scene.layers[0].fontSize=fontSize;try{await D.exportPptx({schema:D.SCHEMA,slides:[scene]});results.push(false)}catch{results.push(true)}}console.log(JSON.stringify(results));})();""")
-    assert json.loads(result.stdout)==[True,True]
+    assert result==[True,True]
 
 
 def test_wrapping_words_graphemes_explicit_breaks_and_legacy_behavior():
@@ -98,7 +86,7 @@ def test_wrapping_words_graphemes_explicit_breaks_and_legacy_behavior():
       explicit:layout('first\r\n\r\nlast\n',20),legacy:layout('hello world',5,false),
       long:layout('abcdefghij',3)};
     console.log(JSON.stringify(samples));""")
-    data = json.loads(result.stdout)
+    data = result
     assert data['exact'] == [['hello', 'world']]
     assert data['words'] == [['one two', 'three']]
     assert ''.join(data['jp'][0]) == '日本語の長い文章を折り返します。'
@@ -117,8 +105,8 @@ def test_wrapping_pptx_uses_shared_layout_and_preserves_native_properties(tmp_pa
     Object.assign(scene.layers[1],{text:'https://example.test/'+ 'longurl'.repeat(8),w:250,font:'mono',fontSize:24});
     const source=JSON.stringify(scene), data=await D.exportPptx({schema:D.SCHEMA,slides:[scene,D.template()]});
     require('fs').writeFileSync(process.argv[1],data.data);
-    console.log(JSON.stringify({layouts:scene.layers.map(l=>C.textLayout(l)),unchanged:source===JSON.stringify(scene)}));})();""", output)
-    expected = json.loads(result.stdout)
+    console.log(JSON.stringify({layouts:scene.layers.map(l=>C.textLayout(l)),unchanged:source===JSON.stringify(scene)}));})();""", None, output)
+    expected = result
     assert expected['unchanged']
     slides = verify_package(output, 2)
     shapes = slides[0].findall('.//p:sp', NS)
@@ -144,5 +132,5 @@ def test_legacy_decks_default_to_wrap_without_mutation_and_false_is_preserved():
     let invalid=false;try{scene.layers[0].wrap='yes';C.validate(scene)}catch{invalid=true}
     console.log(JSON.stringify({wrapped:deck.slides[0].layers.map(l=>l.wrap),invalid,
       originalMissing:!Object.hasOwn(JSON.parse(source).layers[0],'wrap')}));""")
-    assert json.loads(result.stdout) == {'wrapped': [True, False], 'invalid': True,
+    assert result == {'wrapped': [True, False], 'invalid': True,
                                         'originalMissing': True}

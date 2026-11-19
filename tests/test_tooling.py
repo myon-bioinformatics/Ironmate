@@ -135,37 +135,46 @@ def test_workflow_keeps_coverage_budgets_and_setup_failure_visibility():
                and "tests/test_uno_roundtrip.py" in s.get("run", "") for s in marp_steps)
     assert any(s.get("env", {}).get("IRONMATE_FLOW_REQUIRE_CJK") == "1" for s in marp_steps)
 
-def test_clipboard_workflow_uses_version_aligned_prebuilt_browsers_and_keeps_coverage():
+def test_clipboard_workflow_uses_matching_browsers_with_version_floors_and_keeps_coverage():
     workflow = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text())
     clipboard = workflow["jobs"]["studio-clipboard"]
     assert clipboard["timeout-minutes"] == 25
     assert not clipboard.get("continue-on-error", False)
     assert clipboard["strategy"]["matrix"]["browser"] == ["chromium", "firefox", "webkit"]
     assert clipboard["strategy"]["fail-fast"] is False
-    image = re.fullmatch(
-        r"mcr\.microsoft\.com/playwright:v(\d+\.\d+\.\d+)-[a-z]+@sha256:[0-9a-f]{64}",
-        clipboard["container"]["image"],
-    )
-    assert image, "use the official Playwright image pinned by release tag and digest"
+    assert "container" not in clipboard
     steps = clipboard["steps"]
     names = [step.get("name") for step in steps]
-    assert "Bound apt dependency setup" not in names
     assert all(not step.get("continue-on-error", False) for step in steps)
-    assert not any(re.search(r"configure_ci_apt\.py|\bapt(?:-get)?\s|--with-deps|playwright/cli\.js\s+install",
-                             step.get("run", "")) for step in steps)
     node_index = next(i for i, step in enumerate(steps) if step.get("uses", "").startswith("actions/setup-node@"))
-    assert steps[node_index]["with"]["node-version"] == "26"
+    assert steps[node_index]["with"]["node-version"] == ">=26"
     install_index = names.index("Install isolated test-only Playwright")
+    apt_index = names.index("Bound apt dependency setup")
+    deps_index = names.index("Install clipboard browser OS dependencies")
+    browser_index = names.index("Install browser matching the resolved Playwright package")
     verify_index = names.index("Verify clipboard ingress in the static Pages build")
     upload_index = names.index("Preserve clipboard browser evidence")
-    assert node_index < install_index < verify_index < upload_index
-    install, verify, upload = steps[install_index], steps[verify_index], steps[upload_index]
-    assert install["timeout-minutes"] == 10
+    assert node_index < install_index < apt_index < deps_index < browser_index < verify_index < upload_index
+    install, apt, deps, browser, verify, upload = (steps[i] for i in (
+        install_index, apt_index, deps_index, browser_index, verify_index, upload_index,
+    ))
+    assert install["timeout-minutes"] == 5
     assert shlex.split(install["run"]) == [
         "npm", "install", "--prefix", "build/clipboard-tools", "--no-save",
-        "--ignore-scripts", "--package-lock=false", f"playwright@{image[1]}",
+        "--ignore-scripts", "--package-lock=false", "--no-audit", "--no-fund", "playwright@>=1.64.1",
     ]
-    assert "if" not in install and "if" not in verify
+    assert apt["timeout-minutes"] == 2
+    assert "sudo python3 -S scripts/configure_ci_apt.py" in apt["run"]
+    assert "sudo apt-config dump" in apt["run"]
+    cli = "node build/clipboard-tools/node_modules/playwright/cli.js"
+    assert deps["timeout-minutes"] == 15
+    assert deps["run"] == f"{cli} install-deps ${{{{ matrix.browser }}}}"
+    assert browser["timeout-minutes"] == 5
+    assert f"{cli} install ${{{{ matrix.browser }}}}" in browser["run"]
+    assert browser["env"]["PLAYWRIGHT_BROWSERS_PATH"] == verify["env"]["PLAYWRIGHT_BROWSERS_PATH"] == (
+        "${{ runner.temp }}/ironmate-playwright-browsers"
+    )
+    assert all("if" not in step for step in (install, apt, deps, browser, verify))
     assert verify["env"]["IRONMATE_BROWSERS"] == "${{ matrix.browser }}"
     assert verify["env"]["IRONMATE_PLAYWRIGHT_MODULE"] == (
         "${{ github.workspace }}/build/clipboard-tools/node_modules/playwright"

@@ -2386,11 +2386,9 @@ function clipboardError(code, message, cause) {
 function clipboardImageText(text) {
   const value = text.replace(/^\uFEFF/, "").trim();
   const explicit = /^data:image(?:\/|[;,]|$)/i.test(value);
-  // A raw image signature also makes malformed/oversized Base64 an image error.
-  // Inspect only a small prefix; do not decode an unbounded clipboard string.
-  const prefix = value.replace(/\s+/g, "").slice(0, 16);
-  const rawImage = /^[A-Za-z0-9+/]{16}$/.test(prefix) &&
-    sniffImageMime(Uint8Array.from(atob(prefix), c => c.charCodeAt(0)));
+  // Once text has an image signature, a malformed decode must not fall back
+  // to a different binary clipboard image.
+  const rawImage = hasRawImageSignature(value);
   try {
     const payload = imageBase64(value);
     if (sniffImageMime(payload.bytes)) return payload;
@@ -2586,8 +2584,8 @@ function shelfTextSize(text) {
   }
   return size;
 }
-function isImageText(text) {
-  if (/^data:/i.test(text)) return true;
+function hasRawImageSignature(text) {
+  // Bound the amount decoded regardless of the original clipboard size.
   let prefix = "";
   for (const char of text) {
     if (!/\s/.test(char)) prefix += char;
@@ -2596,6 +2594,9 @@ function isImageText(text) {
   if (prefix.startsWith("iVBORw0KGg") || prefix.startsWith("/9j/")) return true;
   try { return !!sniffImageMime(Uint8Array.from(atob(prefix), c => c.charCodeAt(0))); }
   catch { return false; }
+}
+function isImageText(text) {
+  return /^data:/i.test(text) || hasRawImageSignature(text);
 }
 function addShelfText(text, label) {
   const value = text.replace(/^\uFEFF/, "").trim();

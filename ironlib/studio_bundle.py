@@ -121,10 +121,8 @@ STUDIO_HTML = r"""<!doctype html>
           <span id="status" role="status">準備できました。</span
           ><span>ドラッグで移動 / 右下の点で拡縮</span>
         </div>
-        <div class="examples">
-          <button id="stamp-demo" data-gif="brand/example-stamp-demo.gif" aria-controls="example-view" aria-expanded="false">◷ 時計・矢印・顔文字の例</button
-          ><button id="demo" data-gif="brand/example-demo.gif" aria-controls="example-view" aria-expanded="false">✦ スタンプとヒートマップの例</button
-          ><button id="blank">＋ 新しいキャンバス</button
+        <div class="canvas-settings">
+          <button id="blank">＋ 新しいキャンバス</button
           ><label
             >背景<input id="background" type="color" value="#f8f7f2" /></label
           ><label class="check"
@@ -145,9 +143,6 @@ STUDIO_HTML = r"""<!doctype html>
               max="4096" /></label
           ><button id="canvas-size">適用</button>
         </div>
-        <figure id="example-view" class="example-view" hidden>
-          <img id="example-gif" alt="" width="640" height="432" />
-        </figure>
         <div class="note">
           再編集用にはJSONを保存してください。
         </div>
@@ -299,7 +294,7 @@ STUDIO_HTML = r"""<!doctype html>
 </html>
 """
 
-STYLE_CSS = r"""/* web-ui-bundle/1 commit=2b00e6b7c91bcfa325c1cf720c4fc50890430bd2 sha256=f732b25e161123a8bbfd227a4a971c43c8d5f3b5402d1403cbd91a0054c894ad scripts/build_studio_css.py*/
+STYLE_CSS = r"""/* web-ui-bundle/1 commit=2b00e6b7c91bcfa325c1cf720c4fc50890430bd2 sha256=a8d3a3f99df56ffedf85b6a595d1ed9469d4348cf9c23dfee83155d50618316c scripts/build_studio_css.py*/
 @layer base,components,theme;
 /* css/tokens.css */
 :root{--ui-bg:#0d1117;--ui-panel:#101820;--ui-fg:#d1f7c4;--ui-muted:#8b949e;--ui-border:#58a6ff;--ui-accent:#7ee787;--ui-danger:#cf222e;--ui-radius:0;--ui-text:16px;--ui-space:1rem;--ui-max:960px;--ui-font:Meiryo,メイリオ,sans-serif;--ui-font-mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
@@ -367,13 +362,11 @@ body:where([data-page~="studio"]){font-size:13px;line-height:1.5;margin:0}
 :where([data-page~="studio"]) .board .selection{pointer-events:none}
 :where([data-page~="studio"]) .board .handle{pointer-events:all;cursor:nwse-resize}
 :where([data-page~="studio"]) .canvas-footer{display:flex;justify-content:space-between;gap:10px;font-size:10px;line-height:1.5;color:var(--ui-muted);margin:16px 0}
-:where([data-page~="studio"]) .examples{display:flex;flex-wrap:wrap;gap:8px;align-items:center;border-top:1px solid var(--ui-border);padding-top:24px;margin-top:30px}
-:where([data-page~="studio"]) .examples label{margin:0;max-width:76px}
-:where([data-page~="studio"]) .example-view{margin:16px 0 0}
-:where([data-page~="studio"]) .example-view img{display:block;max-width:100%;height:auto;border:1px solid var(--ui-border)}
-:where([data-page~="studio"]) .examples input[type=color]{width:45px}
-:where([data-page~="studio"]) .examples input[type=number]{width:68px}
-:where([data-page~="studio"]) .examples .check{max-width:none}
+:where([data-page~="studio"]) .canvas-settings{display:flex;flex-wrap:wrap;gap:8px;align-items:center;border-top:1px solid var(--ui-border);padding-top:24px;margin-top:30px}
+:where([data-page~="studio"]) .canvas-settings label{margin:0;max-width:76px}
+:where([data-page~="studio"]) .canvas-settings input[type=color]{width:45px}
+:where([data-page~="studio"]) .canvas-settings input[type=number]{width:68px}
+:where([data-page~="studio"]) .canvas-settings .check{max-width:none}
 :where([data-page~="studio"]) .layers{max-height:240px;overflow:auto;margin-bottom:12px}
 :where([data-page~="studio"]) .layers button{width:100%;justify-content:space-between;margin-bottom:5px;text-align:left}
 :where([data-page~="studio"]) .layers small{color:var(--ui-muted);font-size:9px}
@@ -398,7 +391,7 @@ body:where([data-page~="studio"]){font-size:13px;line-height:1.5;margin:0}
 :where([data-page~="studio"]) #base64-dialog p{font-size:12px;line-height:1.8}
 @media(min-width:1600px){:where([data-page~="studio"]) .workspace{padding:44px}}
 @media(max-width:1150px){:where([data-page~="studio"]) main{grid-template-columns:210px minmax(0,1fr)}:where([data-page~="studio"]) .inspector{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px}:where([data-page~="studio"]) .inspector>.eyebrow{display:none}:where([data-page~="studio"]) .inspector>.section{margin:0;border:0;padding:0}:where([data-page~="studio"]) .workspace{padding:22px}}
-@media(max-width:680px){:where([data-page~="studio"]) header{padding:14px;display:block}:where([data-page~="studio"]) .top-actions{margin-top:15px}:where([data-page~="studio"]) .top-actions button,:where([data-page~="studio"]) .top-actions .button{padding:7px;font-size:11px}:where([data-page~="studio"]) main{display:flex;flex-direction:column}:where([data-page~="studio"]) .workspace{order:-1;padding:18px}:where([data-page~="studio"]) .canvas-heading h2{font-size:17px}:where([data-page~="studio"]) .canvas-heading{margin-bottom:16px}:where([data-page~="studio"]) .canvas-footer{display:block}:where([data-page~="studio"]) .canvas-footer span{display:block;margin:5px 0}:where([data-page~="studio"]) .tools{display:block}:where([data-page~="studio"]) .tools h1,:where([data-page~="studio"]) .tools>.hint{display:none}:where([data-page~="studio"]) .tool-grid{margin:8px 0;grid-template-columns:repeat(3,1fr)}:where([data-page~="studio"]) .inspector{display:block}:where([data-page~="studio"]) .inspector>.section{margin-top:20px}:where([data-page~="studio"]) .examples{margin-top:20px;padding-top:15px}:where([data-page~="studio"]) .board{width:100%}:where([data-page~="studio"]) aside{padding:18px}:where([data-page~="studio"]) .tools>.section{margin-top:15px}}
+@media(max-width:680px){:where([data-page~="studio"]) header{padding:14px;display:block}:where([data-page~="studio"]) .top-actions{margin-top:15px}:where([data-page~="studio"]) .top-actions button,:where([data-page~="studio"]) .top-actions .button{padding:7px;font-size:11px}:where([data-page~="studio"]) main{display:flex;flex-direction:column}:where([data-page~="studio"]) .workspace{order:-1;padding:18px}:where([data-page~="studio"]) .canvas-heading h2{font-size:17px}:where([data-page~="studio"]) .canvas-heading{margin-bottom:16px}:where([data-page~="studio"]) .canvas-footer{display:block}:where([data-page~="studio"]) .canvas-footer span{display:block;margin:5px 0}:where([data-page~="studio"]) .tools{display:block}:where([data-page~="studio"]) .tools h1,:where([data-page~="studio"]) .tools>.hint{display:none}:where([data-page~="studio"]) .tool-grid{margin:8px 0;grid-template-columns:repeat(3,1fr)}:where([data-page~="studio"]) .inspector{display:block}:where([data-page~="studio"]) .inspector>.section{margin-top:20px}:where([data-page~="studio"]) .canvas-settings{margin-top:20px;padding-top:15px}:where([data-page~="studio"]) .board{width:100%}:where([data-page~="studio"]) aside{padding:18px}:where([data-page~="studio"]) .tools>.section{margin-top:15px}}
 
 /* tools page layout */
 body:where([data-page~="tools"]){font-size:15px;line-height:1.65;margin:0}
@@ -2423,85 +2416,6 @@ $("blank").onclick = () => {
   selected = null;
   message("新しいキャンバス（戻すで復帰できます）");
 };
-function demo() {
-  const doc = blank();
-  doc.layers.push({
-    ...base("text", 64, 40, 900, 60),
-    name: "タイトル",
-    text: "小さな部品から、大きな表現へ。",
-    fill: "#163B3B",
-    fontSize: 38,
-  });
-  doc.layers.push({
-    ...base("text", 68, 105, 900, 40),
-    name: "サブタイトル",
-    text: "STAMP / COLOR / MATRIX     —     Ironmate Image Studio",
-    fill: "#56766D",
-    fontSize: 17,
-  });
-  doc.layers.push({
-    ...base("rect", 68, 178, 1144, 430),
-    name: "白いカード",
-    fill: "#FFFFFF",
-    stroke: "#D6DFD2",
-    strokeWidth: 1,
-  });
-  doc.layers.push({
-    ...base("heatmap", 90, 220, 680, 350),
-    name: "色の行列",
-    ...C.matrix({
-      z: [
-        [2, 3, 4, 6, 8, 9, 10],
-        [1, 3, 5, 7, 9, null, 12],
-        [2, 4, 6, 8, 10, 12, 14],
-        [0, 2, 5, 8, 11, 14, 16],
-      ],
-      x: ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"],
-      y: ["A", "B", "C", "D"],
-    }),
-  });
-  doc.layers.push({
-    ...base("triangle", 890, 264, 170, 150),
-    name: "三角のスタンプ",
-    fill: "none",
-    stroke: "#EFBE4C",
-    strokeWidth: 7,
-  });
-  doc.layers.push({
-    ...base("text", 910, 294, 140, 90),
-    name: "絵文字スタンプ",
-    text: "🌱",
-    fill: "#163B3B",
-    fontSize: 70,
-  });
-  doc.layers.push({
-    ...base("text", 840, 445, 320, 100),
-    name: "カスタム文字",
-    text: "色を置く。\nかたちが生まれる。",
-    fill: "#163B3B",
-    fontSize: 25,
-  });
-  doc.layers.push({
-    ...base("text", 70, 646, 1100, 35),
-    name: "フッター",
-    text: "01  COMPOSE                         02  EXPLORE COLOR                         03  EXPORT",
-    fill: "#71887C",
-    fontSize: 14,
-  });
-  return doc;
-}
-// An example button only shows its GIF: nothing is loaded, so pressing one by mistake changes nothing.
-let example = null;
-for (const button of document.querySelectorAll(".examples [data-gif]"))
-  button.onclick = () => {
-    example = example === button.id ? null : button.id;
-    $("example-view").hidden = !example;
-    for (const other of document.querySelectorAll(".examples [data-gif]")) other.setAttribute("aria-expanded", String(other.id === example));
-    if (example) {
-      $("example-gif").src = button.dataset.gif;
-      $("example-gif").alt = button.textContent.trim();
-    }
-  };
 window.addEventListener("beforeunload", (e) => {
   if (dirty && document.body.dataset.mode !== "slides") {
     e.preventDefault();
@@ -2778,8 +2692,6 @@ window.IronmateStudio = {
   get shelfItems() { return shelfItems.map(item => ({ ...item })); },
   addShelfItem,
 };
-scene = demo();
-history = new C.History(scene);
 render().catch(error);
 })();
 
@@ -3130,7 +3042,7 @@ if (typeof document !== "undefined" && document.body && (document.body.dataset.p
     D = window.IronmateSlides,
     E = window.IronmateStudio,
     byId = (id) => document.getElementById(id);
-  let deck = { schema: D.SCHEMA, title: "Ironmate", slides: [D.template()] },
+  let deck = { schema: D.SCHEMA, title: "Ironmate", slides: [{...E.scene, background: "#FFFFFF"}] },
     active = 0,
     saved = "",
     busy = false;

@@ -78,13 +78,11 @@ input[type=checkbox]{{display:inline;width:auto;margin:0 7px 0 0}}
 .board .selection{{pointer-events:none}}
 .board .handle{{pointer-events:all;cursor:nwse-resize}}
 .canvas-footer{{display:flex;justify-content:space-between;gap:10px;font-size:10px;line-height:1.5;color:var(--ui-muted);margin:16px 0}}
-.examples{{display:flex;flex-wrap:wrap;gap:8px;align-items:center;border-top:1px solid var(--ui-border);padding-top:24px;margin-top:30px}}
-.examples label{{margin:0;max-width:76px}}
-.example-view{{margin:16px 0 0}}
-.example-view img{{display:block;max-width:100%;height:auto;border:1px solid var(--ui-border)}}
-.examples input[type=color]{{width:45px}}
-.examples input[type=number]{{width:68px}}
-.examples .check{{max-width:none}}
+.canvas-settings{{display:flex;flex-wrap:wrap;gap:8px;align-items:center;border-top:1px solid var(--ui-border);padding-top:24px;margin-top:30px}}
+.canvas-settings label{{margin:0;max-width:76px}}
+.canvas-settings input[type=color]{{width:45px}}
+.canvas-settings input[type=number]{{width:68px}}
+.canvas-settings .check{{max-width:none}}
 .layers{{max-height:240px;overflow:auto;margin-bottom:12px}}
 .layers button{{width:100%;justify-content:space-between;margin-bottom:5px;text-align:left}}
 .layers small{{color:var(--ui-muted);font-size:9px}}
@@ -109,7 +107,7 @@ dialog textarea{{max-width:100%;word-break:break-all}}
 #base64-dialog p{{font-size:12px;line-height:1.8}}
 @media(min-width:1600px){{.workspace{{padding:44px}}}}
 @media(max-width:1150px){{main{{grid-template-columns:210px minmax(0,1fr)}}.inspector{{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px}}.inspector>.eyebrow{{display:none}}.inspector>.section{{margin:0;border:0;padding:0}}.workspace{{padding:22px}}}}
-@media(max-width:680px){{header{{padding:14px;display:block}}.top-actions{{margin-top:15px}}.top-actions button,.top-actions .button{{padding:7px;font-size:11px}}main{{display:flex;flex-direction:column}}.workspace{{order:-1;padding:18px}}.canvas-heading h2{{font-size:17px}}.canvas-heading{{margin-bottom:16px}}.canvas-footer{{display:block}}.canvas-footer span{{display:block;margin:5px 0}}.tools{{display:block}}.tools h1,.tools>.hint{{display:none}}.tool-grid{{margin:8px 0;grid-template-columns:repeat(3,1fr)}}.inspector{{display:block}}.inspector>.section{{margin-top:20px}}.examples{{margin-top:20px;padding-top:15px}}.board{{width:100%}}aside{{padding:18px}}.tools>.section{{margin-top:15px}}}}
+@media(max-width:680px){{header{{padding:14px;display:block}}.top-actions{{margin-top:15px}}.top-actions button,.top-actions .button{{padding:7px;font-size:11px}}main{{display:flex;flex-direction:column}}.workspace{{order:-1;padding:18px}}.canvas-heading h2{{font-size:17px}}.canvas-heading{{margin-bottom:16px}}.canvas-footer{{display:block}}.canvas-footer span{{display:block;margin:5px 0}}.tools{{display:block}}.tools h1,.tools>.hint{{display:none}}.tool-grid{{margin:8px 0;grid-template-columns:repeat(3,1fr)}}.inspector{{display:block}}.inspector>.section{{margin-top:20px}}.canvas-settings{{margin-top:20px;padding-top:15px}}.board{{width:100%}}aside{{padding:18px}}.tools>.section{{margin-top:15px}}}}
 """
 
 TOOLS_RULES = f"""/* tools page layout */

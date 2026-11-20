@@ -973,7 +973,8 @@ def test_build_site_contains_only_public_client_assets_and_relative_paths(tmp_pa
         assert 'src="/' not in html and 'href="/' not in html
     text=(target/'index.html').read_text()
     assert "Content-Security-Policy" in text and 'Base64 / 渡す' in text
-    for name, expected in (('studio.js', STUDIO_JS.encode('utf-8')), ('style.css', STYLE_CSS.encode('utf-8'))):
+    from scripts.pages_catalog import catalog_script
+    for name, expected in (('studio.js', STUDIO_JS.encode('utf-8') + b'\n' + catalog_script()), ('style.css', STYLE_CSS.encode('utf-8'))):
         assert (target/name).read_bytes() == expected
         assert f'"{name}"' in text
     assert 'src="/' not in text and 'href="/' not in text

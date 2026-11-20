@@ -126,10 +126,9 @@ def public_assets():
              'brand/example-demo.gif', 'brand/example-stamp-demo.gif')
     assets = {name: (ROOT / 'studio' / name).read_bytes() for name in names}
     assets['index.html'] = STUDIO_HTML.encode('utf-8')
-    assets['studio.js'] = STUDIO_JS.encode('utf-8')
     assets['style.css'] = STYLE_CSS.encode('utf-8')
     from scripts.pages_catalog import catalog_script
-    assets['tools/catalog.js'] = catalog_script()
+    assets['studio.js'] = STUDIO_JS.encode('utf-8') + b'\n' + catalog_script()
     assets['tools/index.html'] = TOOLS_HTML.encode('utf-8')
     assets['brand/index.html'] = BRAND_HTML.encode('utf-8')
     page = assets['index.html'].decode('utf-8')
@@ -139,8 +138,8 @@ def public_assets():
         page = page.replace('"' + name + '"', '"../' + name + '"')
     page = page.replace('href="tools/"', 'href="../tools/"').replace('href="slides/phone/"', 'href="phone/"')
     page = page.replace('<a href="slides/">スライド・PPTX作成 ↗</a>', '<a href="../">Image Studio ↗</a>')
-    page = page.replace('<body class="ui-elements" data-ui-theme="green" data-page="studio">', '<body class="ui-elements" data-ui-theme="green" data-page="studio slides" data-mode="slides">').replace('画像にする。', 'スライドにする。')
-    page = page.replace('IMAGE STUDIO / 01', 'SLIDE STUDIO / 03').replace('Ironmate — Image Studio', 'Ironmate — Slide Studio')
+    page = page.replace('<body class="ui-elements" data-ui-theme="green" data-page="studio">', '<body class="ui-elements" data-ui-theme="green" data-page="studio slides" data-mode="slides">').replace('<h1>画像を編集</h1>', '<h1>スライドを編集</h1>')
+    page = page.replace('<span>画像編集</span>', '<span>スライド編集</span>').replace('Ironmate — Image Studio', 'Ironmate — Slide Studio')
     page = page.replace('</header>', '</header>' + SLIDES_PANEL_HTML)
     assets['slides/index.html'] = page.encode('utf-8')
     assets['slides/phone/index.html'] = PHONE_HTML.encode('utf-8')  # 📱 the same deck JSON / PPTX on a phone
@@ -321,7 +320,13 @@ def main(argv=None):
 
 def _run_studio(p, args):
     if args.build_site:
-        print(build_site(args.build_site))
+        site = build_site(args.build_site)
+        files = sorted(path for path in site.rglob('*') if path.is_file())
+        for path in files:
+            if path.suffix == '.html':
+                print(f'{path.relative_to(site)}: {path.stat().st_size:,} bytes', file=sys.stderr)
+        print(f'Public site (uncompressed): {sum(p.stat().st_size for p in files):,} bytes', file=sys.stderr)
+        print(site)
         return 0
     if args.render:
         data = render_scene(json.loads(args.render.read_text(encoding='utf-8')), args.format, args.scale, args.chrome, args.data_uri)

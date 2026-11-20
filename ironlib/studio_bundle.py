@@ -21,7 +21,7 @@ STUDIO_HTML = r"""<!doctype html>
   </head>
   <body class="ui-elements" data-ui-theme="green" data-page="studio">
     <header>
-      <div class="brand"><img src="brand/heatmap.svg" width="48" height="48" alt="I’m — 🔰がアポストロフィのIronmateロゴ" /><div>IRONMATE <span>IMAGE STUDIO / 01</span></div></div>
+      <div class="brand"><img src="brand/heatmap.svg" width="48" height="48" alt="I’m — 🔰がアポストロフィのIronmateロゴ" /><div>IRONMATE <span>画像編集</span></div></div>
       <div class="top-actions">
         <a href="slides/">スライド・PPTX作成 ↗</a>
         <a href="slides/phone/" title="スマホで作るスライド">📱 スマホ ↗</a>
@@ -48,10 +48,9 @@ STUDIO_HTML = r"""<!doctype html>
     </header>
     <main>
       <aside class="tools">
-        <p class="eyebrow">01 / COMPOSE</p>
         <h1>画像を編集</h1>
         <p class="hint">
-          図形も文字も、スタンプのように。<br />キャンバスを押して配置できます。
+          ツールを選び、キャンバスを押して配置します。
         </p>
         <div id="tools" class="tool-grid">
           <button data-tool="select" class="active">↖ 選択</button
@@ -98,10 +97,9 @@ STUDIO_HTML = r"""<!doctype html>
         <button id="import-base64-button" class="wide">Base64画像を取り込む</button>
         <button id="custom" class="wide">選択したレイヤーをスタンプに</button>
         <p id="stamp-note" class="hint">
-          文字・絵文字・図形・画像を繰り返し配置。
+          選択したレイヤーを再利用できます。
         </p>
         <div class="section">
-          <p class="eyebrow">02 / MATRIX</p>
           <label
             >数値行列 / Plotly heatmap JSON<textarea id="matrix" rows="3">
 [[0,1,2,3],[3,2,1,0],[1,null,2,3]]</textarea
@@ -121,7 +119,6 @@ STUDIO_HTML = r"""<!doctype html>
       <section class="workspace">
         <div class="canvas-heading">
           <div>
-            <p class="eyebrow">YOUR CANVAS</p>
             <h2>キャンバス</h2>
           </div>
           <span id="size-note">1280 × 720</span>
@@ -164,7 +161,7 @@ STUDIO_HTML = r"""<!doctype html>
           <img id="example-gif" alt="" width="640" height="432" />
         </figure>
         <div class="note">
-          PNGは表示と同じ構成を画像化。SVGは図形・文字を保持。JSONで元画像とレイヤーを再編集できます。
+          再編集用にはJSONを保存してください。
         </div>
         <details id="workspace-history">
           <summary>作業履歴（最大40状態）</summary>
@@ -175,7 +172,7 @@ STUDIO_HTML = r"""<!doctype html>
         </details>
       </section>
       <aside class="inspector">
-        <p class="eyebrow">03 / LAYERS</p>
+        <p class="eyebrow">レイヤー</p>
         <div id="layers" class="layers"></div>
         <div class="two">
           <button id="duplicate">複製</button><button id="delete">削除</button
@@ -245,7 +242,7 @@ STUDIO_HTML = r"""<!doctype html>
           >
         </div>
         <div class="section">
-          <p class="eyebrow">04 / RESOLUTION</p>
+          <p class="eyebrow">解像度</p>
           <label
             >モザイクのセル幅 <output id="cell-value">1 px</output
             ><input id="cell" type="range" min="1" max="128" value="1" /></label
@@ -266,14 +263,14 @@ STUDIO_HTML = r"""<!doctype html>
             />数値ラベル</label
           >
           <p class="hint">
-            画像は保持した元画像から再計算します。モザイクで失われた細部の推測・復元ではありません。
+            セル幅を変えると元画像から再計算します。
           </p>
         </div>
       </aside>
     </main>
     <dialog id="shelf-dialog">
-      <h2>クリップボード・シェルフ (Clipboard Shelf)</h2>
-      <p>クリップボードの画像・Base64・テキストデータを複数ストックし、選択して参照・コピー・キャンバス取り込みを行えます。</p>
+      <h2>クリップボード・シェルフ</h2>
+      <p>画像・Base64・テキストを一時保存できます。</p>
       <div class="shelf-actions">
         <button id="shelf-paste-clip" class="primary">クリップボードから追加 ＋</button>
         <button id="shelf-clear">シェルフをクリア</button>
@@ -3930,13 +3927,12 @@ SLIDES_PANEL_HTML = r"""<section class="slide-controls" aria-label="スライド
     </div>
   </details>
   <p id="deck-status" role="status">
-    文字・図形をImage
-    Studioと同じ操作で配置できます。全スライドは同じ寸法で作成します。
+    全スライドは同じ寸法です。
   </p>
-  <p class="slide-hint">
+  <details class="ui-panel"><summary>PPTXの制限・出力形式</summary><p class="slide-hint">
     文字はボックス幅で折り返します。文字サイズは自動縮小しません。長文では高さ・位置も調整してください。
     最大20枚・JSON合計32MiB。テキスト・通常図形・三角の矢羽根はPPTXの編集可能な要素になります。時計・ヒートマップ・単色スタンプ・🔰の矢印は、レイヤー単位の画像として保存します。フォントは表示先の端末に依存します。
-  </p>
+  </p></details>
 </section>
 """
 
@@ -4047,21 +4043,18 @@ TOOLS_HTML = r"""<!doctype html>
       </nav>
     </header>
     <main>
-      <p class="eyebrow">BROWSER WORKBENCH / 02</p>
-      <h1>素材をつくる。<br />並べて、持ち出す。</h1>
+      <h1>画像ツール</h1>
       <p class="lead">
-        インストール不要。画像もJSONも、このブラウザの中で処理します。
+        画像とJSONは端末内で処理します。
       </p>
-      <img class="brand-hero" src="../brand/hero.svg" width="560" height="160" alt="Ironmate — I’mとヒートマップのセルを組み合わせたロゴ" />
       <div class="jump">
-        <a href="#pixels">01 ドット絵</a><a href="#digest">02 画像一覧</a
-        ><a href="#capacity">03 Base64容量</a><a href="#features">できること</a>
+        <a href="#pixels">ドット絵</a><a href="#digest">画像一覧</a
+        ><a href="#capacity">Base64容量</a><a href="#features">CLI対応表</a>
       </div>
       <p id="message" role="status" aria-live="polite">準備しています…</p>
       <section id="pixels">
         <div class="section-heading">
-          <span>01 / PIXEL GRID</span>
-          <h2>色番号から、ドット絵へ。</h2>
+          <h2>ドット絵</h2>
         </div>
         <div class="workspace">
           <div class="controls">
@@ -4073,8 +4066,7 @@ TOOLS_HTML = r"""<!doctype html>
             <label>配色ID<select id="palette"></select></label
             ><button id="generate" class="primary">プリセットから生成</button>
             <p class="hint">
-              Python版でビルドした5形・4加工・10配色。元サイズは16 / 23 / 31 /
-              32 / 64。配色IDは色そのものとは独立した識別子です。
+              形・サイズ・加工・配色を選んで生成します。
             </p>
             <label class="file"
               >グリッドJSONを開く<input
@@ -4140,15 +4132,14 @@ TOOLS_HTML = r"""<!doctype html>
               ></textarea>
             </label>
             <p class="hint">
-              PNGは色表・寸法のironmateメタデータ付き。JSONは色番号を保持します。SVG・PNGは同じセルを描画しますが、Python版との圧縮byte一致は対象外です。
+              JSONは色番号を、PNGは色表と寸法を保持します。
             </p>
           </div>
         </div>
       </section>
       <section id="digest">
         <div class="section-heading">
-          <span>02 / IMAGE DIGEST</span>
-          <h2>比較のための、一枚。</h2>
+          <h2>画像一覧</h2>
         </div>
         <p>
           最大20枚のPNG / JPEG /
@@ -4172,14 +4163,13 @@ TOOLS_HTML = r"""<!doctype html>
           ><button id="digest-html" disabled>一覧HTML</button>
         </div>
         <p class="hint">
-          1枚8MiB、合計32MiB、1画像4MPまで。表示用に長辺512px以下へ縮小します。ファイル名だけをラベルとして使い、合否・MAE等は計算しません。
+          1枚8 MiB・4 MP、合計32 MiBまで。一覧では長辺512 px以下に縮小します。
         </p>
         <div id="image-list" class="image-list"></div>
       </section>
       <section id="capacity">
         <div class="section-heading">
-          <span>03 / BASE64</span>
-          <h2>送る前に、容量を確認。</h2>
+          <h2>Base64容量</h2>
         </div>
         <label
           >任意のファイルを選ぶ<input id="capacity-file" type="file"
@@ -4188,70 +4178,19 @@ TOOLS_HTML = r"""<!doctype html>
           ファイル本体は読み込まず、サイズから標準Base64文字数を計算します。
         </p>
       </section>
-      <section id="features">
-        <div class="section-heading">
-          <span>CAPABILITIES</span>
-          <h2>用途に合わせた入口。</h2>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>機能</th>
-                <th>ブラウザで利用</th>
-                <th>ローカルCLIで利用</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>図形・文字・画像・時計・矢印・ヒートマップ・モザイク</td>
-                <td><a href="../">Image Studio</a></td>
-                <td>image_studio.py</td>
-              </tr>
-              <tr>
-                <td>レイヤー・履歴・クリップボード・PNG/SVG/JSON/Base64</td>
-                <td><a href="../">Image Studio</a></td>
-                <td>image_studio.py / studio_ingress.py</td>
-              </tr>
-              <tr>
-                <td>ドット絵・配色・最近傍拡縮</td>
-                <td><a href="#pixels">この画面</a>（プリセットサイズ）</td>
-                <td>pixel_grid.py / grid_tools.py（任意の対応サイズ）</td>
-              </tr>
-              <tr>
-                <td>画像一覧</td>
-                <td><a href="#digest">この画面</a>（画像・名前・一覧）</td>
-                <td>
-                  image_digest.py / browser_matrix.py（行列・測定レポート）
-                </td>
-              </tr>
-              <tr>
-                <td>Base64容量</td>
-                <td><a href="#capacity">正確な文字数</a></td>
-                <td>ironlib/size_estimate.py（縮小候補の検証も可）</td>
-              </tr>
-              <tr>
-                <td>PPTX作成・属性置換・PDFプレビュー</td>
-                <td><a href="../slides/">複数スライドのPPTX作成</a></td>
-                <td>pptx_pipeline.py / pptx_replace.py / ironlib/pptx_preview.py</td>
-              </tr>
-              <tr>
-                <td>GitHub・MCP・外部API</td>
-                <td>
-                  <a href="https://myon-bioinformatics.github.io/"
-                    >ポートフォリオの関連プロジェクト</a
-                  >
-                </td>
-                <td>認証やサーバーが必要な処理はCLIで実行</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <p class="hint">
-          GitHub
-          Pagesは静的配信です。Docker・Python・Nodeの処理はビルド時または手元の環境で実行します。入力画像や作業JSONは公開ビルドに入りません。
-        </p>
-      </section>
+      <details id="features" class="ui-panel">
+        <summary>ブラウザとCLIの対応表</summary>
+        <div class="table-wrap"><table>
+          <thead><tr><th>操作</th><th>ブラウザ</th><th>CLI</th></tr></thead>
+          <tbody>
+            <tr><td>画像・レイヤー編集</td><td><a href="../">画像編集</a></td><td>image_studio.py / studio_ingress.py</td></tr>
+            <tr><td>ドット絵</td><td><a href="#pixels">グリッド編集</a></td><td>pixel_grid.py / grid_tools.py</td></tr>
+            <tr><td>画像一覧・比較</td><td><a href="#digest">一覧作成</a></td><td>image_digest.py / browser_matrix.py</td></tr>
+            <tr><td>Base64容量</td><td><a href="#capacity">文字数</a></td><td>ironlib/size_estimate.py</td></tr>
+            <tr><td>PPTX</td><td><a href="../slides/">スライド編集</a></td><td>pptx_pipeline.py / pptx_replace.py / ironlib/pptx_preview.py</td></tr>
+          </tbody>
+        </table></div>
+      </details>
     </main>
     <footer>
       IRONMATE /
@@ -4276,10 +4215,9 @@ BRAND_HTML = r"""<!doctype html>
   <meta name="theme-color" content="#003D32" />
 </head>
 <body class="ui-elements" data-ui-theme="green" data-page="brand">
-  <header><img src="gameboy.svg" width="64" height="64" alt="GameBoy StyleのIronmateロゴ" /><div><a href="../">Ironmate</a><p>ロゴ6案 / 暫定配置</p></div></header>
+  <header><img src="gameboy.svg" width="64" height="64" alt="GameBoy StyleのIronmateロゴ" /><div><a href="../">Ironmate</a><p>ロゴ一覧</p></div></header>
   <main>
-    <h1>同じI’m、6つの表情。</h1>
-    <p>初心者マークをアポストロフィに。正式版は決めず、用途ごとに使い分けます。</p>
+    <h1>ロゴ素材</h1>
     <div class="designs">
       <section><img src="mono.svg" alt="Pixel Mono" width="192" height="192" /><h2>① Pixel Mono</h2><p>白黒資料・印刷向け</p><a href="mono.svg" download>SVGを保存</a></section>
       <section><img src="dark-green.svg" alt="Dark Green" width="192" height="192" /><h2>② Dark Green</h2><p>GitHub向け素材・favicon</p><a href="dark-green.svg" download>SVGを保存</a></section>
@@ -4288,7 +4226,7 @@ BRAND_HTML = r"""<!doctype html>
       <section><img src="heatmap.svg" alt="Heatmap Pixel" width="192" height="192" /><h2>⑤ Heatmap Pixel</h2><p>Web画面・Hero</p><a href="heatmap.svg" download>SVGを保存</a></section>
       <section><img src="pixel-3d.svg" alt="Pixel 3D" width="192" height="192" /><h2>⑥ Pixel 3D</h2><p>ホーム画面・ランチャー</p><a href="app-512.png" download>PNGを保存</a></section>
     </div>
-    <section class="home"><h2>ホーム画面に追加する</h2><p>Androidはブラウザのメニュー、iPhoneは共有メニューの「ホーム画面に追加」から登録できます。⑥をアイコンに指定しています。表示や追加手順は端末・ブラウザによって異なります。</p><a href="../">Image Studio</a> / <a href="../slides/">Slide Studio</a> / <a href="../tools/">ドット絵・画像一覧</a></section>
+    <section class="home"><h2>ホーム画面に追加する</h2><p>Androidはブラウザのメニュー、iPhoneは共有メニューの「ホーム画面に追加」から登録できます。</p><a href="../">Image Studio</a> / <a href="../slides/">Slide Studio</a> / <a href="../tools/">ドット絵・画像一覧</a></section>
     <div class="print-logo"><img src="mono.svg" width="128" height="128" alt="白黒印刷用Ironmateロゴ" /><p>Ironmate — I’m</p></div>
   </main>
 </body>

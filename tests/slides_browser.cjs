@@ -32,7 +32,11 @@ const url =
       (await page.evaluate(() => IronmateSlideEditor.deck)).slides.length,
       1,
     );
-    await page.click('[data-layer-id="title"]');
+    assert.deepEqual((await page.evaluate(() => IronmateStudio.scene)).layers, []);
+    await page.click("#slide-template");
+    await page.waitForFunction(() => IronmateStudio.scene.layers.length === 2);
+    const [titleId, bodyId] = await page.evaluate(() => IronmateStudio.scene.layers.map(layer => layer.id));
+    await page.click(`[data-layer-id="${titleId}"]`);
     await page.fill("#text", "編集したタイトル <>&");
     await page.click("#apply-text");
     await page.fill("#font-size", "64");
@@ -149,7 +153,7 @@ const url =
     // Paste long text through the real inspector, then compare the visible
     // SVG line strings with the editable DrawingML exported by this browser.
     await page.setViewportSize({ width: 1600, height: 1100 });
-    await page.click('[data-layer-id="title"]');
+    await page.click(`[data-layer-id="${titleId}"]`);
     const japanese = "日本語の長い文章を貼り付け、ボックスの幅に合わせて折り返します。".repeat(3) + "\n\n明示改行の後です。\n";
     await page.fill("#text", japanese);
     await page.click("#apply-text");
@@ -157,7 +161,8 @@ const url =
       await page.fill("#" + id, value);
       await page.locator("#" + id).blur();
     }
-    const lineCount = () => page.locator('#board g[data-layer="title"] tspan').count();
+    const titleLines = `#board g[data-layer="${titleId}"] tspan`;
+    const lineCount = () => page.locator(titleLines).count();
     const wideCount = await lineCount();
     assert(wideCount > 3);
     await page.fill("#w", "300");
@@ -169,7 +174,7 @@ const url =
     await page.click("#slide-bold");
     const boldCount = await lineCount();
     assert(boldCount >= smallCount);
-    await page.click('[data-layer-id="body"]');
+    await page.click(`[data-layer-id="${bodyId}"]`);
     const english = "English words should stay together when they fit. ".repeat(5) + "\n\nhttps://example.test/" + "longurl".repeat(14) + " 👨‍👩‍👧‍👦 e\u0301 🇯🇵\n";
     await page.fill("#text", english);
     await page.click("#apply-text");
@@ -190,7 +195,7 @@ const url =
     await page.waitForFunction(() => IronmateSlideEditor.ready);
     assert.deepEqual(await page.evaluate(() => IronmateSlideEditor.deck), longDeck);
     await page.setInputFiles("#open", { name: "legacy-scene.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(legacy.slides[0])) });
-    await page.waitForFunction(() => document.querySelector('#board g[data-layer="title"] tspan')?.textContent !== undefined);
+    await page.locator(titleLines).first().waitFor();
     assert.equal(await page.evaluate(() => IronmateStudio.scene.layers[0].wrap), true);
     const workspace = await page.evaluate((scene) => StudioCore.workspaceText(new StudioCore.History(scene)), legacy.slides[0]);
     await page.setInputFiles("#open-workspace", { name: "legacy-workspace.json", mimeType: "application/json", buffer: Buffer.from(workspace) });

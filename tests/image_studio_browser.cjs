@@ -77,29 +77,26 @@ const failures = [],
     fullPage: true,
   });
   const initial = await page.evaluate(() => window.IronmateStudio.scene);
-  assert.equal(initial.layers.length, 8);
-  const legacyText = initial.layers.find((l) => l.kind === "text");
-  await page.click(`[data-layer-id="${legacyText.id}"]`);
+  assert.deepEqual(initial.layers, []);
+  assert.equal(await page.locator("#demo, #stamp-demo, #example-view").count(), 0);
+  await page.click('[data-tool="text"]');
+  for (const value of ["背面", "前面", "中央"]) {
+    await page.fill("#text", value);
+    await page.locator("#board svg").click({position: {x: 50, y: 40}});
+  }
+  await page.click("#back");
+  const texts = () => page.evaluate(() => IronmateStudio.scene.layers.map(layer => layer.text));
+  assert.deepEqual(await texts(), ["背面", "中央", "前面"]);
+  await page.fill("#text", "中央を編集");
+  await page.click("#apply-text");
+  assert.deepEqual(await texts(), ["背面", "中央を編集", "前面"]);
+  await page.click("#front");
+  assert.deepEqual(await texts(), ["背面", "前面", "中央を編集"]);
+  // Older saved scenes remain editable on the empty canvas.
+  await page.setInputFiles("#open", path.join(root, "docs/evidence/image-studio/demo-scene.json"));
+  const legacyText = page.locator("#layers button").filter({hasText: /^タイトル$/});
+  await legacyText.click();
   assert.equal(await page.isChecked("#monochrome"), false);
-  fs.writeFileSync(
-    path.join(out, "demo-scene.json"),
-    JSON.stringify(initial, null, 2),
-  );
-  fs.writeFileSync(
-    path.join(out, "demo.svg"),
-    await page.evaluate(() => StudioCore.svg(IronmateStudio.scene)),
-  );
-  fs.writeFileSync(
-    path.join(out, "demo.png"),
-    Buffer.from(
-      await page.evaluate(async () =>
-        Array.from(
-          new Uint8Array(await (await IronmateStudio.pngBlob()).arrayBuffer()),
-        ),
-      ),
-    ),
-  );
-
   await page.click("#blank");
   await page.evaluate(() => window.IronmateStudio.ready);
   assert.equal(
@@ -440,16 +437,7 @@ const failures = [],
   assert.equal(await page.evaluate(() => IronmateStudio.scene.layers.filter(l => l.kind === "image").length), 2);
   await page.locator("#error button").click();
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.click("#demo");
-  // The example button only shows its GIF; the scene stays as it was.
-  const beforeExample = await page.evaluate(() => JSON.stringify(IronmateStudio.scene));
-  await page.waitForFunction(() => {
-    const img = document.getElementById("example-gif");
-    return img.src.endsWith("brand/example-demo.gif") && img.complete && img.naturalWidth === 640;
-  });
-  assert.equal(await page.evaluate(() => JSON.stringify(IronmateStudio.scene)), beforeExample);
-  await page.click("#demo");
-  assert(await page.locator("#example-view").isHidden());
+  assert.equal(await page.locator("#demo, #stamp-demo, #example-view").count(), 0);
   await page.evaluate(() => window.IronmateStudio.ready);
   await page.screenshot({ path: path.join(out, "mobile.png"), fullPage: true });
   assert(

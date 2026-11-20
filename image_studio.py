@@ -62,8 +62,7 @@ def public_assets():
              'brand/manifest.webmanifest', 'brand/apple-touch-icon.png', 'brand/app-192.png',
              'brand/app-512.png', 'brand/app-maskable-512.png',
              'brand/icon.svg', 'brand/heatmap.svg', 'brand/hero.svg', 'brand/favicon.ico', 'brand/favicon-16.png',
-             'brand/favicon-32.png', 'brand/favicon-48.png', 'brand/icon-192.png',
-             'brand/example-demo.gif', 'brand/example-stamp-demo.gif')
+             'brand/favicon-32.png', 'brand/favicon-48.png', 'brand/icon-192.png')
     assets = {name: (ROOT / 'studio' / name).read_bytes() for name in names}
     assets['index.html'] = STUDIO_HTML.encode('utf-8')
     assets['style.css'] = STYLE_CSS.encode('utf-8')
@@ -73,8 +72,7 @@ def public_assets():
     assets['brand/index.html'] = BRAND_HTML.encode('utf-8')
     page = assets['index.html'].decode('utf-8')
     for name in ('style.css', 'studio.js', 'brand/icon.svg', 'brand/heatmap.svg', 'brand/favicon.ico',
-                 'brand/manifest.webmanifest', 'brand/apple-touch-icon.png',
-                 'brand/example-demo.gif', 'brand/example-stamp-demo.gif'):
+                 'brand/manifest.webmanifest', 'brand/apple-touch-icon.png'):
         page = page.replace('"' + name + '"', '"../' + name + '"')
     page = page.replace('href="tools/"', 'href="../tools/"').replace('href="slides/phone/"', 'href="phone/"')
     page = page.replace('<a href="slides/">スライド・PPTX作成 ↗</a>', '<a href="../">Image Studio ↗</a>')

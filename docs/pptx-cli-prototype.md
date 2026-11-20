@@ -24,7 +24,65 @@ python pptx_replace.py input.pptx --rules rules.toml --output updated.pptx
 
 Rules run in declaration order (sequential/cascading). A rule's optional `slide` is a 1-based slide number. No shape filter yet. Text replacement operates **within each run**, retaining run formatting; text spanning runs is not matched. Color updates require explicit RGB runs; theme and inherited colors fail explicitly. Slide backgrounds require explicit solid RGB fill, not inherited/theme fills. Shapes in groups, tables, notes, masters and relationships are not intentionally modified. No guarantee is made for unsupported constructs; test on disposable fixture files before production use.
 
-Dry-run applies the same declaration-ordered rules to a private in-memory presentation, so later rules see earlier text and style edits. Its change count and per-rule slide/shape/paragraph/run locations match actual application of the same rules to the same source. Repeated style assignments can become no-ops; restoring a previous value counts as another edit. Dry-run never saves the presentation, changes the source file, creates an output file, or stages a temporary output, even when `--output` is supplied. A zero-match operation is reported as zero changes. The output must be a new path; existing files, symlinks (including dangling ones), and competing path creations are never overwritten or unlinked. The complete PPTX is first saved within a private temporary directory beside the destination; only after the save succeeds does an exclusive same-filesystem hard link publish it. The staging directory is cleaned on normal completion or exceptions, including partial writes. This deliberately fails closed on filesystems without hard-link support. Publication is atomic with respect to filename visibility; crash durability and preservation against modifications by unrelated processes after publication are not guaranteed. This prototype is intentionally narrower than the full Issue #80 plan; future revisions in the same Draft PR should add target selectors, preconditions, atomic output and stronger structure/visual diff checks before claiming general document preservation.
+Dry-run applies the same declaration-ordered rules to a private in-memory presentation, so later rules see earlier text and style edits. Its change count and per-rule slide/shape/paragraph/run locations match actual application of the same rules to the same source. Repeated style assignments can become no-ops; restoring a previous value counts as another edit. Dry-run never saves the presentation, changes the source file, creates an output file, or stages a temporary output, even when `--output` is supplied. A zero-match operation is reported as zero changes. The output must be a new path; existing files, symlinks (including dangling ones), and competing path creations are never overwritten or unlinked. The complete PPTX is first saved within a private temporary directory beside the destination; only after the save succeeds does an exclusive same-filesystem hard link publish it. The staging directory is cleaned on normal completion or exceptions, including partial writes. This deliberately fails closed on filesystems without hard-link support. Publication is atomic with respect to filename visibility; crash durability and preservation against modifications by unrelated processes after publication are not guaranteed. This prototype does not claim general document preservation for unsupported shapes and attributes.
+
+### Existing text frames, shape tops and line-end arrows
+
+Use a TOML rule file to address an exact, unique top-level shape name in a
+1-based slide (display order). For example:
+
+```toml
+[[rules]]
+operation = "text_frame_top"
+slide = 1
+shape_name = "Title"
+expected = "ctr"  # optional old XML attribute; an absent value is ""
+
+[[rules]]
+operation = "shape_top"
+slide = 1
+shape_name = "Title"
+reference_shape = "Subtitle"
+
+[[rules]]
+operation = "arrow_color"
+slide = 1
+shape_name = "Decision connector"
+color = "#000000"
+
+[[rules]]
+operation = "arrowhead_type"
+slide = 1
+shape_name = "Decision connector"
+end = "head"  # head or tail, as stored in DrawingML
+type = "triangle"
+```
+
+Use the same `--dry-run` and `--output` commands above. `text_frame_top`
+sets the text-frame anchor without moving its shape. `shape_top` sets only
+the vertical position (explicit EMUs) of an unrotated native shape to that of
+another unrotated shape. Connector edits apply to an existing native connector
+with an explicit visible line end; the color operation requires explicit RGB.
+The head operation accepts `triangle`, `stealth`, `diamond`, `oval`, or
+`arrow` without adding or removing a marker. Endpoints, orientation, transform,
+connections, line width, and stored marker width/length are not rewritten.
+
+These rules can be combined with each other, but not with the older text-run
+and background rules in one invocation. Missing or duplicate targets, a failed
+old-value precondition, rotated or implicit alignment geometry, and non-native
+arrows (e.g. grouped line/freeform or image) are rejected before publication.
+Use an intermediate file if both rule families are needed. No-op native batches
+leave the package bytes unchanged. Structural tests reopen the output and compare
+all other ZIP members plus unrelated XML properties, not on-screen appearance.
+No external viewer check is implied; authentic rendering evidence remains
+unmeasured by these tests.
+
+Keep the prototype in Ironmate until at least one independent consumer needs
+the same narrow contract and can run the same fixtures without Ironmate-specific
+adapters. Consider extraction only once the selector, preconditions, and output
+contract are stable, with failure semantics and versioning documented; do not
+extract only to duplicate the parser or writer.
+
 
 
 ## Visual regression verification (planned in this Draft PR)

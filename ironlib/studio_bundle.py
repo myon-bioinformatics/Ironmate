@@ -2842,7 +2842,7 @@ if (typeof document !== "undefined" && document.body && (document.body.dataset.p
 (() => {
   const $ = (id) => document.getElementById(id),
     C = IronmateTools,
-    catalog = IronmateCatalog;
+    catalog = buildIronmateCatalog();
   let grid,
     previous = null,
     images = [];
@@ -4034,7 +4034,6 @@ TOOLS_HTML = r"""<!doctype html>
     <link rel="icon" href="../brand/favicon.ico" sizes="16x16 32x32 48x48" />
     <link rel="icon" type="image/svg+xml" href="../brand/icon.svg" sizes="any" />
     <link rel="stylesheet" href="../style.css" />
-    <script defer src="catalog.js"></script>
     <script defer src="../studio.js"></script>
   </head>
   <body class="ui-elements" data-ui-theme="green" data-page="tools">

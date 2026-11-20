@@ -122,7 +122,7 @@ jobs:
           python -S - <<'PY'
           from pathlib import Path
           text = Path('/tmp/tools.html').read_text()
-          assert 'PIXEL GRID' in text and '../studio.js' in text and 'catalog.js' in text
+          assert 'PIXEL GRID' in text and '../studio.js' in text and 'catalog.js' not in text
           print('Published browser tools HTML verified')
           PY
           curl --fail --location --retry 6 --retry-delay 3 --retry-all-errors "${{ steps.deployment.outputs.page_url }}slides/" --output /tmp/slides.html

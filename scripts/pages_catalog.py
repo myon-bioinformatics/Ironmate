@@ -20,10 +20,10 @@ def catalog_script():
                 catalog['grids'][f'{mask}/{effect}/{size}'] = grid
     compact = (',', ':')
     return (
-        '"use strict";\nconst IronmateCatalog = (() => {\n'
+        '"use strict";\nfunction buildIronmateCatalog() {\n'
         f'  const rows = {json.dumps(list(row_ids), separators=compact)};\n'
         f'  const catalog = {json.dumps(catalog, separators=compact)};\n'
         '  for (const key of Object.keys(catalog.grids)) {\n'
         '    catalog.grids[key] = catalog.grids[key].map(index => rows[index]);\n'
-        '  }\n  return catalog;\n})();\n'
+        '  }\n  return catalog;\n}\n'
     ).encode()

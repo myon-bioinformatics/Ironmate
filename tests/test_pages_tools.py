@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def test_catalog_matches_python_for_every_preset():
     script = catalog_script().decode()
-    catalog = js(script + 'console.log(JSON.stringify(IronmateCatalog))')
+    catalog = js(script + 'console.log(JSON.stringify(buildIronmateCatalog()))')
     assert len(catalog['grids']) == 100
     for key, rows in catalog['grids'].items():
         mask, effect, size = key.split('/')
@@ -44,7 +44,7 @@ def test_static_allowlist_excludes_private_scenes_and_generation_inputs(tmp_path
     target = image_studio.build_site(tmp_path / 'Ironmate')
     assert {p.relative_to(target).as_posix() for p in target.rglob('*') if p.is_file()} == {
         'index.html', 'style.css', 'studio.js', '.nojekyll',
-        'tools/index.html', 'tools/catalog.js',
+        'tools/index.html',
         'brand/index.html', 'brand/mono.svg', 'brand/dark-green.svg',
         'brand/famicom.svg', 'brand/gameboy.svg', 'brand/pixel-3d.svg',
         'brand/manifest.webmanifest', 'brand/apple-touch-icon.png', 'brand/app-192.png',

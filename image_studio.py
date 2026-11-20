@@ -126,10 +126,9 @@ def public_assets():
              'brand/example-demo.gif', 'brand/example-stamp-demo.gif')
     assets = {name: (ROOT / 'studio' / name).read_bytes() for name in names}
     assets['index.html'] = STUDIO_HTML.encode('utf-8')
-    assets['studio.js'] = STUDIO_JS.encode('utf-8')
     assets['style.css'] = STYLE_CSS.encode('utf-8')
     from scripts.pages_catalog import catalog_script
-    assets['tools/catalog.js'] = catalog_script()
+    assets['studio.js'] = STUDIO_JS.encode('utf-8') + b'\n' + catalog_script()
     assets['tools/index.html'] = TOOLS_HTML.encode('utf-8')
     assets['brand/index.html'] = BRAND_HTML.encode('utf-8')
     page = assets['index.html'].decode('utf-8')

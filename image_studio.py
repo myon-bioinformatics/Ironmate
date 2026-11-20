@@ -321,7 +321,13 @@ def main(argv=None):
 
 def _run_studio(p, args):
     if args.build_site:
-        print(build_site(args.build_site))
+        site = build_site(args.build_site)
+        files = sorted(path for path in site.rglob('*') if path.is_file())
+        for path in files:
+            if path.suffix == '.html':
+                print(f'{path.relative_to(site)}: {path.stat().st_size:,} bytes', file=sys.stderr)
+        print(f'Public site (uncompressed): {sum(p.stat().st_size for p in files):,} bytes', file=sys.stderr)
+        print(site)
         return 0
     if args.render:
         data = render_scene(json.loads(args.render.read_text(encoding='utf-8')), args.format, args.scale, args.chrome, args.data_uri)

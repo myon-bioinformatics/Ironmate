@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def test_catalog_matches_python_for_every_preset():
     script = catalog_script().decode()
-    catalog = json.loads(script.split('const IronmateCatalog = ', 1)[1].removesuffix(';\n'))
+    catalog = js(script + 'console.log(JSON.stringify(IronmateCatalog))')
     assert len(catalog['grids']) == 100
     for key, rows in catalog['grids'].items():
         mask, effect, size = key.split('/')

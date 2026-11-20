@@ -2,7 +2,7 @@
 
 ![Ironmate — pixel logo with the apostrophe in I’m replaced by 🔰](studio/brand/readme.svg)
 
-The logo is **I’m with a 🔰 apostrophe**. The 6 variants are used by purpose; for now the favicon uses dark green, the README the Famicom style, the web UI the heatmap palette and the home-screen icon Pixel 3D, provisionally. The final version is undecided. Each variant can be saved from the [6-variant gallery](https://myon-bioinformatics.github.io/Ironmate/brand/). [Design and regeneration](docs/brand.md).
+The logo is **I’m with a 🔰 apostrophe**. The 6 variants are used by purpose; for now the favicon uses dark green, the README the Famicom style, the web UI the heatmap palette and the home-screen icon Pixel 3D, provisionally. The final version is undecided. Each variant can be saved from the [6-variant gallery](https://myon-bioinformatics.github.io/Ironmate/tools/#brand). [Design and regeneration](docs/brand.md).
 
 A Python-centered project for verifying **conversion and replacement of content and attributes** in documents, images and more.
 Replacing text, color and arrow attributes in PPTX is a future target, and pixel/palette-based dot representations are being prototyped.

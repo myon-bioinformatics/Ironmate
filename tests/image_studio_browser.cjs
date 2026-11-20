@@ -171,12 +171,13 @@ const failures = [],
     await page.evaluate(() => window.IronmateStudio.scene.layers.at(-1).text),
     "🌱",
   );
-  await page.fill(
-    "#matrix",
-    '{"data":[{"type":"heatmap","z":[[-1.123456789,null],[4,9]],"x":[2025,2026],"y":["A","B"]}]}',
-  );
-  await page.click("#heatmap");
-  await page.evaluate(() => window.IronmateStudio.ready);
+  const heatScene = await page.evaluate(() => window.IronmateStudio.scene);
+  heatScene.layers.push({id:"heat", kind:"heatmap", name:"Heatmap", x:80, y:90, w:500, h:300,
+    rotation:0, opacity:1, z:[[-1.123456789,null],[4,9]], xlabels:[2025,2026], ylabels:["A","B"],
+    low:-1.123456789, high:9, levels:0, labels:true});
+  await page.setInputFiles("#open", {name:"heatmap.json", mimeType:"application/json", buffer:Buffer.from(JSON.stringify(heatScene))});
+  await page.waitForFunction(() => window.IronmateStudio.scene.layers.at(-1)?.id === "heat");
+  await page.click('[data-layer-id="heat"]');
   const exact = await page.evaluate(
     () => window.IronmateStudio.scene.layers.at(-1).z,
   );

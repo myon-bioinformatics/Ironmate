@@ -74,8 +74,10 @@ def test_home_screen_manifest_stays_within_pages_subpath():
     assert {urljoin(base, item['url']) for item in manifest['shortcuts']} == {
         'https://example.test/Ironmate/', 'https://example.test/Ironmate/slides/',
         'https://example.test/Ironmate/tools/'}
+    assert b'content="0;url=../tools/#brand"' in assets['brand/index.html']
+    assert b'id="brand"' in assets['tools/index.html']
     for path, prefix in (('index.html', 'brand/'), ('slides/index.html', '../brand/'), ('slides/phone/index.html', '../../brand/'),
-                         ('tools/index.html', '../brand/'), ('brand/index.html', '')):
+                         ('tools/index.html', '../brand/')):
         page = assets[path].decode()
         assert f'href="{prefix}manifest.webmanifest"' in page
         assert f'href="{prefix}apple-touch-icon.png"' in page

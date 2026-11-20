@@ -100,20 +100,8 @@ STUDIO_HTML = r"""<!doctype html>
           選択したレイヤーを再利用できます。
         </p>
         <div class="section">
-          <label
-            >数値行列 / Plotly heatmap JSON<textarea id="matrix" rows="3">
-[[0,1,2,3],[3,2,1,0],[1,null,2,3]]</textarea
-            ></label
-          ><button id="heatmap" class="wide">＋ ヒートマップを置く</button
-          ><label class="button wide"
-            >行列JSONファイルを読む<input
-              id="matrix-file"
-              type="file"
-              accept=".json"
-          /></label>
-          <p class="hint">
-            先頭行が上。元の数値と欠測を保持し、色の段階だけを変更します。
-          </p>
+          <a href="https://myon-bioinformatics.github.io/DRAgoWing/heatmap/">ヒートマップを作成（DRAgoWing）</a>
+          <p class="hint">作成したシーンJSONは「開く」で読み込めます。</p>
         </div>
       </aside>
       <section class="workspace">
@@ -311,7 +299,7 @@ STUDIO_HTML = r"""<!doctype html>
 </html>
 """
 
-STYLE_CSS = r"""/* web-ui-bundle/1 commit=2b00e6b7c91bcfa325c1cf720c4fc50890430bd2 sha256=28676aeb90c2b0fa1a7d12a166918ecb43ac0290208a18b5f2b976f6bfdd0af3 scripts/build_studio_css.py*/
+STYLE_CSS = r"""/* web-ui-bundle/1 commit=2b00e6b7c91bcfa325c1cf720c4fc50890430bd2 sha256=f732b25e161123a8bbfd227a4a971c43c8d5f3b5402d1403cbd91a0054c894ad scripts/build_studio_css.py*/
 @layer base,components,theme;
 /* css/tokens.css */
 :root{--ui-bg:#0d1117;--ui-panel:#101820;--ui-fg:#d1f7c4;--ui-muted:#8b949e;--ui-border:#58a6ff;--ui-accent:#7ee787;--ui-danger:#cf222e;--ui-radius:0;--ui-text:16px;--ui-space:1rem;--ui-max:960px;--ui-font:Meiryo,メイリオ,sans-serif;--ui-font-mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
@@ -452,28 +440,13 @@ body:where([data-page~="tools"]){font-size:15px;line-height:1.65;margin:0}
 :where([data-page~="tools"]) .image-list img{width:100%;height:160px;object-fit:contain}
 :where([data-page~="tools"]) .image-list figcaption{font-size:12px;overflow-wrap:anywhere}
 :where([data-page~="tools"]) .digest-options{margin:25px 0}
+@media print{body:where([data-page~="tools"]):has(#brand:target) header,body:where([data-page~="tools"]):has(#brand:target) footer,:where([data-page~="tools"]) main:has(#brand:target)>:not(#brand),:where([data-page~="tools"]) #brand:target p,:where([data-page~="tools"]) #brand:target h2,:where([data-page~="tools"]) #brand:target a:not(:first-child){display:none}}
 :where([data-page~="tools"]) .table-wrap{overflow-x:auto}
 :where([data-page~="tools"]) table{background:var(--ui-panel);font-size:13px}
 :where([data-page~="tools"]) th,:where([data-page~="tools"]) td{padding:16px;min-width:180px}
 :where([data-page~="tools"]) th{background:#e4eee8}
 :where([data-page~="tools"]) footer{padding:30px;text-align:center;color:var(--ui-muted);font-size:12px;border-top:1px solid var(--ui-border)}
 @media(max-width:760px){:where([data-page~="tools"]) main{padding:30px 16px}:where([data-page~="tools"]) .workspace{grid-template-columns:1fr}:where([data-page~="tools"]) .controls,:where([data-page~="tools"]) .preview{padding:18px}:where([data-page~="tools"]) header{padding:18px}:where([data-page~="tools"]) h2{font-size:25px}:where([data-page~="tools"]) .exports{gap:8px}}
-
-/* brand gallery layout */
-body:where([data-page~="brand"]){line-height:1.7;margin:0}
-:where([data-page~="brand"]) a{color:var(--ui-accent);text-underline-offset:4px}
-:where([data-page~="brand"]) header{display:flex;align-items:center;gap:18px;background:#d8e6a3;padding:24px max(24px,calc((100vw - 1100px)/2))}
-:where([data-page~="brand"]) header p{margin:0}:where([data-page~="brand"]) header a{font-weight:bold;font-size:22px}
-:where([data-page~="brand"]) main{max-width:1100px;margin:auto;padding:28px 24px}
-:where([data-page~="brand"]) h1{font-size:clamp(26px,5vw,44px)}:where([data-page~="brand"]) h2{font-size:19px}
-:where([data-page~="brand"]) img{image-rendering:pixelated;max-width:100%;object-fit:contain}
-:where([data-page~="brand"]) .designs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin:30px 0}
-:where([data-page~="brand"]) .designs section{padding:22px;background:var(--ui-panel);border:1px solid var(--ui-border)}
-:where([data-page~="brand"]) .designs img{display:block;margin:auto}
-:where([data-page~="brand"]) .home{padding:24px;background:#dfe8df}
-:where([data-page~="brand"]) .print-logo{display:none}
-@media(max-width:700px){:where([data-page~="brand"]) .designs{grid-template-columns:repeat(2,minmax(0,1fr))}:where([data-page~="brand"]) .designs section{padding:14px}:where([data-page~="brand"]) .designs img{width:100%;height:auto}}
-@media print{:where([data-page~="brand"]) header,:where([data-page~="brand"]) .designs,:where([data-page~="brand"]) .home{display:none}:where([data-page~="brand"]) .print-logo{display:block}body:where([data-page~="brand"]){background:white;color:black}}
 
 /* slide studio panel (loaded after style.css) */
 :where([data-page~="slides"]) .slide-controls{padding:14px 24px;background:#e6f0e9;border-bottom:1px solid var(--ui-border)}
@@ -571,7 +544,7 @@ const StudioCore = (function (root) {
     let t;
     if (Array.isArray(source)) t = { z: source };
     else if (Array.isArray(source?.data)) {
-      const traces = source.data.filter((t) => t.type === "heatmap");
+      const traces = source.data.filter((t) => t?.type === "heatmap");
       if (traces.length !== 1) fail("heatmapトレースは1つにしてください");
       t = traces[0];
     } else t = source;
@@ -2443,29 +2416,6 @@ $("paste-image").onclick = guarded(async () => {
   }
   throw clipboardError("clipboard-no-image", "クリップボードにPNG・JPEG・WebP画像または画像Base64テキストがありません");
 });
-function addMatrix(source) {
-  add({
-    ...base(
-      "heatmap",
-      80,
-      100,
-      Math.min(1050, scene.width - 100),
-      Math.min(480, scene.height - 120),
-    ),
-    name: "ヒートマップ",
-    ...C.matrix(source),
-    source: copy(source),
-  });
-  setTool("select");
-}
-$("heatmap").onclick = guarded(() => addMatrix(JSON.parse($("matrix").value)));
-$("matrix-file").onchange = guarded(async () => {
-  const file = $("matrix-file").files[0];
-  if (!file) return;
-  if (file.size > 2000000) throw new Error("行列JSONは2MB以下にしてください");
-  addMatrix(JSON.parse(await file.text()));
-  $("matrix-file").value = "";
-});
 $("blank").onclick = () => {
   change((doc) => {
     doc.layers = [];
@@ -4036,7 +3986,7 @@ TOOLS_HTML = r"""<!doctype html>
     <header>
       <a class="brand" href="../"><img src="../brand/heatmap.svg" width="48" height="48" alt="I’m — 🔰がアポストロフィのIronmateロゴ" /> IRONMATE</a>
       <nav aria-label="サイト">
-        <a href="../brand/">ロゴ6案 ↗</a><a href="../">Image Studio ↗</a
+        <a href="#brand">ロゴ素材</a><a href="../">Image Studio ↗</a
         ><a href="https://myon-bioinformatics.github.io/#ironmate"
           >ポートフォリオ ↗</a
         ><a href="https://github.com/myon-bioinformatics/Ironmate">ソース ↗</a>
@@ -4191,6 +4141,19 @@ TOOLS_HTML = r"""<!doctype html>
           </tbody>
         </table></div>
       </details>
+      <section id="brand">
+        <h2>ロゴ素材</h2>
+        <p>選択すると保存します。</p>
+        <div class="exports">""" + "\n".join(
+            f'<a href="../brand/{asset}" download><img src="../brand/{preview}.svg" width="48" height="48" alt=""> {label}</a>'
+            for preview, asset, label in (
+                ("mono", "mono.svg", "Pixel Mono"), ("dark-green", "dark-green.svg", "Dark Green"),
+                ("famicom", "famicom.svg", "Famicom Retro"), ("gameboy", "gameboy.svg", "GameBoy Style"),
+                ("heatmap", "heatmap.svg", "Heatmap Pixel"), ("pixel-3d", "app-512.png", "Pixel 3D (PNG)"),
+            )
+        ) + r"""</div>
+        <p>ホーム画面への追加はAndroidのブラウザメニュー、iPhoneの共有メニューから。</p>
+      </section>
     </main>
     <footer>
       IRONMATE /
@@ -4200,36 +4163,8 @@ TOOLS_HTML = r"""<!doctype html>
 </html>
 """
 
-BRAND_HTML = r"""<!doctype html>
-<html lang="ja">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; img-src 'self'; manifest-src 'self'; base-uri 'none'; object-src 'none'" />
-  <title>Ironmate — ロゴ6案</title>
-  <link rel="stylesheet" href="../style.css" />
-  <link rel="icon" type="image/svg+xml" href="icon.svg" sizes="any" />
-  <link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48" />
-  <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
-  <meta name="theme-color" content="#003D32" />
-</head>
-<body class="ui-elements" data-ui-theme="green" data-page="brand">
-  <header><img src="gameboy.svg" width="64" height="64" alt="GameBoy StyleのIronmateロゴ" /><div><a href="../">Ironmate</a><p>ロゴ一覧</p></div></header>
-  <main>
-    <h1>ロゴ素材</h1>
-    <div class="designs">
-      <section><img src="mono.svg" alt="Pixel Mono" width="192" height="192" /><h2>① Pixel Mono</h2><p>白黒資料・印刷向け</p><a href="mono.svg" download>SVGを保存</a></section>
-      <section><img src="dark-green.svg" alt="Dark Green" width="192" height="192" /><h2>② Dark Green</h2><p>GitHub向け素材・favicon</p><a href="dark-green.svg" download>SVGを保存</a></section>
-      <section><img src="famicom.svg" alt="Famicom Retro" width="192" height="192" /><h2>③ Famicom Retro</h2><p>READMEの先頭</p><a href="famicom.svg" download>SVGを保存</a></section>
-      <section><img src="gameboy.svg" alt="GameBoy Style" width="192" height="192" /><h2>④ GameBoy Style</h2><p>このギャラリー・特設ページ</p><a href="gameboy.svg" download>SVGを保存</a></section>
-      <section><img src="heatmap.svg" alt="Heatmap Pixel" width="192" height="192" /><h2>⑤ Heatmap Pixel</h2><p>Web画面・Hero</p><a href="heatmap.svg" download>SVGを保存</a></section>
-      <section><img src="pixel-3d.svg" alt="Pixel 3D" width="192" height="192" /><h2>⑥ Pixel 3D</h2><p>ホーム画面・ランチャー</p><a href="app-512.png" download>PNGを保存</a></section>
-    </div>
-    <section class="home"><h2>ホーム画面に追加する</h2><p>Androidはブラウザのメニュー、iPhoneは共有メニューの「ホーム画面に追加」から登録できます。</p><a href="../">Image Studio</a> / <a href="../slides/">Slide Studio</a> / <a href="../tools/">ドット絵・画像一覧</a></section>
-    <div class="print-logo"><img src="mono.svg" width="128" height="128" alt="白黒印刷用Ironmateロゴ" /><p>Ironmate — I’m</p></div>
-  </main>
-</body>
-</html>
+BRAND_HTML = """<!doctype html>
+<html lang="ja"><meta charset="utf-8"><title>Ironmate ロゴ素材</title>
+<meta http-equiv="refresh" content="0;url=../tools/#brand">
+<a href="../tools/#brand">ロゴ素材を開く</a></html>
 """
-

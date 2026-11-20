@@ -152,29 +152,13 @@ textarea{{width:100%;font-size:11px;overflow-wrap:anywhere}}
 .image-list img{{width:100%;height:160px;object-fit:contain}}
 .image-list figcaption{{font-size:12px;overflow-wrap:anywhere}}
 .digest-options{{margin:25px 0}}
+@media print{{body:has(#brand:target) header,body:has(#brand:target) footer,main:has(#brand:target)>:not(#brand),#brand:target p,#brand:target h2,#brand:target a:not(:first-child){{display:none}}}}
 .table-wrap{{overflow-x:auto}}
 table{{background:var(--ui-panel);font-size:13px}}
 th,td{{padding:16px;min-width:180px}}
 th{{background:#e4eee8}}
 footer{{padding:30px;text-align:center;color:var(--ui-muted);font-size:12px;border-top:1px solid var(--ui-border)}}
 @media(max-width:760px){{main{{padding:30px 16px}}.workspace{{grid-template-columns:1fr}}.controls,.preview{{padding:18px}}header{{padding:18px}}h2{{font-size:25px}}.exports{{gap:8px}}}}
-"""
-
-GALLERY_RULES = """/* brand gallery layout */
-body{line-height:1.7;margin:0}
-a{color:var(--ui-accent);text-underline-offset:4px}
-header{display:flex;align-items:center;gap:18px;background:#d8e6a3;padding:24px max(24px,calc((100vw - 1100px)/2))}
-header p{margin:0}header a{font-weight:bold;font-size:22px}
-main{max-width:1100px;margin:auto;padding:28px 24px}
-h1{font-size:clamp(26px,5vw,44px)}h2{font-size:19px}
-img{image-rendering:pixelated;max-width:100%;object-fit:contain}
-.designs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin:30px 0}
-.designs section{padding:22px;background:var(--ui-panel);border:1px solid var(--ui-border)}
-.designs img{display:block;margin:auto}
-.home{padding:24px;background:#dfe8df}
-.print-logo{display:none}
-@media(max-width:700px){.designs{grid-template-columns:repeat(2,minmax(0,1fr))}.designs section{padding:14px}.designs img{width:100%;height:auto}}
-@media print{header,.designs,.home{display:none}.print-logo{display:block}body{background:white;color:black}}
 """
 
 SLIDES_RULES = """/* slide studio panel (loaded after style.css) */
@@ -218,7 +202,7 @@ input[type=file]{display:none}
 NOTE = "scripts/build_studio_css.py"
 
 
-PAGES = (("studio", "STUDIO_RULES"), ("tools", "TOOLS_RULES"), ("brand", "GALLERY_RULES"), ("slides", "SLIDES_RULES"),
+PAGES = (("studio", "STUDIO_RULES"), ("tools", "TOOLS_RULES"), ("slides", "SLIDES_RULES"),
          ("phone", "PHONE_RULES"))
 
 

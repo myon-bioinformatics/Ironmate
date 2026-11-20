@@ -928,9 +928,9 @@ def test_studio_stylesheets_match_the_generator():
     text = STYLE_CSS
     assert '/* css/components.css */' in text and 'body[data-ui-theme="green"]{' in text  # PySaiyanWeBoo's theme
     assert '.ui-elements button,' in text and 'cdn.' not in text
-    for page in ('studio', 'tools', 'brand', 'slides', 'phone'):
+    for page in ('studio', 'tools', 'slides', 'phone'):
         assert f':where([data-page~="{page}"])' in text, page  # page layout is scoped, with zero added specificity
-    for page, html in (('studio', STUDIO_HTML), ('tools', TOOLS_HTML), ('brand', BRAND_HTML)):
+    for page, html in (('studio', STUDIO_HTML), ('tools', TOOLS_HTML)):
         assert f'data-page="{page}"' in html, page
     assert module.scoped('body{a:b}.x,y z{c:d}@media(max-width:1px){.w{e:f}}', 'p') == (
         'body:where([data-page~="p"]){a:b}:where([data-page~="p"]) .x,:where([data-page~="p"]) y z{c:d}'
@@ -940,7 +940,7 @@ def test_studio_stylesheets_match_the_generator():
 
 def test_studio_pages_opt_into_the_components_and_palette():
     from ironlib.studio_bundle import BRAND_HTML, STUDIO_HTML, TOOLS_HTML
-    for name, html, page in (('STUDIO_HTML', STUDIO_HTML, 'studio'), ('TOOLS_HTML', TOOLS_HTML, 'tools'), ('BRAND_HTML', BRAND_HTML, 'brand')):
+    for name, html, page in (('STUDIO_HTML', STUDIO_HTML, 'studio'), ('TOOLS_HTML', TOOLS_HTML, 'tools')):
         assert f'<body class="ui-elements" data-ui-theme="green" data-page="{page}">' in html, name
         assert ('href="style.css"' if page == 'studio' else 'href="../style.css"') in html, name  # one sheet for every page
     import image_studio

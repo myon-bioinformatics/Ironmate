@@ -137,8 +137,7 @@ Successes, errors and processing times are kept in the [verification record for 
 
 ## Numbers → color → heatmap
 
-Enter JSON such as `[[0,1,2],[3,null,4]]` in `数値行列` (numeric matrix) and place it.
-A matrix JSON file, or `{data:[...]}` containing a single Plotly heatmap trace, can also be loaded.
+Open the [DRAgoWing heatmap editor](https://myon-bioinformatics.github.io/DRAgoWing/heatmap/), paste a matrix or load a Plotly JSON file, then download scene.json and open it in Ironmate. [DRAgoWing source](https://github.com/myon-bioinformatics/DRAgoWing/blob/ed7887b07102e381ac59d81f3b96baadbd7972df/dragowing.py) owns the heatmap importer and color scale. Ironmate carries the compatible subset for offline CLI rendering and saved scenes.
 It uses `z`, `x`, `y`, `zmin` and `zmax`, and places **the first row at the top**.
 It is not rendering-compatible with Plotly's axis order, layout, annotations, colorscale or customdata.
 DRAgoWing's research results are not rewritten; this is a separate composite image that stores the input in the JSON's source.

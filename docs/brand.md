@@ -7,7 +7,7 @@ The shared core is **replacing the apostrophe in I’m with 🔰**. The favicon 
 | ① Pixel Mono | `studio/brand/mono.svg` | SVG logo, black-and-white material. Shown when printing the gallery |
 | ② Dark Green | `studio/brand/dark-green.svg`, `icon-192.png` | Images for GitHub. Provisionally used as the favicon |
 | ③ Famicom Retro | `studio/brand/famicom.svg`, `readme.svg` | Provisionally used at the top of the README |
-| ④ GameBoy Style | `studio/brand/gameboy.svg` | Provisionally used in the six-concept gallery header |
+| ④ GameBoy Style | `studio/brand/gameboy.svg` | Available from image tools |
 | ⑤ Heatmap Pixel | `studio/brand/heatmap.svg`, `hero.svg` | Provisionally used in the three screens' headers and the browser tools' Hero |
 | ⑥ Pixel 3D | `studio/brand/pixel-3d.svg` | Provisionally used for the add-to-home-screen icon and launcher |
 
@@ -26,7 +26,7 @@ The heatmap inside 🔰 uses discrete cells, with no gradients. Famicom/GameBoy 
 - Hero: `.brand-hero` in `TOOLS_HTML` (`ironlib/studio_bundle.py`).
 - README: the image link at the top.
 - Home screen: `manifest.webmanifest` and `apple-touch-icon.png` (180 px). Provides 192 px and 512 px for Android, plus an opaque 512 px PNG for masking.
-- Gallery: `/brand/`. Browse and save all six concepts; the mono version is shown when printing.
+- Gallery: `/tools/#brand` (old bookmarks at `/brand/` redirect). Browse and save all six concepts; the mono version is shown when printing.
 
 Run `python -S scripts/build_brand.py` at the repository root. It uses only the Python standard library and the existing `ironlib/grid_output.py`.
 

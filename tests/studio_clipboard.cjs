@@ -154,6 +154,15 @@ let browser;
     await scenario("BOM-case-parameters-and-wrapping", { text: "\uFEFF DATA:IMAGE/PNG;charset=utf-8;BASE64,\n" + image + "\n" });
     calls = await scenario("invalid-image-data-URI-does-not-import-stale-PNG", { text: "data:image/png;base64,!!!", items: [binary()] }, "clipboard-invalid-image");
     assert.equal(calls.read, 0);
+    for (const [name, text] of [
+      ["truncated-raw-PNG-signature", "iVBORw0KGg"],
+      ["truncated-PNG-URI-payload", "data:image/png;base64,iVBORw0KGg"],
+    ]) {
+      calls = await scenario(name + "-does-not-import-stale-PNG", { text, items: [binary(green)] }, "clipboard-invalid-image");
+      assert.equal(calls.read, 0, name);
+    }
+    calls = await scenario("near-magic-note-falls-back-to-binary", { text: "iVBORw0KG ordinary note", items: [binary()] });
+    assert.equal(calls.read, 1);
     await scenario("invalid-image-URI-header", { text: "data:image/png,abc", items: [binary()] }, "clipboard-invalid-image");
     await scenario("MIME-mismatch-text", { text: uri.replace("image/png", "image/jpeg"), items: [binary()] }, "clipboard-invalid-image");
     await scenario("unsupported-image-URI", { text: "data:image/gif;base64,R0lGODlh", items: [binary()] }, "clipboard-invalid-image");

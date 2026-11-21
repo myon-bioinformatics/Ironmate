@@ -2334,13 +2334,28 @@ function imageBase64(text, maxBytes = 32 * 1024 * 1024) {
     throw new Error("画像形式またはMIME宣言が実データと一致しません");
   return { bytes, mime: actual };
 }
+async function importImageFile(file) {
+  if (file.size > 32 * 1024 * 1024) throw new Error("画像は32MiB以下にしてください");
+  await importImageBytes(new Uint8Array(await file.arrayBuffer()), file.type || null, file.name);
+}
 async function importPickedFile(input) {
   const file = input.files?.[0];
-  if (!file) return; // A cancelled picker is not a failed import.
-  try {
-    if (file.size > 32 * 1024 * 1024) throw new Error("画像は32MiB以下にしてください");
-    await importImageBytes(new Uint8Array(await file.arrayBuffer()), file.type || null, file.name);
-  } finally { input.value = ""; }
+  if (!file) return;
+  try { await importImageFile(file); }
+  finally { input.value = ""; }
+}
+if (!document.body.dataset.page.split(" ").includes("slides")) {
+  const board = $("board");
+  board.addEventListener("dragover", event => {
+    if (event.dataTransfer?.types.includes("Files")) event.preventDefault();
+  });
+  board.addEventListener("drop", guarded(async event => {
+    if (!event.dataTransfer?.types.includes("Files")) return;
+    event.preventDefault();
+    const files = event.dataTransfer.files;
+    if (files.length !== 1) throw new Error("画像ファイルを1枚ずつドロップしてください");
+    await importImageFile(files[0]);
+  }));
 }
 $("image").onchange = guarded(() => importPickedFile($("image")));
 $("camera-image").onchange = guarded(() => importPickedFile($("camera-image")));

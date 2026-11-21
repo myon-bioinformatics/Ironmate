@@ -294,7 +294,7 @@ STUDIO_HTML = r"""<!doctype html>
 </html>
 """
 
-STYLE_CSS = r"""/* web-ui-bundle/1 commit=2b00e6b7c91bcfa325c1cf720c4fc50890430bd2 sha256=a8d3a3f99df56ffedf85b6a595d1ed9469d4348cf9c23dfee83155d50618316c scripts/build_studio_css.py*/
+STYLE_CSS = r"""/* web-ui-bundle/1 commit=2b00e6b7c91bcfa325c1cf720c4fc50890430bd2 sha256=3185d76f174a0c14068f2b3b38ffb3e8a4db718fb4a41eabeccac726db7c8a9c scripts/build_studio_css.py*/
 @layer base,components,theme;
 /* css/tokens.css */
 :root{--ui-bg:#0d1117;--ui-panel:#101820;--ui-fg:#d1f7c4;--ui-muted:#8b949e;--ui-border:#58a6ff;--ui-accent:#7ee787;--ui-danger:#cf222e;--ui-radius:0;--ui-text:16px;--ui-space:1rem;--ui-max:960px;--ui-font:Meiryo,メイリオ,sans-serif;--ui-font-mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
@@ -442,6 +442,11 @@ body:where([data-page~="tools"]){font-size:15px;line-height:1.65;margin:0}
 @media(max-width:760px){:where([data-page~="tools"]) main{padding:30px 16px}:where([data-page~="tools"]) .workspace{grid-template-columns:1fr}:where([data-page~="tools"]) .controls,:where([data-page~="tools"]) .preview{padding:18px}:where([data-page~="tools"]) header{padding:18px}:where([data-page~="tools"]) h2{font-size:25px}:where([data-page~="tools"]) .exports{gap:8px}}
 
 /* slide studio panel (loaded after style.css) */
+:where([data-page~="slides"]) .slide-grid:not([hidden]){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:12px}
+:where([data-page~="slides"]) .slide-grid>div{min-width:0}
+:where([data-page~="slides"]) .slide-grid .board{outline:2px solid #126fef}
+:where([data-page~="slides"]) .slide-grid .slide-preview{display:block;width:100%;padding:0;overflow:hidden}
+:where([data-page~="slides"]) .slide-grid .slide-number{display:block;font-size:12px;margin-bottom:4px}
 :where([data-page~="slides"]) .slide-controls{padding:14px 24px;background:#e6f0e9;border-bottom:1px solid var(--ui-border)}
 :where([data-page~="slides"]) .slide-toolbar,:where([data-page~="slides"]) .slide-template{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 :where([data-page~="slides"]) .slide-toolbar select{width:auto;min-width:180px}
@@ -2329,13 +2334,28 @@ function imageBase64(text, maxBytes = 32 * 1024 * 1024) {
     throw new Error("画像形式またはMIME宣言が実データと一致しません");
   return { bytes, mime: actual };
 }
+async function importImageFile(file) {
+  if (file.size > 32 * 1024 * 1024) throw new Error("画像は32MiB以下にしてください");
+  await importImageBytes(new Uint8Array(await file.arrayBuffer()), file.type || null, file.name);
+}
 async function importPickedFile(input) {
   const file = input.files?.[0];
-  if (!file) return; // A cancelled picker is not a failed import.
-  try {
-    if (file.size > 32 * 1024 * 1024) throw new Error("画像は32MiB以下にしてください");
-    await importImageBytes(new Uint8Array(await file.arrayBuffer()), file.type || null, file.name);
-  } finally { input.value = ""; }
+  if (!file) return;
+  try { await importImageFile(file); }
+  finally { input.value = ""; }
+}
+if (!document.body.dataset.page.split(" ").includes("slides")) {
+  const board = $("board");
+  board.addEventListener("dragover", event => {
+    if (event.dataTransfer?.types.includes("Files")) event.preventDefault();
+  });
+  board.addEventListener("drop", guarded(async event => {
+    if (!event.dataTransfer?.types.includes("Files")) return;
+    event.preventDefault();
+    const files = event.dataTransfer.files;
+    if (files.length !== 1) throw new Error("画像ファイルを1枚ずつドロップしてください");
+    await importImageFile(files[0]);
+  }));
 }
 $("image").onchange = guarded(() => importPickedFile($("image")));
 $("camera-image").onchange = guarded(() => importPickedFile($("camera-image")));
@@ -3055,6 +3075,52 @@ if (typeof document !== "undefined" && document.body && (document.body.dataset.p
     next.slides[active] = E.scene;
     return D.validate(next);
   }
+  const board = byId("board");
+  const grid = document.createElement("div");
+  grid.className = "slide-grid";
+  grid.hidden = true;
+  board.before(grid);
+  const gridMode = byId("slide-grid-mode");
+
+  function showGroup() {
+    grid.hidden = !gridMode.checked;
+    if (grid.hidden) {
+      grid.after(board);
+      grid.replaceChildren();
+      return;
+    }
+    const first = active - active % 4;
+    const cells = deck.slides.slice(first, first + 4).map((scene, offset) => {
+      const index = first + offset;
+      const cell = document.createElement("div");
+      const number = document.createElement("span");
+      number.className = "slide-number";
+      number.textContent = index === active ? `${index + 1} 枚目（編集中）` : `${index + 1} 枚目`;
+      cell.append(number);
+      if (index === active) {
+        cell.append(board);
+      } else {
+        const preview = document.createElement("button");
+        preview.className = "slide-preview";
+        preview.setAttribute("aria-label", `${index + 1} 枚目を編集`);
+        preview.addEventListener("click", () => switchSlide(index));
+        // Isolate SVG mask IDs, including those shared by duplicated slides.
+        const drawing = document.createElement("span").attachShadow({mode: "open"});
+        preview.append(drawing.host);
+        cell.append(preview);
+        E.imageSource(scene).then(source => {
+          if (!preview.isConnected) return;
+          drawing.innerHTML = C.svg(scene, source);
+          const svg = drawing.firstElementChild;
+          svg.setAttribute("width", "100%");
+          svg.removeAttribute("height");
+        }).catch(err => { if (preview.isConnected) note(err.message, true); });
+      }
+      return cell;
+    });
+    grid.replaceChildren(...cells);
+  }
+  gridMode.addEventListener("change", showGroup);
   function selectList() {
     const select = byId("slide-select");
     select.replaceChildren(
@@ -3067,6 +3133,7 @@ if (typeof document !== "undefined" && document.body && (document.body.dataset.p
       ),
     );
     select.value = active;
+    showGroup();
     byId("slide-delete").disabled = deck.slides.length === 1;
     byId("slide-up").disabled = active === 0;
     byId("slide-down").disabled = active === deck.slides.length - 1;
@@ -3145,22 +3212,23 @@ if (typeof document !== "undefined" && document.body && (document.body.dataset.p
       ];
       await commit(next, index);
     });
-  byId("slide-select").addEventListener("change", async (e) => {
+  async function switchSlide(index) {
     if (busy) {
-      e.target.value = active;
+      byId("slide-select").value = active;
       return;
     }
     busy = true;
     try {
       const next = snapshot();
-      await commit(next, Number(e.target.value));
+      await commit(next, index);
     } catch (err) {
-      e.target.value = active;
+      byId("slide-select").value = active;
       note(err.message, true);
     } finally {
       busy = false;
     }
-  });
+  }
+  byId("slide-select").addEventListener("change", e => switchSlide(Number(e.target.value)));
   action("slide-template", async () => {
     const next = E.scene,
       added = D.template(
@@ -3741,6 +3809,7 @@ SLIDES_PANEL_HTML = r"""<section class="slide-controls" aria-label="スライド
   <div class="slide-toolbar">
     <strong>スライド作成</strong
     ><select id="slide-select" aria-label="スライド"></select
+    ><label class="check"><input type="checkbox" id="slide-grid-mode" />4枚表示</label
     ><button id="slide-add">＋ 白紙</button
     ><button id="slide-duplicate">スライド複製</button
     ><button id="slide-up">前へ移動</button

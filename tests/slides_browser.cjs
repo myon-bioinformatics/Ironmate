@@ -33,6 +33,32 @@ const url =
       1,
     );
     assert.deepEqual((await page.evaluate(() => IronmateStudio.scene)).layers, []);
+    await page.check("#slide-grid-mode");
+    for (let i = 1; i < 5; i++) {
+      await page.click("#slide-add");
+      await page.waitForFunction(n => IronmateSlideEditor.active === n, i);
+    }
+    assert.equal(await page.locator(".slide-grid > div").count(), 1);
+    await page.selectOption("#slide-select", "0");
+    await page.waitForFunction(() => IronmateSlideEditor.active === 0);
+    assert.equal(await page.locator(".slide-grid > div").count(), 4);
+    await page.getByRole("button", {name: "3 枚目を編集"}).click();
+    await page.waitForFunction(() => IronmateSlideEditor.active === 2);
+    await page.click("#slide-arrow");
+    await page.waitForFunction(() => IronmateStudio.scene.layers.length === 1);
+    await page.click("#slide-up");
+    await page.waitForFunction(() => IronmateSlideEditor.active === 1);
+    await page.click("#slide-duplicate");
+    await page.waitForFunction(() => IronmateSlideEditor.active === 2);
+    await page.click("#slide-template");
+    await page.waitForFunction(() => IronmateStudio.scene.layers.length === 3);
+    assert.deepEqual(await page.evaluate(() => IronmateSlideEditor.deck.slides.map(s => s.layers.length)), [0,1,3,0,0,0]);
+    for (let count = 5; count >= 1; count--) {
+      await page.click("#slide-delete");
+      await page.waitForFunction(n => IronmateSlideEditor.deck.slides.length === n, count);
+    }
+    await page.uncheck("#slide-grid-mode");
+    assert.equal(await page.locator(".workspace > #board").count(), 1);
     await page.click("#slide-template");
     await page.waitForFunction(() => IronmateStudio.scene.layers.length === 2);
     const [titleId, bodyId] = await page.evaluate(() => IronmateStudio.scene.layers.map(layer => layer.id));

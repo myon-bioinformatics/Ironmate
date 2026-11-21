@@ -44,7 +44,9 @@ It does not mean the operation in Flutter was re-run this time. It was verified 
 
 ## Image input and clipboard format selection
 
-File selection, the camera file input, explicit Base64 input and clipboard images all go through the same validation and PNG normalization path.
+Drop one PNG, JPEG or WebP file on the Image Studio canvas, or use the file picker. Both paths and the camera file input use the same byte limit, MIME check and PNG normalization as clipboard images. A drop containing multiple files is rejected as a whole.
+
+The Node entry runs the Python validator. Its regression test uses the same 19 Base64 cases as the archived Flutter project, including MIME mismatches, padding and data-URI parameters. The archived [Dart expectations](https://github.com/myon-bioinformatics/flutter_navigation_basic/blob/647fb74c36899e52906cce6db7fe0d1fbbb04bf2/test/fixtures/base64_bridge/flutter_expectations.json) can be compared offline. [Flutter #208](https://github.com/myon-bioinformatics/flutter_navigation_basic/pull/208) contains the published Ironmate → Flutter Web handoff test. Its PR-head Flutter workflow passed, and the separate Non-Dart E2E workflow reported a failure. These browser fixtures cover file delivery and decoded pixels. Camera hardware, OS dialogs and physical-device clipboard behavior require a separate device run.
 Canceling file selection does not change the scene. `capture` is a hint to the OS/browser and does not guarantee the camera opens.
 
 The clipboard's `画像を取り込む` (import image) chooses in this order.

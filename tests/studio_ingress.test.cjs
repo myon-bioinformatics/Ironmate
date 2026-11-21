@@ -32,3 +32,12 @@ test("MIME mismatch and missing padding exit 2", () => {
     assert.equal(body.ok, false);
   }
 });
+
+test("Node launcher honors the shared Dart and Python clipboard fixtures", () => {
+  const {cases} = require("./fixtures/base64_bridge_cases.json");
+  for (const entry of cases) {
+    const {status, body} = decode(entry.text);
+    assert.equal(status, entry.expect === "ok" ? 0 : 2, entry.id);
+    if (status === 0) assert.equal(body.mime, "image/" + entry.result, entry.id);
+  }
+});

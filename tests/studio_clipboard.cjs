@@ -195,6 +195,30 @@ let browser;
     const over = Buffer.concat([atLimit, Buffer.from([0])]).toString("base64");
     await scenario("raw-Base64-over-32MiB", { text: over, items: [binary()] }, "clipboard-invalid-image");
     await scenario("URI-Base64-over-32MiB", { text: "data:image/png;base64," + over }, "clipboard-invalid-image");
+    async function dropFile(types) {
+      await page.evaluate(({types, image}) => {
+        const transfer = new DataTransfer();
+        const bytes = Uint8Array.from(atob(image), c => c.charCodeAt(0));
+        for (const type of types) transfer.items.add(new File([bytes], "drop.png", {type}));
+        const event = new Event("drop", {bubbles: true, cancelable: true});
+        Object.defineProperty(event, "dataTransfer", {value: transfer});
+        document.querySelector("#board").dispatchEvent(event);
+        if (!event.defaultPrevented) throw Error("file drop was not handled");
+      }, {types, image});
+    }
+    await reset();
+    await dropFile(["image/png"]);
+    await page.waitForFunction(() => IronmateStudio.scene.layers.length === 1);
+    assert.deepEqual(await normalized(), {width: 3, height: 1, pixels});
+    checks.push("drop-file-RGBA-dimensions");
+    for (const types of [["image/jpeg"], ["image/png", "image/png"]]) {
+      const before = await snapshot();
+      await dropFile(types);
+      await page.waitForFunction(() => document.querySelector("#error").open);
+      assert.equal(await snapshot(), before);
+      await page.evaluate(() => document.querySelector("#error").close());
+    }
+    checks.push("drop-rejects-wrong-MIME-and-multiple-files");
     // File and camera input paths still use the same strict import pipeline.
     for (const id of ["image", "camera-image"]) {
       await reset();

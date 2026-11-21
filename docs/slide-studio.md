@@ -7,10 +7,11 @@ No installation, external CDN or server processing is needed. Input images and i
 
 ## Usage
 
-1. The first slide has a black title and body. Select a layer, paste into the text field on the left, and press `入力した文字・色を適用` (apply entered text and color). Adjust with the position, size and font size on the right.
+1. The first slide is blank. Add a text box or use the title/body template. Select a layer, paste into the text field on the left, and press `入力した文字・色を適用` (apply entered text and color). Adjust with the position, size and font size on the right.
 2. Text boxes with content can be added from the title and body fields at the top. `文字の見本` (text samples) inserts Japanese, alphanumeric and English text into the body field. Titles are bold. You can also select a text layer and use `太字を切替` (toggle bold).
 3. `編集できる矢印を追加` (add an editable arrow) places a straight line with a triangular arrowhead. Moving, scaling, rotating and recoloring work as in Image Studio. The centered arrowhead is also available.
 4. Build a deck with `白紙` (blank), `スライド複製` (duplicate slide), slide selection, reordering and deletion. All slides use the same canvas size. Switching slides keeps the current layout and restarts the edit history.
+   Enable `4枚表示` to edit a group of up to four slides in place. Choose a slide in the grid to use the same text, shape and arrow controls on it. The selector reaches other groups. Adding, duplicating, moving or deleting a slide keeps the edited slide in view.
 5. `PPTXを書き出す` (export PPTX) saves all slides. Also using `全スライドJSON保存` (save all slides as JSON) lets you reload the editable data, images included, later. The regular `JSON保存` (save JSON) and `作業履歴を保存` (save work history) save only the current slide.
 
 Unsaved changes are confirmed when leaving the page. There is no autosave or re-import of PPTX files.

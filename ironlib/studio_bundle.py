@@ -442,6 +442,11 @@ body:where([data-page~="tools"]){font-size:15px;line-height:1.65;margin:0}
 @media(max-width:760px){:where([data-page~="tools"]) main{padding:30px 16px}:where([data-page~="tools"]) .workspace{grid-template-columns:1fr}:where([data-page~="tools"]) .controls,:where([data-page~="tools"]) .preview{padding:18px}:where([data-page~="tools"]) header{padding:18px}:where([data-page~="tools"]) h2{font-size:25px}:where([data-page~="tools"]) .exports{gap:8px}}
 
 /* slide studio panel (loaded after style.css) */
+.slide-grid:not([hidden]){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:12px}
+.slide-grid>div{min-width:0}
+.slide-grid .board{outline:2px solid #126fef}
+.slide-grid .slide-preview{display:block;width:100%;padding:0;overflow:hidden}
+.slide-grid .slide-number{display:block;font-size:12px;margin-bottom:4px}
 :where([data-page~="slides"]) .slide-controls{padding:14px 24px;background:#e6f0e9;border-bottom:1px solid var(--ui-border)}
 :where([data-page~="slides"]) .slide-toolbar,:where([data-page~="slides"]) .slide-template{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 :where([data-page~="slides"]) .slide-toolbar select{width:auto;min-width:180px}
@@ -3055,6 +3060,52 @@ if (typeof document !== "undefined" && document.body && (document.body.dataset.p
     next.slides[active] = E.scene;
     return D.validate(next);
   }
+  const board = byId("board");
+  const grid = document.createElement("div");
+  grid.className = "slide-grid";
+  grid.hidden = true;
+  board.before(grid);
+  const gridMode = byId("slide-grid-mode");
+
+  function showGroup() {
+    grid.hidden = !gridMode.checked;
+    if (grid.hidden) {
+      grid.after(board);
+      grid.replaceChildren();
+      return;
+    }
+    const first = active - active % 4;
+    const cells = deck.slides.slice(first, first + 4).map((scene, offset) => {
+      const index = first + offset;
+      const cell = document.createElement("div");
+      const number = document.createElement("span");
+      number.className = "slide-number";
+      number.textContent = index === active ? `${index + 1} 枚目（編集中）` : `${index + 1} 枚目`;
+      cell.append(number);
+      if (index === active) {
+        cell.append(board);
+      } else {
+        const preview = document.createElement("button");
+        preview.className = "slide-preview";
+        preview.setAttribute("aria-label", `${index + 1} 枚目を編集`);
+        preview.addEventListener("click", () => switchSlide(index));
+        // Isolate SVG mask IDs, including those shared by duplicated slides.
+        const drawing = document.createElement("span").attachShadow({mode: "open"});
+        preview.append(drawing.host);
+        cell.append(preview);
+        E.imageSource(scene).then(source => {
+          if (!preview.isConnected) return;
+          drawing.innerHTML = C.svg(scene, source);
+          const svg = drawing.firstElementChild;
+          svg.setAttribute("width", "100%");
+          svg.removeAttribute("height");
+        }).catch(err => { if (preview.isConnected) note(err.message, true); });
+      }
+      return cell;
+    });
+    grid.replaceChildren(...cells);
+  }
+  gridMode.addEventListener("change", showGroup);
   function selectList() {
     const select = byId("slide-select");
     select.replaceChildren(
@@ -3067,6 +3118,7 @@ if (typeof document !== "undefined" && document.body && (document.body.dataset.p
       ),
     );
     select.value = active;
+    showGroup();
     byId("slide-delete").disabled = deck.slides.length === 1;
     byId("slide-up").disabled = active === 0;
     byId("slide-down").disabled = active === deck.slides.length - 1;
@@ -3145,22 +3197,23 @@ if (typeof document !== "undefined" && document.body && (document.body.dataset.p
       ];
       await commit(next, index);
     });
-  byId("slide-select").addEventListener("change", async (e) => {
+  async function switchSlide(index) {
     if (busy) {
-      e.target.value = active;
+      byId("slide-select").value = active;
       return;
     }
     busy = true;
     try {
       const next = snapshot();
-      await commit(next, Number(e.target.value));
+      await commit(next, index);
     } catch (err) {
-      e.target.value = active;
+      byId("slide-select").value = active;
       note(err.message, true);
     } finally {
       busy = false;
     }
-  });
+  }
+  byId("slide-select").addEventListener("change", e => switchSlide(Number(e.target.value)));
   action("slide-template", async () => {
     const next = E.scene,
       added = D.template(
@@ -3741,6 +3794,7 @@ SLIDES_PANEL_HTML = r"""<section class="slide-controls" aria-label="スライド
   <div class="slide-toolbar">
     <strong>スライド作成</strong
     ><select id="slide-select" aria-label="スライド"></select
+    ><label class="check"><input type="checkbox" id="slide-grid-mode" />4枚表示</label
     ><button id="slide-add">＋ 白紙</button
     ><button id="slide-duplicate">スライド複製</button
     ><button id="slide-up">前へ移動</button

@@ -1,5 +1,7 @@
 """Inspect generated PPTX text editability without assuming raster content is editable."""
 import json
+import sys
+from io import BytesIO
 from pathlib import Path; from xml.etree import ElementTree as ET; from zipfile import ZipFile
 
 from ironlib.pptx_ooxml import ordered_slide_members
@@ -24,9 +26,15 @@ def _editable_runs(root):
 
 
 def inspect(path):
-    path = Path(path)
+    """Inspect a path or an in-memory PPTX byte sequence."""
+    if isinstance(path, (bytes, bytearray, memoryview)):
+        package_input = BytesIO(path)
+        source = "<memory>"
+    else:
+        package_input = Path(path)
+        source = str(package_input)
     slides = []
-    with ZipFile(path) as package:
+    with ZipFile(package_input) as package:
         for number, member in enumerate(ordered_slide_members(package), 1):
             root = ET.fromstring(package.read(member))
             runs = _editable_runs(root)
@@ -37,19 +45,20 @@ def inspect(path):
             status = "editable" if runs and not pictures else "unknown" if runs else "unsupported"
             slides.append({"slide": number, "status": status, "editable_runs": runs,
                            "pictures": pictures, "text_nodes": len(texts)})
-    return {"source": str(path), "slides": slides}
+    return {"source": source, "slides": slides}
 
 
 def main(argv=None):
     from ironlib.ironmate_cli import ToolParser, guard
     parser = ToolParser(description=__doc__, tool="pptx_inspect.py")
-    parser.add_argument("source", type=Path)
+    parser.add_argument("source", help="PPTX path or - for raw PPTX bytes on stdin")
     parser.add_argument("-o", "--output", type=Path)
     parser.add_json_flag()
     args = parser.parse_args(argv)
 
     def work():
-        report = json.dumps(inspect(args.source), ensure_ascii=False, indent=2) + "\n"
+        source = sys.stdin.buffer.read() if args.source == "-" else args.source
+        report = json.dumps(inspect(source), ensure_ascii=False, indent=2) + "\n"
         if args.output:
             with args.output.open("x", encoding="utf-8") as stream:
                 stream.write(report)

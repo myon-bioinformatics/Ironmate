@@ -1348,7 +1348,7 @@ const IronmateSlides = (function (root) {
     }
     return (c ^ 0xffffffff) >>> 0;
   }
-  function zip(files) {
+  function zip(files, mediaChecksums) {
     const entries = Object.entries(files).map(([name, data]) => ({
       name: encoder.encode(name),
       data: typeof data === "string" ? encoder.encode(data) : data,
@@ -1368,7 +1368,7 @@ const IronmateSlides = (function (root) {
       date = (20 << 9) | (1 << 5) | 1;
     for (const e of entries) {
       const start = offset,
-        sum = crc(e.data);
+        sum = mediaChecksums.get(e.data) ?? crc(e.data);
       dword(offset, 0x04034b50);
       word(offset + 4, 20);
       word(offset + 6, 0x800);
@@ -1416,6 +1416,8 @@ const IronmateSlides = (function (root) {
   async function exportPptx(input, imageForLayer) {
     const deck = validate(input),
       files = { ...shell };
+    const mediaByChecksum = new Map();
+    const mediaChecksums = new Map();
     let imageNumber = 0,
       totalNative = 0,
       totalImages = 0;
@@ -1511,9 +1513,21 @@ const IronmateSlides = (function (root) {
             ![137, 80, 78, 71, 13, 10, 26, 10].every((b, i) => bytes[i] === b)
           )
             throw Error("埋め込み画像はPNGが必要です。");
-          const media = `image${++imageNumber}.png`,
-            rid = `rIdImage${imageNumber}`;
-          files["ppt/media/" + media] = bytes;
+          const checksum = crc(bytes);
+          const candidates = mediaByChecksum.get(checksum) || [];
+          let media = candidates.find((name) => {
+            const saved = files["ppt/media/" + name];
+            return saved.length === bytes.length && saved.every((value, i) => value === bytes[i]);
+          });
+          if (!media) {
+            media = `image${++imageNumber}.png`;
+            const saved = new Uint8Array(bytes);
+            files["ppt/media/" + media] = saved;
+            mediaChecksums.set(saved, checksum);
+            candidates.push(media);
+            mediaByChecksum.set(checksum, candidates);
+          }
+          const rid = `rIdImage${totalImages + 1}`;
           rels.push(
             `<Relationship Id="${rid}" Type="${R}/image" Target="../media/${media}"/>`,
           );
@@ -1569,7 +1583,7 @@ const IronmateSlides = (function (root) {
       declaration +
       `<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>Ironmate</Application><Slides>${deck.slides.length}</Slides><Notes>0</Notes><HiddenSlides>0</HiddenSlides></Properties>`;
     return {
-      data: zip(files),
+      data: zip(files, mediaChecksums),
       native: totalNative,
       images: totalImages,
       slides: deck.slides.length,

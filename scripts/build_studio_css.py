@@ -160,6 +160,11 @@ footer{{padding:30px;text-align:center;color:var(--ui-muted);font-size:12px;bord
 """
 
 SLIDES_RULES = """/* slide studio panel (loaded after style.css) */
+.slide-grid:not([hidden]){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:12px}
+.slide-grid>div{min-width:0}
+.slide-grid .board{outline:2px solid #126fef}
+.slide-grid .slide-preview{display:block;width:100%;padding:0;overflow:hidden}
+.slide-grid .slide-number{display:block;font-size:12px;margin-bottom:4px}
 .slide-controls{padding:14px 24px;background:#e6f0e9;border-bottom:1px solid var(--ui-border)}
 .slide-toolbar,.slide-template{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .slide-toolbar select{width:auto;min-width:180px}

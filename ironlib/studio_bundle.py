@@ -294,7 +294,7 @@ STUDIO_HTML = r"""<!doctype html>
 </html>
 """
 
-STYLE_CSS = r"""/* web-ui-bundle/1 commit=2b00e6b7c91bcfa325c1cf720c4fc50890430bd2 sha256=a8d3a3f99df56ffedf85b6a595d1ed9469d4348cf9c23dfee83155d50618316c scripts/build_studio_css.py*/
+STYLE_CSS = r"""/* web-ui-bundle/1 commit=2b00e6b7c91bcfa325c1cf720c4fc50890430bd2 sha256=3185d76f174a0c14068f2b3b38ffb3e8a4db718fb4a41eabeccac726db7c8a9c scripts/build_studio_css.py*/
 @layer base,components,theme;
 /* css/tokens.css */
 :root{--ui-bg:#0d1117;--ui-panel:#101820;--ui-fg:#d1f7c4;--ui-muted:#8b949e;--ui-border:#58a6ff;--ui-accent:#7ee787;--ui-danger:#cf222e;--ui-radius:0;--ui-text:16px;--ui-space:1rem;--ui-max:960px;--ui-font:Meiryo,メイリオ,sans-serif;--ui-font-mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
@@ -442,11 +442,11 @@ body:where([data-page~="tools"]){font-size:15px;line-height:1.65;margin:0}
 @media(max-width:760px){:where([data-page~="tools"]) main{padding:30px 16px}:where([data-page~="tools"]) .workspace{grid-template-columns:1fr}:where([data-page~="tools"]) .controls,:where([data-page~="tools"]) .preview{padding:18px}:where([data-page~="tools"]) header{padding:18px}:where([data-page~="tools"]) h2{font-size:25px}:where([data-page~="tools"]) .exports{gap:8px}}
 
 /* slide studio panel (loaded after style.css) */
-.slide-grid:not([hidden]){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:12px}
-.slide-grid>div{min-width:0}
-.slide-grid .board{outline:2px solid #126fef}
-.slide-grid .slide-preview{display:block;width:100%;padding:0;overflow:hidden}
-.slide-grid .slide-number{display:block;font-size:12px;margin-bottom:4px}
+:where([data-page~="slides"]) .slide-grid:not([hidden]){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:12px}
+:where([data-page~="slides"]) .slide-grid>div{min-width:0}
+:where([data-page~="slides"]) .slide-grid .board{outline:2px solid #126fef}
+:where([data-page~="slides"]) .slide-grid .slide-preview{display:block;width:100%;padding:0;overflow:hidden}
+:where([data-page~="slides"]) .slide-grid .slide-number{display:block;font-size:12px;margin-bottom:4px}
 :where([data-page~="slides"]) .slide-controls{padding:14px 24px;background:#e6f0e9;border-bottom:1px solid var(--ui-border)}
 :where([data-page~="slides"]) .slide-toolbar,:where([data-page~="slides"]) .slide-template{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 :where([data-page~="slides"]) .slide-toolbar select{width:auto;min-width:180px}

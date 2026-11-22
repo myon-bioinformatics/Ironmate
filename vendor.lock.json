@@ -504,15 +504,6 @@
       "destination": "vendor/pillow_min.py",
       "blob_sha": "d3d8e986ac5492f822c017ab7d9d5aa482e877a0",
       "sha256": "3ef0bf0743934aebd39c6baf11ca20e9db6190486ec409ffe993da840cc63942"
-    },
-    {
-      "repository": "myon-bioinformatics/myon-bioinformatics",
-      "ref": "64db25eb0fd9025dbe3cbcbced8b88a39ecb9266",
-      "commit": "64db25eb0fd9025dbe3cbcbced8b88a39ecb9266",
-      "source": "fleet_check.py",
-      "destination": "vendor/fleet_check.py",
-      "blob_sha": "e464c95809c288029d6b3a8562cf65214205de33",
-      "sha256": "2906b1583593567816abd91d24367bd6db14cef61c35e5abe17bd46cc64ad140"
     }
   ]
 }

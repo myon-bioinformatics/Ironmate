@@ -1,13 +1,17 @@
 """Write JUnit evidence from GitHub Actions setup-step outcomes."""
 
+import argparse
 import os
-import sys
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
 
-def main():
-    suite_name, destination = sys.argv[1:]
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__, epilog="SETUP_OUTCOMES holds one 'step=outcome' per line.")
+    parser.add_argument("suite_name", help="JUnit testsuite name")
+    parser.add_argument("destination", help="JUnit XML file to write")
+    args = parser.parse_args(argv)
+    suite_name, destination = args.suite_name, args.destination
     suite = ET.Element("testsuite", name=suite_name)
     errors = skipped = 0
     for line in os.environ["SETUP_OUTCOMES"].splitlines():

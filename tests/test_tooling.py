@@ -273,10 +273,10 @@ def test_finish_without_a_restore_record_reports_a_change(tmp_path):
     assert finish(archives, run=lambda cmd, **kw: None) is True
 
 
-def test_cli_rejects_unknown_arguments():
+def test_cli_rejects_unknown_arguments(capsys):
     with pytest.raises(SystemExit) as error:
         main(["--archives"])
-    assert "usage" in str(error.value)
+    assert error.value.code == 2 and "usage" in capsys.readouterr().err
 
 
 def test_workflow_restores_apt_downloads_everywhere_but_saves_them_only_from_main():

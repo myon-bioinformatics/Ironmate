@@ -302,7 +302,7 @@ uv run --project ../BrowserTestKit --group pages --group browser python ../Brows
 
 ## Comparing screenshots across browsers
 
-`browser_matrix.py` collects screenshots of the same page taken by browser-test-kit on Linux, macOS and Windows × Chromium, Firefox and WebKit
+`browser_matrix.py` collects screenshots of the same page taken by BrowserTestKit on Linux, macOS and Windows × Chromium, Firefox and WebKit
 into a "page × environment" comparison sheet (PNG, table, JSON). See the [comparison sheet](docs/browser-matrix.md) for details.
 
 ## Image digest page

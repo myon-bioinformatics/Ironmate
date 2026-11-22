@@ -14,6 +14,14 @@ No installation, external CDN or server processing is needed. Input images and i
    Enable `4枚表示` to edit a group of up to four slides in place. Choose a slide in the grid to use the same text, shape and arrow controls on it. The selector reaches other groups. Adding, duplicating, moving or deleting a slide keeps the edited slide in view.
 5. `PPTXを書き出す` (export PPTX) saves all slides. Also using `全スライドJSON保存` (save all slides as JSON) lets you reload the editable data, images included, later. The regular `JSON保存` (save JSON) and `作業履歴を保存` (save work history) save only the current slide.
 
+When several layers render to identical PNG bytes, the PPTX stores one media
+part. Each placement retains its own size, position and opacity. This applies
+across slides as well as within one slide.
+
+Python consumers can inspect the generated PPTX directly with
+`pptx_inspect.inspect(deck_bytes)`. A program that writes raw PPTX to stdout can
+pipe it to `python -S pptx_inspect.py -` and read the slide report as JSON.
+
 Unsaved changes are confirmed when leaving the page. There is no autosave or re-import of PPTX files.
 
 ## 📱 Phone slides

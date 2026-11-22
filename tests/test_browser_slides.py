@@ -1,5 +1,8 @@
 """PPTX ZIP, relationship, native-object and serialization contracts."""
+import json
 import posixpath
+import subprocess
+import sys
 from pathlib import Path; from xml.etree import ElementTree as ET; from zipfile import ZipFile
 
 import pytest
@@ -51,6 +54,53 @@ def test_native_multiple_slides_text_format_geometry_and_package_relationships(t
     assert group.find('p:grpSpPr/a:xfrm',NS).get('rot')=='1800000'
     assert len(group.findall('p:sp',NS))==2
     assert len(group.findall('.//a:custGeom/a:pathLst/a:path/a:lnTo',NS))==2
+
+
+def test_repeated_pngs_share_media_and_raw_deck_inspection(tmp_path):
+    from pptx_inspect import inspect
+    from zlib import crc32
+
+    output = tmp_path / "media.pptx"
+    # Distinct valid 1x1 PNGs with equal lengths and ZIP CRCs.
+    colors = [bytes.fromhex(value) for value in (
+        "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d4944415478da63689afe40190005b5021d6f7ea2430000000049454e44ae426082",
+        "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d4944415478da6358d9fad10d0006600266eb00dcc70000000049454e44ae426082",
+    )]
+    assert len(colors[0]) == len(colors[1]) and crc32(colors[0]) == crc32(colors[1])
+    result = node("""
+        const scene = D.template();
+        for (const layer of scene.layers) layer.mono = true;
+        const other = D.template();
+        other.layers[0].mono = true;
+        other.layers[0].x += 20;
+        const images = [input[0], input[1], input[0]];
+        D.exportPptx({schema:D.SCHEMA, slides:[scene, other]},
+          () => Uint8Array.from(images.shift())).then(result => {
+            require('fs').writeFileSync(process.argv[1], result.data);
+            console.log(JSON.stringify(result.images));
+          });
+    """, [list(color) for color in colors], output)
+    assert result == 3
+    slides = verify_package(output, 2)
+    assert [len(slide.findall('.//p:pic', NS)) for slide in slides] == [2, 1]
+    with ZipFile(output) as package:
+        media = sorted(name for name in package.namelist() if name.startswith("ppt/media/"))
+        assert [package.read(name) for name in media] == colors
+        for i, expected in enumerate([colors, colors[:1]], 1):
+            rels = ET.fromstring(package.read(f"ppt/slides/_rels/slide{i}.xml.rels"))
+            by_id = {rel.get("Id"): rel.get("Target") for rel in rels}
+            rid = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}embed"
+            targets = [by_id[blip.attrib[rid]] for blip in slides[i-1].findall(".//a:blip", NS)]
+            assert [package.read(posixpath.normpath("ppt/slides/" + target)) for target in targets] == expected
+
+    raw = output.read_bytes()
+    report = inspect(raw)
+    assert report["source"] == "<memory>" and report["slides"] == inspect(output)["slides"]
+    output.unlink()
+    cli = subprocess.run([sys.executable, "-S", str(ROOT / "pptx_inspect.py"), "-"],
+                         input=raw, capture_output=True, check=True, cwd=tmp_path)
+    assert json.loads(cli.stdout) == report
+    assert not list(tmp_path.iterdir())
 
 
 def test_invalid_decks_and_xml_control_characters_fail_without_a_pptx(tmp_path):

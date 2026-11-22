@@ -273,10 +273,10 @@ def test_finish_without_a_restore_record_reports_a_change(tmp_path):
     assert finish(archives, run=lambda cmd, **kw: None) is True
 
 
-def test_cli_rejects_unknown_arguments():
+def test_cli_rejects_unknown_arguments(capsys):
     with pytest.raises(SystemExit) as error:
         main(["--archives"])
-    assert "usage" in str(error.value)
+    assert error.value.code == 2 and "usage" in capsys.readouterr().err
 
 
 def test_workflow_restores_apt_downloads_everywhere_but_saves_them_only_from_main():
@@ -963,7 +963,7 @@ def test_catalog_enrollment_is_explicit_and_complete():
     catalog = json.loads((ROOT / "vendor-catalog.json").read_text(encoding="utf-8"))
     lock = json.loads((ROOT / "vendor.lock.json").read_text(encoding="utf-8"))
     assert lock["schema"] == "vendor-lock/1"
-    assert len(lock["files"]) == 56  # web-ui's six flow copies and its LICENSE left with the flow code (now ascii_artist)
+    assert len(lock["files"]) == 57  # web-ui's six flow copies and its LICENSE left with the flow code (now ascii_artist); + fleet_check
     locked = {(entry["repository"], entry["source"]) for entry in lock["files"]}
     for item in catalog["tools"]:
         if item.get("default_enrollment", {}).get("enrollment") == "skipped":
@@ -971,7 +971,7 @@ def test_catalog_enrollment_is_explicit_and_complete():
         source = item.get("source", item["repository"].split("/")[1] + ".py")
         assert (item["repository"], source) in locked
     assert ("myon-bioinformatics/cli_args", "cli_args.py") in locked
-    assert len({entry["destination"] for entry in lock["files"]}) == 56
+    assert len({entry["destination"] for entry in lock["files"]}) == 57
     assert ("myon-bioinformatics/Aoi", "scripts/fetch_module.py") in locked
     assert ("myon-bioinformatics/Aoi", "LICENSE") in locked
 

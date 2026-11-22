@@ -10,11 +10,11 @@ installs) drops downloads apt can no longer install, makes DIR readable for the
 cache upload and prints ``changed=true|false`` for $GITHUB_OUTPUT. apt still checks
 every cached file against the signed indexes, so a stale or bad file is fetched again.
 """
+import argparse
 import os
 from pathlib import Path
 import shutil
 import subprocess
-import sys
 
 
 # Sort after the runner's zz-retries. These are per-file retry / connection and
@@ -91,16 +91,19 @@ def finish(archives, run=subprocess.run):
     return deb_names(archives) != before
 
 
-def main(argv):
-    if not argv:
-        configure("/etc/apt")
-    elif len(argv) == 2 and argv[0] == "--archives":
-        configure("/etc/apt", argv[1])
-    elif len(argv) == 2 and argv[0] == "--finish":
-        print(f"changed={'true' if finish(argv[1]) else 'false'}")
+def main(argv=None):
+    parser = argparse.ArgumentParser(prog="configure_ci_apt.py", description=__doc__.split("\n\n")[0])
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--archives", metavar="DIR", help="also download .deb files into DIR (for actions/cache)")
+    mode.add_argument("--finish", metavar="DIR", help="after apt: report changed=true/false for DIR")
+    args = parser.parse_args(argv)
+    if args.finish is not None:
+        print(f"changed={'true' if finish(args.finish) else 'false'}")
+    elif args.archives is not None:
+        configure("/etc/apt", args.archives)
     else:
-        sys.exit("usage: configure_ci_apt.py [--archives DIR | --finish DIR]")
+        configure("/etc/apt")
 
 
 if __name__ == "__main__":
-    main(sys.argv[1:])
+    main()

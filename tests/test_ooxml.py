@@ -21,6 +21,7 @@ import pytest
 from tests.fixture_pptx import generate, parse_blocks
 from tests.fixture_pptx_layout import CASES, IDS, case_rule, make_source
 from tests.test_uno_roundtrip import CLIENT, _assert_fixture_readback
+from vendor.cli_args import run_cli
 
 ROOT = Path(__file__).resolve().parents[1]
 import pptx_pipeline
@@ -76,7 +77,7 @@ def test_markdown_cli_one_liner(tmp_path):
     source = Path(__file__).parent / "fixtures" / "mini_readme.md"
     output = tmp_path / "fixture.pptx"
     script = Path(__file__).resolve().parent / "fixture_pptx.py"
-    p = subprocess.run([sys.executable, str(script), str(source), "-o", str(output)], capture_output=True, text=True)
+    p = run_cli(script, str(source), "-o", str(output))
     assert p.returncode == 0, p.stderr
     assert output.is_file()
     assert "markdown:line-1:title" in p.stdout
@@ -656,10 +657,10 @@ def test_unequal_sizes_literal_coordinates_and_preservation(tmp_path, case):
     rules = tmp_path / 'rules.toml'
     rules.write_text('[[rules]]\n' + '\n'.join(
         f'{key} = {json.dumps(value)}' for key, value in config.items()) + '\n', encoding='utf-8')
-    process = subprocess.run([sys.executable, str(Path(__file__).resolve().parents[1] / 'pptx_layout.py'),
-                              str(source), '--rules', str(rules), '--output', str(output)],
-                             capture_output=True, text=True, check=True)
-    applied = json.loads(process.stdout)
+    process = run_cli(Path(__file__).resolve().parents[1] / 'pptx_layout.py',
+                      str(source), '--rules', str(rules), '--output', str(output))
+    assert process.returncode == 0, process.stderr
+    applied = process.json()
     assert preview['changes'] == applied['changes']
     assert applied['change_count'] == 5
     assert source.read_bytes() == original_bytes
@@ -988,8 +989,7 @@ def test_cli_one_liner_and_explicit_failure_evidence(tmp_path):
     src = fixture(tmp_path)
     output = tmp_path / "cli-output.pptx"
     cli = Path(__file__).resolve().parents[1] / "pptx_replace.py"
-    command = [sys.executable, str(cli), str(src), "--replace", "Draft", "Final", "--output", str(output)]
-    completed = subprocess.run(command, capture_output=True, text=True, check=False)
+    completed = run_cli(cli, str(src), "--replace", "Draft", "Final", "--output", str(output))
     assert completed.returncode == 0, completed.stderr
     assert Presentation(output).slides[0].shapes[0].text_frame.paragraphs[0].runs[0].text == "Final title"
 
@@ -2080,10 +2080,9 @@ def test_spec_file_resolves_csv_encoding(tmp_path):
         'sheets': [{'name': 'メモ', 'csv': 'notes.csv', 'columns': [{'align': 'left'}]}],
     }), encoding='utf-8')
     output = tmp_path / 'out.xlsx'
-    completed = subprocess.run(
-        [sys.executable, str(Path(__file__).resolve().parents[1] / 'xlsx_csv.py'),
-         '--spec', str(spec_path), '-o', str(output)],
-        capture_output=True, text=True, check=False,
+    completed = run_cli(
+        Path(__file__).resolve().parents[1] / 'xlsx_csv.py',
+        '--spec', str(spec_path), '-o', str(output),
     )
     assert completed.returncode == 0, completed.stderr
     assert read_spec(output.read_bytes())['sheets'][0]['rows'][1][0]['v'] == '髙島'

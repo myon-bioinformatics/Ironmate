@@ -630,6 +630,7 @@ class CliResult(CommandResult):
 
 def run_cli(target: str | os.PathLike[str], *args: str | os.PathLike[str],
             python: str | os.PathLike[str] | None = None,
+            python_options: Sequence[str | os.PathLike[str]] = (),
             timeout: float | None = None, cwd: str | os.PathLike[str] | None = None,
             env: Mapping[str, str] | None = None,
             stdin: str | bytes | None = None) -> CliResult:
@@ -638,12 +639,17 @@ def run_cli(target: str | os.PathLike[str], *args: str | os.PathLike[str],
     This is the test-side counterpart of ``run_command``: the interpreter
     (``python``, default ``sys.executable``), the script ``target`` and the
     argument tokens are assembled with ``Command`` so quoting and splitting
-    never reappear in test code. Nonzero exits are results, as with
+    never reappear in test code. ``python_options`` must be an ordered,
+    finite ``Sequence`` of interpreter flags placed before the target
+    (e.g. ``("-S",)`` for a stdlib-only run). A single ``str`` /
+    ``PathLike``, an unordered set/dict, or a generator is rejected
+    with ``TypeError``. Nonzero exits are results, as with
     ``run_command``; launch failures raise OSError. Use ``Command`` +
     ``run_command`` directly when the target is not a Python script.
     """
     executable = sys.executable if python is None else _token(python)
-    command = Command((executable, _token(target), *(_token(arg) for arg in args)))
+    options = _tokens(python_options)
+    command = Command((executable, *options, _token(target), *(_token(arg) for arg in args)))
     result = run_command(command, cwd=cwd, timeout=timeout, env=env, stdin=stdin)
     return CliResult(result.argv, result.returncode, result.stdout, result.stderr,
                      result.executed, result.timed_out, result.output_limited)

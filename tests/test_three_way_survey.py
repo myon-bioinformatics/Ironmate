@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 
 from research import littlebit_jev_3way_survey as s
+from vendor.cli_args import run_cli
 
 
 def test_fwht_against_dense_sign_matrix_including_negative_rounding():
@@ -172,9 +173,8 @@ def test_import_does_not_run_benchmark(tmp_path):
 
 
 def test_cli_writes_machine_readable_trials_and_visuals_with_stdlib_only(tmp_path):
-    run = subprocess.run([sys.executable, "-S", str(Path(s.__file__).resolve()),
-                          "--trials", "1", "--train-trials", "1", "--width", "16", "--height", "16",
-                          "--output", str(tmp_path)], text=True, capture_output=True)
+    run = run_cli(Path(s.__file__).resolve(), "--trials", "1", "--train-trials", "1",
+                  "--width", "16", "--height", "16", "--output", str(tmp_path), python_options=("-S",))
     assert run.returncode == 0, run.stderr
     report = json.loads((tmp_path / "results.json").read_text())
     assert report["test_seeds"] == [20261018, 20261019]

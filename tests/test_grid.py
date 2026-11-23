@@ -28,6 +28,8 @@ import grid_tools as grid
 import ironmate_image as im
 import ironmate_image as image
 import photo_grid
+from vendor.cli_args import run_cli
+from vendor.cli_args import run_cli
 import photo_grid as g_photo_grid
 import photo_grid as pg
 from vendor import pillow_min as pm
@@ -1151,25 +1153,25 @@ def test_cli_end_to_end_from_base64_png(tmp_path):
     src = tmp_path / 'in.b64'
     src.write_text(_png_b64(), encoding='ascii')
     out = tmp_path / 'out.svg'
-    cmd = [sys.executable, '-S', str(ROOT / 'photo_grid.py'), str(src), '--size', '8', '--colors', '2']
-    r = subprocess.run(cmd + ['--format', 'svg', '--scale', '3', '-o', str(out)], capture_output=True, text=True)
+    script = ROOT / 'photo_grid.py'
+    base_args = (str(src), '--size', '8', '--colors', '2')
+    r = run_cli(script, *base_args, '--format', 'svg', '--scale', '3', '-o', str(out), python_options=('-S',))
     assert r.returncode == 0 and r.stdout == '', r.stderr
-    j = subprocess.run(cmd, capture_output=True, text=True)
-    art = json.loads(j.stdout)
+    j = run_cli(script, *base_args, python_options=('-S',))
+    art = j.json()
     root, cells = _cover(out.read_text(encoding='utf-8'))
     assert root.get('width') == '24' and cells == _expected(art)
     assert any(v == 0 for row in art['pixels'] for v in row)
     assert out.read_text(encoding='utf-8') == grid_output.to_svg(art, 3)
     jf = tmp_path / 'a.json'
     jf.write_text(j.stdout, encoding='utf-8')
-    r2 = subprocess.run([sys.executable, '-S', str(ROOT / 'grid_tools.py'), 'load', str(jf), '--to', 'svg', '--scale', '3'],
-                        capture_output=True, text=True)
+    r2 = run_cli(ROOT / 'grid_tools.py', 'load', str(jf), '--to', 'svg', '--scale', '3', python_options=('-S',))
     assert r2.returncode == 0 and r2.stdout == grid_output.to_svg(art, 3)
 
 
 def test_pixel_grid_cli_svg_and_inert_imports(tmp_path):
-    r = subprocess.run([sys.executable, '-S', str(ROOT / 'pixel_grid.py'), '--mask', 'circle', '--size', '8', '--format', 'svg'],
-                       cwd=tmp_path, capture_output=True, text=True)
+    r = run_cli(ROOT / 'pixel_grid.py', '--mask', 'circle', '--size', '8', '--format', 'svg',
+                python_options=('-S',), cwd=tmp_path)
     assert r.returncode == 0 and r.stdout == grid_output.to_svg(pixel_grid.render('circle', size=8))
     probe = ('import sys;sys.path.insert(0,sys.argv[1]);import pixel_grid;from ironlib import grid_output;'
              'import photo_grid;assert "PIL" not in sys.modules')
@@ -1654,13 +1656,11 @@ def test_cli_raw_files(tmp_path, kind):
     path = tmp_path / f'in.{kind}'
     if kind == 'gif':
         path.write_bytes(SIGNATURES['gif'][0])
-        r = subprocess.run([sys.executable, '-S', str(ROOT / 'photo_grid.py'), str(path), '--size', '8'],
-                           capture_output=True, text=True)
+        r = run_cli(ROOT / 'photo_grid.py', str(path), '--size', '8', python_options=('-S',))
         assert r.returncode == 2 and 'GIF input is not supported' in r.stderr and 'Traceback' not in r.stderr
         return
     path.write_bytes(_pillow_bytes('JPEG'))
-    r = subprocess.run([sys.executable, str(ROOT / 'photo_grid.py'), str(path), '--size', '8'],
-                       capture_output=True, text=True)
+    r = run_cli(ROOT / 'photo_grid.py', str(path), '--size', '8')
     assert r.returncode == 0, r.stderr
 
 
@@ -1815,12 +1815,10 @@ def test_cli_and_inert_import(tmp_path):
     file = Path(g_photo_grid.__file__).resolve()
     src = tmp_path / 'in.b64'
     src.write_text(_b64_photo_grid(_png_photo_grid(8, 8, _quadrants)), encoding='ascii')
-    result = subprocess.run([sys.executable, '-S', str(file), str(src), '--size', '8'],
-                            cwd=tmp_path, capture_output=True, text=True)
+    result = run_cli(file, str(src), '--size', '8', python_options=('-S',), cwd=tmp_path)
     assert result.returncode == 0, result.stderr
-    assert json.loads(result.stdout)['width'] == 8
-    bad = subprocess.run([sys.executable, '-S', str(file), '-'], input='not base64!',
-                         cwd=tmp_path, capture_output=True, text=True)
+    assert result.json()['width'] == 8
+    bad = run_cli(file, '-', python_options=('-S',), stdin='not base64!', cwd=tmp_path)
     assert bad.returncode == 2 and 'invalid Base64' in bad.stderr
     probe = ('import sys;sys.path.insert(0,sys.argv[1]);import photo_grid;'
              'assert "PIL" not in sys.modules')
@@ -1992,12 +1990,11 @@ def test_invalid_selections(kwargs):
 
 def test_cli_and_inert_import_pixel_grid(tmp_path):
     file = Path(p.__file__).resolve()
-    result = subprocess.run([sys.executable, '-S', str(file), '--mask', 'circle', '--size', '23', '--format', 'json'],
-                            cwd=tmp_path, capture_output=True, text=True)
+    result = run_cli(file, '--mask', 'circle', '--size', '23', '--format', 'json',
+                     python_options=('-S',), cwd=tmp_path)
     assert result.returncode == 0
-    assert json.loads(result.stdout)['width'] == 23
-    bad = subprocess.run([sys.executable, '-S', str(file), '--mask', 'cloud', '--size', '8'],
-                         cwd=tmp_path, capture_output=True, text=True)
+    assert result.json()['width'] == 23
+    bad = run_cli(file, '--mask', 'cloud', '--size', '8', python_options=('-S',), cwd=tmp_path)
     assert bad.returncode == 2 and 'cloud needs an integer size from 16 to 256' in bad.stderr
     result = subprocess.run([sys.executable, '-S', '-c', 'import sys;sys.path.insert(0,sys.argv[1]);import pixel_grid',
                              str(file.parent)], cwd=tmp_path, capture_output=True)
@@ -3049,7 +3046,7 @@ def test_corrupt_crc_and_truncation():
 
 
 def test_standalone_python_s():
-    r = subprocess.run([sys.executable, '-S', str(ROOT / 'vendor' / 'pillow_min.py')], capture_output=True, text=True)
+    r = run_cli(ROOT / 'vendor' / 'pillow_min.py', python_options=('-S',))
     assert r.returncode == 0, r.stderr
 
 

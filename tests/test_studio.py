@@ -28,6 +28,7 @@ ROOT = Path(__file__).resolve().parents[1]
 import browser_matrix as bm
 import flow_export as f
 import flow_workspace as w
+from vendor.cli_args import run_cli
 import grid_tools
 import grid_tools as g
 import image_compare as c
@@ -159,11 +160,12 @@ console.log(JSON.stringify(scenes.map(s=>{try{c.svg(s);return false;}catch{retur
 def test_cli_heatmap_and_existing_file_protection(tmp_path):
     src, out = tmp_path/'matrix.json', tmp_path/'scene.json'
     src.write_text('[[1,null,3]]')
-    cmd = [sys.executable, '-S', str(ROOT/'image_studio.py'), '--heatmap', str(src), '-o', str(out)]
-    subprocess.run(cmd, check=True, capture_output=True)
+    args = ('--heatmap', str(src), '-o', str(out))
+    first = run_cli(ROOT / 'image_studio.py', *args, python_options=('-S',))
+    assert first.returncode == 0, first.stderr
     assert json.loads(out.read_text())['layers'][0]['z'] == [[1, None, 3]]
     old = out.read_bytes()
-    assert subprocess.run(cmd, capture_output=True).returncode != 0
+    assert run_cli(ROOT / 'image_studio.py', *args, python_options=('-S',)).returncode != 0
     assert out.read_bytes() == old
 
 

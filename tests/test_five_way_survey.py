@@ -1,11 +1,12 @@
 """Independent pixel-graph oracles; no production topology/ring code in oracle."""
-import ast, copy, json, random, subprocess, sys
+import ast, copy, json, random
 from collections import deque; from pathlib import Path
 
 import pytest
 
 from research import littlebit_jev_5way_survey as s
 from research import littlebit_jev_3way_survey as legacy
+from vendor.cli_args import run_cli
 
 
 def oracle(board, w, h):
@@ -218,14 +219,14 @@ def test_benchmark_is_deterministic_except_measurements_and_records_observed_fai
 
 def test_standalone_cli_stdlib_and_reports(tmp_path):
     script = Path(s.__file__)
-    result = subprocess.run([sys.executable, '-S', str(script), '--trials', '1', '--output', str(tmp_path)],
-                            cwd=tmp_path, capture_output=True, text=True, check=True)
+    result = run_cli(script, '--trials', '1', '--output', str(tmp_path), python_options=('-S',), cwd=tmp_path)
+    assert result.returncode == 0, result.stderr
     report = json.loads((tmp_path/'results.json').read_text())
     assert len(report['records']) == 8
     assert '# TP, + FP, - FN' in result.stdout
     assert 'causal_claim' in result.stdout
     assert (tmp_path/'report.md').read_text() == result.stdout
-    bad = subprocess.run([sys.executable, '-S', str(script), '--trials', '0'],capture_output=True)
+    bad = run_cli(script, '--trials', '0', python_options=('-S',))
     assert bad.returncode != 0
 
 

@@ -27,6 +27,7 @@ from research.boundary_twins import audit_boundary_twins, evaluate_rule
 from research.observable_choice import ObservableChoice, Prototype
 from research.robust_observation import BoundedErrorChoice, temporal_prediction
 from research.stream_phase_report import csv_spins
+from vendor.cli_args import run_cli
 
 
 # ═══ · bit representation ════════════════════════════════════════════════════════════════════════════════
@@ -954,8 +955,9 @@ def test_invalid_fixtures_and_engine_errors_fail_instead_of_becoming_accuracy_re
 
 
 def test_stdlib_cli_preserves_full_replayable_inputs_and_rejects_invalid_trial_count(tmp_path):
-    command = [sys.executable, "-S", str(Path(holdout.__file__).resolve()), "--trials", "1", "--output", str(tmp_path)]
-    run = subprocess.run(command, capture_output=True, text=True, cwd=tmp_path)
+    script = Path(holdout.__file__).resolve()
+    args = ("--trials", "1", "--output", str(tmp_path))
+    run = run_cli(script, *args, python_options=("-S",), cwd=tmp_path)
     assert run.returncode == 0, run.stderr
     raw_bytes = gzip.decompress((tmp_path / "results.json.gz").read_bytes())
     raw, summary = json.loads(raw_bytes), json.loads((tmp_path / "summary.json").read_text())
@@ -970,7 +972,7 @@ def test_stdlib_cli_preserves_full_replayable_inputs_and_rejects_invalid_trial_c
         assert sorted(result["normal_set"]) == row["prediction"]
     assert (tmp_path / "report.md").read_text() == run.stdout
     assert "observed_mismatch" in raw_bytes.decode()
-    invalid = subprocess.run(command + ["--trials", "0"], capture_output=True, text=True)
+    invalid = run_cli(script, *args, "--trials", "0", python_options=("-S",))
     assert invalid.returncode != 0 and "trials must be 1..20" in invalid.stderr
 
 

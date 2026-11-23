@@ -43,7 +43,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
@@ -79,7 +79,7 @@ jobs:
           python -S scripts/parent_vendor_tools_resolve.py --emit-github-actions
       - name: Fetch shared vendor tool at resolved parent main
         id: vendor_tool
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: myon-bioinformatics/myon-bioinformatics
           ref: ${{ steps.parent-vendor-tools.outputs.sha }}
@@ -98,7 +98,7 @@ jobs:
         run: npm ci
       - name: Check out pinned test-only JUnit importer
         id: junit_importer
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: myon-bioinformatics/xprobe
           ref: 7e7015b2df69ad446b968f6fa49711b5b1dbdd3f
@@ -127,7 +127,7 @@ jobs:
         run: python3 -S scripts/ci_setup_junit.py test build/test-results/setup.xml
       - name: Preserve setup JUnit before tests
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: junit-setup-test
           path: build/test-results/setup.xml
@@ -145,7 +145,7 @@ jobs:
         run: uv run --locked python -m pytest -q -m "not heavy and not network" --junitxml=build/test-results/pytest-3.15.xml
       - name: Preserve raw suite JUnit
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: junit-py3.15
           path: build/test-results/pytest-3.15.xml
@@ -153,7 +153,7 @@ jobs:
           retention-days: 14
       - name: Preserve controlled child evidence
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: junit-controlled-py3.15
           path: build/controlled-failure/
@@ -166,7 +166,7 @@ jobs:
           --kind locked --output build/vendor-evidence-test
       - name: Preserve vendor lock used by this run
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: vendor-lock-py3.15
           path: build/vendor-evidence-test
@@ -180,7 +180,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
@@ -277,7 +277,7 @@ jobs:
         run: python3 -S scripts/ci_setup_junit.py marp build/test-results/setup.xml
       - name: Preserve setup JUnit before tests
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: junit-setup-marp
           path: build/test-results/setup.xml
@@ -312,7 +312,7 @@ jobs:
           IRONMATE_STUDIO_STATIC=1 node tests/image_studio_browser.cjs
       - name: Preserve Marp JUnit
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: junit-marp
           path: build/test-results/marp.xml
@@ -320,7 +320,7 @@ jobs:
           retention-days: 14
       - name: Preserve raw Marp Open XML
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: marp-openxml-observations
           path: |
@@ -343,7 +343,7 @@ jobs:
       matrix:
         browser: [chromium, firefox, webkit]
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
@@ -403,7 +403,7 @@ jobs:
         run: python3 -S scripts/ci_setup_junit.py clipboard-${{ matrix.browser }} build/test-results/setup.xml
       - name: Preserve setup JUnit before tests
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: junit-setup-clipboard-${{ matrix.browser }}
           path: build/test-results/setup.xml
@@ -415,7 +415,7 @@ jobs:
         run: node tests/studio_clipboard.cjs
       - name: Preserve clipboard browser evidence
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: studio-clipboard-${{ matrix.browser }}
           path: build/studio-clipboard/

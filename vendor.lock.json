@@ -507,12 +507,12 @@
     },
     {
       "repository": "myon-bioinformatics/myon-bioinformatics",
-      "ref": "64db25eb0fd9025dbe3cbcbced8b88a39ecb9266",
-      "commit": "64db25eb0fd9025dbe3cbcbced8b88a39ecb9266",
+      "ref": "bc57f08a590ee1cb33a8bb37c1bb3b8f28a2f3c9",
+      "commit": "bc57f08a590ee1cb33a8bb37c1bb3b8f28a2f3c9",
       "source": "fleet_check.py",
       "destination": "vendor/fleet_check.py",
-      "blob_sha": "e464c95809c288029d6b3a8562cf65214205de33",
-      "sha256": "2906b1583593567816abd91d24367bd6db14cef61c35e5abe17bd46cc64ad140"
+      "blob_sha": "181161ab1733ce0e5d56d834f5549a64d64a5f63",
+      "sha256": "c914408f32d99c08cb642c123c2e91d5be3547661a1eab6ca0a83a0926af06d8"
     }
   ]
 }

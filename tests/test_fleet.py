@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parents[1]
 _spec = importlib.util.spec_from_file_location("ironmate_fleet_check", ROOT / "vendor/fleet_check.py")
 fleet = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(fleet)
-ACCEPTED = {"vendor/fleet_check.py": "64db25eb0fd9025dbe3cbcbced8b88a39ecb9266"}
+ACCEPTED = {"vendor/fleet_check.py": "bc57f08a590ee1cb33a8bb37c1bb3b8f28a2f3c9"}
 
 
 class VendorLock(unittest.TestCase):

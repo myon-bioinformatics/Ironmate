@@ -235,17 +235,17 @@ class StudioHandler(BaseHTTPRequestHandler):
 
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    p.add_argument('--port', type=int, default=8765)
+    p.add_argument('--port', type=int, default=8765,help="port of the local studio on 127.0.0.1 (default: %(default)s)")
     mode = p.add_mutually_exclusive_group()
-    mode.add_argument('--heatmap', type=Path)
+    mode.add_argument('--heatmap', type=Path,help="heatmap JSON -> scene JSON (needs -o)")
     mode.add_argument('--render', type=Path, help='scene JSON -> SVG/PNG/Base64')
     mode.add_argument('--build-site', type=Path, help='write standalone GitHub Pages assets')
-    p.add_argument('--format', choices=('svg', 'png', 'base64'), default='svg')
-    p.add_argument('--scale', type=float, default=1)
+    p.add_argument('--format', choices=('svg', 'png', 'base64'), default='svg',help="--render output format (default: %(default)s)")
+    p.add_argument('--scale', type=float, default=1,help="--render scale (default: %(default)s)")
     p.add_argument('--chrome', help='installed Chrome/Chromium executable')
     p.add_argument('--data-uri', action='store_true', help='prefix Base64 with data:image/png;base64,')
-    p.add_argument('-o', '--output', type=Path)
-    p.add_argument('--force', action='store_true')
+    p.add_argument('-o', '--output', type=Path,help="output file (default: stdout)")
+    p.add_argument('--force', action='store_true',help="replace an existing -o file")
     p.add_argument('--json', action='store_true',
                    help='on a fixable failure, write one JSON object to stderr; success output is unchanged')
     args = p.parse_args(argv)

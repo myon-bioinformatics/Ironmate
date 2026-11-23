@@ -108,10 +108,10 @@ def arrange(source, rules, *, destination=None, dry_run=False):
 def main(argv=None):
     from ironlib.ironmate_cli import ToolParser, guard
     parser = ToolParser(description=__doc__, tool='pptx_layout.py')
-    parser.add_argument('source', type=Path)
-    parser.add_argument('--rules', type=Path, required=True)
-    parser.add_argument('--output', type=Path)
-    parser.add_argument('--dry-run', action='store_true')
+    parser.add_argument('source', type=Path,help="PPTX to read")
+    parser.add_argument('--rules', type=Path, required=True,help="TOML file with [[rules]] for rows, columns and grids")
+    parser.add_argument('--output', type=Path,help="PPTX to write")
+    parser.add_argument('--dry-run', action='store_true',help="report the changes without writing")
     parser.add_json_flag()
     args = parser.parse_args(argv)
 

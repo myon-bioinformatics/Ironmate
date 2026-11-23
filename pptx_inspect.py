@@ -52,7 +52,7 @@ def main(argv=None):
     from ironlib.ironmate_cli import ToolParser, guard
     parser = ToolParser(description=__doc__, tool="pptx_inspect.py")
     parser.add_argument("source", help="PPTX path or - for raw PPTX bytes on stdin")
-    parser.add_argument("-o", "--output", type=Path)
+    parser.add_argument("-o", "--output", type=Path,help="new file for the JSON report (default: stdout)")
     parser.add_json_flag()
     args = parser.parse_args(argv)
 

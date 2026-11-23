@@ -388,8 +388,8 @@ def convert(text, size=16, fit='crop', colors=8, palette=None, decoder=decode_im
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument('input', help="PNG file, or file with Base64 / a data: URI ('-' = stdin)")
-    p.add_argument('--size', type=int, choices=SIZES, default=16)
-    p.add_argument('--fit', choices=FITS, default='crop')
+    p.add_argument('--size', type=int, choices=SIZES, default=16,help="grid width in cells (default: %(default)s)")
+    p.add_argument('--fit', choices=FITS, default='crop',help="crop to a square, or contain the whole image (default: %(default)s)")
     p.add_argument('--colors', type=int, default=8, help='median-cut colors, 1-16 (default 8)')
     p.add_argument('--palette', choices=PALETTES, help='use a fixed pixel_grid palette instead')
     p.add_argument('--format', choices=('json', 'svg', 'png', 'base64'), default=None,

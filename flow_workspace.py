@@ -101,18 +101,18 @@ def main(argv=None):
     commands = parser.add_subparsers(dest='command', required=True)
     for name in ('import', 'patch', 'render', 'original', 'spec'):
         command = commands.add_parser(name)
-        command.add_argument('input', type=Path)
-        command.add_argument('-o', '--output', type=Path)
-        command.add_argument('--force', action='store_true')
+        command.add_argument('input', type=Path,help="flow JSON (import) or workspace JSON")
+        command.add_argument('-o', '--output', type=Path,help="output file (default: stdout)")
+        command.add_argument('--force', action='store_true',help="replace an existing -o file")
         if name == 'patch':
             command.add_argument('patch', type=Path, help='array of path/value operations (ascii_artist flow-patch)')
         if name == 'render':
-            command.add_argument('--format', choices=FORMATS, default='svg')
-            command.add_argument('--scale', type=float, default=1)
-            command.add_argument('--background')
-            command.add_argument('--mmdc', default='mmdc')
-            command.add_argument('--chrome')
-            command.add_argument('--puppeteer-config', type=Path)
+            command.add_argument('--format', choices=FORMATS, default='svg',help="output format (default: %(default)s)")
+            command.add_argument('--scale', type=float, default=1,help="SVG/PNG scale, 0.25 to 8 (default: %(default)s)")
+            command.add_argument('--background',help="#RRGGBB (default: transparent)")
+            command.add_argument('--mmdc', default='mmdc',help="Mermaid CLI command (default: %(default)s)")
+            command.add_argument('--chrome',help="installed Chrome/Chromium executable for PNG")
+            command.add_argument('--puppeteer-config', type=Path,help="optional local mmdc browser configuration")
     args = parser.parse_args(argv)
     try:
         if args.command == 'import':

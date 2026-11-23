@@ -133,18 +133,18 @@ def png(image):
 
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    p.add_argument('--reference', required=True, type=Path)
-    p.add_argument('--nearest', required=True, type=Path)
-    p.add_argument('--smooth', required=True, type=Path)
+    p.add_argument('--reference', required=True, type=Path,help="reference PNG the variants are scored against")
+    p.add_argument('--nearest', required=True, type=Path,help="nearest-neighbour PNG, the 0%% smooth end of the sweep")
+    p.add_argument('--smooth', required=True, type=Path,help="smooth PNG, the 100%% smooth end of the sweep (same size as --reference)")
     p.add_argument('--out', '-o', '--output', required=True, type=Path, dest='out',
                    help='new or empty directory for the variant PNGs and report.json')
     p.add_argument('--json', action='store_true',
                    help='on a fixable failure, write one JSON object to stderr; success JSON is unchanged')
-    p.add_argument('--steps', type=int, default=10)
-    p.add_argument('--mae-weight', type=float, default=0.5)
+    p.add_argument('--steps', type=int, default=10,help="even number of blend steps, 2 to 100 (default: %(default)s)")
+    p.add_argument('--mae-weight', type=float, default=0.5,help="MAE share of the balance score, 0 to 1; RMSE gets the rest (default: %(default)s)")
     p.add_argument('--quality', action='store_true', help='add foreground, color and registration diagnostics')
-    p.add_argument('--select-by', choices=('rgb_mae', 'rgb_rmse', 'balance_score', 'iou', 'energy_dice', 'near_field', 'rgba_similarity'))
-    p.add_argument('--max-missing-foreground', type=int)
+    p.add_argument('--select-by', choices=('rgb_mae', 'rgb_rmse', 'balance_score', 'iou', 'energy_dice', 'near_field', 'rgba_similarity'),help="quality objective for the pick (default: balance_score; needs --quality)")
+    p.add_argument('--max-missing-foreground', type=int,help="reject candidates missing more foreground pixels than this (needs --quality)")
     args = p.parse_args(argv)
     try:
         if args.select_by or args.max_missing_foreground is not None:

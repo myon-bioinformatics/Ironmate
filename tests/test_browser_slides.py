@@ -1,8 +1,5 @@
 """PPTX ZIP, relationship, native-object and serialization contracts."""
-import json
 import posixpath
-import subprocess
-import sys
 from pathlib import Path; from xml.etree import ElementTree as ET; from zipfile import ZipFile
 
 import pytest

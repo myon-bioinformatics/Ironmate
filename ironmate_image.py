@@ -158,7 +158,7 @@ def _output_flags(command, *, data_uri=False):
     if data_uri:
         command.add_argument('--data-uri', action='store_true', help='prefix Base64 with data:image/png;base64,')
     command.add_argument('--no-meta', action='store_true', help='omit the ironmate PNG header')
-    command.add_argument('-o', '--output')
+    command.add_argument('-o', '--output',help="output file (default: stdout)")
     command.add_argument('--force', action='store_true', help='replace an existing -o file')
 
 
@@ -183,9 +183,9 @@ def main(argv=None):
     _output_flags(b64_cmd, data_uri=True)
     resize_cmd = commands.add_parser('resize', help='nearest-neighbour resize, then JSON, PNG, or Base64')
     resize_cmd.add_argument('input', help='path, or - for stdin')
-    resize_cmd.add_argument('width', type=int)
-    resize_cmd.add_argument('--height', type=int)
-    resize_cmd.add_argument('--to', '--format', dest='to', choices=('json', 'png', 'base64'), default='json')
+    resize_cmd.add_argument('width', type=int,help="new width in cells")
+    resize_cmd.add_argument('--height', type=int,help="new height in cells (default: keep the aspect ratio)")
+    resize_cmd.add_argument('--to', '--format', dest='to', choices=('json', 'png', 'base64'), default='json',help="output format (default: %(default)s)")
     _output_flags(resize_cmd, data_uri=True)
     parser.epilog = 'To fit a size limit: python -m grid_tools fit INPUT --limit-chars N'
     args = parser.parse_args(argv)

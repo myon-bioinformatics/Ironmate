@@ -125,18 +125,18 @@ def to_gif(png, *, duration_ms=60, hold_ms=400, loop=0, **options):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('input', type=Path)
-    parser.add_argument('output', type=Path)
-    parser.add_argument('--zoom', type=float, default=3)
-    parser.add_argument('--steps', type=int, default=16)
+    parser.add_argument('input', type=Path,help="PNG (or APNG: its default image)")
+    parser.add_argument('output', type=Path,help="new GIF file")
+    parser.add_argument('--zoom', type=float, default=3,help="peak magnification, above 1 and at most 64 (default: %(default)s)")
+    parser.add_argument('--steps', type=int, default=16,help="frames from full view to the peak, 2 to 120 (default: %(default)s)")
     focus = parser.add_mutually_exclusive_group()
-    focus.add_argument('--anchor', nargs=2, type=float, metavar=('X', 'Y'))
+    focus.add_argument('--anchor', nargs=2, type=float, metavar=('X', 'Y'),help="focus point, each 0 to 1; 0 1 is bottom-left")
     focus.add_argument('--focus', type=_focus_name, choices=tuple(ANCHORS), default='bottom-left',
                        help='focus name or arrow, e.g. ↙️, ↗️, ⬅️, 🎯')
     focus.add_argument('--sequence', nargs='+', type=_focus_name, choices=tuple(ANCHORS),
                        help='ordered names/arrows; return to full view between each')
-    parser.add_argument('--duration-ms', type=int, default=60)
-    parser.add_argument('--hold-ms', type=int, default=400)
+    parser.add_argument('--duration-ms', type=int, default=60,help="frame duration, a multiple of 10 (default: %(default)s)")
+    parser.add_argument('--hold-ms', type=int, default=400,help="extra pause on the first, peak and last frames, a multiple of 10 (default: %(default)s)")
     args = parser.parse_args(argv)
     try:
         data = to_gif(args.input.read_bytes(), zoom=args.zoom, steps=args.steps,

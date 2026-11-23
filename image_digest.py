@@ -212,9 +212,9 @@ def main(argv=None):
     parser = ToolParser(prog='image_digest.py', description=__doc__.splitlines()[0])
     parser.add_argument('input', help=f'{SCHEMA} JSON; image paths are relative to it ("-" = stdin with --base)')
     parser.add_argument('out_dir', nargs='?', metavar='OUT', help='same as --out (INPUT.json DIR)')
-    parser.add_argument('--out', '-o', '--output', dest='out')
+    parser.add_argument('--out', '-o', '--output', dest='out',help="output directory (or give it as OUT)")
     parser.add_argument('--base', help='directory image paths are relative to (default: the input file directory)')
-    parser.add_argument('--max-bytes', type=int, default=1_000_000)
+    parser.add_argument('--max-bytes', type=int, default=1_000_000,help="page size target in bytes, 20000 to 20000000; thumbnails shrink until it fits (default: %(default)s)")
     parser.add_argument('--tile', default='64x128', help='starting thumbnail WIDTHxHEIGHT')
     parser.add_argument('--json', action='store_true',
                         help='on a fixable failure, write one JSON object to stderr; success JSON is unchanged')

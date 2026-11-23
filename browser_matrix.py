@@ -218,7 +218,7 @@ def write(out, report, sheet, tiles):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument('root', type=Path, help='browser-test-kit app-results tree')
-    parser.add_argument('--out', '-o', '--output', type=Path, dest='out')
+    parser.add_argument('--out', '-o', '--output', type=Path, dest='out',help="new directory for the sheet, tiles and report (required unless --list)")
     parser.add_argument('--page', action='append', help='page-name glob; repeat for OR')
     parser.add_argument('--env', action='append', help='environment-name glob; repeat for OR')
     parser.add_argument('--exclude-page', action='append', help='exclude page-name glob; repeat for OR')

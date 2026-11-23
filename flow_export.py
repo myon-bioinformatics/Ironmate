@@ -92,14 +92,14 @@ def render_flow(spec, format='svg', *, scale=1, background=None, mmdc='mmdc',
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument('input', nargs='?', type=Path, help='JSON file (default: stdin)')
-    parser.add_argument('--format', choices=FORMATS, default='svg')
-    parser.add_argument('--scale', type=float, default=1)
+    parser.add_argument('--format', choices=FORMATS, default='svg',help="output format (default: %(default)s)")
+    parser.add_argument('--scale', type=float, default=1,help="SVG/PNG scale, 0.25 to 8 (default: %(default)s)")
     parser.add_argument('--background', help='#RRGGBB (default: transparent)')
-    parser.add_argument('--mmdc', default='mmdc')
-    parser.add_argument('--chrome')
+    parser.add_argument('--mmdc', default='mmdc',help="Mermaid CLI command (default: %(default)s)")
+    parser.add_argument('--chrome',help="installed Chrome/Chromium executable for PNG")
     parser.add_argument('--puppeteer-config', type=Path, help='optional local mmdc browser configuration')
-    parser.add_argument('-o', '--output', type=Path)
-    parser.add_argument('--force', action='store_true')
+    parser.add_argument('-o', '--output', type=Path,help="output file (default: stdout)")
+    parser.add_argument('--force', action='store_true',help="replace an existing -o file")
     args = parser.parse_args(argv)
     try:
         if args.input:

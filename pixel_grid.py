@@ -323,9 +323,9 @@ def emoji(artifact):
 
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    p.add_argument('--mask', choices=MASKS, default='cloud')
+    p.add_argument('--mask', choices=MASKS, default='cloud',help="procedural shape (default: %(default)s)")
     p.add_argument('--palette', choices=PALETTES, default='C01', help='color ID (C01-C10)')
-    p.add_argument('--effect', choices=EFFECTS, default='normal')
+    p.add_argument('--effect', choices=EFFECTS, default='normal',help="shading (default: %(default)s)")
     p.add_argument('--size', type=int, default=16, help='canvas size; per-mask range in MASK_BOUNDS')
     p.add_argument('--format', choices=('emoji', 'json', 'svg', 'png', 'base64'), default=None,
                    help='emoji (default), json, svg, png, or base64')

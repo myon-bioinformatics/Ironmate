@@ -49,11 +49,11 @@ def main(argv=None):
     from ironlib.ironmate_cli import ToolParser, guard
     parser = ToolParser(description='Convert CSV files into an xlsx workbook.', tool='xlsx_csv.py')
     parser.add_argument('sheets', nargs='*', type=_sheet_arg, help='SheetName=file.csv, or a csv path')
-    parser.add_argument('-o', '--output', type=Path, required=True)
+    parser.add_argument('-o', '--output', type=Path, required=True,help="xlsx file to write")
     parser.add_argument('--spec', type=Path, help='JSON workbook spec; csv paths are relative to the spec file')
     parser.add_argument('--border', action='store_true', help='draw a thin grid border on every cell')
     parser.add_argument('--autofilter', action='store_true', help='turn on autofilter for the used range')
-    parser.add_argument('--encoding', default='auto', choices=('auto', 'utf-8', 'utf-8-sig', 'shift_jis', 'cp932'))
+    parser.add_argument('--encoding', default='auto', choices=('auto', 'utf-8', 'utf-8-sig', 'shift_jis', 'cp932'),help="CSV encoding; auto takes valid UTF-8 (with or without BOM), else CP932/Shift_JIS (default: %(default)s)")
     parser.add_json_flag()
     args = parser.parse_args(argv)
     if (args.spec is None) == (not args.sheets):

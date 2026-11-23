@@ -24,6 +24,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 from scripts.configure_ci_apt import APT_CONFIG, ARCHIVES_CONFIG, CONFIG_NAME, configure, finish, main, prefer_existing_archive
 from vendor import ascii_artist, markdown, nvd_nist_known_vulns as nvd, xprobe
+from vendor.cli_args import run_cli
 
 
 # ═══ · ci apt setup ══════════════════════════════════════════════════════════════════════════════════════
@@ -576,8 +577,7 @@ def test_parent_tools_match_recorded_bytes():
 
 
 def test_gh_ops_help_is_standalone():
-    result = subprocess.run([sys.executable, "-S", str(VENDOR / "gh_ops.py"), "--help"],
-                            capture_output=True, text=True, timeout=20)
+    result = run_cli(VENDOR / "gh_ops.py", "--help", python_options=("-S",), timeout=20)
     assert result.returncode == 0, result.stderr
     assert "git-push" in result.stdout
 
@@ -624,9 +624,8 @@ print(json.dumps(receipt))
 
 def test_gh_workflow_invalid_inputs_remain_private_and_fail_closed():
     marker = "private-test-input-not-a-real-secret"
-    result = subprocess.run([sys.executable, "-S", str(VENDOR / "gh_workflow.py"),
-                             "owner/repo", "ci.yml", "--inputs", marker],
-                            capture_output=True, text=True, timeout=20)
+    result = run_cli(VENDOR / "gh_workflow.py", "owner/repo", "ci.yml", "--inputs", marker,
+                     python_options=("-S",), timeout=20)
     assert result.returncode == 1
     receipt = json.loads(result.stdout)
     assert receipt["status"] == "preflight_failed"
@@ -638,8 +637,7 @@ def test_gh_workflow_invalid_inputs_remain_private_and_fail_closed():
 def test_ci_status_help_exposes_opt_in_options():
     # Help is offline; actual CI observation has a separately tracked pre-existing
     # vendored GHI lookup issue and is not claimed to be validated here.
-    result = subprocess.run([sys.executable, "-S", str(VENDOR / "ci_status.py"), "--help"],
-                            capture_output=True, text=True, timeout=20)
+    result = run_cli(VENDOR / "ci_status.py", "--help", python_options=("-S",), timeout=20)
     assert result.returncode == 0, result.stderr
     assert "--explain" in result.stdout
     assert "--ci-check" in result.stdout

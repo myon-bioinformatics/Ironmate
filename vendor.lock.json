@@ -446,10 +446,10 @@
       "repository": "myon-bioinformatics/cli_args",
       "source": "cli_args.py",
       "destination": "vendor/cli_args.py",
-      "ref": "e5d4bf4f39d6fc3d5f7890a7c8e9cffb723c1ece",
-      "commit": "e5d4bf4f39d6fc3d5f7890a7c8e9cffb723c1ece",
-      "blob_sha": "b6610635a13e778518f53118c14e8743b31c0b5b",
-      "sha256": "8a45d1c21792f22a1cd5e1bc9ed6387444787d193a217979a1bc5f90e100247b"
+      "ref": "5ae22b1a1b808eca93e3c385a8db867fbeb8ee32",
+      "commit": "5ae22b1a1b808eca93e3c385a8db867fbeb8ee32",
+      "blob_sha": "2016baa6f1f347840ac8dff7ca59e7bdaf565475",
+      "sha256": "360a048d5e2764da52277be4992ad3e5399d25fd236ceed19f8efe611674b4b5"
     },
     {
       "repository": "myon-bioinformatics/cli_args",

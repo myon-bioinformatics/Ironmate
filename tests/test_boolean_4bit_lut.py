@@ -1,6 +1,7 @@
 """All truth tables, independent operator semantics and context controls."""
 import unittest
 from research import littlebit_jev_5way_survey as s
+from vendor.cli_args import run_cli
 
 class TruthTables(unittest.TestCase):
     def test_all_functions(self):
@@ -62,16 +63,12 @@ class RadixConversion(unittest.TestCase):
                 s.convert_bitboard_radix(*args)
 
     def test_cli_converts_without_running_benchmark(self):
-        import subprocess
-        import sys
         for source, target, text, expected in (
             ('16','8','0xff','0o377'), ('8','16','377','0xff')):
-            result = subprocess.run([sys.executable, '-S', s.__file__, '--convert',
-                                     source, target, text], capture_output=True, text=True)
+            result = run_cli(s.__file__, '--convert', source, target, text, python_options=('-S',))
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(result.stdout.strip(), expected)
-        result = subprocess.run([sys.executable, '-S', s.__file__, '--convert',
-                                 '8','16','89'], capture_output=True, text=True)
+        result = run_cli(s.__file__, '--convert', '8', '16', '89', python_options=('-S',))
         self.assertEqual(result.returncode, 2)
 
 class ExactRadixNumbers(unittest.TestCase):

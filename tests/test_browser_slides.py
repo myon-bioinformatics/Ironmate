@@ -1,13 +1,11 @@
 """PPTX ZIP, relationship, native-object and serialization contracts."""
-import json
 import posixpath
-import subprocess
-import sys
 from pathlib import Path; from xml.etree import ElementTree as ET; from zipfile import ZipFile
 
 import pytest
 from ironlib.pptx_ooxml import require_package, ordered_slide_members
 from tests.test_studio import node  # 🟨 STUDIO_JS loader shared with test_studio (C, D = slides)
+from vendor.cli_args import run_cli
 
 ROOT = Path(__file__).resolve().parents[1]
 NS = {'p':'http://schemas.openxmlformats.org/presentationml/2006/main',
@@ -97,9 +95,9 @@ def test_repeated_pngs_share_media_and_raw_deck_inspection(tmp_path):
     report = inspect(raw)
     assert report["source"] == "<memory>" and report["slides"] == inspect(output)["slides"]
     output.unlink()
-    cli = subprocess.run([sys.executable, "-S", str(ROOT / "pptx_inspect.py"), "-"],
-                         input=raw, capture_output=True, check=True, cwd=tmp_path)
-    assert json.loads(cli.stdout) == report
+    cli = run_cli(ROOT / "pptx_inspect.py", "-", python_options=("-S",), stdin=raw, cwd=tmp_path)
+    assert cli.returncode == 0, cli.stderr
+    assert cli.json() == report
     assert not list(tmp_path.iterdir())
 
 

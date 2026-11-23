@@ -5,18 +5,19 @@ External tools keep their own option semantics; pass their argv unchanged.
 """
 from __future__ import annotations
 
-import argparse, base64, json, math, os, re, shutil, subprocess, sys, tempfile
-from collections import deque; from collections.abc import Sequence as SequenceABC; from dataclasses import asdict, dataclass, field; from difflib import get_close_matches; from pathlib import Path; from threading import Event, Lock, Thread; from typing import Any, Iterable, Mapping, Sequence, TextIO
+import argparse, base64, fnmatch, json, math, os, re, shutil, subprocess, sys, tempfile
+from collections import deque; from collections.abc import Sequence as SequenceABC; from dataclasses import asdict, dataclass, field; from difflib import get_close_matches; from pathlib import Path; from threading import Event, Lock, Thread; from typing import Any, Callable, Iterable, Mapping, Sequence, TextIO
 
 
 __version__ = "0.0.0"
 
 __all__ = [
     "Argument", "make_parser", "parse_args", "add_output_arguments",
-    "add_execution_arguments", "add_node_arguments", "require_when",
-    "positive_seconds", "requested_format", "write_error",
+    "add_execution_arguments", "add_node_arguments", "add_selection_arguments",
+    "select_keys", "require_when",
+    "named_path", "int_range", "positive_seconds", "requested_format", "write_error",
     "EXIT_OK", "EXIT_FAILURE", "EXIT_USAGE", "EXIT_PARTIAL",
-    "Command", "CommandResult", "run_command",
+    "Command", "CommandResult", "run_command", "CliResult", "run_cli",
     "render_output", "write_output", "pytest_command", "trim_output",
     "pytest_summary", "build_env", "NodeNotFoundError", "is_node_target",
     "resolve_node", "node_command", "run_node", "node_or_command",
@@ -243,6 +244,37 @@ def parse_args(arguments: Iterable[Argument] = (), argv: Sequence[str] | None = 
     return make_parser(arguments, **kwargs).parse_args(tokens)
 
 
+def named_path(value: str) -> tuple[str, Path]:
+    """Parse NAME=PATH at the first equals sign, trimming surrounding whitespace."""
+    name, separator, path = value.partition("=")
+    name, path = name.strip(), path.strip()
+    if not separator or not name or not path:
+        raise argparse.ArgumentTypeError("expected NAME=PATH with a nonempty name and path")
+    return name, Path(path)
+
+
+def int_range(*, minimum: int | None = None, maximum: int | None = None) -> Callable[[str], int]:
+    """Return an argparse integer converter with optional inclusive bounds."""
+    for bound in (minimum, maximum):
+        if bound is not None and type(bound) is not int:
+            raise TypeError("bounds must be integers or None")
+    if minimum is not None and maximum is not None and minimum > maximum:
+        raise ValueError("minimum exceeds maximum")
+
+    def parse(value: str) -> int:
+        try:
+            number = int(value)
+        except ValueError as exc:
+            raise argparse.ArgumentTypeError("expected an integer") from exc
+        if minimum is not None and number < minimum:
+            raise argparse.ArgumentTypeError(f"must be at least {minimum}")
+        if maximum is not None and number > maximum:
+            raise argparse.ArgumentTypeError(f"must be at most {maximum}")
+        return number
+
+    return parse
+
+
 def positive_seconds(value: str) -> float:
     try:
         number = float(value)
@@ -290,6 +322,52 @@ def add_node_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--node", metavar="PATH", help="Node.js executable path")
     parser.add_argument("--node-flag", action="append", default=[], dest="node_flags",
                         metavar="FLAG", help="repeatable flag before the script target")
+
+
+def add_selection_arguments(parser: argparse.ArgumentParser, *, option: str = "--case",
+                            exclude_option: str = "--exclude",
+                            list_option: str | None = "--list") -> None:
+    """Add repeatable glob selection arguments, as measured in the markdown
+    converter tools: the include option adds keys (repeat for OR), the exclude
+    option removes keys, and the list flag names the selection without doing
+    the work. Pair with :func:`select_keys`. The append destinations default
+    to None, so callers pass ``args.case or ("*",)`` for an unfiltered run.
+    Rename the options to the caller's noun (``--case``, ``--target``, ...)
+    and pass ``list_option=None`` to omit the list flag."""
+    parser.add_argument(option, action="append", metavar="GLOB",
+                        help="key or id glob to include; repeat for OR (default: all keys)")
+    parser.add_argument(exclude_option, action="append", metavar="GLOB",
+                        help="key or id glob to exclude; repeatable")
+    if list_option is not None:
+        parser.add_argument(list_option, action="store_true",
+                            help="list the selected keys without doing the work")
+
+
+def select_keys(keys: Sequence[str], patterns: Sequence[str] = ("*",),
+                exclude: Sequence[str] = ()) -> list[str]:
+    """Select keys by include/exclude globs, preserving the input order.
+
+    A pattern matches a key when it fnmatch-matches the whole key or the
+    part after the first ``:``, so ``basic*`` selects ``html:basic_blocks``.
+    Duplicate keys and an empty selection raise ValueError, so a typo can
+    never silently turn into "run nothing" or "run everything".
+    """
+    keys = _tokens(keys)
+    if len(keys) != len(set(keys)):
+        raise ValueError("duplicate selection keys")
+    patterns = _tokens(patterns)
+    exclude = _tokens(exclude)
+    if any(not rule for rule in patterns + exclude):
+        raise ValueError("selection rules must be nonempty strings")
+
+    def matches(key: str, rules: tuple[str, ...]) -> bool:
+        return any(fnmatch.fnmatchcase(key, rule)
+                   or fnmatch.fnmatchcase(key.split(":", 1)[-1], rule) for rule in rules)
+
+    result = [key for key in keys if matches(key, patterns) and not matches(key, exclude)]
+    if not result:
+        raise ValueError("no keys selected")
+    return result
 
 
 def require_when(parser: argparse.ArgumentParser, args: argparse.Namespace, *,
@@ -521,6 +599,54 @@ def _run_command_with_bytes(command: Command, *, cwd: str | os.PathLike[str] | N
         return _command_result_with_bytes(command, None, exc.stdout, exc.stderr, True, timed_out=True)
     return _command_result_with_bytes(command, completed.returncode, completed.stdout,
                                       completed.stderr, True)
+
+
+@dataclass(frozen=True)
+class CliResult(CommandResult):
+    """A CommandResult with the two JSON views tests assert on most.
+
+    ``json()`` parses stdout (the ``--format json`` payload); ``error()``
+    parses stderr (the single JSON error object ``write_error`` emits).
+    A stream that is not JSON raises ValueError naming the exit code and
+    the first bytes seen, instead of a bare json.JSONDecodeError whose
+    message never says which command produced the text.
+    """
+
+    def _parse(self, stream: str, text: str) -> Any:
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError as exc:
+            preview = text[:120].replace("\n", " ")
+            raise ValueError(
+                f"cli_args: {stream} is not JSON (exit {self.returncode}): {preview!r}"
+            ) from exc
+
+    def json(self) -> Any:
+        return self._parse("stdout", self.stdout)
+
+    def error(self) -> Any:
+        return self._parse("stderr", self.stderr)
+
+
+def run_cli(target: str | os.PathLike[str], *args: str | os.PathLike[str],
+            python: str | os.PathLike[str] | None = None,
+            timeout: float | None = None, cwd: str | os.PathLike[str] | None = None,
+            env: Mapping[str, str] | None = None,
+            stdin: str | bytes | None = None) -> CliResult:
+    """Run a Python CLI script once and return its captured result.
+
+    This is the test-side counterpart of ``run_command``: the interpreter
+    (``python``, default ``sys.executable``), the script ``target`` and the
+    argument tokens are assembled with ``Command`` so quoting and splitting
+    never reappear in test code. Nonzero exits are results, as with
+    ``run_command``; launch failures raise OSError. Use ``Command`` +
+    ``run_command`` directly when the target is not a Python script.
+    """
+    executable = sys.executable if python is None else _token(python)
+    command = Command((executable, _token(target), *(_token(arg) for arg in args)))
+    result = run_command(command, cwd=cwd, timeout=timeout, env=env, stdin=stdin)
+    return CliResult(result.argv, result.returncode, result.stdout, result.stderr,
+                     result.executed, result.timed_out, result.output_limited)
 
 
 def render_output(value: Any, *, format: str = "text") -> str:
@@ -901,7 +1027,6 @@ CLI_RENDER_RESPONSE_MAX_BYTES = 96 * 1024 * 1024
 CLI_HOST_RESPONSE_MARGIN_BYTES = 512
 """Node ``maxBuffer`` is ``response_max_bytes +`` this margin (never rely on a JSON size formula)."""
 
-_CLI_STDIN_MAX_BYTES = CLI_STDIN_MAX_BYTES
 _RUN_REQUEST_KEYS = frozenset({
     "argv", "timeout", "cwd", "env", "input", "max_output", "dry_run", "response_max_bytes",
 })
@@ -971,8 +1096,8 @@ def _reject_json_non_finite(constant: str) -> Any:
 
 
 def _read_stdin_text() -> str:
-    raw = sys.stdin.buffer.read(_CLI_STDIN_MAX_BYTES + 1)
-    if len(raw) > _CLI_STDIN_MAX_BYTES:
+    raw = sys.stdin.buffer.read(CLI_STDIN_MAX_BYTES + 1)
+    if len(raw) > CLI_STDIN_MAX_BYTES:
         raise _CliRequestError("stdin exceeds size limit")
     try:
         return raw.decode("utf-8")
@@ -1103,7 +1228,7 @@ def _main(argv: Sequence[str] | None = None) -> int:
         formatter_class=help_formatter,
         exit_on_error=False,
     )
-    parser.add_argument("--version", action="version", version="%(prog)s " + __version__)
+    parser.add_argument("--version", action="version", version="%(prog)s " + __version__,help="show the version and exit")
     subparsers = parser.add_subparsers(dest="command", required=False)
     subparsers.add_parser(
         "run",
@@ -1122,7 +1247,7 @@ def _main(argv: Sequence[str] | None = None) -> int:
         description="Read one JSON value from stdin and write render_output to stdout.",
         formatter_class=help_formatter,
     )
-    render_parser.add_argument("--format", choices=("text", "json"), default="text")
+    render_parser.add_argument("--format", choices=("text", "json"), default="text",help="output format (default: %(default)s)")
     render_parser.add_argument(
         "--response-max-bytes",
         type=int,

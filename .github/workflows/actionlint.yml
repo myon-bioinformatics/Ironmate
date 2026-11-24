@@ -5,6 +5,7 @@ on:
     paths:
       - ".github/workflows/**"
   push:
+    branches: [main]
     paths:
       - ".github/workflows/**"
 
@@ -14,4 +15,4 @@ permissions:
 jobs:
   # Shared actionlint uses a SHA-256 verified official binary without Docker.
   actionlint:
-    uses: myon-bioinformatics/myon-bioinformatics/.github/workflows/reusable-actionlint.yml@9e3da7ae1846e9604ebc24bb5178f7de094a4e77
+    uses: myon-bioinformatics/myon-bioinformatics/.github/workflows/reusable-actionlint.yml@1368174821fb03be258ecf3312ce0ea809f6ea22

@@ -33,6 +33,9 @@ on:
       - "uv.lock"
       - ".github/workflows/node-tests.yml"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   node-test:
     runs-on: ${{ matrix.os }}

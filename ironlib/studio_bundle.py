@@ -26,7 +26,8 @@ STUDIO_HTML = r"""<!doctype html>
         <a href="slides/">スライド・PPTX作成 ↗</a>
         <a href="slides/phone/" title="スマホで作るスライド">📱 スマホ ↗</a>
         <a href="tools/">ドット絵・画像一覧 ↗</a>
-        <a href="https://myon-bioinformatics.github.io/#ironmate">ポートフォリオ ↗</a>
+        <a href="https://myon-bioinformatics.github.io/#ironmate">🏠 ポートフォリオ ↗</a>
+        <a href="https://github.com/myon-bioinformatics/Ironmate">🐙 GitHub リポジトリ ↗</a>
         <button id="undo-2" data-steps="2" title="2つ戻す" aria-label="2つ戻す">⏪</button>
         <button id="undo">↶ 戻す</button>
         <button id="redo">↷ やり直す</button>
@@ -3983,8 +3984,8 @@ TOOLS_HTML = r"""<!doctype html>
       <nav aria-label="サイト">
         <a href="#brand">ロゴ素材</a><a href="../">Image Studio ↗</a
         ><a href="https://myon-bioinformatics.github.io/#ironmate"
-          >ポートフォリオ ↗</a
-        ><a href="https://github.com/myon-bioinformatics/Ironmate">ソース ↗</a>
+          >🏠 ポートフォリオ ↗</a
+        ><a href="https://github.com/myon-bioinformatics/Ironmate">🐙 GitHub リポジトリ ↗</a>
       </nav>
     </header>
     <main>

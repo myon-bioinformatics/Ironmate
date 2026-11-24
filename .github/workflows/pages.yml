@@ -1,10 +1,17 @@
 name: Pages
 
+# 🧭 The tools (Image Studio, browser tools, Slide Studio) are published by the portfolio under /tools/ironmate/
+# (scripts/project_pages.py --record-tools runs image_studio.py --build-site). Here `build` keeps testing them in a
+# real browser, and `guide` publishes docs/guide.page.json with the parent's reusable workflow.
+
 on:
   push:
     branches: [main]
     paths:
       [
+        "docs/guide.page.json",
+        "docs/evidence/browser.gif",
+        "docs/assets/phone-slides.gif",
         "studio/**",
         "ironlib/studio_bundle.py",
         "image_studio.py",
@@ -22,6 +29,9 @@ on:
   pull_request:
     paths:
       [
+        "docs/guide.page.json",
+        "docs/evidence/browser.gif",
+        "docs/assets/phone-slides.gif",
         "studio/**",
         "ironlib/studio_bundle.py",
         "image_studio.py",
@@ -90,44 +100,17 @@ jobs:
         if: always()
         # http.server as PID 1 ignores SIGTERM, so the default 10 s grace period was all wait (15 s step).
         run: docker stop --time 1 ironmate-pages || true
-      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
-        with:
-          path: build/studio-site
-  deploy:
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    needs: build
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
+  guide:
     permissions:
       contents: read
       pages: write
       id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
-      - uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
-        id: deployment
-      - name: Verify the published editor is available
-        run: |
-          curl --fail --location --retry 6 --retry-delay 3 --retry-all-errors "${{ steps.deployment.outputs.page_url }}" --output /tmp/studio-index.html
-          python -S - <<'PY'
-          from pathlib import Path
-          text = Path('/tmp/studio-index.html').read_text()
-          assert 'Base64 / 渡す' in text and 'studio.js' in text
-          print('Published Image Studio HTML verified')
-          PY
-          curl --fail --location --retry 6 --retry-delay 3 --retry-all-errors "${{ steps.deployment.outputs.page_url }}tools/" --output /tmp/tools.html
-          python -S - <<'PY'
-          from pathlib import Path
-          text = Path('/tmp/tools.html').read_text()
-          assert 'id="grid"' in text and '../studio.js' in text and 'catalog.js' not in text
-          print('Published browser tools HTML verified')
-          PY
-          curl --fail --location --retry 6 --retry-delay 3 --retry-all-errors "${{ steps.deployment.outputs.page_url }}slides/" --output /tmp/slides.html
-          python -S - <<'PY'
-          from pathlib import Path
-          assert 'deck-pptx' in Path('/tmp/slides.html').read_text()
-          print('Published Slide Studio verified')
-          PY
+    uses: myon-bioinformatics/myon-bioinformatics/.github/workflows/reusable-pages-static.yml@dbe7e16be53f9e5b8c9ba29ff6ed8be0899a35ff
+    with:
+      artifact_path: _site
+      guide_page: docs/guide.page.json
+      guide_assets: >-
+        studio/brand/icon-192.png=icon.png
+        studio/brand/favicon-48.png=favicon.png
+        docs/evidence/browser.gif=demos/browser.gif
+        docs/assets/phone-slides.gif=demos/phone-slides.gif

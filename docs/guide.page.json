@@ -1,0 +1,149 @@
+{
+  "schema": "web-ui-page/1",
+  "title": "🔰 Ironmate 利用ガイド",
+  "theme": "auto",
+  "description": "文書・画像の中身と属性の変換・置き換えを Python で確かめるリポジトリ。ブラウザで使う道具はポートフォリオの 🧭 Tools & Demos で動きます。",
+  "icon": "./icon.png",
+  "favicon": "./favicon.png",
+  "blocks": [
+    {
+      "type": "badges",
+      "items": [
+        "🐍 Python 中心",
+        "🧰 python -S で動く道具",
+        "🧭 道具はポートフォリオで公開"
+      ]
+    },
+    {
+      "type": "tabs",
+      "id": "guide",
+      "tabs": [
+        {
+          "label": "🎞 GIF デモ",
+          "blocks": [
+            {
+              "type": "card",
+              "title": "🖥 Image Studio・🧰 道具・🎞 Slide Studio",
+              "text": "Chromium の PC 幅とスマホ幅で、3つの道具を順に開いて操作します。",
+              "blocks": [
+                {
+                  "type": "image",
+                  "src": "./demos/browser.gif",
+                  "alt": "Image Studio, pixel tools and Slide Studio at desktop and mobile widths in Chromium"
+                }
+              ]
+            },
+            {
+              "type": "card",
+              "title": "📱 スマホでスライド",
+              "text": "テキストを足して直し、⬅️ ➡️ でページをめくり、🧭 で操作部の形を切り替えます。",
+              "blocks": [
+                {
+                  "type": "image",
+                  "src": "./demos/phone-slides.gif",
+                  "alt": "Phone slides: adding and editing a text box, turning pages and switching the page controls",
+                  "width": 240
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "label": "🧩 機能一覧",
+          "blocks": [
+            {
+              "type": "section",
+              "title": "🧭 ブラウザで開く",
+              "blocks": [
+                {
+                  "type": "links",
+                  "items": [
+                    {
+                      "label": "🖼 Image Studio",
+                      "href": "https://myon-bioinformatics.github.io/tools/ironmate/"
+                    },
+                    {
+                      "label": "🧰 ドット絵・画像の道具",
+                      "href": "https://myon-bioinformatics.github.io/tools/ironmate/tools/"
+                    },
+                    {
+                      "label": "🎞 Slide Studio",
+                      "href": "https://myon-bioinformatics.github.io/tools/ironmate/slides/"
+                    },
+                    {
+                      "label": "📱 スマホ版",
+                      "href": "https://myon-bioinformatics.github.io/tools/ironmate/slides/phone/"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "section",
+              "title": "▶️ 手元で動かす",
+              "blocks": [
+                {
+                  "type": "card",
+                  "title": "🖼 Image Studio",
+                  "text": "図形・画像・スタンプを重ね、PNG・SVG・Base64・再編集できる JSON で出します。",
+                  "blocks": [
+                    {
+                      "type": "output",
+                      "text": "python -S image_studio.py"
+                    }
+                  ]
+                },
+                {
+                  "type": "card",
+                  "title": "📦 静的サイトを組む",
+                  "text": "道具一式を相対パスのフォルダに書き出します（ポートフォリオはこれを公開時に呼びます）。",
+                  "blocks": [
+                    {
+                      "type": "output",
+                      "text": "python -S image_studio.py --build-site DIR"
+                    }
+                  ]
+                },
+                {
+                  "type": "card",
+                  "title": "📝 Markdown → PPTX",
+                  "text": "Marp CLI を使って Markdown から PPTX を作ります。",
+                  "blocks": [
+                    {
+                      "type": "output",
+                      "text": "python pptx_pipeline.py slides.md -o slides.pptx"
+                    }
+                  ]
+                },
+                {
+                  "type": "card",
+                  "title": "🎨 PPTX の属性を置き換え",
+                  "text": "既存の PPTX の文字・色・フォントを置き換えます（--dry-run で確認だけ）。",
+                  "blocks": [
+                    {
+                      "type": "output",
+                      "text": "python pptx_replace.py --help"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "links",
+      "items": [
+        {
+          "label": "📦 リポジトリ",
+          "href": "https://github.com/myon-bioinformatics/Ironmate"
+        },
+        {
+          "label": "🧭 ポートフォリオ",
+          "href": "https://myon-bioinformatics.github.io/#ironmate"
+        }
+      ]
+    }
+  ]
+}

@@ -6,7 +6,7 @@ python -S image_studio.py
 
 Open the shown `http://127.0.0.1:8765` in a browser. It runs with only the Python standard library and a browser.
 No Dart, Flutter, Plotly or image-generation API is needed. Images and scenes are processed in the browser and not sent to the server.
-A static public version is served at https://myon-bioinformatics.github.io/Ironmate/.
+A static public version is served at https://myon-bioinformatics.github.io/tools/ironmate/.
 On GitHub Pages it runs without Python. Only fixed HTML/JS/CSS is published; images and scene JSON you create are not included.
 
 ![Image Studio in a real browser](evidence/image-studio/desktop.png)

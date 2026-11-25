@@ -105,7 +105,7 @@ jobs:
       contents: read
       pages: write
       id-token: write
-    uses: myon-bioinformatics/myon-bioinformatics/.github/workflows/reusable-pages-static.yml@0778ede0c872d609bb2dc590f9f9898a39a18668
+    uses: myon-bioinformatics/myon-bioinformatics/.github/workflows/reusable-pages-static.yml@1cd621c8a46d18611a9135bdc8a0e9d46013d58d
     with:
       artifact_path: _site
       guide_page: docs/guide.page.json

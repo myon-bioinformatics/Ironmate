@@ -49,30 +49,56 @@
           ]
         },
         {
-          "label": "🧩 機能一覧",
+          "label": "▶️ はじめに",
           "blocks": [
             {
               "type": "section",
-              "title": "🧭 ブラウザで開く",
+              "title": "目的から選ぶ",
               "blocks": [
                 {
-                  "type": "links",
-                  "items": [
+                  "type": "card",
+                  "title": "画像を編集する",
+                  "text": "Image Studio を開き、PNG・JPEG・WebPを選ぶ。レイヤーを編集し、配布用なら PNG、後で編集するならシーン JSON を保存する。",
+                  "blocks": [
                     {
-                      "label": "🖼 Image Studio",
-                      "href": "https://myon-bioinformatics.github.io/tools/ironmate/"
-                    },
+                      "type": "links",
+                      "items": [
+                        {
+                          "label": "Image Studio を開く",
+                          "href": "https://myon-bioinformatics.github.io/tools/ironmate/"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "card",
+                  "title": "スライドを作る",
+                  "text": "Slide Studio でスライドに文字や図形を置く。編集用にはデッキ JSON、共有用には PPTX を保存する。スマホ版でも同じデッキ JSON を開ける。",
+                  "blocks": [
                     {
-                      "label": "🧰 ドット絵・画像の道具",
-                      "href": "https://myon-bioinformatics.github.io/tools/ironmate/tools/"
-                    },
+                      "type": "links",
+                      "items": [
+                        {
+                          "label": "Slide Studio を開く",
+                          "href": "https://myon-bioinformatics.github.io/tools/ironmate/slides/"
+                        },
+                        {
+                          "label": "スマホ版を開く",
+                          "href": "https://myon-bioinformatics.github.io/tools/ironmate/slides/phone/"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "card",
+                  "title": "Pythonでドット絵を作る",
+                  "text": "リポジトリのルートで実行。丸いドット絵をまず PNG 出力し、次にグリッド JSON に読み戻す。標準ライブラリだけで動く。",
+                  "blocks": [
                     {
-                      "label": "🎞 Slide Studio",
-                      "href": "https://myon-bioinformatics.github.io/tools/ironmate/slides/"
-                    },
-                    {
-                      "label": "📱 スマホ版",
-                      "href": "https://myon-bioinformatics.github.io/tools/ironmate/slides/phone/"
+                      "type": "output",
+                      "text": "python -S -m grid_tools make circle --palette C02 --size 32 --scale 4 --to png -o circle.png\npython -S -m grid_tools load circle.png --to json -o circle.json"
                     }
                   ]
                 }
@@ -80,30 +106,194 @@
             },
             {
               "type": "section",
-              "title": "▶️ 手元で動かす",
+              "title": "ローカルで開く",
               "blocks": [
                 {
                   "type": "card",
-                  "title": "🖼 Image Studio",
-                  "text": "図形・画像・スタンプを重ね、PNG・SVG・Base64・再編集できる JSON で出します。",
+                  "title": "Studio を起動",
+                  "text": "ブラウザで直接開く方法とは別に、ローカルの編集サーバーも使える。",
                   "blocks": [
                     {
                       "type": "output",
                       "text": "python -S image_studio.py"
+                    },
+                    {
+                      "type": "links",
+                      "items": [
+                        {
+                          "label": "詳しい使い方",
+                          "href": "https://github.com/myon-bioinformatics/Ironmate/blob/main/docs/image-studio.md"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "label": "🧩 機能一覧",
+          "blocks": [
+            {
+              "type": "section",
+              "title": "ブラウザ向け",
+              "blocks": [
+                {
+                  "type": "card",
+                  "title": "Image Studio",
+                  "text": "画像・図形・文字・ヒートマップを重ね、モザイクや色階調を調整。PNG・SVG・Base64に書き出し、シーンや作業履歴を JSON で保存・再読込する。",
+                  "blocks": [
+                    {
+                      "type": "links",
+                      "items": [
+                        {
+                          "label": "開く",
+                          "href": "https://myon-bioinformatics.github.io/tools/ironmate/"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "links",
+                      "items": [
+                        {
+                          "label": "詳しい使い方",
+                          "href": "https://github.com/myon-bioinformatics/Ironmate/blob/main/docs/image-studio.md"
+                        }
+                      ]
                     }
                   ]
                 },
                 {
                   "type": "card",
-                  "title": "📦 静的サイトを組む",
-                  "text": "道具一式を相対パスのフォルダに書き出します（ポートフォリオはこれを公開時に呼びます）。",
+                  "title": "Browser Tools",
+                  "text": "ドット絵・画像グリッドを作成・変換し、PNG／Base64のサイズを見積もる。",
                   "blocks": [
                     {
-                      "type": "output",
-                      "text": "python -S image_studio.py --build-site DIR"
+                      "type": "links",
+                      "items": [
+                        {
+                          "label": "開く",
+                          "href": "https://myon-bioinformatics.github.io/tools/ironmate/tools/"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "links",
+                      "items": [
+                        {
+                          "label": "詳しい使い方",
+                          "href": "https://github.com/myon-bioinformatics/Ironmate/blob/main/docs/browser-tools.md"
+                        }
+                      ]
                     }
                   ]
                 },
+                {
+                  "type": "card",
+                  "title": "Slide Studio・Phone Slides",
+                  "text": "複数スライドを編集し、デッキ JSON と PPTX を出力。スマホ版では文字ボックス編集とページ切替を小さい画面で行う。",
+                  "blocks": [
+                    {
+                      "type": "links",
+                      "items": [
+                        {
+                          "label": "PC向け",
+                          "href": "https://myon-bioinformatics.github.io/tools/ironmate/slides/"
+                        },
+                        {
+                          "label": "スマホ向け",
+                          "href": "https://myon-bioinformatics.github.io/tools/ironmate/slides/phone/"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "links",
+                      "items": [
+                        {
+                          "label": "詳しい使い方",
+                          "href": "https://github.com/myon-bioinformatics/Ironmate/blob/main/docs/slide-studio.md"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "section",
+              "title": "画像の作成・変換",
+              "blocks": [
+                {
+                  "type": "card",
+                  "title": "グリッドのCLIとPython API",
+                  "text": "grid_tools の make／photo／load はドット絵の作成・写真変換・再読込。estimate／fit はBase64の容量を見積もり、上限に合わせて出力する。PNG／SVG／JSON／Base64を扱う。PNGの基本操作は標準ライブラリ、JPEG/WebP入力にはPillowが必要。",
+                  "blocks": [
+                    {
+                      "type": "output",
+                      "text": "python -S -m grid_tools --help"
+                    },
+                    {
+                      "type": "links",
+                      "items": [
+                        {
+                          "label": "使い方・API例",
+                          "href": "https://github.com/myon-bioinformatics/Ironmate/blob/main/README.md#estimating-reduction-ratio-and-output-size-estimate"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "card",
+                  "title": "用途別の入口",
+                  "text": "pixel_grid.py はドット絵生成、photo_grid.py は写真のドット化。ironmate_image は PNG／Base64 の読込、変換、縮小をCLIとPythonから扱う。",
+                  "blocks": [
+                    {
+                      "type": "output",
+                      "text": "python -S ironmate_image.py --help"
+                    },
+                    {
+                      "type": "links",
+                      "items": [
+                        {
+                          "label": "詳しい使い方",
+                          "href": "https://github.com/myon-bioinformatics/Ironmate/blob/main/docs/pixel-grid-prototype.md"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "card",
+                  "title": "画像の比較・一覧・アニメーション",
+                  "text": "image_digest.py は複数画像を静的な確認ページとMarkdownへまとめる。browser_matrix.py はブラウザ別の証跡を比較する。png_zoom_gif.py はPNGから拡大・縮小GIFを出力する（Pillowが必要）。",
+                  "blocks": [
+                    {
+                      "type": "links",
+                      "items": [
+                        {
+                          "label": "画像ダイジェスト",
+                          "href": "https://github.com/myon-bioinformatics/Ironmate/blob/main/docs/image-digest.md"
+                        },
+                        {
+                          "label": "ブラウザ比較",
+                          "href": "https://github.com/myon-bioinformatics/Ironmate/blob/main/docs/browser-matrix.md"
+                        },
+                        {
+                          "label": "PNG→GIF",
+                          "href": "https://github.com/myon-bioinformatics/Ironmate/blob/main/docs/png-zoom-gif.md"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "section",
+              "title": "スライド・フロー・配信",
+              "blocks": [
                 {
                   "type": "card",
                   "title": "📝 Markdown → PPTX",
@@ -123,6 +313,53 @@
                     {
                       "type": "output",
                       "text": "python pptx_replace.py --help"
+                    }
+                  ]
+                },
+                {
+                  "type": "card",
+                  "title": "PPTXの内容と配置を確認",
+                  "text": "pptx_inspect.py でスライド内の属性を調べ、pptx_layout.py で配置情報を扱う。置換は既存PPTXを対象とし、先に dry-run で確認できる。",
+                  "blocks": [
+                    {
+                      "type": "links",
+                      "items": [
+                        {
+                          "label": "詳しい使い方",
+                          "href": "https://github.com/myon-bioinformatics/Ironmate/blob/main/docs/pptx-cli-prototype.md"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "card",
+                  "title": "フロー図の変換",
+                  "text": "flow_export.py は共通JSONのフローをMermaidへ変換。SVGの描画にはMermaid CLI、PNGとそのBase64出力にはさらにNode.js 26以上とChrome系ブラウザが必要。",
+                  "blocks": [
+                    {
+                      "type": "output",
+                      "text": "python -S flow_export.py --help"
+                    },
+                    {
+                      "type": "links",
+                      "items": [
+                        {
+                          "label": "詳しい使い方",
+                          "href": "https://github.com/myon-bioinformatics/Ironmate/blob/main/docs/flow-export.md"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "card",
+                  "title": "📦 静的サイトを組む",
+                  "text": "道具一式を相対パスのフォルダに書き出します（ポートフォリオはこれを公開時に呼びます）。",
+                  "blocks": [
+                    {
+                      "type": "output",
+                      "text": "python -S image_studio.py --build-site DIR"
                     }
                   ]
                 }

@@ -139,7 +139,7 @@ Successes, errors and processing times are kept in the [verification record for 
 
 ## Numbers → color → heatmap
 
-Open the [DRAgoWing heatmap editor](https://myon-bioinformatics.github.io/DRAgoWing/heatmap/), paste a matrix or load a Plotly JSON file, then download scene.json and open it in Ironmate. [DRAgoWing source](https://github.com/myon-bioinformatics/DRAgoWing/blob/ed7887b07102e381ac59d81f3b96baadbd7972df/dragowing.py) owns the heatmap importer and color scale. Ironmate carries the compatible subset for offline CLI rendering and saved scenes.
+Open the [DRAgoWing heatmap editor](https://myon-bioinformatics.github.io/DRAgoWing/heatmap/), paste a matrix or load a Plotly JSON file, then download scene.json and open it in Ironmate. The scene's heatmap `palette` is kept through editing, SVG and PNG export, and saving. Color conversion uses [PySaiyanWeBoo's shared heatmap code](https://github.com/myon-bioinformatics/PySaiyanWeBoo/pull/189).
 It uses `z`, `x`, `y`, `zmin` and `zmax`, and places **the first row at the top**.
 It is not rendering-compatible with Plotly's axis order, layout, annotations, colorscale or customdata.
 DRAgoWing's research results are not rewritten; this is a separate composite image that stores the input in the JSON's source.
@@ -147,7 +147,7 @@ DRAgoWing's research results are not rewritten; this is a separate composite ima
 Changing `色の段階` (color steps) from 2 to 256 quantizes only the colors. It can be set back to continuous color.
 The original z values are unchanged. null is treated as missing and drawn transparent, distinct from 0.
 Each cell's title holds the label and original value. Value labels are omitted in narrow cells.
-Display colors use a custom 5-point scale, with no claim that they match the original chart's appearance.
+Scenes without a `palette` use the original five-stop Viridis-like scale.
 Max 4096 cells. NaN, Infinity, bools and integers beyond JavaScript's safe integer range are rejected.
 JSON decimals are ordinary Python/JavaScript floats, not arbitrary-precision decimal arithmetic.
 

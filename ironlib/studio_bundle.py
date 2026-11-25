@@ -295,7 +295,7 @@ STUDIO_HTML = r"""<!doctype html>
 </html>
 """
 
-STYLE_CSS = r"""/* web-ui-bundle/1 commit=2b00e6b7c91bcfa325c1cf720c4fc50890430bd2 sha256=3185d76f174a0c14068f2b3b38ffb3e8a4db718fb4a41eabeccac726db7c8a9c scripts/build_studio_css.py*/
+STYLE_CSS = r"""/* web-ui-bundle/1 commit=12a3c1f30c480ac04b176ff38795608004aa110a sha256=b2579ab6f0851448276b1f656f7faf61d105a927530407daa35cf94fee2a24b9 scripts/build_studio_css.py*/
 @layer base,components,theme;
 /* css/tokens.css */
 :root{--ui-bg:#0d1117;--ui-panel:#101820;--ui-fg:#d1f7c4;--ui-muted:#8b949e;--ui-border:#58a6ff;--ui-accent:#7ee787;--ui-danger:#cf222e;--ui-radius:0;--ui-text:16px;--ui-space:1rem;--ui-max:960px;--ui-font:Meiryo,メイリオ,sans-serif;--ui-font-mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
@@ -308,9 +308,9 @@ body[data-ui-theme="blue"]{--ui-bg:#eef1f6;--ui-panel:#fcfcfd;--ui-fg:#41526c;--
 body[data-ui-theme="purple"]{--ui-bg:#fffbfe;--ui-panel:#f7f2fa;--ui-fg:#1c1b1f;--ui-muted:#49454f;--ui-border:#cac4d0;--ui-accent:#6750a4;--ui-danger:#b3261e;--ui-radius:.5rem;color-scheme:light}
 body[data-ui-theme="terminal"]{--ui-bg:#0a0e10;--ui-panel:#11171a;--ui-fg:#d5dee0;--ui-muted:#7c8a8d;--ui-border:#2b3436;--ui-accent:#5fd7a7;--ui-danger:#ff8080;--ui-radius:0;--ui-font:var(--ui-font-mono);color-scheme:dark}
 /* css/base.css */
-@layer base{*{box-sizing:border-box}body{margin:0;background:var(--ui-bg);color:var(--ui-fg);font:var(--ui-text)/1.6 var(--ui-font)}pre,code,kbd,samp{font-family:var(--ui-font-mono)!important}.ui-page{max-width:var(--ui-max);margin:auto;padding:var(--ui-space)}a{color:inherit}.ui-print-only{display:none}@media print{body{background:#fff;color:#000}.ui-page{max-width:none;padding:0}.ui-no-print{display:none}.ui-print-only{display:block}a{text-decoration:none}}@media(prefers-reduced-motion:reduce){*,::before,::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}}
+@layer base{*{box-sizing:border-box}body{margin:0;background:var(--ui-bg);color:var(--ui-fg);font:var(--ui-text)/1.6 var(--ui-font)}pre,code,kbd,samp{font-family:var(--ui-font-mono)!important}.ui-page{max-width:var(--ui-max);margin:auto;padding:var(--ui-space)}.ui-title{overflow-wrap:anywhere}a{color:inherit}.ui-print-only{display:none}@media print{body{background:#fff;color:#000}.ui-page{max-width:none;padding:0}.ui-no-print{display:none}.ui-print-only{display:block}a{text-decoration:none}}@media(prefers-reduced-motion:reduce){*,::before,::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}}
 /* css/components.css */
-@layer components{.ui-panel,.ui-card{background:var(--ui-panel);border:1px solid var(--ui-border);padding:var(--ui-space);margin:var(--ui-space) 0;border-radius:var(--ui-radius)}.ui-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.75rem}.ui-tag{display:inline-block;border:1px solid var(--ui-border);padding:.1rem .4rem}.ui-button,.ui-input,.ui-elements button,.ui-elements select,.ui-elements textarea,.ui-elements input:not([type=checkbox],[type=radio],[type=range],[type=color],[type=file]){font:inherit;background:var(--ui-panel);color:var(--ui-fg);border:1px solid var(--ui-border);padding:.6rem;border-radius:var(--ui-radius)}.ui-button,.ui-elements button{cursor:pointer}.ui-button:hover,.ui-elements button:hover{border-color:var(--ui-accent)}.ui-button:disabled,.ui-elements button:disabled{opacity:.4;cursor:default}.ui-elements input[type=range],.ui-elements input[type=checkbox],.ui-elements input[type=radio]{accent-color:var(--ui-accent)}.ui-elements label{color:var(--ui-muted)}.ui-muted{color:var(--ui-muted)}.ui-output{font:inherit;white-space:pre-wrap;overflow:auto;background:#d8dee4;color:#161b22;border:1px solid #8c959f;border-radius:4px;padding:.75rem}pre code,.ui-output code{font-family:inherit;color:inherit}pre.ui-output code{background:transparent}@media(max-width:480px){.ui-page{padding:.75rem}.ui-grid{grid-template-columns:1fr}.ui-card,.ui-panel{margin:.75rem 0;padding:.75rem}}.ui-lightbox{border:1px solid var(--ui-border);background:var(--ui-panel);color:var(--ui-fg);padding:1rem;max-width:min(96vw,960px);max-height:96vh;border-radius:var(--ui-radius)}.ui-lightbox::backdrop{background:rgba(0,0,0,.72)}.ui-lightbox img{display:block;max-width:100%;max-height:calc(96vh - 8rem);margin:auto}.ui-lightbox-bar{display:flex;gap:.5rem;justify-content:space-between;margin-top:.75rem}body:has(.ui-lightbox[open]){overflow:hidden}.ui-table,.ui-elements table{border-collapse:collapse;width:100%}.ui-table th,.ui-table td,.ui-elements th,.ui-elements td{border-bottom:1px solid var(--ui-border);padding:.25rem .5rem;text-align:left;vertical-align:top;overflow-wrap:anywhere}.ui-table th,.ui-elements th{color:var(--ui-muted);font-weight:500}.ui-table caption,.ui-elements caption{text-align:left;color:var(--ui-muted);padding:.25rem 0}.ui-pass{color:var(--ui-accent)}.ui-fail{color:var(--ui-danger)}.ui-changed{background:color-mix(in srgb,var(--ui-accent) 18%,transparent)}.ui-tag.ui-pass{border-color:var(--ui-accent)}.ui-tag.ui-fail{border-color:var(--ui-danger)}}
+@layer components{.ui-panel,.ui-card{background:var(--ui-panel);border:1px solid var(--ui-border);padding:var(--ui-space);margin:var(--ui-space) 0;border-radius:var(--ui-radius)}.ui-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.75rem}.ui-tag{display:inline-block;border:1px solid var(--ui-border);padding:.1rem .4rem}.ui-button,.ui-input,.ui-elements button,.ui-elements select,.ui-elements textarea,.ui-elements input:not([type=checkbox],[type=radio],[type=range],[type=color],[type=file]){font:inherit;background:var(--ui-panel);color:var(--ui-fg);border:1px solid var(--ui-border);padding:.6rem;border-radius:var(--ui-radius)}.ui-button,.ui-elements button{cursor:pointer}.ui-button:hover,.ui-elements button:hover{border-color:var(--ui-accent)}.ui-button:disabled,.ui-elements button:disabled{opacity:.4;cursor:default}.ui-elements input[type=range],.ui-elements input[type=checkbox],.ui-elements input[type=radio]{accent-color:var(--ui-accent)}.ui-elements label{color:var(--ui-muted)}.ui-muted{color:var(--ui-muted)}.ui-back{margin:0 0 8px;font-size:.875rem}.ui-back .ui-links{margin:0}.ui-back a{color:var(--ui-muted);text-decoration:none}.ui-back a:hover,.ui-back a:focus-visible{color:var(--ui-accent);text-decoration:underline}.ui-output{font:inherit;white-space:pre-wrap;overflow:auto;background:#d8dee4;color:#161b22;border:1px solid #8c959f;border-radius:4px;padding:.75rem}pre code,.ui-output code{font-family:inherit;color:inherit}pre.ui-output code{background:transparent}@media(max-width:480px){.ui-page{padding:.75rem}.ui-grid{grid-template-columns:1fr}.ui-card,.ui-panel{margin:.75rem 0;padding:.75rem}}.ui-lightbox{border:1px solid var(--ui-border);background:var(--ui-panel);color:var(--ui-fg);padding:1rem;max-width:min(96vw,960px);max-height:96vh;border-radius:var(--ui-radius)}.ui-lightbox::backdrop{background:rgba(0,0,0,.72)}.ui-lightbox img{display:block;max-width:100%;max-height:calc(96vh - 8rem);margin:auto}.ui-lightbox-bar{display:flex;gap:.5rem;justify-content:space-between;margin-top:.75rem}body:has(.ui-lightbox[open]){overflow:hidden}.ui-table,.ui-elements table{border-collapse:collapse;width:100%}.ui-table th,.ui-table td,.ui-elements th,.ui-elements td{border-bottom:1px solid var(--ui-border);padding:.25rem .5rem;text-align:left;vertical-align:top;overflow-wrap:anywhere}.ui-table th,.ui-elements th{color:var(--ui-muted);font-weight:500}.ui-table caption,.ui-elements caption{text-align:left;color:var(--ui-muted);padding:.25rem 0}.ui-pass{color:var(--ui-accent)}.ui-fail{color:var(--ui-danger)}.ui-changed{background:color-mix(in srgb,var(--ui-accent) 18%,transparent)}.ui-tag.ui-pass{border-color:var(--ui-accent)}.ui-tag.ui-fail{border-color:var(--ui-danger)}}
 @layer components{.ui-stage{--ui-stage-w:16;--ui-stage-h:9;--ui-stage-room:64dvh;position:relative;flex:none;align-self:center;box-sizing:border-box;margin:0 auto;width:min(100%,calc(var(--ui-stage-room) * var(--ui-stage-w) / var(--ui-stage-h)));aspect-ratio:var(--ui-stage-w)/var(--ui-stage-h);overflow:hidden;background:var(--ui-panel);border:1px solid var(--ui-border)}.ui-stage[data-ui-stage=pinned]{position:sticky;top:0;z-index:1}.ui-stage>:is(svg,img,canvas,video,[data-ui-fill]){position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:contain}@media(orientation:landscape) and (max-height:560px){.ui-stage{--ui-stage-room:100dvh}}}
 @layer components{.ui-pager{display:inline-flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;max-width:100%}.ui-pager button{box-sizing:border-box;min-width:48px;min-height:48px;padding:0 8px;font-size:24px;line-height:1;color:var(--ui-fg);background:var(--ui-panel);border:1px solid var(--ui-border);border-radius:var(--ui-radius);cursor:pointer;touch-action:manipulation}.ui-pager button:disabled{opacity:.32;cursor:default}.ui-pager button:focus-visible{outline:2px solid var(--ui-accent);outline-offset:2px}.ui-pager output{min-width:48px;text-align:center;font-weight:700;font-variant-numeric:tabular-nums}.ui-pager>[data-ui-pager-part=dots]{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;max-width:100%}.ui-pager>[data-ui-pager-part=dots] button{min-width:32px;min-height:32px;padding:0;font-size:16px;color:var(--ui-accent)}.ui-pager>input[type=range]{width:160px;max-width:100%;min-height:48px;margin:0;accent-color:var(--ui-accent)}.ui-pager[data-ui-pager=dpad]{display:inline-grid;grid-template-columns:repeat(3,48px);grid-template-rows:repeat(3,48px)}[data-ui-pager=dpad]>[data-ui-pager-part=up]{grid-area:1/2}[data-ui-pager=dpad]>[data-ui-pager-part=prev]{grid-area:2/1}[data-ui-pager=dpad]>[data-ui-pager-part=page]{grid-area:2/2;place-self:center}[data-ui-pager=dpad]>[data-ui-pager-part=next]{grid-area:2/3}[data-ui-pager=dpad]>[data-ui-pager-part=down]{grid-area:3/2}.ui-pager[data-ui-pager=dpad]>:not([data-ui-pager-in~=dpad]),.ui-pager[data-ui-pager=ends]>:not([data-ui-pager-in~=ends]),.ui-pager[data-ui-pager=arrows]>:not([data-ui-pager-in~=arrows]),.ui-pager[data-ui-pager=dots]>:not([data-ui-pager-in~=dots]),.ui-pager[data-ui-pager=slider]>:not([data-ui-pager-in~=slider]),.ui-pager[data-ui-pager=dial]>:not([data-ui-pager-in~=dial]){display:none}}
 @layer components{.ui-dial{position:relative;display:inline-block;width:48px;height:48px;border-radius:50%;border:2px solid var(--ui-border);background:var(--ui-panel);box-sizing:border-box;touch-action:none;cursor:grab;vertical-align:middle}.ui-dial[data-ui-dial-drag]{cursor:grabbing}.ui-dial::after{content:"";position:absolute;left:50%;top:4px;width:4px;height:16px;border-radius:2px;background:var(--ui-accent);transform-origin:50% 18px;transform:translateX(-50%) rotate(var(--ui-dial-angle,-135deg))}.ui-dial>input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;pointer-events:none}.ui-dial:focus-within{outline:2px solid var(--ui-accent);outline-offset:2px}}
@@ -491,7 +491,6 @@ const StudioCore = (function (root) {
   const SCHEMA = "ironmate-image-studio/1";
   const WORKSPACE_SCHEMA = "ironmate-studio-workspace/1";
   const WORKSPACE_MAX_BYTES = 32 * 1024 * 1024;
-  const PALETTE = ["#440154", "#3B528B", "#21918C", "#5EC962", "#FDE725"];
   const clone = (x) => JSON.parse(JSON.stringify(x));
   const escape = (x) =>
     String(x).replace(
@@ -512,33 +511,17 @@ const StudioCore = (function (root) {
   const fail = (message) => {
     throw new Error(message);
   };
-  function heatColor(v, lo, hi, levels = 0) {
-    if (v === null) return "none";
-    if (
-      ![v, lo, hi].every(Number.isFinite) ||
-      lo > hi ||
-      !Number.isInteger(levels) ||
-      (levels !== 0 && (levels < 2 || levels > 256))
-    )
-      fail("色の範囲または段階数が不正です");
-    let t = hi === lo ? 0.5 : Math.max(0, Math.min(1, (v - lo) / (hi - lo)));
-    if (levels) t = Math.round(t * (levels - 1)) / (levels - 1);
-    const p = t * 4,
-      i = Math.min(3, Math.floor(p));
-    const a = PALETTE[i].match(/\w\w/g).map((x) => parseInt(x, 16));
-    const b = PALETTE[i + 1].match(/\w\w/g).map((x) => parseInt(x, 16));
-    return (
-      "#" +
-      a
-        .map((x, j) =>
-          Math.round(x + (b[j] - x) * (p - i))
-            .toString(16)
-            .padStart(2, "0"),
-        )
-        .join("")
-        .toUpperCase()
-    );
-  }
+  /* PSWB heatmap-color.js @ 12a3c1f30c480ac04b176ff38795608004aa110a. Generated by scripts/build_studio_css.py. */
+  const heatmapDefaultPalette=["#440154", "#3B528B", "#21918C", "#5EC962", "#FDE725"];
+  function heatmapColor(v,lo,hi,levels=0,palette=heatmapDefaultPalette){
+   if(!Array.isArray(palette)||palette.length<2||palette.length>256||
+      [...palette].some(stop=>typeof stop!=="string"||stop.length!==7||!/^#[0-9a-f]{6}$/i.test(stop)))throw new TypeError("配色には2〜256個の #RRGGBB が必要です");
+   if(v===null)return"none";
+   if(![v,lo,hi].every(Number.isFinite)||lo>hi||!Number.isInteger(levels)||(levels!==0&&(levels<2||levels>256)))throw new TypeError("色の範囲または段階数が不正です");
+   let t=hi===lo?0.5:Math.max(0,Math.min(1,(v-lo)/(hi-lo)));if(levels)t=Math.round(t*(levels-1))/(levels-1);
+   const p=t*(palette.length-1),i=Math.min(palette.length-2,Math.floor(p)),a=palette[i].match(/\w\w/g).map(x=>parseInt(x,16)),b=palette[i+1].match(/\w\w/g).map(x=>parseInt(x,16));
+   return"#"+a.map((x,j)=>Math.round(x+(b[j]-x)*(p-i)).toString(16).padStart(2,"0")).join("").toUpperCase()}
+  /* End PSWB heatmap-color.js */
   function matrix(source) {
     let t;
     if (Array.isArray(source)) t = { z: source };
@@ -575,7 +558,7 @@ const StudioCore = (function (root) {
       )
     )
       fail("色の範囲には有限の安全な数値を指定してください");
-    heatColor(low, low, high);
+    heatmapColor(low, low, high);
     const xlabels = t.x ?? Array.from({ length: cols }, (_, i) => i),
       ylabels = t.y ?? Array.from({ length: z.length }, (_, i) => i);
     if (
@@ -680,7 +663,7 @@ const StudioCore = (function (root) {
           zmin: l.low,
           zmax: l.high,
         });
-        heatColor(l.low, l.low, l.high, l.levels);
+        heatmapColor(l.low, l.low, l.high, l.levels, l.palette);
       } else if (
         !color(l.fill) ||
         !color(l.stroke) ||
@@ -925,7 +908,7 @@ const StudioCore = (function (root) {
         for (let x = 0; x < l.z[y].length; x++) {
           const v = l.z[y][x],
             title = `${l.ylabels[y]} / ${l.xlabels[x]}: ${v === null ? "欠測" : v}`;
-          body += `<rect x="${left + x * cw}" y="${top + y * ch}" width="${cw}" height="${ch}" fill="${heatColor(v, l.low, l.high, l.levels)}"><title>${escape(title)}</title></rect>`;
+          body += `<rect x="${left + x * cw}" y="${top + y * ch}" width="${cw}" height="${ch}" fill="${heatmapColor(v, l.low, l.high, l.levels, l.palette)}"><title>${escape(title)}</title></rect>`;
           if (l.labels && cw >= 35 && ch >= 24 && v !== null)
             body += `<text x="${left + (x + 0.5) * cw}" y="${top + (y + 0.5) * ch}" text-anchor="middle" dominant-baseline="central" font-family="Meiryo,sans-serif" font-size="12" fill="#111827" stroke="#FFFFFF" stroke-width="2" paint-order="stroke">${escape(v)}</text>`;
         }
@@ -1047,10 +1030,9 @@ const StudioCore = (function (root) {
     SCHEMA,
     WORKSPACE_SCHEMA,
     WORKSPACE_MAX_BYTES,
-    PALETTE,
     clone,
     escape,
-    heatColor,
+    heatmapColor,
     matrix,
     validate,
     mosaicRGBA,
@@ -3369,7 +3351,7 @@ if (typeof document !== "undefined" && document.body && (document.body.dataset.p
   }
 });
 })();
-/* ⬇️ pysaiyanweboo 2b00e6b7 (stage, pager): written by scripts/build_studio_css.py from the pinned commit; --check fails when it drifts */
+/* ⬇️ pysaiyanweboo 12a3c1f3 (stage, pager): written by scripts/build_studio_css.py from the pinned commit; --check fails when it drifts */
 (() => {
 /* A rotary dial over a range input (dial_html): drag around its centre, turn the wheel, or use the range's own keys. Value and events stay the input's. */
 function dialAngle(value,min,max){const span=max-min;const t=span>0?(Number(value)-min)/span:0;return -135+270*Math.min(1,Math.max(0,t))}

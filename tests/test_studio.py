@@ -90,17 +90,34 @@ def test_heatmap_keeps_values_gaps_labels_and_source_across_python_js():
     assert output == scene
 
 
-@pytest.mark.parametrize('source', [[[True]], [[float('inf')]], [[2**53]], [[1e100]], [[2**1024]], [[1], [1, 2]], [], {'data': []}])
+@pytest.mark.parametrize('source', [
+    [[True]], [[float('inf')]], [[2**53]], [[1e100]], [[2**1024]], [[1], [1, 2]], [], {'data': []},
+    {'z': [[1]], 'zmin': 2, 'zmax': 1},
+])
 def test_rejects_invalid_or_unsafe_heatmaps(source):
     with pytest.raises(ValueError):
         studio.heatmap_scene(source)
 
 
-def test_quantized_colors_match_independent_js_for_negative_constant_and_clipped_values():
+def test_quantized_colors_match_across_python_and_js_for_negative_constant_and_clipped_values():
+    from pysaiyanweboo import studio_heat_color
+
     cases = [[value, -3, 7, levels] for value in (-4, -3, -2.5, 0, 1.123456789, 7, 8)
              for levels in (0, 2, 3, 8, 256)] + [[1, 1, 1, 0], [None, 0, 1, 0]]
-    js = node('console.log(JSON.stringify(input.map(x=>c.heatColor(...x))))', cases)
-    assert js == [studio.heat_color(*row) or 'none' for row in cases]
+    custom = ['#ff0000', '#00ff00', '#0000ff']
+    cases += [[value, 0, 1, levels, custom] for levels in (0, 2) for value in (0, .25, .5, .75, 1, None)]
+    js = node('console.log(JSON.stringify(input.map(x=>c.heatmapColor(...x))))', cases)
+    assert js == [studio_heat_color(*row) for row in cases]
+    assert js[-12:] == ['#FF0000', '#808000', '#00FF00', '#008080', '#0000FF', 'none',
+                        '#FF0000', '#FF0000', '#0000FF', '#0000FF', '#0000FF', 'none']
+
+
+@pytest.mark.parametrize('palette', [None, ['#000000'], ['#000000', '#FFF'], ['#FFFFFF'] * 257])
+def test_invalid_heatmap_palette_is_rejected(palette):
+    scene = studio.heatmap_scene([[None]])
+    scene['layers'][0]['palette'] = palette
+    error = node('try{c.validate(input)}catch(e){console.log(JSON.stringify(e.message))}', scene)
+    assert '#RRGGBB' in error
 
 
 def test_mosaic_alpha_means_partial_edges_and_cross_runtime_png_roundtrip():
@@ -141,6 +158,9 @@ console.log(JSON.stringify({svg:c.svg(input),saved,undo,branch:h.redo()}));
 ''', scene)
     assert '<script>' not in result['svg'] and '&lt;script&gt;' in result['svg']
     assert '欠測' in result['svg'] and '🌱' in result['svg']
+    assert 'fill="#440154"><title>0 / 0: 1' in result['svg']
+    assert 'fill="none"><title>0 / 1: 欠測' in result['svg']
+    assert 'fill="#FDE725"><title>0 / 2: 2' in result['svg']
     assert result['saved']['layers'][0]['z'][0][0] == 1
     assert result['undo'] == scene
     assert len(result['branch']['layers']) == 1

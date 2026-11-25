@@ -19,7 +19,7 @@ from functools import lru_cache; from http.server import BaseHTTPRequestHandler,
 ROOT = Path(__file__).resolve().parent
 SCHEMA = 'ironmate-image-studio/1'
 
-from ironlib.dragowing_heatmap import heat_color, heatmap_scene
+from ironlib.dragowing_heatmap import heatmap_scene
 
 
 def mosaic(artifact, cell=8, levels=256):

@@ -1,7 +1,7 @@
 {
   "schema": "web-ui-page/1",
   "title": "🔰 Ironmate 利用ガイド",
-  "theme": "auto",
+  "theme": "modern",
   "description": "文書・画像の中身と属性の変換・置き換えを Python で確かめるリポジトリ。ブラウザで使う道具はポートフォリオの 🧭 Tools & Demos で動きます。",
   "icon": "./icon.png",
   "favicon": "./favicon.png",

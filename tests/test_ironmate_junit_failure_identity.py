@@ -126,7 +126,7 @@ def test_workflow_keeps_suite_failure_and_exact_reports(tmp_path):
     collector = jobs['failure-identity']
     assert collector['needs'] == ['test', 'marp-integration', 'studio-clipboard']
     assert collector['if'] == 'always()'
-    assert collector['uses'].endswith('@0778ede0c872d609bb2dc590f9f9898a39a18668')
+    assert collector['uses'].endswith('@1cd621c8a46d18611a9135bdc8a0e9d46013d58d')
     marp_steps = jobs['marp-integration']['steps']
     install = next(s for s in marp_steps if s.get('name') == 'Install pinned Node packages and the locked Marp CLI tools')
     assert '--ignore-scripts' in install['run']

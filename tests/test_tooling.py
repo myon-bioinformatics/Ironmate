@@ -647,7 +647,7 @@ def test_ci_status_help_exposes_opt_in_options():
 # Local rollout contract; adopted vendor locks are deliberately independent.
 
 PARENT = "myon-bioinformatics/myon-bioinformatics"
-PARENT_WORKFLOW_PIN = "0778ede0c872d609bb2dc590f9f9898a39a18668"
+PARENT_WORKFLOW_PIN = "1cd621c8a46d18611a9135bdc8a0e9d46013d58d"
 
 
 def test_parent_workflow_references_use_reviewed_rollout_commit():

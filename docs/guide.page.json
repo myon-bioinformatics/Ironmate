@@ -19,120 +19,6 @@
       "id": "guide",
       "tabs": [
         {
-          "label": "🎞 GIF デモ",
-          "blocks": [
-            {
-              "type": "card",
-              "title": "🖥 Image Studio・🧰 道具・🎞 Slide Studio",
-              "text": "Chromium の PC 幅とスマホ幅で、3つの道具を順に開いて操作します。",
-              "blocks": [
-                {
-                  "type": "image",
-                  "src": "./demos/browser.gif",
-                  "alt": "Image Studio, pixel tools and Slide Studio at desktop and mobile widths in Chromium"
-                }
-              ]
-            },
-            {
-              "type": "card",
-              "title": "📱 スマホでスライド",
-              "text": "テキストを足して直し、⬅️ ➡️ でページをめくり、🧭 で操作部の形を切り替えます。",
-              "blocks": [
-                {
-                  "type": "image",
-                  "src": "./demos/phone-slides.gif",
-                  "alt": "Phone slides: adding and editing a text box, turning pages and switching the page controls",
-                  "width": 240
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "label": "▶️ はじめに",
-          "blocks": [
-            {
-              "type": "section",
-              "title": "目的から選ぶ",
-              "blocks": [
-                {
-                  "type": "card",
-                  "title": "画像を編集する",
-                  "text": "Image Studio を開き、PNG・JPEG・WebPを選ぶ。レイヤーを編集し、配布用なら PNG、後で編集するならシーン JSON を保存する。",
-                  "blocks": [
-                    {
-                      "type": "links",
-                      "items": [
-                        {
-                          "label": "Image Studio を開く",
-                          "href": "https://myon-bioinformatics.github.io/tools/ironmate/"
-                        }
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "type": "card",
-                  "title": "スライドを作る",
-                  "text": "Slide Studio でスライドに文字や図形を置く。編集用にはデッキ JSON、共有用には PPTX を保存する。スマホ版でも同じデッキ JSON を開ける。",
-                  "blocks": [
-                    {
-                      "type": "links",
-                      "items": [
-                        {
-                          "label": "Slide Studio を開く",
-                          "href": "https://myon-bioinformatics.github.io/tools/ironmate/slides/"
-                        },
-                        {
-                          "label": "スマホ版を開く",
-                          "href": "https://myon-bioinformatics.github.io/tools/ironmate/slides/phone/"
-                        }
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "type": "card",
-                  "title": "Pythonでドット絵を作る",
-                  "text": "リポジトリのルートで実行。丸いドット絵をまず PNG 出力し、次にグリッド JSON に読み戻す。標準ライブラリだけで動く。",
-                  "blocks": [
-                    {
-                      "type": "output",
-                      "text": "python -S -m grid_tools make circle --palette C02 --size 32 --scale 4 --to png -o circle.png\npython -S -m grid_tools load circle.png --to json -o circle.json"
-                    }
-                  ]
-                }
-              ]
-            },
-            {
-              "type": "section",
-              "title": "ローカルで開く",
-              "blocks": [
-                {
-                  "type": "card",
-                  "title": "Studio を起動",
-                  "text": "ブラウザで直接開く方法とは別に、ローカルの編集サーバーも使える。",
-                  "blocks": [
-                    {
-                      "type": "output",
-                      "text": "python -S image_studio.py"
-                    },
-                    {
-                      "type": "links",
-                      "items": [
-                        {
-                          "label": "詳しい使い方",
-                          "href": "https://github.com/myon-bioinformatics/Ironmate/blob/main/docs/image-studio.md"
-                        }
-                      ]
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        },
-        {
           "label": "🧩 機能一覧",
           "blocks": [
             {
@@ -360,6 +246,152 @@
                     {
                       "type": "output",
                       "text": "python -S image_studio.py --build-site DIR"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "label": "🔬 検証ガイド",
+          "blocks": [
+            {
+              "type": "runbook",
+              "id": "verify",
+              "books": [
+                {
+                  "label": "⚡ そのまま",
+                  "intro": "📋 コピーして手元で試し、結果を記録できます。🤖 の手順は、Pages の公開で実際に動かした結果も載ります。",
+                  "runbook": {
+                    "key": "ironmate/verify",
+                    "steps": [
+                      {
+                        "id": "grid",
+                        "title": "🟦 ドット絵の道具",
+                        "command": "python3 -S -m grid_tools --help",
+                        "run": true
+                      },
+                      {
+                        "id": "image",
+                        "title": "🖼️ 画像の道具",
+                        "command": "python3 -S ironmate_image.py --help",
+                        "run": true
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "label": "🎞 GIF デモ",
+          "blocks": [
+            {
+              "type": "card",
+              "title": "🖥 Image Studio・🧰 道具・🎞 Slide Studio",
+              "text": "Chromium の PC 幅とスマホ幅で、3つの道具を順に開いて操作します。",
+              "blocks": [
+                {
+                  "type": "image",
+                  "src": "./demos/browser.gif",
+                  "alt": "Image Studio, pixel tools and Slide Studio at desktop and mobile widths in Chromium"
+                }
+              ]
+            },
+            {
+              "type": "card",
+              "title": "📱 スマホでスライド",
+              "text": "テキストを足して直し、⬅️ ➡️ でページをめくり、🧭 で操作部の形を切り替えます。",
+              "blocks": [
+                {
+                  "type": "image",
+                  "src": "./demos/phone-slides.gif",
+                  "alt": "Phone slides: adding and editing a text box, turning pages and switching the page controls",
+                  "width": 240
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "label": "▶️ はじめに",
+          "blocks": [
+            {
+              "type": "section",
+              "title": "目的から選ぶ",
+              "blocks": [
+                {
+                  "type": "card",
+                  "title": "画像を編集する",
+                  "text": "Image Studio を開き、PNG・JPEG・WebPを選ぶ。レイヤーを編集し、配布用なら PNG、後で編集するならシーン JSON を保存する。",
+                  "blocks": [
+                    {
+                      "type": "links",
+                      "items": [
+                        {
+                          "label": "Image Studio を開く",
+                          "href": "https://myon-bioinformatics.github.io/tools/ironmate/"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "card",
+                  "title": "スライドを作る",
+                  "text": "Slide Studio でスライドに文字や図形を置く。編集用にはデッキ JSON、共有用には PPTX を保存する。スマホ版でも同じデッキ JSON を開ける。",
+                  "blocks": [
+                    {
+                      "type": "links",
+                      "items": [
+                        {
+                          "label": "Slide Studio を開く",
+                          "href": "https://myon-bioinformatics.github.io/tools/ironmate/slides/"
+                        },
+                        {
+                          "label": "スマホ版を開く",
+                          "href": "https://myon-bioinformatics.github.io/tools/ironmate/slides/phone/"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "card",
+                  "title": "Pythonでドット絵を作る",
+                  "text": "リポジトリのルートで実行。丸いドット絵をまず PNG 出力し、次にグリッド JSON に読み戻す。標準ライブラリだけで動く。",
+                  "blocks": [
+                    {
+                      "type": "output",
+                      "text": "python -S -m grid_tools make circle --palette C02 --size 32 --scale 4 --to png -o circle.png\npython -S -m grid_tools load circle.png --to json -o circle.json"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "section",
+              "title": "ローカルで開く",
+              "blocks": [
+                {
+                  "type": "card",
+                  "title": "Studio を起動",
+                  "text": "ブラウザで直接開く方法とは別に、ローカルの編集サーバーも使える。",
+                  "blocks": [
+                    {
+                      "type": "output",
+                      "text": "python -S image_studio.py"
+                    },
+                    {
+                      "type": "links",
+                      "items": [
+                        {
+                          "label": "詳しい使い方",
+                          "href": "https://github.com/myon-bioinformatics/Ironmate/blob/main/docs/image-studio.md"
+                        }
+                      ]
                     }
                   ]
                 }

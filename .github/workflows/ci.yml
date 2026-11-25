@@ -422,7 +422,7 @@ jobs:
     permissions:
       contents: read
       actions: read
-    uses: myon-bioinformatics/myon-bioinformatics/.github/workflows/reusable-junit-identity.yml@1368174821fb03be258ecf3312ce0ea809f6ea22
+    uses: myon-bioinformatics/myon-bioinformatics/.github/workflows/reusable-junit-identity.yml@0778ede0c872d609bb2dc590f9f9898a39a18668
     with:
       commit-sha: ${{ github.event.pull_request.head.sha || github.sha }}
       expected-reports: '["junit-py3.15/pytest-3.15.xml","junit-controlled-py3.15/junit.xml","junit-marp/marp.xml","junit-setup-test/setup.xml","junit-setup-marp/setup.xml","junit-setup-clipboard-chromium/setup.xml","junit-setup-clipboard-firefox/setup.xml","junit-setup-clipboard-webkit/setup.xml"]'

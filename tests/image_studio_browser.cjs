@@ -63,6 +63,11 @@ const failures = [],
     viewport: { width: 1600, height: 1100 },
     acceptDownloads: true,
   });
+  const download = async (id, name) => {
+    const wait = page.waitForEvent("download");
+    await page.click(id);
+    await (await wait).saveAs(path.join(out, name));
+  };
   page.on("pageerror", (e) => failures.push(e.message));
   page.on("request", (r) => requests.push(r.url()));
   page.on("dialog", (dialog) =>
@@ -169,9 +174,10 @@ const failures = [],
     "🌱",
   );
   const heatScene = await page.evaluate(() => window.IronmateStudio.scene);
+  const heatPalette = ["#112233", "#778899"];
   heatScene.layers.push({id:"heat", kind:"heatmap", name:"Heatmap", x:80, y:90, w:500, h:300,
     rotation:0, opacity:1, z:[[-1.123456789,null],[4,9]], xlabels:[2025,2026], ylabels:["A","B"],
-    low:-1.123456789, high:9, levels:0, labels:true});
+    low:-1.123456789, high:9, levels:0, labels:true, palette:heatPalette});
   await page.setInputFiles("#open", {name:"heatmap.json", mimeType:"application/json", buffer:Buffer.from(JSON.stringify(heatScene))});
   await page.waitForFunction(() => window.IronmateStudio.scene.layers.at(-1)?.id === "heat");
   await page.click('[data-layer-id="heat"]');
@@ -182,9 +188,22 @@ const failures = [],
   await page.locator("#levels").dispatchEvent("change");
   await page.evaluate(() => window.IronmateStudio.ready);
   assert.deepEqual(
-    await page.evaluate(() => window.IronmateStudio.scene.layers.at(-1).z),
-    exact,
+    await page.evaluate(() => {
+      const { z, levels, palette } = window.IronmateStudio.scene.layers.at(-1);
+      return { z, levels, palette };
+    }),
+    { z: exact, levels: 4, palette: heatPalette },
   );
+  await download("#png", "heatmap-palette.png");
+  const pngColor = await page.evaluate(async (bytes) => {
+    const bitmap = await createImageBitmap(new Blob([new Uint8Array(bytes)], { type: "image/png" }));
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 1;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(bitmap, 180, 128, 1, 1, 0, 0, 1, 1);
+    return [...ctx.getImageData(0, 0, 1, 1).data];
+  }, [...fs.readFileSync(path.join(out, "heatmap-palette.png"))]);
+  assert.deepEqual(pngColor, [17, 34, 51, 255]);
   // Generate an original RGBA fixture in-browser, including transparency and an uneven edge.
   const fixture = await page.evaluate(() => {
     const c = document.createElement("canvas");
@@ -222,22 +241,17 @@ const failures = [],
     await page.locator("[data-layer] image").getAttribute("href"),
     original,
   );
-  const download = async (id, name) => {
-    const wait = page.waitForEvent("download");
-    await page.click(id);
-    await (await wait).saveAs(path.join(out, name));
-  };
   await download("#save", "scene.json");
   await download("#svg", "composition.svg");
   await download("#png", "composition.png");
   const saved = JSON.parse(
     fs.readFileSync(path.join(out, "scene.json"), "utf8"),
   );
-  assert(
-    !fs
-      .readFileSync(path.join(out, "composition.svg"), "utf8")
-      .includes('class="selection"'),
-  );
+  assert.deepEqual(saved.layers.find(({ id }) => id === "heat").palette, heatPalette);
+  const exportedSvg = fs.readFileSync(path.join(out, "composition.svg"), "utf8");
+  assert(!exportedSvg.includes('class="selection"'));
+  assert(exportedSvg.includes('fill="#556677"><title>B / 2025: 4</title>'));
+  assert(exportedSvg.includes('fill="none"><title>A / 2026: 欠測</title>'));
   const png1 = await page.evaluate(async () =>
     Array.from(
       new Uint8Array(
@@ -498,6 +512,7 @@ const failures = [],
           "emoji",
           "undo-redo",
           "exact-matrix",
+          "heatmap-palette-SVG-PNG-JSON",
           "mosaic-original-retained",
           "20-image-cache",
           "JSON-PNG-roundtrip",

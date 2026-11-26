@@ -101,7 +101,7 @@ STUDIO_HTML = r"""<!doctype html>
           選択したレイヤーを再利用できます。
         </p>
         <div class="section">
-          <a href="https://myon-bioinformatics.github.io/DRAgoWing/heatmap/">ヒートマップを作成（DRAgoWing）</a>
+          <a href="https://myon-bioinformatics.github.io/tools/heatmap/">ヒートマップを作成（DRAgoWing）</a>
           <p class="hint">作成したシーンJSONは「開く」で読み込めます。</p>
         </div>
       </aside>

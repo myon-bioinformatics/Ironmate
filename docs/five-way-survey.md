@@ -259,7 +259,7 @@ three-edge cycle lock and false-hole diagonal rule are not carried forward.
 Neither are the O(1) topology claim, approximate inclusion described as a
 sufficient cause, or the old asymmetric Flux score presented as a validated
 accuracy measure. The reasons and replacements are documented above; the
-[original proposal source](https://github.com/myon-bioinformatics/Ironmate/blob/aff11622991b6fa3f75c8b9a9876fccb97edac8f/research/littlebit_jev_5way_survey.py)
+[original proposal source](https://github.com/myon-bioinformatics/Ironmate/blob/aff11622991b6fa3f75c8b9a9876fccb97edac8f/scripts/littlebit_jev_5way_survey.py)
 remains an immutable comparison reference rather than a second active engine.
 The standalone experimental API is not a drop-in compatibility layer for #156's
 return-field names; runtime evidence retains full support coordinates instead of

@@ -35,7 +35,7 @@
                       "items": [
                         {
                           "label": "開く",
-                          "href": "https://myon-bioinformatics.github.io/tools/ironmate/"
+                          "href": "https://myon-bioinformatics.github.io/tools/image-studio/"
                         }
                       ]
                     },
@@ -60,7 +60,7 @@
                       "items": [
                         {
                           "label": "開く",
-                          "href": "https://myon-bioinformatics.github.io/tools/ironmate/tools/"
+                          "href": "https://myon-bioinformatics.github.io/tools/browser-tools/"
                         }
                       ]
                     },
@@ -85,11 +85,11 @@
                       "items": [
                         {
                           "label": "PC向け",
-                          "href": "https://myon-bioinformatics.github.io/tools/ironmate/slides/"
+                          "href": "https://myon-bioinformatics.github.io/tools/slide-studio/"
                         },
                         {
                           "label": "スマホ向け",
-                          "href": "https://myon-bioinformatics.github.io/tools/ironmate/slides/phone/"
+                          "href": "https://myon-bioinformatics.github.io/tools/slide-studio/phone/"
                         }
                       ]
                     },
@@ -332,7 +332,7 @@
                       "items": [
                         {
                           "label": "Image Studio を開く",
-                          "href": "https://myon-bioinformatics.github.io/tools/ironmate/"
+                          "href": "https://myon-bioinformatics.github.io/tools/image-studio/"
                         }
                       ]
                     }
@@ -348,11 +348,11 @@
                       "items": [
                         {
                           "label": "Slide Studio を開く",
-                          "href": "https://myon-bioinformatics.github.io/tools/ironmate/slides/"
+                          "href": "https://myon-bioinformatics.github.io/tools/slide-studio/"
                         },
                         {
                           "label": "スマホ版を開く",
-                          "href": "https://myon-bioinformatics.github.io/tools/ironmate/slides/phone/"
+                          "href": "https://myon-bioinformatics.github.io/tools/slide-studio/phone/"
                         }
                       ]
                     }

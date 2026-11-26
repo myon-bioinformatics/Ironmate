@@ -2,7 +2,7 @@
 
 ![Ironmate — pixel logo with the apostrophe in I’m replaced by 🔰](studio/brand/readme.svg)
 
-The logo is **I’m with a 🔰 apostrophe**. The 6 variants are used by purpose; for now the favicon uses dark green, the README the Famicom style, the web UI the heatmap palette and the home-screen icon Pixel 3D, provisionally. The final version is undecided. Each variant can be saved from the [6-variant gallery](https://myon-bioinformatics.github.io/tools/ironmate/tools/#brand). [Design and regeneration](docs/brand.md).
+The logo is **I’m with a 🔰 apostrophe**. The 6 variants are used by purpose; for now the favicon uses dark green, the README the Famicom style, the web UI the heatmap palette and the home-screen icon Pixel 3D, provisionally. The final version is undecided. Each variant can be saved from the [6-variant gallery](https://myon-bioinformatics.github.io/tools/browser-tools/#brand). [Design and regeneration](docs/brand.md).
 
 A Python-centered project for verifying **conversion and replacement of content and attributes** in documents, images and more.
 Replacing text, color and arrow attributes in PPTX is a future target, and pixel/palette-based dot representations are being prototyped.
@@ -31,13 +31,13 @@ not a guarantee of faithfully reproducing edited PPTX in HTML.
 
 `python -S image_studio.py` opens a local editor. Layer shapes, images and custom stamps, change heatmap color steps and mosaic granularity, and output PNG, SVG, Base64 and re-editable JSON. Clock, arrow, emoticon and monochrome stamps and CLI rendering are also supported.
 
-[Open Image Studio in the browser](https://myon-bioinformatics.github.io/tools/ironmate/) / [Open the pixel art and image list](https://myon-bioinformatics.github.io/tools/ironmate/tools/) / [Docker startup and Pages version scope](docs/browser-tools.md)
+[Open Image Studio in the browser](https://myon-bioinformatics.github.io/tools/image-studio/) / [Open the pixel art and image list](https://myon-bioinformatics.github.io/tools/browser-tools/) / [Docker startup and Pages version scope](docs/browser-tools.md)
 
 [Usage and verification scope](docs/image-studio.md) / [Real-browser screens and verification evidence](docs/evidence/image-studio/report.md).
 
 ## Create slides in the browser
 
-[Open Slide Studio](https://myon-bioinformatics.github.io/tools/ironmate/slides/). Place titles, body text and arrows with the same operations as Image Studio, and save multiple slides to PPTX. Text and ordinary shapes are output in a form editable in PowerPoint. [Usage and scope](docs/slide-studio.md). On a phone, [📱 Phone slides](https://myon-bioinformatics.github.io/tools/ironmate/slides/phone/) keeps the slide pinned on top with emoji-only controls and ⬅️ ➡️ for pages ([usage](docs/slide-studio.md#-phone-slides)).
+[Open Slide Studio](https://myon-bioinformatics.github.io/tools/slide-studio/). Place titles, body text and arrows with the same operations as Image Studio, and save multiple slides to PPTX. Text and ordinary shapes are output in a form editable in PowerPoint. [Usage and scope](docs/slide-studio.md). On a phone, [📱 Phone slides](https://myon-bioinformatics.github.io/tools/slide-studio/phone/) keeps the slide pinned on top with emoji-only controls and ⬅️ ➡️ for pages ([usage](docs/slide-studio.md#-phone-slides)).
 
 <img src="docs/assets/phone-slides.gif" width="240" alt="Phone slides: a blank slide pinned on top, adding a text box, editing it later, making every text bigger, a second page with a rectangle and an arrow, turning pages with ⬅️ ➡️, and 🧭 switching the page controls between six shapes">
 
@@ -254,7 +254,7 @@ Any other keys or free-form strings are discarded both when writing and when rea
 - The source/niconico implementation and tests moved to [mcp-toolcall-lab PR #108](https://github.com/myon-bioinformatics/mcp-toolcall-lab/pull/108), which is merged. This repository's `vendor/niconico_search_api_template.py` still remains for now. The design for absorbing API/MCP differences was handled in that repo's #107 (closed).
 - `vendor/` and `vendor.lock.json` are the consumer's pinned copies. 58 shared tool files (from 24 repositories, including LICENSE) are registered with the parent's management scheme and verified against pinned hashes. `vendor.lock.json` is the only provenance.
 
-Introduction and metadata are consolidated in the [portfolio](https://myon-bioinformatics.github.io/#ironmate). Ironmate's dedicated metadata stub Pages has been retired. [Image Studio](https://myon-bioinformatics.github.io/tools/ironmate/) and the other browser tools are built from this repository and published by the portfolio's 🧭 Tools & Demos (`image_studio.py --build-site`); images and scenes are handled only in the browser. This repository's own Pages is the [usage guide](https://myon-bioinformatics.github.io/Ironmate/) (🎞 GIF demos / 🧩 features, `docs/guide.page.json`).
+Introduction and metadata are consolidated in the [portfolio](https://myon-bioinformatics.github.io/#ironmate). Ironmate's dedicated metadata stub Pages has been retired. [Image Studio](https://myon-bioinformatics.github.io/tools/image-studio/) and the other browser tools are built from this repository and published by the portfolio's 🧭 Tools & Demos (`image_studio.py --build-site`); images and scenes are handled only in the browser. This repository's own Pages is the [usage guide](https://myon-bioinformatics.github.io/Ironmate/) (🎞 GIF demos / 🧩 features, `docs/guide.page.json`).
 
 For details, see [cleanup and vendor survey](docs/cleanup-stage-two.md) and [vendor CI](docs/vendor-automation.md).
 

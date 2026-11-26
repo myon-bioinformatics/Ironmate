@@ -1,6 +1,6 @@
 # Ironmate
 
-![Ironmate — pixel logo with the apostrophe in I’m replaced by 🔰](studio/brand/readme.svg)
+![Ironmate — pixel logo with the apostrophe in I’m replaced by 🔰](https://myon-bioinformatics.github.io/Ironmate/readme.png)
 
 The logo is **I’m with a 🔰 apostrophe**. The 6 variants are used by purpose; for now the favicon uses dark green, the README the Famicom style, the web UI the heatmap palette and the home-screen icon Pixel 3D, provisionally. The final version is undecided. Each variant can be saved from the [6-variant gallery](https://myon-bioinformatics.github.io/tools/browser-tools/#brand). [Design and regeneration](docs/brand.md).
 

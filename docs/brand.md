@@ -6,7 +6,7 @@ The shared core is **replacing the apostrophe in I’m with 🔰**. The favicon 
 | --- | --- | --- |
 | ① Pixel Mono | `studio/brand/mono.svg` | SVG logo, black-and-white material. Shown when printing the gallery |
 | ② Dark Green | `studio/brand/dark-green.svg`, `icon-192.png` | Images for GitHub. Provisionally used as the favicon |
-| ③ Famicom Retro | `studio/brand/famicom.svg`, `readme.svg` | Provisionally used at the top of the README |
+| ③ Famicom Retro | `studio/brand/famicom.svg`, `readme.svg` | Published as `readme.png` for the README |
 | ④ GameBoy Style | `studio/brand/gameboy.svg` | Available from image tools |
 | ⑤ Heatmap Pixel | `studio/brand/heatmap.svg`, `hero.svg` | Provisionally used in the three screens' headers and the browser tools' Hero |
 | ⑥ Pixel 3D | `studio/brand/pixel-3d.svg` | Provisionally used for the add-to-home-screen icon and launcher |

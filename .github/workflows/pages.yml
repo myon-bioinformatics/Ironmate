@@ -110,6 +110,12 @@ jobs:
     with:
       artifact_path: _site
       guide_page: docs/guide.page.json
+      build: |
+        if ! command -v inkscape >/dev/null; then
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends inkscape
+        fi
+        inkscape studio/brand/readme.svg --export-filename=_site/readme.png
       guide_assets: >-
         studio/brand/icon-192.png=icon.png
         studio/brand/favicon-48.png=favicon.png

@@ -295,7 +295,7 @@ STUDIO_HTML = r"""<!doctype html>
 </html>
 """
 
-STYLE_CSS = r"""/* web-ui-bundle/1 commit=901b790f14ad7a04a4280409bfd274d8f6926fa7 sha256=b2579ab6f0851448276b1f656f7faf61d105a927530407daa35cf94fee2a24b9 scripts/build_studio_css.py*/
+STYLE_CSS = r"""/* web-ui-bundle/1 commit=901b790f14ad7a04a4280409bfd274d8f6926fa7 sha256=a9597ece41065469980a76b49f409f13a87f30a37e065dd5456e97fdc89cb0f1 scripts/build_studio_css.py*/
 @layer base,components,theme;
 /* css/tokens.css */
 :root{--ui-bg:#0d1117;--ui-panel:#101820;--ui-fg:#d1f7c4;--ui-muted:#8b949e;--ui-border:#58a6ff;--ui-accent:#7ee787;--ui-danger:#cf222e;--ui-radius:0;--ui-text:16px;--ui-space:1rem;--ui-max:960px;--ui-font:Meiryo,メイリオ,sans-serif;--ui-font-mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
@@ -481,7 +481,26 @@ body:where([data-page~="phone"]){margin:0;background:#dfe8df}
 :where([data-page~="phone"]) .phone-status{flex:1 1 128px;margin:0;align-self:center;min-height:24px;font-size:16px;overflow-wrap:anywhere}
 :where([data-page~="phone"]) .phone-status[data-error=true]{color:var(--ui-danger)}
 @media(orientation:landscape) and (max-height:560px){:where([data-page~="phone"]) .phone{flex-direction:row;max-width:none}:where([data-page~="phone"]) .ui-stage{max-width:72vw}:where([data-page~="phone"]) .phone-deck{flex-direction:column;flex-wrap:nowrap}:where([data-page~="phone"]) .phone-tools,:where([data-page~="phone"]) .phone-status{flex:none}}
-"""
+
+/* 🌙 dark palettes (DARK_THEMES) */
+body:is([data-ui-theme="modern"],[data-ui-theme="terminal"]):where([data-page~="studio"]){color-scheme:dark}
+:is([data-ui-theme="modern"],[data-ui-theme="terminal"]):where([data-page~="studio"]) header{background:var(--ui-panel);color:var(--ui-fg);border-bottom:1px solid var(--ui-border)}
+:is([data-ui-theme="modern"],[data-ui-theme="terminal"]):where([data-page~="studio"]) .brand span{color:var(--ui-muted)}
+:is([data-ui-theme="modern"],[data-ui-theme="terminal"]):where([data-page~="studio"]) .top-actions>a{color:var(--ui-accent)}
+:is([data-ui-theme="modern"],[data-ui-theme="terminal"]):where([data-page~="studio"]) header button,:is([data-ui-theme="modern"],[data-ui-theme="terminal"]):where([data-page~="studio"]) header .button,:is([data-ui-theme="modern"],[data-ui-theme="terminal"]):where([data-page~="studio"]) header select{border-color:var(--ui-border);background:var(--ui-bg);color:var(--ui-fg)}
+:is([data-ui-theme="modern"],[data-ui-theme="terminal"]):where([data-page~="studio"]) .primary,:is([data-ui-theme="modern"],[data-ui-theme="terminal"]):where([data-page~="studio"]) header .primary{background:#bdf06c;border-color:#bdf06c;color:#183b34}
+:is([data-ui-theme="modern"],[data-ui-theme="terminal"]):where([data-page~="studio"]) button:hover,:is([data-ui-theme="modern"],[data-ui-theme="terminal"]):where([data-page~="studio"]) .button:hover{background:color-mix(in srgb,var(--ui-accent) 16%,var(--ui-panel))}
+:is([data-ui-theme="modern"],[data-ui-theme="terminal"]):where([data-page~="studio"]) aside,:is([data-ui-theme="modern"],[data-ui-theme="terminal"]):where([data-page~="studio"]) .shelf-card{background:var(--ui-panel)}
+:is([data-ui-theme="modern"],[data-ui-theme="terminal"]):where([data-page~="studio"]) .active{background:color-mix(in srgb,var(--ui-accent) 24%,var(--ui-panel))!important;border-color:var(--ui-accent)!important;color:var(--ui-fg)!important}
+:is([data-ui-theme="modern"],[data-ui-theme="terminal"]):where([data-page~="studio"]) input[type=color]{background:var(--ui-panel);border-color:var(--ui-border)}
+body:is([data-ui-theme="modern"],[data-ui-theme="terminal"]):where([data-page~="tools"]){color-scheme:dark}
+:is([data-ui-theme="modern"],[data-ui-theme="terminal"]):where([data-page~="tools"]) button:hover{background:color-mix(in srgb,var(--ui-accent) 16%,var(--ui-panel))}
+:is([data-ui-theme="modern"],[data-ui-theme="terminal"]):where([data-page~="tools"]) .primary{color:var(--ui-bg)}
+:is([data-ui-theme="modern"],[data-ui-theme="terminal"]):where([data-page~="tools"]) .primary:hover{background:color-mix(in srgb,var(--ui-accent) 80%,var(--ui-fg))}
+:is([data-ui-theme="modern"],[data-ui-theme="terminal"]):where([data-page~="tools"]) #message,:is([data-ui-theme="modern"],[data-ui-theme="terminal"]):where([data-page~="tools"]) th{background:color-mix(in srgb,var(--ui-accent) 14%,var(--ui-panel))}
+:is([data-ui-theme="modern"],[data-ui-theme="terminal"]):where([data-page~="tools"]) #message[data-error=true]{color:var(--ui-danger)}
+:is([data-ui-theme="modern"],[data-ui-theme="terminal"]):where([data-page~="slides"]) .slide-controls{background:var(--ui-panel)}
+body:is([data-ui-theme="modern"],[data-ui-theme="terminal"]):where([data-page~="phone"]){background:var(--ui-bg);color-scheme:dark}"""
 
 STUDIO_JS = r"""/* Ironmate studio: the one browser script for every page (studio, tools, slides; brand needs none).
    Models first (composition, pixel-grid tools, slide shell, Open XML writer), then each page's UI. */

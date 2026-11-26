@@ -5,7 +5,7 @@
 
 The sheet is ``pysaiyanweboo.write_bundle`` output: ``core_css()`` (tokens, base, components) with PySaiyanWeBoo's ``green`` theme
 (``CANDIDATE_THEMES``) + the rules below, which are only this studio's layout: header and brand, the three-column
-workspace, the board and its handles, the shelf cards, the inspector. Buttons, inputs, selects, textareas and
+workspace, the board and its handles, the shelf cards, the inspector (and, for a dark palette, ``DARK_RULES``). Buttons, inputs, selects, textareas and
 tables take the component look through ``class="ui-elements"`` on ``<body>``; nothing generic lives here.
 The file is committed (the studio is served as static files and image_studio.py is stdlib-only), and
 ``tests/test_studio.py`` (``pysaiyanweboo.check_bundle``) fails when it drifts.
@@ -210,6 +210,38 @@ NOTE = "scripts/build_studio_css.py"
 PAGES = (("studio", "STUDIO_RULES"), ("tools", "TOOLS_RULES"), ("slides", "SLIDES_RULES"),
          ("phone", "PHONE_RULES"))
 
+# 🌙 The rules above are drawn for the light palettes (green, red, blue, purple). On a dark one (``data-ui-theme`` modern or
+# terminal: the portfolio publishes every studio page in modern, like its other pages), these take the surfaces the light
+# rules paint by hand back to the theme's own tokens. Nothing here applies to a light palette; the board's checker and the
+# slide stay as they are (they are the picture, not the page).
+DARK_THEMES = ("modern", "terminal")
+DARK_RULES = {
+    "studio": f"""body{{color-scheme:dark}}
+header{{background:var(--ui-panel);color:var(--ui-fg);border-bottom:1px solid var(--ui-border)}}
+.brand span{{color:var(--ui-muted)}}
+.top-actions>a{{color:var(--ui-accent)}}
+header button,header .button,header select{{border-color:var(--ui-border);background:var(--ui-bg);color:var(--ui-fg)}}
+.primary,header .primary{{background:{LIME};border-color:{LIME};color:#183b34}}
+button:hover,.button:hover{{background:color-mix(in srgb,var(--ui-accent) 16%,var(--ui-panel))}}
+aside,.shelf-card{{background:var(--ui-panel)}}
+.active{{background:color-mix(in srgb,var(--ui-accent) 24%,var(--ui-panel))!important;border-color:var(--ui-accent)!important;color:var(--ui-fg)!important}}
+input[type=color]{{background:var(--ui-panel);border-color:var(--ui-border)}}""",
+    "tools": """body{color-scheme:dark}
+button:hover{background:color-mix(in srgb,var(--ui-accent) 16%,var(--ui-panel))}
+.primary{color:var(--ui-bg)}
+.primary:hover{background:color-mix(in srgb,var(--ui-accent) 80%,var(--ui-fg))}
+#message,th{background:color-mix(in srgb,var(--ui-accent) 14%,var(--ui-panel))}
+#message[data-error=true]{color:var(--ui-danger)}""",
+    "slides": """.slide-controls{background:var(--ui-panel)}""",
+    "phone": """body{background:var(--ui-bg);color-scheme:dark}""",
+}
+
+
+def dark(css: str, page: str) -> str:
+    """``scoped`` for a dark palette: the same page guard, and the body's ``data-ui-theme`` one of ``DARK_THEMES``."""
+    themes = ",".join(f'[data-ui-theme="{name}"]' for name in DARK_THEMES)
+    return scoped(css, page).replace(f':where([data-page~="{page}"])', f':is({themes}):where([data-page~="{page}"])')
+
 
 def scoped(css: str, page: str) -> str:
     """Prefix every selector with ``:where([data-page~="page"])`` (zero specificity, so the cascade is unchanged).
@@ -251,7 +283,8 @@ def bundles() -> dict[Path, dict]:
     each page's layout scoped by ``<body data-page="...">`` (the slides page is ``data-page="studio slides"``)."""
     import pysaiyanweboo
     sheets = dict.fromkeys(sheet for name in PSWB for sheet in pysaiyanweboo.COMPONENTS[name]["css"])
-    rules = "\n".join(scoped(globals()[name], page) for page, name in PAGES)
+    rules = "\n".join([*(scoped(globals()[name], page) for page, name in PAGES),
+                       "/* 🌙 dark palettes (DARK_THEMES) */", *(dark(css, page) for page, css in DARK_RULES.items())])
     return {STUDIO / "style.css": {"theme": THEME, "extra_css": "\n".join([*map(pysaiyanweboo.css_source, sheets), rules])}}
 
 

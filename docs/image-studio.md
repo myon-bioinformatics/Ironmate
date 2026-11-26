@@ -139,7 +139,7 @@ Successes, errors and processing times are kept in the [verification record for 
 
 ## Numbers → color → heatmap
 
-Open the [DRAgoWing heatmap editor](https://myon-bioinformatics.github.io/DRAgoWing/heatmap/), paste a matrix or load a Plotly JSON file, then download scene.json and open it in Ironmate. The scene's heatmap `palette` is kept through editing, SVG and PNG export, and saving. Color conversion uses [PySaiyanWeBoo's shared heatmap code](https://github.com/myon-bioinformatics/PySaiyanWeBoo/pull/189).
+Open the [DRAgoWing heatmap editor](https://myon-bioinformatics.github.io/tools/heatmap/), paste a matrix or load a Plotly JSON file, then download scene.json and open it in Ironmate. The scene's heatmap `palette` is kept through editing, SVG and PNG export, and saving. Color conversion uses [PySaiyanWeBoo's shared heatmap code](https://github.com/myon-bioinformatics/PySaiyanWeBoo/pull/189).
 It uses `z`, `x`, `y`, `zmin` and `zmax`, and places **the first row at the top**.
 It is not rendering-compatible with Plotly's axis order, layout, annotations, colorscale or customdata.
 DRAgoWing's research results are not rewritten; this is a separate composite image that stores the input in the JSON's source.

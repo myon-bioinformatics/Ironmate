@@ -1,8 +1,8 @@
 # Browser tools on GitHub Pages
 
-- Slide Studio: https://myon-bioinformatics.github.io/tools/ironmate/slides/
-- Image Studio: https://myon-bioinformatics.github.io/tools/ironmate/
-- Pixel art, image grid, Base64 size: https://myon-bioinformatics.github.io/tools/ironmate/tools/
+- Slide Studio: https://myon-bioinformatics.github.io/tools/slide-studio/
+- Image Studio: https://myon-bioinformatics.github.io/tools/image-studio/
+- Pixel art, image grid, Base64 size: https://myon-bioinformatics.github.io/tools/browser-tools/
 - Portfolio: https://myon-bioinformatics.github.io/#ironmate
 
 No extra JavaScript packages or external CDNs are used. Only HTML/CSS/JavaScript and public presets generated from the Python version are served. Images and JSON are processed in the browser and not uploaded.
@@ -28,7 +28,7 @@ python -S image_studio.py --build-site build/studio-site
 # the output must be a new or empty directory
 ```
 
-`pages.yml` generates the static files with Docker and verifies `/Ironmate/` in the container with a real browser. The portfolio publishes the same files under `/tools/ironmate/` (it runs `image_studio.py --build-site` at deploy time), and this repository's Pages publishes only the usage guide (`docs/guide.page.json`). Docker and Python do not run in the published environment.
+`pages.yml` generates the static files with Docker and verifies `/Ironmate/` in the container with a real browser. The portfolio publishes the same files under `/tools/image-studio/`, `/tools/browser-tools/` and `/tools/slide-studio/` (it runs `image_studio.py --build-site` at deploy time), and this repository's Pages publishes only the usage guide (`docs/guide.page.json`). Docker and Python do not run in the published environment.
 
 ## Coverage
 

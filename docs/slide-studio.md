@@ -1,6 +1,6 @@
 # Slide Studio: build multiple slides in the browser and save as PPTX
 
-https://myon-bioinformatics.github.io/tools/ironmate/slides/
+https://myon-bioinformatics.github.io/tools/slide-studio/
 
 Image Studio's shape, text and image editing is reused per slide.
 No installation, external CDN or server processing is needed. Input images and in-progress JSON are not sent anywhere.
@@ -26,7 +26,7 @@ Unsaved changes are confirmed when leaving the page. There is no autosave or re-
 
 ## 📱 Phone slides
 
-https://myon-bioinformatics.github.io/tools/ironmate/slides/phone/
+https://myon-bioinformatics.github.io/tools/slide-studio/phone/
 
 <img src="assets/phone-slides.gif" width="240" alt="Phone slides in a 390×844 browser: blank slide, text box, editing later, bigger text, page 2, ⬅️ back to page 1, then 🧭 through the six pager shapes">
 

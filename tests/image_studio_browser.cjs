@@ -73,6 +73,8 @@ const failures = [],
   page.on("dialog", (dialog) =>
     dialog.type() === "confirm" && !acceptHistoryTrim ? dialog.dismiss() : dialog.accept());
   await page.goto(url);
+  assert.equal(await page.locator("#png").isVisible(), false);
+  await page.locator("#studio-export summary").click();
   for (const id of ["save", "save-workspace", "trim-history", "open-workspace"])
     assert.equal(await page.locator(`#${id}`).count(), 1, `required Studio control: ${id}`);
   await page.waitForFunction(() => !!window.IronmateStudio, null, {timeout:10000});
@@ -437,6 +439,8 @@ const failures = [],
   await page.locator("#error button").click();
   // Isolate the new ingress smoke from legacy editor tool/selection state.
   await page.goto(url);
+  assert.equal(await page.locator("#png").isVisible(), false);
+  await page.locator("#studio-export summary").click();
   await page.evaluate(() => window.IronmateStudio.ready);
   // Same real browser: feed exported PNG back via Base64 and clipboard.
   const pngIn = await page.evaluate(async () => Array.from(

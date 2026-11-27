@@ -1,5 +1,98 @@
 """Bundled Studio HTML, CSS, and browser JS (pure stdlib, served in-memory or written at build time)."""
 
+PIXEL_EDITOR_HTML = r"""      <section id="pixels">
+        <div class="section-heading">
+          <h2>ドット絵</h2>
+        </div>
+        <div class="workspace">
+          <div class="controls">
+            <label>形<select id="mask"></select></label>
+            <div class="pair">
+              <label>元サイズ<select id="size"></select></label
+              ><label>加工<select id="effect"></select></label>
+            </div>
+            <label>配色ID<select id="palette"></select></label
+            ><button id="generate" class="primary">プリセットから生成</button>
+            <p class="hint">
+              形・サイズ・加工・配色を選んで生成します。
+            </p>
+            <label class="file"
+              >グリッドJSONを開く<input
+                id="grid-file"
+                type="file"
+                accept=".json,application/json"
+            /></label>
+            <div class="pair">
+              <label
+                >幅<input
+                  id="width"
+                  type="number"
+                  min="1"
+                  max="256"
+                  value="32" /></label
+              ><label
+                >高さ<input
+                  id="height"
+                  type="number"
+                  min="1"
+                  max="256"
+                  value="32"
+              /></label>
+            </div>
+            <button id="resize">最近傍でサイズ変更</button>
+            <p class="hint">
+              縮小では細部が失われます。配色変更は5役割のグリッドのみ。
+            </p>
+            <button id="recolor">選択した配色IDを適用</button>
+            <div class="pair">
+              <label>描く色番号<select id="ink"></select></label
+              ><label
+                >出力倍率<select id="scale">
+                  <option>1</option>
+                  <option>2</option>
+                  <option selected>8</option>
+                  <option>16</option>
+                </select></label
+              >
+            </div>
+            <button id="undo-grid">ひとつ戻す</button>
+          </div>
+          <div class="preview">
+            <canvas
+              id="grid"
+              width="32"
+              height="32"
+              aria-label="ドット絵。クリックすると選択した色番号で描画"
+              tabindex="0"
+            ></canvas>
+            <p id="grid-info"></p>
+            <div class="exports">
+              <button id="grid-json">JSON保存</button
+              ><button id="grid-svg">SVG</button
+              ><button id="grid-png">PNG</button
+              ><button id="grid-base64">Base64</button>
+            </div>
+            <label
+              >PNG data URI<textarea
+                id="base64-output"
+                rows="3"
+                readonly
+              ></textarea>
+            </label>
+            <p class="hint">
+              JSONは色番号を、PNGは色表と寸法を保持します。
+            </p>
+          </div>
+        </div>
+      </section>"""
+
+STUDIO_PIXEL_PANEL = r"""        <details id="pixel-editor">
+          <summary>▦ ドット絵</summary>
+""" + PIXEL_EDITOR_HTML + r"""
+          <button id="place-grid">画像にレイヤーとして追加</button>
+          <p id="pixel-status" role="status"></p>
+        </details>"""
+
 STUDIO_HTML = r"""<!doctype html>
 <html lang="ja">
   <head>
@@ -23,28 +116,37 @@ STUDIO_HTML = r"""<!doctype html>
     <header>
       <div class="brand"><img src="brand/heatmap.svg" width="48" height="48" alt="I’m — 🔰がアポストロフィのIronmateロゴ" /><div>IRONMATE <span>画像編集</span></div></div>
       <div class="top-actions">
-        <a href="slides/">スライド・PPTX作成 ↗</a>
-        <a href="slides/phone/" title="スマホで作るスライド">📱 スマホ ↗</a>
-        <a href="tools/">ドット絵・画像一覧 ↗</a>
-        <a href="https://myon-bioinformatics.github.io/#ironmate">🏠 ポートフォリオ ↗</a>
-        <a href="https://github.com/myon-bioinformatics/Ironmate">🐙 GitHub リポジトリ ↗</a>
+        <details id="studios">
+          <summary>工房一覧</summary>
+          <a href="slides/">スライド・PPTX作成 ↗</a>
+          <a href="tools/#composition">🎵 作曲 ↗</a>
+          <a href="tools/">画像一覧・素材 ↗</a>
+          <a href="https://myon-bioinformatics.github.io/#ironmate">🏠 ポートフォリオ ↗</a>
+          <a href="https://github.com/myon-bioinformatics/Ironmate">🐙 GitHub リポジトリ ↗</a>
+        </details>
         <button id="undo-2" data-steps="2" title="2つ戻す" aria-label="2つ戻す">⏪</button>
         <button id="undo">↶ 戻す</button>
         <button id="redo">↷ やり直す</button>
         <button id="redo-2" data-steps="2" title="2つやり直す" aria-label="2つやり直す">⏩</button>
-        <button id="save">JSON保存</button>
-        <button id="shelf-button">クリップボード・シェルフ</button>
-        <button id="save-workspace">作業履歴を保存</button>
-        <label class="button">作業履歴を開く<input id="open-workspace" type="file" accept=".json,application/json" /></label>
-        <label class="button">開く<input id="open" type="file" accept=".json" /></label>
-        <button id="svg">SVG</button><button id="base64">Base64 / 渡す</button>
-        <select id="export-scale" aria-label="出力倍率">
-          <option value="1">1×</option>
-          <option value="2">2×</option>
-          <option value="4">4×</option>
-          <option value="8">8×</option>
-        </select>
-        <button id="png" class="primary">PNGを書き出す ↗</button>
+        <details id="studio-import">
+          <summary>↓ インポート</summary>
+          <button id="shelf-button">クリップボード・シェルフ</button>
+          <label class="button">作業履歴を開く<input id="open-workspace" type="file" accept=".json,application/json" /></label>
+          <label class="button">開く<input id="open" type="file" accept=".json" /></label>
+        </details>
+        <details id="studio-export">
+          <summary>↑ エクスポート</summary>
+          <button id="save">JSON保存</button>
+          <button id="save-workspace">作業履歴を保存</button>
+          <button id="svg">SVG</button><button id="base64">Base64 / 渡す</button>
+          <select id="export-scale" aria-label="出力倍率">
+            <option value="1">1×</option>
+            <option value="2">2×</option>
+            <option value="4">4×</option>
+            <option value="8">8×</option>
+          </select>
+          <button id="png" class="primary">PNGを書き出す ↗</button>
+        </details>
       </div>
     </header>
     <main>
@@ -62,7 +164,12 @@ STUDIO_HTML = r"""<!doctype html>
           ><button data-tool="kaomoji" data-label="顔文字" data-candidates="(・∀・) (｡•̀ᴗ-)✧ ٩(๑❛ᴗ❛๑)۶">顔文字(^^)</button
           ><button data-tool="clock">◷ 時計</button>
         </div>
+""" + STUDIO_PIXEL_PANEL + r"""
         <div id="candidates" class="emojis" role="group" aria-label="候補"></div>
+        <div id="keyboard-input" hidden>
+          <button id="keyboard-focus">⌨ ほかの文字を入力</button>
+          <p class="hint">Windows は Win + .、Mac は Control + Command + Space。スマホはキーボードの絵文字キーから。顔文字の入力・貼り付けもできます。</p>
+        </div>
         <label
           >T 文字列<textarea id="text" rows="2" placeholder="文字列 😊 (・∀・)"></textarea
         ></label>
@@ -307,7 +414,7 @@ STUDIO_HTML = r"""<!doctype html>
 </html>
 """
 
-STYLE_CSS = r"""/* web-ui-bundle/1 commit=be49b945db2c32c50a9242faaaa9dfd07948ec82 sha256=10144bca5a229ee3f192f4660c5f88bc0e1a4819164a0579ab6b4549fb40426f scripts/build_studio_css.py*/
+STYLE_CSS = r"""/* web-ui-bundle/1 commit=59dc44376a81ce27721dda37840e6564fa520674 sha256=921b6dba124aa84d4f35c698c7d7ecbefd431ebe88b8917c9793f300a1ca393c scripts/build_studio_css.py*/
 @layer base,components,theme;
 /* css/tokens.css */
 :root{--ui-bg:#0d1117;--ui-panel:#101820;--ui-fg:#d1f7c4;--ui-muted:#8b949e;--ui-border:#58a6ff;--ui-accent:#7ee787;--ui-danger:#cf222e;--ui-radius:0;--ui-text:16px;--ui-space:1rem;--ui-max:960px;--ui-font:Meiryo,メイリオ,sans-serif;--ui-font-mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
@@ -326,6 +433,8 @@ body[data-ui-theme="terminal"]{--ui-bg:#0a0e10;--ui-panel:#11171a;--ui-fg:#d5dee
 @layer components{.ui-stage{--ui-stage-w:16;--ui-stage-h:9;--ui-stage-room:64dvh;position:relative;flex:none;align-self:center;box-sizing:border-box;margin:0 auto;width:min(100%,calc(var(--ui-stage-room) * var(--ui-stage-w) / var(--ui-stage-h)));aspect-ratio:var(--ui-stage-w)/var(--ui-stage-h);overflow:hidden;background:var(--ui-panel);border:1px solid var(--ui-border)}.ui-stage[data-ui-stage=pinned]{position:sticky;top:0;z-index:1}.ui-stage>:is(svg,img,canvas,video,[data-ui-fill]){position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:contain}@media(orientation:landscape) and (max-height:560px){.ui-stage{--ui-stage-room:100dvh}}}
 @layer components{.ui-pager{display:inline-flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;max-width:100%}.ui-pager button{box-sizing:border-box;min-width:48px;min-height:48px;padding:0 8px;font-size:24px;line-height:1;color:var(--ui-fg);background:var(--ui-panel);border:1px solid var(--ui-border);border-radius:var(--ui-radius);cursor:pointer;touch-action:manipulation}.ui-pager button:disabled{opacity:.32;cursor:default}.ui-pager button:focus-visible{outline:2px solid var(--ui-accent);outline-offset:2px}.ui-pager output{min-width:48px;text-align:center;font-weight:700;font-variant-numeric:tabular-nums}.ui-pager>[data-ui-pager-part=dots]{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;max-width:100%}.ui-pager>[data-ui-pager-part=dots] button{min-width:32px;min-height:32px;padding:0;font-size:16px;color:var(--ui-accent)}.ui-pager>input[type=range]{width:160px;max-width:100%;min-height:48px;margin:0;accent-color:var(--ui-accent)}.ui-pager[data-ui-pager=dpad]{display:inline-grid;grid-template-columns:repeat(3,48px);grid-template-rows:repeat(3,48px)}[data-ui-pager=dpad]>[data-ui-pager-part=up]{grid-area:1/2}[data-ui-pager=dpad]>[data-ui-pager-part=prev]{grid-area:2/1}[data-ui-pager=dpad]>[data-ui-pager-part=page]{grid-area:2/2;place-self:center}[data-ui-pager=dpad]>[data-ui-pager-part=next]{grid-area:2/3}[data-ui-pager=dpad]>[data-ui-pager-part=down]{grid-area:3/2}.ui-pager[data-ui-pager=dpad]>:not([data-ui-pager-in~=dpad]),.ui-pager[data-ui-pager=ends]>:not([data-ui-pager-in~=ends]),.ui-pager[data-ui-pager=arrows]>:not([data-ui-pager-in~=arrows]),.ui-pager[data-ui-pager=dots]>:not([data-ui-pager-in~=dots]),.ui-pager[data-ui-pager=slider]>:not([data-ui-pager-in~=slider]),.ui-pager[data-ui-pager=dial]>:not([data-ui-pager-in~=dial]){display:none}}
 @layer components{.ui-dial{position:relative;display:inline-block;width:48px;height:48px;border-radius:50%;border:2px solid var(--ui-border);background:var(--ui-panel);box-sizing:border-box;touch-action:none;cursor:grab;vertical-align:middle}.ui-dial[data-ui-dial-drag]{cursor:grabbing}.ui-dial::after{content:"";position:absolute;left:50%;top:4px;width:4px;height:16px;border-radius:2px;background:var(--ui-accent);transform-origin:50% 18px;transform:translateX(-50%) rotate(var(--ui-dial-angle,-135deg))}.ui-dial>input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;pointer-events:none}.ui-dial:focus-within{outline:2px solid var(--ui-accent);outline-offset:2px}}
+@layer components{.ui-current-items > [aria-current=step]{font-weight:700;text-decoration:underline;text-decoration-color:var(--ui-accent);text-decoration-thickness:.16em;text-underline-offset:.18em}}
+
 /* studio layout */
 body:where([data-page~="studio"]){font-size:13px;line-height:1.5;margin:0}
 :where([data-page~="studio"]) header{min-height:76px;background:var(--ui-panel);color:var(--ui-fg);box-shadow:inset 0 -1px var(--ui-border);padding:18px 26px;display:flex;align-items:center;justify-content:space-between;gap:20px}
@@ -333,7 +442,8 @@ body:where([data-page~="studio"]){font-size:13px;line-height:1.5;margin:0}
 :where([data-page~="studio"]) .brand span{font-weight:400;font-size:10px;display:block;letter-spacing:3px;margin:5px 0 0;color:var(--ui-muted)}
 :where([data-page~="studio"]) .brand img{flex:none;image-rendering:pixelated}
 :where([data-page~="studio"]) .top-actions{display:flex;flex-wrap:wrap;gap:7px}
-:where([data-page~="studio"]) .top-actions>a{color:var(--ui-accent);align-self:center;padding:7px 3px;text-underline-offset:3px}
+:where([data-page~="studio"]) .top-actions summary{cursor:pointer;padding:7px}
+:where([data-page~="studio"]) .top-actions details a{color:var(--ui-accent);align-self:center;padding:7px 3px;text-underline-offset:3px}
 :where([data-page~="studio"]) button,:where([data-page~="studio"]) .button{display:inline-flex;align-items:center;justify-content:center;gap:5px;text-decoration:none;min-height:38px;padding:10px 12px}
 :where([data-page~="studio"]) .button{font:inherit;cursor:pointer;background:var(--ui-panel);color:var(--ui-fg);border:1px solid var(--ui-border);border-radius:var(--ui-radius)}
 :where([data-page~="studio"]) button:hover,:where([data-page~="studio"]) .button:hover{border-color:var(--ui-accent);background:color-mix(in srgb,var(--ui-accent) 12%,var(--ui-panel))}
@@ -438,6 +548,8 @@ body:where([data-page~="tools"]){font-size:15px;line-height:1.65;margin:0}
 :where([data-page~="tools"]) .preview{display:flex;flex-direction:column;gap:16px;justify-content:center;align-items:stretch}
 :where([data-page~="tools"]) .preview canvas{display:block;width:min(100%,480px);height:auto;image-rendering:pixelated;margin:auto;border:1px solid var(--ui-border);background:repeating-conic-gradient(#e1e8e3 0% 25%,#fff 0% 50%) 0 0/20px 20px;cursor:crosshair;touch-action:manipulation}
 :where([data-page~="tools"]) textarea{width:100%;font-size:11px;overflow-wrap:anywhere}
+:where([data-page~="studio"]) #pixel-editor .workspace{display:block;padding:0}
+:where([data-page~="studio"]) #pixel-editor #grid{width:min(100%,320px);height:auto;image-rendering:pixelated;cursor:crosshair}
 :where([data-page~="tools"]) #grid-info{font-size:13px;color:var(--ui-muted)}
 :where([data-page~="tools"]) #message{border-left:3px solid var(--ui-accent);padding:8px 16px;min-height:42px;background:color-mix(in srgb,var(--ui-accent) 12%,var(--ui-panel))}
 :where([data-page~="tools"]) #message[data-error=true]{border-color:var(--ui-danger);color:var(--ui-danger)}
@@ -492,7 +604,8 @@ body:where([data-page~="phone"]){margin:0;background:var(--ui-bg)}
 :where([data-page~="phone"]) .phone-tools button:disabled{opacity:.32}
 :where([data-page~="phone"]) .phone-status{flex:1 1 128px;margin:0;align-self:center;min-height:24px;font-size:16px;overflow-wrap:anywhere}
 :where([data-page~="phone"]) .phone-status[data-error=true]{color:var(--ui-danger)}
-@media(orientation:landscape) and (max-height:560px){:where([data-page~="phone"]) .phone{flex-direction:row;max-width:none}:where([data-page~="phone"]) .ui-stage{max-width:72vw}:where([data-page~="phone"]) .phone-deck{flex-direction:column;flex-wrap:nowrap}:where([data-page~="phone"]) .phone-tools,:where([data-page~="phone"]) .phone-status{flex:none}}
+@media(orientation:landscape) and (max-height:560px),(min-width:960px){:where([data-page~="phone"]) .phone{flex-direction:row;max-width:none}:where([data-page~="phone"]) .ui-stage{max-width:72vw;--ui-stage-room:100dvh}:where([data-page~="phone"]) .phone-deck{flex-direction:column;flex-wrap:nowrap}:where([data-page~="phone"]) .phone-tools,:where([data-page~="phone"]) .phone-status{flex:none}}
+@media(min-width:960px){:where([data-page~="phone"]) .ui-stage{max-width:calc(100vw - 376px)}}
 """
 
 STUDIO_JS = r"""/* Ironmate studio: the one browser script for every page (studio, tools, slides; brand needs none).
@@ -523,7 +636,7 @@ const StudioCore = (function (root) {
   const fail = (message) => {
     throw new Error(message);
   };
-  /* PSWB heatmap-color.js @ be49b945db2c32c50a9242faaaa9dfd07948ec82. Generated by scripts/build_studio_css.py. */
+  /* PSWB heatmap-color.js @ 59dc44376a81ce27721dda37840e6564fa520674. Generated by scripts/build_studio_css.py. */
   const heatmapDefaultPalette=["#440154", "#3B528B", "#21918C", "#5EC962", "#FDE725"];
   function heatmapColor(v,lo,hi,levels=0,palette=heatmapDefaultPalette){
    if(!Array.isArray(palette)||palette.length<2||palette.length>256||
@@ -1020,14 +1133,22 @@ const StudioCore = (function (root) {
     setTimeout(() => URL.revokeObjectURL(url), 30000);
   }
   // 🖼️ 画像ファイル → 長辺 longest までの PNG。4MP 超は断る（fit なら 4MP まで縮める: スマホの写真）
-  async function picture(file, longest = Infinity, fit = false) {
+  async function picture(file, longest = Infinity, fit = false, signal) {
+    signal?.throwIfAborted();
     const url = URL.createObjectURL(file),
       img = new Image();
+    const abort = () => {
+      img.removeAttribute("src");
+      URL.revokeObjectURL(url);
+    };
     try {
+      signal?.addEventListener("abort", abort, {once: true});
       img.src = url;
       await img.decode();
+      signal?.throwIfAborted();
     } finally {
-      URL.revokeObjectURL(url);
+      signal?.removeEventListener("abort", abort);
+      if (!signal?.aborted) URL.revokeObjectURL(url);
     }
     const w = img.naturalWidth,
       h = img.naturalHeight;
@@ -1069,7 +1190,7 @@ const StudioCore = (function (root) {
 /* Browser/Node shared operations. Pixel coordinates follow grid_tools.py. */
 const IronmateTools = (function (root) {
   "use strict";
-  /* PSWB pixel-grid.js @ be49b945db2c32c50a9242faaaa9dfd07948ec82. Generated by scripts/build_studio_css.py. */
+  /* PSWB pixel-grid.js @ 59dc44376a81ce27721dda37840e6564fa520674. Generated by scripts/build_studio_css.py. */
   /* web-ui pixel-grid: a dot-art grid checked, resized, drawn as SVG and described for a PNG; Base64 length; PNG chunks. pysaiyanweboo.py (pixel_grid_*, base64_length) is the reference; this must agree. */
   const PIXEL_GRID_SCHEMA="ironmate-pixel-grid/1";
   function pixelGridValidate(value){
@@ -1129,15 +1250,15 @@ const IronmateTools = (function (root) {
 const IronmateSlideShell = {"[Content_Types].xml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"xml\" ContentType=\"application/xml\"/><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Default Extension=\"jpeg\" ContentType=\"image/jpeg\"/><Default Extension=\"jpg\" ContentType=\"image/jpg\"/><Default Extension=\"svg\" ContentType=\"image/svg+xml\"/><Default Extension=\"png\" ContentType=\"image/png\"/><Default Extension=\"gif\" ContentType=\"image/gif\"/><Default Extension=\"m4v\" ContentType=\"video/mp4\"/><Default Extension=\"mp4\" ContentType=\"video/mp4\"/><Default Extension=\"vml\" ContentType=\"application/vnd.openxmlformats-officedocument.vmlDrawing\"/><Default Extension=\"xlsx\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\"/><Override PartName=\"/ppt/presentation.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml\"/><Override PartName=\"/ppt/notesMasters/notesMaster1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.presentationml.notesMaster+xml\"/><Override PartName=\"/ppt/slideMasters/slideMaster1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml\"/><Override PartName=\"/ppt/slides/slide1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.presentationml.slide+xml\"/><Override PartName=\"/ppt/presProps.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.presentationml.presProps+xml\"/><Override PartName=\"/ppt/viewProps.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.presentationml.viewProps+xml\"/><Override PartName=\"/ppt/theme/theme1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.theme+xml\"/><Override PartName=\"/ppt/tableStyles.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.presentationml.tableStyles+xml\"/><Override PartName=\"/ppt/slideLayouts/slideLayout1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml\"/><Override PartName=\"/ppt/notesSlides/notesSlide1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.presentationml.notesSlide+xml\"/> <Override PartName=\"/docProps/core.xml\" ContentType=\"application/vnd.openxmlformats-package.core-properties+xml\"/> <Override PartName=\"/docProps/app.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.extended-properties+xml\"/></Types>","_rels/.rels":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n\t\t<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties\" Target=\"docProps/app.xml\"/>\n\t\t<Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties\" Target=\"docProps/core.xml\"/>\n\t\t<Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"ppt/presentation.xml\"/>\n\t\t</Relationships>","docProps/app.xml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Properties xmlns=\"http://schemas.openxmlformats.org/officeDocument/2006/extended-properties\" xmlns:vt=\"http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes\">\n\t<TotalTime>0</TotalTime>\n\t<Words>0</Words>\n\t<Application>Microsoft Office PowerPoint</Application>\n\t<PresentationFormat>On-screen Show (16:9)</PresentationFormat>\n\t<Paragraphs>0</Paragraphs>\n\t<Slides>1</Slides>\n\t<Notes>1</Notes>\n\t<HiddenSlides>0</HiddenSlides>\n\t<MMClips>0</MMClips>\n\t<ScaleCrop>false</ScaleCrop>\n\t<HeadingPairs>\n\t\t<vt:vector size=\"6\" baseType=\"variant\">\n\t\t\t<vt:variant><vt:lpstr>Fonts Used</vt:lpstr></vt:variant>\n\t\t\t<vt:variant><vt:i4>2</vt:i4></vt:variant>\n\t\t\t<vt:variant><vt:lpstr>Theme</vt:lpstr></vt:variant>\n\t\t\t<vt:variant><vt:i4>1</vt:i4></vt:variant>\n\t\t\t<vt:variant><vt:lpstr>Slide Titles</vt:lpstr></vt:variant>\n\t\t\t<vt:variant><vt:i4>1</vt:i4></vt:variant>\n\t\t</vt:vector>\n\t</HeadingPairs>\n\t<TitlesOfParts>\n\t\t<vt:vector size=\"4\" baseType=\"lpstr\">\n\t\t\t<vt:lpstr>Arial</vt:lpstr>\n\t\t\t<vt:lpstr>Calibri</vt:lpstr>\n\t\t\t<vt:lpstr>Office Theme</vt:lpstr>\n\t\t\t<vt:lpstr>Slide 1</vt:lpstr>\n\t\t</vt:vector>\n\t</TitlesOfParts>\n\t<Company>PptxGenJS</Company>\n\t<LinksUpToDate>false</LinksUpToDate>\n\t<SharedDoc>false</SharedDoc>\n\t<HyperlinksChanged>false</HyperlinksChanged>\n\t<AppVersion>16.0000</AppVersion>\n\t</Properties>","docProps/core.xml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n\t<cp:coreProperties xmlns:cp=\"http://schemas.openxmlformats.org/package/2006/metadata/core-properties\" xmlns:dc=\"http://purl.org/dc/elements/1.1/\" xmlns:dcterms=\"http://purl.org/dc/terms/\" xmlns:dcmitype=\"http://purl.org/dc/dcmitype/\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\">\n\t\t<dc:title>PptxGenJS Presentation</dc:title>\n\t\t<dc:subject>PptxGenJS Presentation</dc:subject>\n\t\t<dc:creator>PptxGenJS</dc:creator>\n\t\t<cp:lastModifiedBy>PptxGenJS</cp:lastModifiedBy>\n\t\t<cp:revision>1</cp:revision>\n\t\t<dcterms:created xsi:type=\"dcterms:W3CDTF\">2000-01-01T00:00:00Z</dcterms:created>\n\t\t<dcterms:modified xsi:type=\"dcterms:W3CDTF\">2000-01-01T00:00:00Z</dcterms:modified>\n\t</cp:coreProperties>","ppt/_rels/presentation.xml.rels":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster\" Target=\"slideMasters/slideMaster1.xml\"/><Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide\" Target=\"slides/slide1.xml\"/><Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesMaster\" Target=\"notesMasters/notesMaster1.xml\"/><Relationship Id=\"rId4\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/presProps\" Target=\"presProps.xml\"/><Relationship Id=\"rId5\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/viewProps\" Target=\"viewProps.xml\"/><Relationship Id=\"rId6\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme\" Target=\"theme/theme1.xml\"/><Relationship Id=\"rId7\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/tableStyles\" Target=\"tableStyles.xml\"/></Relationships>","ppt/notesMasters/_rels/notesMaster1.xml.rels":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n\t\t<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme\" Target=\"../theme/theme1.xml\"/>\n\t\t</Relationships>","ppt/notesMasters/notesMaster1.xml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<p:notesMaster xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:bg><p:bgRef idx=\"1001\"><a:schemeClr val=\"bg1\"/></p:bgRef></p:bg><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"0\" cy=\"0\"/><a:chOff x=\"0\" y=\"0\"/><a:chExt cx=\"0\" cy=\"0\"/></a:xfrm></p:grpSpPr><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"Header Placeholder 1\"/><p:cNvSpPr><a:spLocks noGrp=\"1\"/></p:cNvSpPr><p:nvPr><p:ph type=\"hdr\" sz=\"quarter\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"2971800\" cy=\"458788\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom></p:spPr><p:txBody><a:bodyPr vert=\"horz\" lIns=\"91440\" tIns=\"45720\" rIns=\"91440\" bIns=\"45720\" rtlCol=\"0\"/><a:lstStyle><a:lvl1pPr algn=\"l\"><a:defRPr sz=\"1200\"/></a:lvl1pPr></a:lstStyle><a:p><a:endParaRPr lang=\"en-US\"/></a:p></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"3\" name=\"Date Placeholder 2\"/><p:cNvSpPr><a:spLocks noGrp=\"1\"/></p:cNvSpPr><p:nvPr><p:ph type=\"dt\" idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"3884613\" y=\"0\"/><a:ext cx=\"2971800\" cy=\"458788\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom></p:spPr><p:txBody><a:bodyPr vert=\"horz\" lIns=\"91440\" tIns=\"45720\" rIns=\"91440\" bIns=\"45720\" rtlCol=\"0\"/><a:lstStyle><a:lvl1pPr algn=\"r\"><a:defRPr sz=\"1200\"/></a:lvl1pPr></a:lstStyle><a:p><a:fld id=\"{5282F153-3F37-0F45-9E97-73ACFA13230C}\" type=\"datetimeFigureOut\"><a:rPr lang=\"en-US\"/><a:t>7/23/19</a:t></a:fld><a:endParaRPr lang=\"en-US\"/></a:p></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"4\" name=\"Slide Image Placeholder 3\"/><p:cNvSpPr><a:spLocks noGrp=\"1\" noRot=\"1\" noChangeAspect=\"1\"/></p:cNvSpPr><p:nvPr><p:ph type=\"sldImg\" idx=\"2\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"685800\" y=\"1143000\"/><a:ext cx=\"5486400\" cy=\"3086100\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:noFill/><a:ln w=\"12700\"><a:solidFill><a:prstClr val=\"black\"/></a:solidFill></a:ln></p:spPr><p:txBody><a:bodyPr vert=\"horz\" lIns=\"91440\" tIns=\"45720\" rIns=\"91440\" bIns=\"45720\" rtlCol=\"0\" anchor=\"ctr\"/><a:lstStyle/><a:p><a:endParaRPr lang=\"en-US\"/></a:p></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"5\" name=\"Notes Placeholder 4\"/><p:cNvSpPr><a:spLocks noGrp=\"1\"/></p:cNvSpPr><p:nvPr><p:ph type=\"body\" sz=\"quarter\" idx=\"3\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"685800\" y=\"4400550\"/><a:ext cx=\"5486400\" cy=\"3600450\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom></p:spPr><p:txBody><a:bodyPr vert=\"horz\" lIns=\"91440\" tIns=\"45720\" rIns=\"91440\" bIns=\"45720\" rtlCol=\"0\"/><a:lstStyle/><a:p><a:pPr lvl=\"0\"/><a:r><a:rPr lang=\"en-US\"/><a:t>Click to edit Master text styles</a:t></a:r></a:p><a:p><a:pPr lvl=\"1\"/><a:r><a:rPr lang=\"en-US\"/><a:t>Second level</a:t></a:r></a:p><a:p><a:pPr lvl=\"2\"/><a:r><a:rPr lang=\"en-US\"/><a:t>Third level</a:t></a:r></a:p><a:p><a:pPr lvl=\"3\"/><a:r><a:rPr lang=\"en-US\"/><a:t>Fourth level</a:t></a:r></a:p><a:p><a:pPr lvl=\"4\"/><a:r><a:rPr lang=\"en-US\"/><a:t>Fifth level</a:t></a:r></a:p></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"6\" name=\"Footer Placeholder 5\"/><p:cNvSpPr><a:spLocks noGrp=\"1\"/></p:cNvSpPr><p:nvPr><p:ph type=\"ftr\" sz=\"quarter\" idx=\"4\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"0\" y=\"8685213\"/><a:ext cx=\"2971800\" cy=\"458787\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom></p:spPr><p:txBody><a:bodyPr vert=\"horz\" lIns=\"91440\" tIns=\"45720\" rIns=\"91440\" bIns=\"45720\" rtlCol=\"0\" anchor=\"b\"/><a:lstStyle><a:lvl1pPr algn=\"l\"><a:defRPr sz=\"1200\"/></a:lvl1pPr></a:lstStyle><a:p><a:endParaRPr lang=\"en-US\"/></a:p></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"7\" name=\"Slide Number Placeholder 6\"/><p:cNvSpPr><a:spLocks noGrp=\"1\"/></p:cNvSpPr><p:nvPr><p:ph type=\"sldNum\" sz=\"quarter\" idx=\"5\"/></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"3884613\" y=\"8685213\"/><a:ext cx=\"2971800\" cy=\"458787\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom></p:spPr><p:txBody><a:bodyPr vert=\"horz\" lIns=\"91440\" tIns=\"45720\" rIns=\"91440\" bIns=\"45720\" rtlCol=\"0\" anchor=\"b\"/><a:lstStyle><a:lvl1pPr algn=\"r\"><a:defRPr sz=\"1200\"/></a:lvl1pPr></a:lstStyle><a:p><a:fld id=\"{CE5E9CC1-C706-0F49-92D6-E571CC5EEA8F}\" type=\"slidenum\"><a:rPr lang=\"en-US\"/><a:t>\u2039#\u203a</a:t></a:fld><a:endParaRPr lang=\"en-US\"/></a:p></p:txBody></p:sp></p:spTree><p:extLst><p:ext uri=\"{BB962C8B-B14F-4D97-AF65-F5344CB8AC3E}\"><p14:creationId xmlns:p14=\"http://schemas.microsoft.com/office/powerpoint/2010/main\" val=\"1024086991\"/></p:ext></p:extLst></p:cSld><p:clrMap bg1=\"lt1\" tx1=\"dk1\" bg2=\"lt2\" tx2=\"dk2\" accent1=\"accent1\" accent2=\"accent2\" accent3=\"accent3\" accent4=\"accent4\" accent5=\"accent5\" accent6=\"accent6\" hlink=\"hlink\" folHlink=\"folHlink\"/><p:notesStyle><a:lvl1pPr marL=\"0\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1200\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl1pPr><a:lvl2pPr marL=\"457200\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1200\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl2pPr><a:lvl3pPr marL=\"914400\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1200\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl3pPr><a:lvl4pPr marL=\"1371600\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1200\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl4pPr><a:lvl5pPr marL=\"1828800\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1200\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl5pPr><a:lvl6pPr marL=\"2286000\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1200\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl6pPr><a:lvl7pPr marL=\"2743200\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1200\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl7pPr><a:lvl8pPr marL=\"3200400\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1200\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl8pPr><a:lvl9pPr marL=\"3657600\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1200\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl9pPr></p:notesStyle></p:notesMaster>","ppt/notesSlides/_rels/notesSlide1.xml.rels":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n\t\t<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">\n\t\t\t<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesMaster\" Target=\"../notesMasters/notesMaster1.xml\"/>\n\t\t\t<Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide\" Target=\"../slides/slide1.xml\"/>\n\t\t</Relationships>","ppt/notesSlides/notesSlide1.xml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<p:notes xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"0\" cy=\"0\"/><a:chOff x=\"0\" y=\"0\"/><a:chExt cx=\"0\" cy=\"0\"/></a:xfrm></p:grpSpPr><p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"Slide Image Placeholder 1\"/><p:cNvSpPr><a:spLocks noGrp=\"1\" noRot=\"1\" noChangeAspect=\"1\"/></p:cNvSpPr><p:nvPr><p:ph type=\"sldImg\"/></p:nvPr></p:nvSpPr><p:spPr/></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"3\" name=\"Notes Placeholder 2\"/><p:cNvSpPr><a:spLocks noGrp=\"1\"/></p:cNvSpPr><p:nvPr><p:ph type=\"body\" idx=\"1\"/></p:nvPr></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang=\"en-US\" dirty=\"0\"/><a:t></a:t></a:r><a:endParaRPr lang=\"en-US\" dirty=\"0\"/></a:p></p:txBody></p:sp><p:sp><p:nvSpPr><p:cNvPr id=\"4\" name=\"Slide Number Placeholder 3\"/><p:cNvSpPr><a:spLocks noGrp=\"1\"/></p:cNvSpPr><p:nvPr><p:ph type=\"sldNum\" sz=\"quarter\" idx=\"10\"/></p:nvPr></p:nvSpPr><p:spPr/><p:txBody><a:bodyPr/><a:lstStyle/><a:p><a:fld id=\"{F7021451-1387-4CA6-816F-3879F97B5CBC}\" type=\"slidenum\"><a:rPr lang=\"en-US\"/><a:t>1</a:t></a:fld><a:endParaRPr lang=\"en-US\"/></a:p></p:txBody></p:sp></p:spTree><p:extLst><p:ext uri=\"{BB962C8B-B14F-4D97-AF65-F5344CB8AC3E}\"><p14:creationId xmlns:p14=\"http://schemas.microsoft.com/office/powerpoint/2010/main\" val=\"1024086991\"/></p:ext></p:extLst></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:notes>","ppt/presProps.xml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<p:presentationPr xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"/>","ppt/presentation.xml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<p:presentation xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"  saveSubsetFonts=\"1\" autoCompressPictures=\"0\"><p:sldMasterIdLst><p:sldMasterId id=\"2147483648\" r:id=\"rId1\"/></p:sldMasterIdLst><p:sldIdLst><p:sldId id=\"256\" r:id=\"rId2\"/></p:sldIdLst><p:notesMasterIdLst><p:notesMasterId r:id=\"rId3\"/></p:notesMasterIdLst><p:sldSz cx=\"9144000\" cy=\"5143500\"/><p:notesSz cx=\"5143500\" cy=\"9144000\"/><p:defaultTextStyle><a:lvl1pPr marL=\"0\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1800\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl1pPr><a:lvl2pPr marL=\"457200\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1800\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl2pPr><a:lvl3pPr marL=\"914400\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1800\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl3pPr><a:lvl4pPr marL=\"1371600\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1800\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl4pPr><a:lvl5pPr marL=\"1828800\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1800\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl5pPr><a:lvl6pPr marL=\"2286000\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1800\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl6pPr><a:lvl7pPr marL=\"2743200\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1800\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl7pPr><a:lvl8pPr marL=\"3200400\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1800\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl8pPr><a:lvl9pPr marL=\"3657600\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1800\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl9pPr></p:defaultTextStyle></p:presentation>","ppt/slideLayouts/_rels/slideLayout1.xml.rels":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster\" Target=\"../slideMasters/slideMaster1.xml\"/></Relationships>","ppt/slideLayouts/slideLayout1.xml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n\t\t<p:sldLayout xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\" preserve=\"1\">\n\t\t<p:cSld name=\"DEFAULT\"><p:bg><p:bgRef idx=\"1001\"><a:schemeClr val=\"bg1\"/></p:bgRef></p:bg><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"0\" cy=\"0\"/><a:chOff x=\"0\" y=\"0\"/><a:chExt cx=\"0\" cy=\"0\"/></a:xfrm></p:grpSpPr></p:spTree></p:cSld>\n\t\t<p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sldLayout>","ppt/slideMasters/_rels/slideMaster1.xml.rels":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout\" Target=\"../slideLayouts/slideLayout1.xml\"/><Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme\" Target=\"../theme/theme1.xml\"/></Relationships>","ppt/slideMasters/slideMaster1.xml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<p:sldMaster xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"0\" cy=\"0\"/><a:chOff x=\"0\" y=\"0\"/><a:chExt cx=\"0\" cy=\"0\"/></a:xfrm></p:grpSpPr></p:spTree></p:cSld><p:clrMap bg1=\"lt1\" tx1=\"dk1\" bg2=\"lt2\" tx2=\"dk2\" accent1=\"accent1\" accent2=\"accent2\" accent3=\"accent3\" accent4=\"accent4\" accent5=\"accent5\" accent6=\"accent6\" hlink=\"hlink\" folHlink=\"folHlink\"/><p:sldLayoutIdLst><p:sldLayoutId id=\"2147483649\" r:id=\"rId1\"/></p:sldLayoutIdLst><p:hf sldNum=\"0\" hdr=\"0\" ftr=\"0\" dt=\"0\"/><p:txStyles> <p:titleStyle>  <a:lvl1pPr algn=\"ctr\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:spcBef><a:spcPct val=\"0\"/></a:spcBef><a:buNone/><a:defRPr sz=\"4400\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mj-lt\"/><a:ea typeface=\"+mj-ea\"/><a:cs typeface=\"+mj-cs\"/></a:defRPr></a:lvl1pPr> </p:titleStyle> <p:bodyStyle>  <a:lvl1pPr marL=\"342900\" indent=\"-342900\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:spcBef><a:spcPct val=\"20000\"/></a:spcBef><a:buFont typeface=\"Arial\" pitchFamily=\"34\" charset=\"0\"/><a:buChar char=\"\u2022\"/><a:defRPr sz=\"3200\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl1pPr>  <a:lvl2pPr marL=\"742950\" indent=\"-285750\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:spcBef><a:spcPct val=\"20000\"/></a:spcBef><a:buFont typeface=\"Arial\" pitchFamily=\"34\" charset=\"0\"/><a:buChar char=\"\u2013\"/><a:defRPr sz=\"2800\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl2pPr>  <a:lvl3pPr marL=\"1143000\" indent=\"-228600\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:spcBef><a:spcPct val=\"20000\"/></a:spcBef><a:buFont typeface=\"Arial\" pitchFamily=\"34\" charset=\"0\"/><a:buChar char=\"\u2022\"/><a:defRPr sz=\"2400\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl3pPr>  <a:lvl4pPr marL=\"1600200\" indent=\"-228600\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:spcBef><a:spcPct val=\"20000\"/></a:spcBef><a:buFont typeface=\"Arial\" pitchFamily=\"34\" charset=\"0\"/><a:buChar char=\"\u2013\"/><a:defRPr sz=\"2000\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl4pPr>  <a:lvl5pPr marL=\"2057400\" indent=\"-228600\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:spcBef><a:spcPct val=\"20000\"/></a:spcBef><a:buFont typeface=\"Arial\" pitchFamily=\"34\" charset=\"0\"/><a:buChar char=\"\u00bb\"/><a:defRPr sz=\"2000\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl5pPr>  <a:lvl6pPr marL=\"2514600\" indent=\"-228600\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:spcBef><a:spcPct val=\"20000\"/></a:spcBef><a:buFont typeface=\"Arial\" pitchFamily=\"34\" charset=\"0\"/><a:buChar char=\"\u2022\"/><a:defRPr sz=\"2000\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl6pPr>  <a:lvl7pPr marL=\"2971800\" indent=\"-228600\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:spcBef><a:spcPct val=\"20000\"/></a:spcBef><a:buFont typeface=\"Arial\" pitchFamily=\"34\" charset=\"0\"/><a:buChar char=\"\u2022\"/><a:defRPr sz=\"2000\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl7pPr>  <a:lvl8pPr marL=\"3429000\" indent=\"-228600\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:spcBef><a:spcPct val=\"20000\"/></a:spcBef><a:buFont typeface=\"Arial\" pitchFamily=\"34\" charset=\"0\"/><a:buChar char=\"\u2022\"/><a:defRPr sz=\"2000\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl8pPr>  <a:lvl9pPr marL=\"3886200\" indent=\"-228600\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:spcBef><a:spcPct val=\"20000\"/></a:spcBef><a:buFont typeface=\"Arial\" pitchFamily=\"34\" charset=\"0\"/><a:buChar char=\"\u2022\"/><a:defRPr sz=\"2000\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl9pPr> </p:bodyStyle> <p:otherStyle>  <a:defPPr><a:defRPr lang=\"en-US\"/></a:defPPr>  <a:lvl1pPr marL=\"0\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1800\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl1pPr>  <a:lvl2pPr marL=\"457200\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1800\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl2pPr>  <a:lvl3pPr marL=\"914400\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1800\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl3pPr>  <a:lvl4pPr marL=\"1371600\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1800\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl4pPr>  <a:lvl5pPr marL=\"1828800\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1800\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl5pPr>  <a:lvl6pPr marL=\"2286000\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1800\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl6pPr>  <a:lvl7pPr marL=\"2743200\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1800\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl7pPr>  <a:lvl8pPr marL=\"3200400\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1800\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl8pPr>  <a:lvl9pPr marL=\"3657600\" algn=\"l\" defTabSz=\"914400\" rtl=\"0\" eaLnBrk=\"1\" latinLnBrk=\"0\" hangingPunct=\"1\"><a:defRPr sz=\"1800\" kern=\"1200\"><a:solidFill><a:schemeClr val=\"tx1\"/></a:solidFill><a:latin typeface=\"+mn-lt\"/><a:ea typeface=\"+mn-ea\"/><a:cs typeface=\"+mn-cs\"/></a:defRPr></a:lvl9pPr> </p:otherStyle></p:txStyles></p:sldMaster>","ppt/tableStyles.xml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<a:tblStyleLst xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" def=\"{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}\"/>","ppt/theme/theme1.xml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><a:theme xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" name=\"Office Theme\"><a:themeElements><a:clrScheme name=\"Office\"><a:dk1><a:sysClr val=\"windowText\" lastClr=\"000000\"/></a:dk1><a:lt1><a:sysClr val=\"window\" lastClr=\"FFFFFF\"/></a:lt1><a:dk2><a:srgbClr val=\"44546A\"/></a:dk2><a:lt2><a:srgbClr val=\"E7E6E6\"/></a:lt2><a:accent1><a:srgbClr val=\"4472C4\"/></a:accent1><a:accent2><a:srgbClr val=\"ED7D31\"/></a:accent2><a:accent3><a:srgbClr val=\"A5A5A5\"/></a:accent3><a:accent4><a:srgbClr val=\"FFC000\"/></a:accent4><a:accent5><a:srgbClr val=\"5B9BD5\"/></a:accent5><a:accent6><a:srgbClr val=\"70AD47\"/></a:accent6><a:hlink><a:srgbClr val=\"0563C1\"/></a:hlink><a:folHlink><a:srgbClr val=\"954F72\"/></a:folHlink></a:clrScheme><a:fontScheme name=\"Office\"><a:majorFont><a:latin typeface=\"Calibri Light\" panose=\"020F0302020204030204\"/><a:ea typeface=\"\"/><a:cs typeface=\"\"/><a:font script=\"Jpan\" typeface=\"\u6e38\u30b4\u30b7\u30c3\u30af Light\"/><a:font script=\"Hang\" typeface=\"\ub9d1\uc740 \uace0\ub515\"/><a:font script=\"Hans\" typeface=\"\u7b49\u7ebf Light\"/><a:font script=\"Hant\" typeface=\"\u65b0\u7d30\u660e\u9ad4\"/><a:font script=\"Arab\" typeface=\"Times New Roman\"/><a:font script=\"Hebr\" typeface=\"Times New Roman\"/><a:font script=\"Thai\" typeface=\"Angsana New\"/><a:font script=\"Ethi\" typeface=\"Nyala\"/><a:font script=\"Beng\" typeface=\"Vrinda\"/><a:font script=\"Gujr\" typeface=\"Shruti\"/><a:font script=\"Khmr\" typeface=\"MoolBoran\"/><a:font script=\"Knda\" typeface=\"Tunga\"/><a:font script=\"Guru\" typeface=\"Raavi\"/><a:font script=\"Cans\" typeface=\"Euphemia\"/><a:font script=\"Cher\" typeface=\"Plantagenet Cherokee\"/><a:font script=\"Yiii\" typeface=\"Microsoft Yi Baiti\"/><a:font script=\"Tibt\" typeface=\"Microsoft Himalaya\"/><a:font script=\"Thaa\" typeface=\"MV Boli\"/><a:font script=\"Deva\" typeface=\"Mangal\"/><a:font script=\"Telu\" typeface=\"Gautami\"/><a:font script=\"Taml\" typeface=\"Latha\"/><a:font script=\"Syrc\" typeface=\"Estrangelo Edessa\"/><a:font script=\"Orya\" typeface=\"Kalinga\"/><a:font script=\"Mlym\" typeface=\"Kartika\"/><a:font script=\"Laoo\" typeface=\"DokChampa\"/><a:font script=\"Sinh\" typeface=\"Iskoola Pota\"/><a:font script=\"Mong\" typeface=\"Mongolian Baiti\"/><a:font script=\"Viet\" typeface=\"Times New Roman\"/><a:font script=\"Uigh\" typeface=\"Microsoft Uighur\"/><a:font script=\"Geor\" typeface=\"Sylfaen\"/><a:font script=\"Armn\" typeface=\"Arial\"/><a:font script=\"Bugi\" typeface=\"Leelawadee UI\"/><a:font script=\"Bopo\" typeface=\"Microsoft JhengHei\"/><a:font script=\"Java\" typeface=\"Javanese Text\"/><a:font script=\"Lisu\" typeface=\"Segoe UI\"/><a:font script=\"Mymr\" typeface=\"Myanmar Text\"/><a:font script=\"Nkoo\" typeface=\"Ebrima\"/><a:font script=\"Olck\" typeface=\"Nirmala UI\"/><a:font script=\"Osma\" typeface=\"Ebrima\"/><a:font script=\"Phag\" typeface=\"Phagspa\"/><a:font script=\"Syrn\" typeface=\"Estrangelo Edessa\"/><a:font script=\"Syrj\" typeface=\"Estrangelo Edessa\"/><a:font script=\"Syre\" typeface=\"Estrangelo Edessa\"/><a:font script=\"Sora\" typeface=\"Nirmala UI\"/><a:font script=\"Tale\" typeface=\"Microsoft Tai Le\"/><a:font script=\"Talu\" typeface=\"Microsoft New Tai Lue\"/><a:font script=\"Tfng\" typeface=\"Ebrima\"/></a:majorFont><a:minorFont><a:latin typeface=\"Calibri\" panose=\"020F0502020204030204\"/><a:ea typeface=\"\"/><a:cs typeface=\"\"/><a:font script=\"Jpan\" typeface=\"\u6e38\u30b4\u30b7\u30c3\u30af\"/><a:font script=\"Hang\" typeface=\"\ub9d1\uc740 \uace0\ub515\"/><a:font script=\"Hans\" typeface=\"\u7b49\u7ebf\"/><a:font script=\"Hant\" typeface=\"\u65b0\u7d30\u660e\u9ad4\"/><a:font script=\"Arab\" typeface=\"Arial\"/><a:font script=\"Hebr\" typeface=\"Arial\"/><a:font script=\"Thai\" typeface=\"Cordia New\"/><a:font script=\"Ethi\" typeface=\"Nyala\"/><a:font script=\"Beng\" typeface=\"Vrinda\"/><a:font script=\"Gujr\" typeface=\"Shruti\"/><a:font script=\"Khmr\" typeface=\"DaunPenh\"/><a:font script=\"Knda\" typeface=\"Tunga\"/><a:font script=\"Guru\" typeface=\"Raavi\"/><a:font script=\"Cans\" typeface=\"Euphemia\"/><a:font script=\"Cher\" typeface=\"Plantagenet Cherokee\"/><a:font script=\"Yiii\" typeface=\"Microsoft Yi Baiti\"/><a:font script=\"Tibt\" typeface=\"Microsoft Himalaya\"/><a:font script=\"Thaa\" typeface=\"MV Boli\"/><a:font script=\"Deva\" typeface=\"Mangal\"/><a:font script=\"Telu\" typeface=\"Gautami\"/><a:font script=\"Taml\" typeface=\"Latha\"/><a:font script=\"Syrc\" typeface=\"Estrangelo Edessa\"/><a:font script=\"Orya\" typeface=\"Kalinga\"/><a:font script=\"Mlym\" typeface=\"Kartika\"/><a:font script=\"Laoo\" typeface=\"DokChampa\"/><a:font script=\"Sinh\" typeface=\"Iskoola Pota\"/><a:font script=\"Mong\" typeface=\"Mongolian Baiti\"/><a:font script=\"Viet\" typeface=\"Arial\"/><a:font script=\"Uigh\" typeface=\"Microsoft Uighur\"/><a:font script=\"Geor\" typeface=\"Sylfaen\"/><a:font script=\"Armn\" typeface=\"Arial\"/><a:font script=\"Bugi\" typeface=\"Leelawadee UI\"/><a:font script=\"Bopo\" typeface=\"Microsoft JhengHei\"/><a:font script=\"Java\" typeface=\"Javanese Text\"/><a:font script=\"Lisu\" typeface=\"Segoe UI\"/><a:font script=\"Mymr\" typeface=\"Myanmar Text\"/><a:font script=\"Nkoo\" typeface=\"Ebrima\"/><a:font script=\"Olck\" typeface=\"Nirmala UI\"/><a:font script=\"Osma\" typeface=\"Ebrima\"/><a:font script=\"Phag\" typeface=\"Phagspa\"/><a:font script=\"Syrn\" typeface=\"Estrangelo Edessa\"/><a:font script=\"Syrj\" typeface=\"Estrangelo Edessa\"/><a:font script=\"Syre\" typeface=\"Estrangelo Edessa\"/><a:font script=\"Sora\" typeface=\"Nirmala UI\"/><a:font script=\"Tale\" typeface=\"Microsoft Tai Le\"/><a:font script=\"Talu\" typeface=\"Microsoft New Tai Lue\"/><a:font script=\"Tfng\" typeface=\"Ebrima\"/></a:minorFont></a:fontScheme><a:fmtScheme name=\"Office\"><a:fillStyleLst><a:solidFill><a:schemeClr val=\"phClr\"/></a:solidFill><a:gradFill rotWithShape=\"1\"><a:gsLst><a:gs pos=\"0\"><a:schemeClr val=\"phClr\"><a:lumMod val=\"110000\"/><a:satMod val=\"105000\"/><a:tint val=\"67000\"/></a:schemeClr></a:gs><a:gs pos=\"50000\"><a:schemeClr val=\"phClr\"><a:lumMod val=\"105000\"/><a:satMod val=\"103000\"/><a:tint val=\"73000\"/></a:schemeClr></a:gs><a:gs pos=\"100000\"><a:schemeClr val=\"phClr\"><a:lumMod val=\"105000\"/><a:satMod val=\"109000\"/><a:tint val=\"81000\"/></a:schemeClr></a:gs></a:gsLst><a:lin ang=\"5400000\" scaled=\"0\"/></a:gradFill><a:gradFill rotWithShape=\"1\"><a:gsLst><a:gs pos=\"0\"><a:schemeClr val=\"phClr\"><a:satMod val=\"103000\"/><a:lumMod val=\"102000\"/><a:tint val=\"94000\"/></a:schemeClr></a:gs><a:gs pos=\"50000\"><a:schemeClr val=\"phClr\"><a:satMod val=\"110000\"/><a:lumMod val=\"100000\"/><a:shade val=\"100000\"/></a:schemeClr></a:gs><a:gs pos=\"100000\"><a:schemeClr val=\"phClr\"><a:lumMod val=\"99000\"/><a:satMod val=\"120000\"/><a:shade val=\"78000\"/></a:schemeClr></a:gs></a:gsLst><a:lin ang=\"5400000\" scaled=\"0\"/></a:gradFill></a:fillStyleLst><a:lnStyleLst><a:ln w=\"6350\" cap=\"flat\" cmpd=\"sng\" algn=\"ctr\"><a:solidFill><a:schemeClr val=\"phClr\"/></a:solidFill><a:prstDash val=\"solid\"/><a:miter lim=\"800000\"/></a:ln><a:ln w=\"12700\" cap=\"flat\" cmpd=\"sng\" algn=\"ctr\"><a:solidFill><a:schemeClr val=\"phClr\"/></a:solidFill><a:prstDash val=\"solid\"/><a:miter lim=\"800000\"/></a:ln><a:ln w=\"19050\" cap=\"flat\" cmpd=\"sng\" algn=\"ctr\"><a:solidFill><a:schemeClr val=\"phClr\"/></a:solidFill><a:prstDash val=\"solid\"/><a:miter lim=\"800000\"/></a:ln></a:lnStyleLst><a:effectStyleLst><a:effectStyle><a:effectLst/></a:effectStyle><a:effectStyle><a:effectLst/></a:effectStyle><a:effectStyle><a:effectLst><a:outerShdw blurRad=\"57150\" dist=\"19050\" dir=\"5400000\" algn=\"ctr\" rotWithShape=\"0\"><a:srgbClr val=\"000000\"><a:alpha val=\"63000\"/></a:srgbClr></a:outerShdw></a:effectLst></a:effectStyle></a:effectStyleLst><a:bgFillStyleLst><a:solidFill><a:schemeClr val=\"phClr\"/></a:solidFill><a:solidFill><a:schemeClr val=\"phClr\"><a:tint val=\"95000\"/><a:satMod val=\"170000\"/></a:schemeClr></a:solidFill><a:gradFill rotWithShape=\"1\"><a:gsLst><a:gs pos=\"0\"><a:schemeClr val=\"phClr\"><a:tint val=\"93000\"/><a:satMod val=\"150000\"/><a:shade val=\"98000\"/><a:lumMod val=\"102000\"/></a:schemeClr></a:gs><a:gs pos=\"50000\"><a:schemeClr val=\"phClr\"><a:tint val=\"98000\"/><a:satMod val=\"130000\"/><a:shade val=\"90000\"/><a:lumMod val=\"103000\"/></a:schemeClr></a:gs><a:gs pos=\"100000\"><a:schemeClr val=\"phClr\"><a:shade val=\"63000\"/><a:satMod val=\"120000\"/></a:schemeClr></a:gs></a:gsLst><a:lin ang=\"5400000\" scaled=\"0\"/></a:gradFill></a:bgFillStyleLst></a:fmtScheme></a:themeElements><a:objectDefaults/><a:extraClrSchemeLst/><a:extLst><a:ext uri=\"{05A4C25C-085E-4340-85A3-A5531E510DB2}\"><thm15:themeFamily xmlns:thm15=\"http://schemas.microsoft.com/office/thememl/2012/main\" name=\"Office Theme\" id=\"{62F939B6-93AF-4DB8-9C6B-D6C7DFDC589F}\" vid=\"{4A3C46E8-61CC-4603-A589-7422A47A8E4A}\"/></a:ext></a:extLst></a:theme>","ppt/viewProps.xml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<p:viewPr xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:normalViewPr horzBarState=\"maximized\"><p:restoredLeft sz=\"15611\"/><p:restoredTop sz=\"94610\"/></p:normalViewPr><p:slideViewPr><p:cSldViewPr snapToGrid=\"0\" snapToObjects=\"1\"><p:cViewPr varScale=\"1\"><p:scale><a:sx n=\"136\" d=\"100\"/><a:sy n=\"136\" d=\"100\"/></p:scale><p:origin x=\"216\" y=\"312\"/></p:cViewPr><p:guideLst/></p:cSldViewPr></p:slideViewPr><p:notesTextViewPr><p:cViewPr><p:scale><a:sx n=\"1\" d=\"1\"/><a:sy n=\"1\" d=\"1\"/></p:scale><p:origin x=\"0\" y=\"0\"/></p:cViewPr></p:notesTextViewPr><p:gridSpacing cx=\"76200\" cy=\"76200\"/></p:viewPr>"};
 /* </slide-shell> */
 
-/* The deck (check, JSON, template, page operations) is PySaiyanWeBoo's slide-deck.js; the native Open XML writer over the
-   PptxGenJS-generated package shell stays here. */
+/* The deck (check, JSON, template, page operations) and its native Open XML writer are PySaiyanWeBoo's slide-deck.js;
+   Ironmate supplies the PptxGenJS-generated package shell. */
 const IronmateSlides = (function (root) {
   "use strict";
   const C = StudioCore;
   const shell = IronmateSlideShell;
-  /* PSWB slide-deck.js @ be49b945db2c32c50a9242faaaa9dfd07948ec82. Generated by scripts/build_studio_css.py. */
-  /* web-ui slide-deck: several scenes of the image studio as one deck: checked, kept as JSON, pages added, copied, deleted and moved. slideDeck(core): core is js/imagestudio.js (or the same functions). pysaiyanweboo.py (slide_deck_*) is the reference; this must agree. */
-  function slideDeck(C) {
+  /* PSWB slide-deck.js @ 59dc44376a81ce27721dda37840e6564fa520674. Generated by scripts/build_studio_css.py. */
+  /* web-ui slide-deck: several scenes of the image studio as one deck (checked, kept as JSON, pages added, copied, deleted and moved) and written as a PPTX in the page: text, rectangles, ellipses, triangles and arrows stay editable, anything else is a picture. slideDeck(core, shell): core is js/imagestudio.js (or the same functions), shell the empty package the slides go into (part name to text). pysaiyanweboo.py (slide_deck_*) is the reference; this must agree. */
+  function slideDeck(C, shell) {
     const SCHEMA = "ironmate-slide-deck/1",
       LIMIT = 32 * 1024 * 1024;
     const encoder = new TextEncoder(),
@@ -1263,6 +1384,90 @@ const IronmateSlides = (function (root) {
         ],
       });
     }
+    function xml(value) {
+      for (const c of String(value)) {
+        const n = c.codePointAt(0);
+        if (
+          (n < 32 && ![9, 10, 13].includes(n)) ||
+          (n >= 0xd800 && n <= 0xdfff) ||
+          n === 0xfffe ||
+          n === 0xffff
+        )
+          throw Error("PPTXに保存できない制御文字が含まれています。");
+      }
+      return C.escape(value);
+    }
+    const A = "http://schemas.openxmlformats.org/drawingml/2006/main",
+      P = "http://schemas.openxmlformats.org/presentationml/2006/main",
+      R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
+      REL = "http://schemas.openxmlformats.org/package/2006/relationships";
+    const declaration = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+    function crc(bytes) {
+      let c = 0xffffffff;
+      for (const b of bytes) {
+        c ^= b;
+        for (let i = 0; i < 8; i++) c = (c >>> 1) ^ (c & 1 ? 0xedb88320 : 0);
+      }
+      return (c ^ 0xffffffff) >>> 0;
+    }
+    function zip(files, mediaChecksums) {
+      const entries = Object.entries(files).map(([name, data]) => ({
+        name: encoder.encode(name),
+        data: typeof data === "string" ? encoder.encode(data) : data,
+      }));
+      let size = 22;
+      for (const e of entries) {
+        if (!(e.data instanceof Uint8Array)) throw Error("ZIPデータが不正です。");
+        size += 76 + 2 * e.name.length + e.data.length;
+      }
+      if (size > LIMIT) throw Error("PPTXは32MiB以下にしてください。");
+      const out = new Uint8Array(size),
+        v = new DataView(out.buffer);
+      let offset = 0;
+      const central = [];
+      const word = (p, n) => v.setUint16(p, n, true),
+        dword = (p, n) => v.setUint32(p, n, true),
+        date = (20 << 9) | (1 << 5) | 1;
+      for (const e of entries) {
+        const start = offset,
+          sum = mediaChecksums?.get(e.data) ?? crc(e.data);
+        dword(offset, 0x04034b50);
+        word(offset + 4, 20);
+        word(offset + 6, 0x800);
+        word(offset + 8, 0);
+        word(offset + 12, date);
+        dword(offset + 14, sum);
+        dword(offset + 18, e.data.length);
+        dword(offset + 22, e.data.length);
+        word(offset + 26, e.name.length);
+        out.set(e.name, offset + 30);
+        out.set(e.data, offset + 30 + e.name.length);
+        offset += 30 + e.name.length + e.data.length;
+        central.push({ ...e, start, sum });
+      }
+      const cd = offset;
+      for (const e of central) {
+        dword(offset, 0x02014b50);
+        word(offset + 4, 20);
+        word(offset + 6, 20);
+        word(offset + 8, 0x800);
+        word(offset + 10, 0);
+        word(offset + 14, date);
+        dword(offset + 16, e.sum);
+        dword(offset + 20, e.data.length);
+        dword(offset + 24, e.data.length);
+        word(offset + 28, e.name.length);
+        dword(offset + 42, e.start);
+        out.set(e.name, offset + 46);
+        offset += 46 + e.name.length;
+      }
+      dword(offset, 0x06054b50);
+      word(offset + 8, entries.length);
+      word(offset + 10, entries.length);
+      dword(offset + 12, offset - cd);
+      dword(offset + 16, cd);
+      return out;
+    }
     function isNative(layer) {
       return (
         ["rect", "ellipse", "triangle"].includes(layer.kind) ||
@@ -1270,319 +1475,275 @@ const IronmateSlides = (function (root) {
         (layer.kind === "arrow" && layer.headStyle !== "beginner")
       );
     }
-    return { SCHEMA, LIMIT, validate, deckText, parse, template, edit, isNative };
+    async function exportPptx(input, imageForLayer) {
+      const deck = validate(input),
+        files = { ...shell };
+      for (const part of ["[Content_Types].xml", "ppt/presentation.xml", "ppt/_rels/presentation.xml.rels", "docProps/core.xml"])
+        if (typeof files[part] !== "string") throw Error("PPTXの空パッケージが不正です。");
+      const mediaByChecksum = new Map();
+      const mediaChecksums = new Map();
+      let imageNumber = 0,
+        totalNative = 0,
+        totalImages = 0;
+      const unit =
+          9144000 / Math.max(deck.slides[0].width, deck.slides[0].height),
+        emu = (n) => Math.round(n * unit);
+      const slideIds = [],
+        presRels = [];
+      for (let number = 1; number <= deck.slides.length; number++) {
+        const scene = deck.slides[number - 1],
+          parts = [],
+          rels = [
+            `<Relationship Id="rIdLayout" Type="${R}/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>`,
+          ];
+        let nextId = 2;
+        const nv = (id, name, tx = false) =>
+          `<p:nvSpPr><p:cNvPr id="${id}" name="${xml(name)}"/><p:cNvSpPr${tx ? ' txBox="1"' : ""}/><p:nvPr/></p:nvSpPr>`;
+        const transform = (l) =>
+          `<a:xfrm rot="${Math.round(l.rotation * 60000)}"><a:off x="${emu(l.x)}" y="${emu(l.y)}"/><a:ext cx="${emu(l.w)}" cy="${emu(l.h)}"/></a:xfrm>`;
+        const fill = (color, opacity) =>
+          color === "none"
+            ? "<a:noFill/>"
+            : `<a:solidFill><a:srgbClr val="${color.slice(1).toUpperCase()}"><a:alpha val="${Math.round(opacity * 100000)}"/></a:srgbClr></a:solidFill>`;
+        const line = (l) =>
+          `<a:ln w="${emu(l.strokeWidth)}">${l.strokeWidth ? fill(l.stroke, l.opacity) : "<a:noFill/>"}<a:prstDash val="solid"/></a:ln>`;
+        for (const layer of scene.layers) {
+          const l = clone(layer),
+            name = l.name || l.id;
+          if (l.kind === "text" && !l.mono) {
+            const size = Math.round((l.fontSize * unit) / 127),
+              font = l.font === "mono" ? "MS Gothic" : "Meiryo";
+            if (size < 100 || size > 400000)
+              throw Error(
+                "PPTXの文字サイズが1〜4000ptの範囲を超えています。キャンバスまたは文字サイズを調整してください。",
+              );
+            const properties = `<a:rPr lang="ja-JP" sz="${size}" b="${l.bold ? 1 : 0}"${l.italic ? ' i="1"' : ""}>${fill(l.fill, l.opacity)}<a:latin typeface="${font}"/><a:ea typeface="${font}"/></a:rPr>`;
+            // Explicit input newlines remain paragraphs; measured soft wraps are
+            // editable line breaks. Preserve the source text only in deck JSON.
+            const paragraphs = C.textLayout(l)
+              .map(
+                (lines) =>
+                  `<a:p><a:pPr><a:lnSpc><a:spcPts val="${Math.round(size * 1.3)}"/></a:lnSpc><a:spcBef><a:spcPts val="0"/></a:spcBef><a:spcAft><a:spcPts val="0"/></a:spcAft></a:pPr>${lines.map(t => `<a:r>${properties}<a:t xml:space="preserve">${xml(t)}</a:t></a:r>`).join(`<a:br>${properties}</a:br>`)}<a:endParaRPr lang="ja-JP" sz="${size}"/></a:p>`,
+              )
+              .join("");
+            parts.push(
+              `<p:sp>${nv(nextId++, name, true)}<p:spPr>${transform(l)}<a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></p:spPr><p:txBody><a:bodyPr wrap="${l.wrap ? "square" : "none"}" lIns="0" tIns="0" rIns="0" bIns="0" anchor="t" vertOverflow="overflow"><a:noAutofit/></a:bodyPr><a:lstStyle/>${paragraphs}</p:txBody></p:sp>`,
+            );
+            totalNative++;
+          } else if (["rect", "ellipse", "triangle"].includes(l.kind)) {
+            const kind = {
+              rect: "rect",
+              ellipse: "ellipse",
+              triangle: "triangle",
+            }[l.kind];
+            parts.push(
+              `<p:sp>${nv(nextId++, name)}<p:spPr>${transform(l)}<a:prstGeom prst="${kind}"><a:avLst/></a:prstGeom>${fill(l.fill, l.opacity)}${line(l)}</p:spPr></p:sp>`,
+            );
+            totalNative++;
+          } else if (l.kind === "arrow" && l.headStyle !== "beginner") {
+            const geometry = C.arrowGeometry(
+                l.w,
+                l.h,
+                l.headSize,
+                l.headPlacement,
+              ),
+              groupId = nextId++,
+              shaftId = nextId++,
+              headId = nextId++,
+              points = geometry.points;
+            const gTransform = `<a:xfrm rot="${Math.round(l.rotation * 60000)}"><a:off x="${emu(l.x)}" y="${emu(l.y)}"/><a:ext cx="${emu(l.w)}" cy="${emu(l.h)}"/><a:chOff x="0" y="0"/><a:chExt cx="${emu(l.w)}" cy="${emu(l.h)}"/></a:xfrm>`;
+            const local = { ...l, x: 0, y: 0, rotation: 0 },
+              shaft = { ...local, y: l.h / 2, h: 0 };
+            const custom = `<a:custGeom><a:avLst/><a:gdLst/><a:ahLst/><a:cxnLst/><a:rect l="0" t="0" r="r" b="b"/><a:pathLst><a:path w="${emu(l.w)}" h="${emu(l.h)}"><a:moveTo><a:pt x="${emu(points[0][0])}" y="${emu(points[0][1])}"/></a:moveTo>${points
+              .slice(1)
+              .map(
+                (p) =>
+                  `<a:lnTo><a:pt x="${emu(p[0])}" y="${emu(p[1])}"/></a:lnTo>`,
+              )
+              .join("")}<a:close/></a:path></a:pathLst></a:custGeom>`;
+            parts.push(
+              `<p:grpSp><p:nvGrpSpPr><p:cNvPr id="${groupId}" name="${xml(name)}"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr>${gTransform}</p:grpSpPr><p:sp>${nv(shaftId, "Arrow shaft")}<p:spPr>${transform(shaft)}<a:prstGeom prst="line"><a:avLst/></a:prstGeom><a:noFill/>${line(l)}</p:spPr></p:sp><p:sp>${nv(headId, "Arrow head")}<p:spPr>${transform(local)}${custom}${fill(l.fill, l.opacity)}<a:ln><a:noFill/></a:ln></p:spPr></p:sp></p:grpSp>`,
+            );
+            totalNative += 2;
+          } else {
+            if (typeof imageForLayer !== "function")
+              throw Error(
+                "画像化が必要なレイヤーがあります。ブラウザから書き出してください。",
+              );
+            const bytes = await imageForLayer(l, scene);
+            if (
+              !(bytes instanceof Uint8Array) ||
+              bytes.length < 8 ||
+              ![137, 80, 78, 71, 13, 10, 26, 10].every((b, i) => bytes[i] === b)
+            )
+              throw Error("埋め込み画像はPNGが必要です。");
+            const checksum = crc(bytes);
+            const candidates = mediaByChecksum.get(checksum) || [];
+            let media = candidates.find((name) => {
+              const saved = files["ppt/media/" + name];
+              return saved.length === bytes.length && saved.every((value, i) => value === bytes[i]);
+            });
+            if (!media) {
+              media = `image${++imageNumber}.png`;
+              const saved = new Uint8Array(bytes);
+              files["ppt/media/" + media] = saved;
+              mediaChecksums.set(saved, checksum);
+              candidates.push(media);
+              mediaByChecksum.set(checksum, candidates);
+            }
+            const rid = `rIdImage${totalImages + 1}`;
+            rels.push(
+              `<Relationship Id="${rid}" Type="${R}/image" Target="../media/${media}"/>`,
+            );
+            parts.push(
+              `<p:pic><p:nvPicPr><p:cNvPr id="${nextId++}" name="${xml(name)}"/><p:cNvPicPr><a:picLocks noChangeAspect="1"/></p:cNvPicPr><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed="${rid}"><a:alphaModFix amt="${Math.round(l.opacity * 100000)}"/></a:blip><a:stretch><a:fillRect/></a:stretch></p:blipFill><p:spPr>${transform(l)}<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:pic>`,
+            );
+            totalImages++;
+          }
+        }
+        files[`ppt/slides/slide${number}.xml`] =
+          declaration +
+          `<p:sld xmlns:a="${A}" xmlns:r="${R}" xmlns:p="${P}"><p:cSld name="Slide ${number}"><p:bg><p:bgPr>${scene.background === "none" ? "<a:noFill/>" : `<a:solidFill><a:srgbClr val="${scene.background.slice(1)}"/></a:solidFill>`}<a:effectLst/></p:bgPr></p:bg><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/><a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>${parts.join("")}</p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sld>`;
+        files[`ppt/slides/_rels/slide${number}.xml.rels`] =
+          declaration +
+          `<Relationships xmlns="${REL}">${rels.join("")}</Relationships>`;
+        slideIds.push(
+          `<p:sldId id="${255 + number}" r:id="rIdBrowserSlide${number}"/>`,
+        );
+        presRels.push(
+          `<Relationship Id="rIdBrowserSlide${number}" Type="${R}/slide" Target="slides/slide${number}.xml"/>`,
+        );
+      }
+      files["ppt/presentation.xml"] = files["ppt/presentation.xml"]
+        .replace(
+          /<p:sldIdLst>[\s\S]*?<\/p:sldIdLst>/,
+          `<p:sldIdLst>${slideIds.join("")}</p:sldIdLst>`,
+        )
+        .replace(
+          /<p:sldSz[^>]*\/>/,
+          `<p:sldSz cx="${emu(deck.slides[0].width)}" cy="${emu(deck.slides[0].height)}"/>`,
+        );
+      files["ppt/_rels/presentation.xml.rels"] = files[
+        "ppt/_rels/presentation.xml.rels"
+      ]
+        .replace(/<Relationship\b[^>]*Type="[^"]*\/slide"[^>]*\/>/g, "")
+        .replace("</Relationships>", presRels.join("") + "</Relationships>");
+      files["[Content_Types].xml"] = files["[Content_Types].xml"]
+        .replace(/<Override\b[^>]*PartName="\/ppt\/slides\/[^"]*"[^>]*\/>/g, "")
+        .replace(
+          "</Types>",
+          deck.slides
+            .map(
+              (_, i) =>
+                `<Override PartName="/ppt/slides/slide${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>`,
+            )
+            .join("") + "</Types>",
+        );
+      const title = xml(deck.title); // text, not a replacement pattern: "$&" stays as written
+      files["docProps/core.xml"] = files["docProps/core.xml"].replace(
+        /<dc:title>[\s\S]*?<\/dc:title>/,
+        () => `<dc:title>${title}</dc:title>`,
+      );
+      files["docProps/app.xml"] =
+        declaration +
+        `<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>Ironmate</Application><Slides>${deck.slides.length}</Slides><Notes>0</Notes><HiddenSlides>0</HiddenSlides></Properties>`;
+      return {
+        data: zip(files, mediaChecksums),
+        native: totalNative,
+        images: totalImages,
+        slides: deck.slides.length,
+      };
+    }
+    const bytesFromData = (uri) =>
+      Uint8Array.from(atob(uri.split(",")[1]), (c) => c.charCodeAt(0));
+    async function layerPng(layer, imageSource = (x) => x.src) {
+      // Browser only: PNG bytes for a layer PPTX keeps as a picture (images, clocks, heatmaps, 🔰 arrows).
+      if (layer.kind === "image" && !layer.mono)
+        return bytesFromData(imageSource(layer));
+      const l = { ...layer, x: 0, y: 0, rotation: 0, opacity: 1 },
+        scale = Math.min(2, Math.sqrt(4194304 / (l.w * l.h))),
+        canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(l.w * scale));
+      canvas.height = Math.max(1, Math.round(l.h * scale));
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${canvas.width}" height="${canvas.height}" viewBox="0 0 ${l.w} ${l.h}">${C.layerSVG(l, imageSource)}</svg>`;
+      const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" })),
+        image = new Image();
+      try {
+        image.src = url;
+        await image.decode();
+        canvas.getContext("2d").drawImage(image, 0, 0);
+        const blob = await new Promise((resolve) =>
+          canvas.toBlob(resolve, "image/png"),
+        );
+        if (!blob) throw Error("画像レイヤーを出力できませんでした。");
+        return new Uint8Array(await blob.arrayBuffer());
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    }
+    return { SCHEMA, LIMIT, validate, deckText, parse, template, edit, zip, isNative, exportPptx, layerPng };
   }
   /* End PSWB slide-deck.js */
-  const { SCHEMA, LIMIT, validate, deckText, parse, template, edit, isNative } = slideDeck(C);
-  const encoder = new TextEncoder(),
-    clone = C.clone;
-  function xml(value) {
-    for (const c of String(value)) {
-      const n = c.codePointAt(0);
-      if (
-        (n < 32 && ![9, 10, 13].includes(n)) ||
-        (n >= 0xd800 && n <= 0xdfff) ||
-        n === 0xfffe ||
-        n === 0xffff
-      )
-        throw Error("PPTXに保存できない制御文字が含まれています。");
-    }
-    return C.escape(value);
-  }
-  const A = "http://schemas.openxmlformats.org/drawingml/2006/main",
-    P = "http://schemas.openxmlformats.org/presentationml/2006/main",
-    R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
-    REL = "http://schemas.openxmlformats.org/package/2006/relationships";
-  const declaration = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
-  function crc(bytes) {
-    let c = 0xffffffff;
-    for (const b of bytes) {
-      c ^= b;
-      for (let i = 0; i < 8; i++) c = (c >>> 1) ^ (c & 1 ? 0xedb88320 : 0);
-    }
-    return (c ^ 0xffffffff) >>> 0;
-  }
-  function zip(files, mediaChecksums) {
-    const entries = Object.entries(files).map(([name, data]) => ({
-      name: encoder.encode(name),
-      data: typeof data === "string" ? encoder.encode(data) : data,
-    }));
-    let size = 22;
-    for (const e of entries) {
-      if (!(e.data instanceof Uint8Array)) throw Error("ZIPデータが不正です。");
-      size += 76 + 2 * e.name.length + e.data.length;
-    }
-    if (size > LIMIT) throw Error("PPTXは32MiB以下にしてください。");
-    const out = new Uint8Array(size),
-      v = new DataView(out.buffer);
-    let offset = 0;
-    const central = [];
-    const word = (p, n) => v.setUint16(p, n, true),
-      dword = (p, n) => v.setUint32(p, n, true),
-      date = (20 << 9) | (1 << 5) | 1;
-    for (const e of entries) {
-      const start = offset,
-        sum = mediaChecksums.get(e.data) ?? crc(e.data);
-      dword(offset, 0x04034b50);
-      word(offset + 4, 20);
-      word(offset + 6, 0x800);
-      word(offset + 8, 0);
-      word(offset + 12, date);
-      dword(offset + 14, sum);
-      dword(offset + 18, e.data.length);
-      dword(offset + 22, e.data.length);
-      word(offset + 26, e.name.length);
-      out.set(e.name, offset + 30);
-      out.set(e.data, offset + 30 + e.name.length);
-      offset += 30 + e.name.length + e.data.length;
-      central.push({ ...e, start, sum });
-    }
-    const cd = offset;
-    for (const e of central) {
-      dword(offset, 0x02014b50);
-      word(offset + 4, 20);
-      word(offset + 6, 20);
-      word(offset + 8, 0x800);
-      word(offset + 10, 0);
-      word(offset + 14, date);
-      dword(offset + 16, e.sum);
-      dword(offset + 20, e.data.length);
-      dword(offset + 24, e.data.length);
-      word(offset + 28, e.name.length);
-      dword(offset + 42, e.start);
-      out.set(e.name, offset + 46);
-      offset += 46 + e.name.length;
-    }
-    dword(offset, 0x06054b50);
-    word(offset + 8, entries.length);
-    word(offset + 10, entries.length);
-    dword(offset + 12, offset - cd);
-    dword(offset + 16, cd);
-    return out;
-  }
-  async function exportPptx(input, imageForLayer) {
-    const deck = validate(input),
-      files = { ...shell };
-    const mediaByChecksum = new Map();
-    const mediaChecksums = new Map();
-    let imageNumber = 0,
-      totalNative = 0,
-      totalImages = 0;
-    const unit =
-        9144000 / Math.max(deck.slides[0].width, deck.slides[0].height),
-      emu = (n) => Math.round(n * unit);
-    const slideIds = [],
-      presRels = [];
-    for (let number = 1; number <= deck.slides.length; number++) {
-      const scene = deck.slides[number - 1],
-        parts = [],
-        rels = [
-          `<Relationship Id="rIdLayout" Type="${R}/slideLayout" Target="../slideLayouts/slideLayout1.xml"/>`,
-        ];
-      let nextId = 2;
-      const nv = (id, name, tx = false) =>
-        `<p:nvSpPr><p:cNvPr id="${id}" name="${xml(name)}"/><p:cNvSpPr${tx ? ' txBox="1"' : ""}/><p:nvPr/></p:nvSpPr>`;
-      const transform = (l) =>
-        `<a:xfrm rot="${Math.round(l.rotation * 60000)}"><a:off x="${emu(l.x)}" y="${emu(l.y)}"/><a:ext cx="${emu(l.w)}" cy="${emu(l.h)}"/></a:xfrm>`;
-      const fill = (color, opacity) =>
-        color === "none"
-          ? "<a:noFill/>"
-          : `<a:solidFill><a:srgbClr val="${color.slice(1).toUpperCase()}"><a:alpha val="${Math.round(opacity * 100000)}"/></a:srgbClr></a:solidFill>`;
-      const line = (l) =>
-        `<a:ln w="${emu(l.strokeWidth)}">${l.strokeWidth ? fill(l.stroke, l.opacity) : "<a:noFill/>"}<a:prstDash val="solid"/></a:ln>`;
-      for (const layer of scene.layers) {
-        const l = clone(layer),
-          name = l.name || l.id;
-        if (l.kind === "text" && !l.mono) {
-          const size = Math.round((l.fontSize * unit) / 127),
-            font = l.font === "mono" ? "MS Gothic" : "Meiryo";
-          if (size < 100 || size > 400000)
-            throw Error(
-              "PPTXの文字サイズが1〜4000ptの範囲を超えています。キャンバスまたは文字サイズを調整してください。",
-            );
-          const properties = `<a:rPr lang="ja-JP" sz="${size}" b="${l.bold ? 1 : 0}"${l.italic ? ' i="1"' : ""}>${fill(l.fill, l.opacity)}<a:latin typeface="${font}"/><a:ea typeface="${font}"/></a:rPr>`;
-          // Explicit input newlines remain paragraphs; measured soft wraps are
-          // editable line breaks. Preserve the source text only in deck JSON.
-          const paragraphs = C.textLayout(l)
-            .map(
-              (lines) =>
-                `<a:p><a:pPr><a:lnSpc><a:spcPts val="${Math.round(size * 1.3)}"/></a:lnSpc><a:spcBef><a:spcPts val="0"/></a:spcBef><a:spcAft><a:spcPts val="0"/></a:spcAft></a:pPr>${lines.map(t => `<a:r>${properties}<a:t xml:space="preserve">${xml(t)}</a:t></a:r>`).join(`<a:br>${properties}</a:br>`)}<a:endParaRPr lang="ja-JP" sz="${size}"/></a:p>`,
-            )
-            .join("");
-          parts.push(
-            `<p:sp>${nv(nextId++, name, true)}<p:spPr>${transform(l)}<a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></p:spPr><p:txBody><a:bodyPr wrap="${l.wrap ? "square" : "none"}" lIns="0" tIns="0" rIns="0" bIns="0" anchor="t" vertOverflow="overflow"><a:noAutofit/></a:bodyPr><a:lstStyle/>${paragraphs}</p:txBody></p:sp>`,
-          );
-          totalNative++;
-        } else if (["rect", "ellipse", "triangle"].includes(l.kind)) {
-          const kind = {
-            rect: "rect",
-            ellipse: "ellipse",
-            triangle: "triangle",
-          }[l.kind];
-          parts.push(
-            `<p:sp>${nv(nextId++, name)}<p:spPr>${transform(l)}<a:prstGeom prst="${kind}"><a:avLst/></a:prstGeom>${fill(l.fill, l.opacity)}${line(l)}</p:spPr></p:sp>`,
-          );
-          totalNative++;
-        } else if (l.kind === "arrow" && l.headStyle !== "beginner") {
-          const geometry = C.arrowGeometry(
-              l.w,
-              l.h,
-              l.headSize,
-              l.headPlacement,
-            ),
-            groupId = nextId++,
-            shaftId = nextId++,
-            headId = nextId++,
-            points = geometry.points;
-          const gTransform = `<a:xfrm rot="${Math.round(l.rotation * 60000)}"><a:off x="${emu(l.x)}" y="${emu(l.y)}"/><a:ext cx="${emu(l.w)}" cy="${emu(l.h)}"/><a:chOff x="0" y="0"/><a:chExt cx="${emu(l.w)}" cy="${emu(l.h)}"/></a:xfrm>`;
-          const local = { ...l, x: 0, y: 0, rotation: 0 },
-            shaft = { ...local, y: l.h / 2, h: 0 };
-          const custom = `<a:custGeom><a:avLst/><a:gdLst/><a:ahLst/><a:cxnLst/><a:rect l="0" t="0" r="r" b="b"/><a:pathLst><a:path w="${emu(l.w)}" h="${emu(l.h)}"><a:moveTo><a:pt x="${emu(points[0][0])}" y="${emu(points[0][1])}"/></a:moveTo>${points
-            .slice(1)
-            .map(
-              (p) =>
-                `<a:lnTo><a:pt x="${emu(p[0])}" y="${emu(p[1])}"/></a:lnTo>`,
-            )
-            .join("")}<a:close/></a:path></a:pathLst></a:custGeom>`;
-          parts.push(
-            `<p:grpSp><p:nvGrpSpPr><p:cNvPr id="${groupId}" name="${xml(name)}"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr>${gTransform}</p:grpSpPr><p:sp>${nv(shaftId, "Arrow shaft")}<p:spPr>${transform(shaft)}<a:prstGeom prst="line"><a:avLst/></a:prstGeom><a:noFill/>${line(l)}</p:spPr></p:sp><p:sp>${nv(headId, "Arrow head")}<p:spPr>${transform(local)}${custom}${fill(l.fill, l.opacity)}<a:ln><a:noFill/></a:ln></p:spPr></p:sp></p:grpSp>`,
-          );
-          totalNative += 2;
-        } else {
-          if (typeof imageForLayer !== "function")
-            throw Error(
-              "画像化が必要なレイヤーがあります。ブラウザから書き出してください。",
-            );
-          const bytes = await imageForLayer(l, scene);
-          if (
-            !(bytes instanceof Uint8Array) ||
-            bytes.length < 8 ||
-            ![137, 80, 78, 71, 13, 10, 26, 10].every((b, i) => bytes[i] === b)
-          )
-            throw Error("埋め込み画像はPNGが必要です。");
-          const checksum = crc(bytes);
-          const candidates = mediaByChecksum.get(checksum) || [];
-          let media = candidates.find((name) => {
-            const saved = files["ppt/media/" + name];
-            return saved.length === bytes.length && saved.every((value, i) => value === bytes[i]);
-          });
-          if (!media) {
-            media = `image${++imageNumber}.png`;
-            const saved = new Uint8Array(bytes);
-            files["ppt/media/" + media] = saved;
-            mediaChecksums.set(saved, checksum);
-            candidates.push(media);
-            mediaByChecksum.set(checksum, candidates);
-          }
-          const rid = `rIdImage${totalImages + 1}`;
-          rels.push(
-            `<Relationship Id="${rid}" Type="${R}/image" Target="../media/${media}"/>`,
-          );
-          parts.push(
-            `<p:pic><p:nvPicPr><p:cNvPr id="${nextId++}" name="${xml(name)}"/><p:cNvPicPr><a:picLocks noChangeAspect="1"/></p:cNvPicPr><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed="${rid}"><a:alphaModFix amt="${Math.round(l.opacity * 100000)}"/></a:blip><a:stretch><a:fillRect/></a:stretch></p:blipFill><p:spPr>${transform(l)}<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:pic>`,
-          );
-          totalImages++;
-        }
-      }
-      files[`ppt/slides/slide${number}.xml`] =
-        declaration +
-        `<p:sld xmlns:a="${A}" xmlns:r="${R}" xmlns:p="${P}"><p:cSld name="Slide ${number}"><p:bg><p:bgPr>${scene.background === "none" ? "<a:noFill/>" : `<a:solidFill><a:srgbClr val="${scene.background.slice(1)}"/></a:solidFill>`}<a:effectLst/></p:bgPr></p:bg><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/><a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>${parts.join("")}</p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sld>`;
-      files[`ppt/slides/_rels/slide${number}.xml.rels`] =
-        declaration +
-        `<Relationships xmlns="${REL}">${rels.join("")}</Relationships>`;
-      slideIds.push(
-        `<p:sldId id="${255 + number}" r:id="rIdBrowserSlide${number}"/>`,
-      );
-      presRels.push(
-        `<Relationship Id="rIdBrowserSlide${number}" Type="${R}/slide" Target="slides/slide${number}.xml"/>`,
-      );
-    }
-    files["ppt/presentation.xml"] = files["ppt/presentation.xml"]
-      .replace(
-        /<p:sldIdLst>[\s\S]*?<\/p:sldIdLst>/,
-        `<p:sldIdLst>${slideIds.join("")}</p:sldIdLst>`,
-      )
-      .replace(
-        /<p:sldSz[^>]*\/>/,
-        `<p:sldSz cx="${emu(deck.slides[0].width)}" cy="${emu(deck.slides[0].height)}"/>`,
-      );
-    files["ppt/_rels/presentation.xml.rels"] = files[
-      "ppt/_rels/presentation.xml.rels"
-    ]
-      .replace(/<Relationship\b[^>]*Type="[^"]*\/slide"[^>]*\/>/g, "")
-      .replace("</Relationships>", presRels.join("") + "</Relationships>");
-    files["[Content_Types].xml"] = files["[Content_Types].xml"]
-      .replace(/<Override\b[^>]*PartName="\/ppt\/slides\/[^"]*"[^>]*\/>/g, "")
-      .replace(
-        "</Types>",
-        deck.slides
-          .map(
-            (_, i) =>
-              `<Override PartName="/ppt/slides/slide${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>`,
-          )
-          .join("") + "</Types>",
-      );
-    files["docProps/core.xml"] = files["docProps/core.xml"].replace(
-      /<dc:title>[\s\S]*?<\/dc:title>/,
-      `<dc:title>${xml(deck.title)}</dc:title>`,
-    );
-    files["docProps/app.xml"] =
-      declaration +
-      `<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>Ironmate</Application><Slides>${deck.slides.length}</Slides><Notes>0</Notes><HiddenSlides>0</HiddenSlides></Properties>`;
-    return {
-      data: zip(files, mediaChecksums),
-      native: totalNative,
-      images: totalImages,
-      slides: deck.slides.length,
-    };
-  }
-  const bytesFromData = (uri) =>
-    Uint8Array.from(atob(uri.split(",")[1]), (c) => c.charCodeAt(0));
-  async function layerPng(layer, imageSource = (x) => x.src) {
-    // Browser only: PNG bytes for a layer PPTX keeps as a picture (images, clocks, heatmaps, 🔰 arrows).
-    if (layer.kind === "image" && !layer.mono)
-      return bytesFromData(imageSource(layer));
-    const l = { ...layer, x: 0, y: 0, rotation: 0, opacity: 1 },
-      scale = Math.min(2, Math.sqrt(4194304 / (l.w * l.h))),
-      canvas = document.createElement("canvas");
-    canvas.width = Math.max(1, Math.round(l.w * scale));
-    canvas.height = Math.max(1, Math.round(l.h * scale));
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${canvas.width}" height="${canvas.height}" viewBox="0 0 ${l.w} ${l.h}">${C.layerSVG(l, imageSource)}</svg>`;
-    const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" })),
-      image = new Image();
-    try {
-      image.src = url;
-      await image.decode();
-      canvas.getContext("2d").drawImage(image, 0, 0);
-      const blob = await new Promise((resolve) =>
-        canvas.toBlob(resolve, "image/png"),
-      );
-      if (!blob) throw Error("画像レイヤーを出力できませんでした。");
-      return new Uint8Array(await blob.arrayBuffer());
-    } finally {
-      URL.revokeObjectURL(url);
-    }
-  }
-  const api = {
-    SCHEMA,
-    LIMIT,
-    validate,
-    deckText,
-    parse,
-    template,
-    edit,
-    zip,
-    isNative,
-    exportPptx,
-    layerPng,
-  };
+  const api = slideDeck(C, shell); // 📽️ the writer too: the same bytes this file used to write itself
   return api;
 })(globalThis);
+
+const IronmateComposition = (() => {
+  function arrangeSong(partsText, orderText) {
+    const parts = new Map();
+    for (const line of partsText.split("\n").filter(line => line.trim())) {
+      const match = /^\s*([^\s=]+)\s*=\s*([^=]+)$/.exec(line);
+      if (!match || !match[2].trim()) throw Error("パート名 = コード進行 の形で入力してください。");
+      if (parts.has(match[1])) throw Error("同じパート名があります: " + match[1]);
+      parts.set(match[1], match[2].trim().split(/\s+/));
+    }
+    const arrangement = [];
+    let chordCount = 0;
+    for (const name of orderText.trim().split(/\s+/)) {
+      if (!parts.has(name)) throw Error("曲順のパートを確認してください: " + name);
+      const chords = parts.get(name);
+      chordCount += chords.length;
+      if (chordCount > 32) throw Error("曲全体を32コード以内にしてください。");
+      arrangement.push({name, chords});
+    }
+    return arrangement;
+  }
+  function planSong(parts, key, bpm) {
+    const tonic = {C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11}[key];
+    if (!Number.isInteger(tonic) || !Number.isInteger(bpm) || bpm < 30 || bpm > 300)
+      throw Error("キーまたはBPMを確認してください。");
+    const scale = [0, 2, 4, 5, 7, 9, 11];
+    const degrees = ["I", "II", "III", "IV", "V", "VI", "VII"];
+    const intervalSeconds = 30 / bpm;
+    const notes = [];
+    const starts = [];
+    for (const {chords} of parts) {
+      starts.push(notes.length * intervalSeconds);
+      for (const chord of chords) {
+        const match = /^([IViv]+)(dim|°)?(7)?$/.exec(chord);
+        const roman = match?.[1];
+        const degree = degrees.indexOf(roman?.toUpperCase());
+        if (degree < 0 || (roman !== roman.toUpperCase() && roman !== roman.toLowerCase()))
+          throw Error("未対応のコード: " + chord);
+        const diminished = Boolean(match[2]);
+        const intervals = [0, diminished || roman === roman.toLowerCase() ? 3 : 4, diminished ? 6 : 7];
+        if (match[3]) intervals.push(diminished ? 9 : 10);
+        for (const semitones of intervals) {
+          const midi = 60 + tonic + scale[degree] + semitones;
+          const hz = 440 * 2 ** ((midi - 69) / 12);
+          notes.push({hz, start: notes.length * intervalSeconds, duration: intervalSeconds * 0.85});
+        }
+      }
+    }
+    return {notes, starts};
+  }
+  return {arrangeSong, planSong};
+})();
 
 /* Node: require("./studio/studio.js") is the composition model, with .tools, .slides and .slideShell beside it.
    Browser: the same objects as globals, then each page's UI below runs only on the page that names it in data-page. */
 if (typeof module === "object" && module.exports)
-  module.exports = Object.assign({}, StudioCore, {tools: IronmateTools, slides: IronmateSlides, slideShell: IronmateSlideShell});
+  module.exports = Object.assign({}, StudioCore, {tools: IronmateTools, slides: IronmateSlides, slideShell: IronmateSlideShell, composition: IronmateComposition});
 else Object.assign(globalThis, {StudioCore, IronmateTools, IronmateSlides, IronmateSlideShell});
 
 /* Image Studio UI (data-page~="studio"): browser only. */
@@ -1591,13 +1752,7 @@ if (typeof document !== "undefined" && document.body && (document.body.dataset.p
 "use strict";
 const C = window.StudioCore,
   $ = (id) => document.getElementById(id),
-  copy = (value) => {
-    const doc = C.clone(value);
-    if (document.body.dataset.mode === "slides")
-      for (const l of doc.layers || [])
-        if (l.kind === "text" && !l.mono && l.wrap === undefined) l.wrap = true;
-    return doc;
-  };
+  copy = (value) => C.clone(value);
 let serial = 0,
   tool = "select",
   shape = "rect", // 図形(▭ ◯ △ →): the candidate the 図形 tool places
@@ -1840,6 +1995,7 @@ function candidates() {
   const button = document.querySelector(`[data-tool="${tool}"]`),
     list = button?.dataset.candidates;
   $("candidates").classList.toggle("kaomojis", tool === "kaomoji");
+  $("keyboard-input").hidden = !["emoji", "kaomoji"].includes(tool);
   $("candidates").replaceChildren(
     ...(list ? list.split(" ") : []).map((value) => {
       const b = document.createElement("button");
@@ -1891,8 +2047,8 @@ function textLayer(text, x, y) {
     fill: $("fill").value,
     fontSize: size,
     font: $("font-family").value,
-    mono: document.body.dataset.mode !== "slides",
-    wrap: document.body.dataset.mode === "slides",
+    mono: true,
+    wrap: false,
   };
 }
 function place(x, y) {
@@ -1914,8 +2070,7 @@ function place(x, y) {
       strokeWidth: 4,
       headSize: 28,
       headPlacement: $("arrow-placement").value,
-      // a slide's arrow has the triangular head a PPTX keeps editable; 🔰 is a choice in ✏️ afterwards
-      headStyle: document.body.dataset.mode === "slides" ? "triangle" : $("arrow-style").value,
+      headStyle: $("arrow-style").value,
     });
   else if (kind === "clock") {
     const [hour, minute] = $("clock-time").value.split(":").map(Number);
@@ -2010,8 +2165,18 @@ $("board").addEventListener("pointercancel", () => {
     render().catch(error);
   }
 });
+$("keyboard-focus").onclick = () => $(tool + "-text").focus();
 for (const button of document.querySelectorAll("[data-tool]"))
   button.onclick = () => setTool(button.dataset.tool);
+// 🧰 A host's header (PySaiyanWeBoo chrome rows, declared in #ui-chrome-rows by image_studio.host_rows) sends a key;
+// each presses this page's own control, so a save from the header and one from the page are the same save.
+const HOST_ACTIONS = { png: "png", svg: "svg", json: "save", workspace: "save-workspace", base64: "base64", shelf: "shelf-button",
+  "open-json": "open", "open-workspace": "open-workspace" };
+document.addEventListener("ui-chrome-action", (e) => {
+  const [key, scale] = String(e.detail?.key).split(/-(?=\d+$)/);
+  if (key === "png" || key === "svg") $("export-scale").value = (key === "png" && scale) || "1"; // a size is a PNG row's own
+  document.getElementById(HOST_ACTIONS[key])?.click();
+});
 for (const [id, name] of [["text", "text"], ["stamp-text", "stamp"], ["emoji-text", "emoji"], ["kaomoji-text", "kaomoji"]])
   $(id).onfocus = () => setTool(name); // typing into an input means its tool
 $("stamp-text").oninput = () => {
@@ -2455,7 +2620,7 @@ $("blank").onclick = () => {
   message("新しいキャンバス（戻すで復帰できます）");
 };
 window.addEventListener("beforeunload", (e) => {
-  if (dirty && document.body.dataset.mode !== "slides") {
+  if (dirty) {
     e.preventDefault();
     e.returnValue = "";
   }
@@ -2715,6 +2880,7 @@ window.IronmateStudio = {
     return render();
   },
   pngBlob,
+  importImageFile,
   get selectedId() { return selected; },
   async replaceScene(value) {
     const next = C.validate(value);
@@ -2733,26 +2899,13 @@ window.IronmateStudio = {
 render().catch(error);
 })();
 
-/* Tools page UI (data-page~="tools"): browser only. */
-if (typeof document !== "undefined" && document.body && (document.body.dataset.page || "").split(" ").includes("tools")) (function () {
-"use strict";
-(() => {
-  const $ = (id) => document.getElementById(id),
-    C = IronmateTools,
-    catalog = buildIronmateCatalog();
-  let grid,
-    previous = null,
-    images = [];
-  const status = (text, error = false) => {
-    $("message").textContent = text;
-    $("message").dataset.error = error;
-  };
-  const action = (id, fn) =>
-    $(id).addEventListener("click", () =>
-      Promise.resolve()
-        .then(fn)
-        .catch((e) => status(e.message, true)),
-    );
+/* PSWB pixel-editor.js */
+function bindPixelEditor({ root, catalog, gridTools: C, save, pngPayload, status }) {
+  const $ = id => root.querySelector("#" + id);
+  let grid, previous = null;
+  const action = (id, fn) => $(id).addEventListener("click", () =>
+    Promise.resolve().then(fn).catch(error => status(error.message, true))
+  );
   const choose = (id, items) => {
     $(id).replaceChildren(
       ...items.map(([value, text]) => new Option(text, value)),
@@ -2852,7 +3005,6 @@ if (typeof document !== "undefined" && document.body && (document.body.dataset.p
       "Python版のプリセットから生成しました。クリックで色番号を編集できます。",
     );
   }
-  const { save, picture } = StudioCore;
   async function png() {
     const scale = Number($("scale").value),
       g = C.canonical(grid),
@@ -2934,7 +3086,7 @@ if (typeof document !== "undefined" && document.body && (document.body.dataset.p
   action("grid-base64", async () => {
     const blob = await png(),
       bytes = new Uint8Array(await blob.arrayBuffer());
-    $("base64-output").value = StudioCore.pngPayload(bytes).dataUri;
+    $("base64-output").value = pngPayload(bytes).dataUri;
     status(
       `PNG ${blob.size.toLocaleString()} bytes / data URI ${C.base64Length(blob.size, true).toLocaleString()}文字。選択してコピーできます。`,
     );
@@ -2970,17 +3122,114 @@ if (typeof document !== "undefined" && document.body && (document.body.dataset.p
       e.target.value = "";
     }
   });
-  $("capacity-file").addEventListener("change", (e) => {
-    const f = e.target.files[0];
-    if (f)
-      $("capacity-result").textContent =
-        `${f.name}: ${f.size.toLocaleString()} bytes → 標準Base64 ${C.base64Length(f.size).toLocaleString()}文字 / PNG data URIなら ${C.base64Length(f.size, true).toLocaleString()}文字。画像かどうかの判定・圧縮後サイズの推定はしません。`;
-  });
+  generate();
+  return { get grid() { return C.canonical(grid); }, png };
+}
+/* End PSWB pixel-editor.js */
+
+/* PSWB current-item.js */
+function setCurrentItem(list, index) {
+  const next = Number.isInteger(index) ? list.children[index] : undefined;
+  for (const item of list.children) {
+    if (item === next) {
+      if (item.getAttribute("aria-current") !== "step") item.setAttribute("aria-current", "step");
+    } else if (item.hasAttribute("aria-current")) {
+      item.removeAttribute("aria-current");
+    }
+  }
+}
+/* End PSWB current-item.js */
+
+/* Tools page UI (data-page~="tools"): browser only. */
+if (typeof document !== "undefined" && (document.getElementById("pixel-editor") || document.getElementById("digest"))) (function () {
+"use strict";
+  const $ = (id) => document.getElementById(id);
+  const C = IronmateTools;
+  const status = (text, error = false) => {
+    const output = $("pixel-status") || $("message");
+    output.textContent = text;
+    output.dataset.error = error;
+  };
+  const action = (id, fn) =>
+    $(id).addEventListener("click", () =>
+      Promise.resolve()
+        .then(fn)
+        .catch((e) => status(e.message, true)),
+    );
+  const { save, picture } = StudioCore;
+  const editor = $("pixel-editor");
+  if (editor) {
+    editor.addEventListener("toggle", function start() {
+      if (!editor.open) return;
+      editor.removeEventListener("toggle", start);
+      const workbench = bindPixelEditor({
+        root: $("pixels"), catalog: buildIronmateCatalog(), gridTools: C, save,
+        pngPayload: StudioCore.pngPayload, status,
+      });
+      window.IronmateWorkbench = workbench;
+      action("place-grid", async () => {
+        await window.IronmateStudio.importImageFile(new File([await workbench.png()], "ドット絵.png", { type: "image/png" }));
+        editor.open = false;
+      });
+    });
+    return;
+  }
+  const songSections = $("song-sections");
+  function updateArrangement() {
+    setCurrentItem(songSections, null);
+    try {
+      const parts = IronmateComposition.arrangeSong($("song-parts").value, $("song-order").value);
+      songSections.replaceChildren(...parts.map(({name}) => {
+        const item = document.createElement("li");
+        item.textContent = name;
+        return item;
+      }));
+      $("song-progression").value = parts.flatMap(part => part.chords).join(" ");
+      $("song-status").textContent = "曲順に展開しました。";
+      return parts;
+    } catch (err) {
+      songSections.replaceChildren();
+      $("song-progression").value = "";
+      $("song-status").textContent = err.message;
+      return null;
+    }
+  }
+  $("song-arrange").onclick = () => {
+    $("song-stop").click();
+    updateArrangement();
+  };
+  $("song-stop").onclick = () => {
+    document.dispatchEvent(new Event("studio-audio-stop"));
+    setCurrentItem(songSections, null);
+    $("song-status").textContent = "停止しました。";
+  };
+  $("song-play").onclick = () => {
+    $("song-stop").click();
+    const parts = updateArrangement();
+    if (!parts || !$("song-bpm").reportValidity()) return;
+    try {
+      const key = $("song-key").value;
+      const bpm = Number($("song-bpm").value);
+      const {notes, starts} = IronmateComposition.planSong(parts, key, bpm);
+      document.dispatchEvent(new CustomEvent("studio-audio-play", { detail: {
+        notes,
+        report: text => { $("song-status").textContent = text; },
+        position: elapsed => setCurrentItem(songSections, elapsed === null ? null : starts.findLastIndex(start => start <= elapsed)),
+      } }));
+    } catch (err) { $("song-status").textContent = err.message; }
+  };
+  let images = [];
   let imageGeneration = 0;
+  let imageLoad;
+  $("images-cancel").onclick = () => imageLoad?.cancel();
+  window.addEventListener("pagehide", () => imageLoad?.cancel());
   $("images").addEventListener("change", async (e) => {
-    const generation = ++imageGeneration,
-      files = Array.from(e.target.files);
+    const files = Array.from(e.target.files);
     if (!files.length) return;
+    e.target.value = "";
+    const generation = ++imageGeneration;
+    imageLoad?.cancel();
+    $("images-cancel").hidden = true;
     $("digest-png").disabled = true;
     $("digest-html").disabled = true;
     try {
@@ -2990,13 +3239,21 @@ if (typeof document !== "undefined" && document.body && (document.body.dataset.p
         files.reduce((s, f) => s + f.size, 0) > 32 * 1024 * 1024
       )
         throw Error("画像は20枚、1枚8MiB、合計32MiB以下です。");
-      const next = [];
-      for (const file of files) {
-        if (!["image/png", "image/jpeg", "image/webp"].includes(file.type))
-          throw Error("PNG / JPEG / WebPを選んでください。");
-        const { src, canvas } = await picture(file, 512);
-        next.push({ name: file.name, src, canvas });
-      }
+      const {startTask} = await import(new URL("./async-task.js", document.baseURI));
+      if (generation !== imageGeneration) return;
+      imageLoad = startTask(async signal => {
+        const thumbnails = [];
+        for (const file of files) {
+          signal.throwIfAborted();
+          if (!["image/png", "image/jpeg", "image/webp"].includes(file.type))
+            throw Error("PNG / JPEG / WebPを選んでください。");
+          const {src, canvas} = await picture(file, 512, false, signal);
+          thumbnails.push({name: file.name, src, canvas});
+        }
+        return thumbnails;
+      }, {timeoutMs: 30000});
+      $("images-cancel").hidden = false;
+      const next = await imageLoad.promise;
       if (generation !== imageGeneration) return;
       images = next;
       $("image-list").replaceChildren(
@@ -3015,13 +3272,18 @@ if (typeof document !== "undefined" && document.body && (document.body.dataset.p
         `${images.length}枚を読み込みました。表示用サムネイルに縮小しています。`,
       );
     } catch (err) {
-      if (generation === imageGeneration) status(err.message, true);
+      if (generation === imageGeneration) {
+        if (err.name === "AbortError") status("画像の読み込みを中止しました。");
+        else if (err.name === "TimeoutError") status("画像の読み込みがタイムアウトしました。", true);
+        else status(err.message, true);
+      }
     } finally {
       if (generation === imageGeneration) {
+        imageLoad = undefined;
+        $("images-cancel").hidden = true;
         $("digest-png").disabled = !images.length;
         $("digest-html").disabled = !images.length;
       }
-      e.target.value = "";
     }
   });
   action("digest-png", async () => {
@@ -3058,249 +3320,9 @@ if (typeof document !== "undefined" && document.body && (document.body.dataset.p
       html = `<!doctype html><html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; base-uri 'none'"><title>Ironmate Image Digest</title><style>body{font:14px system-ui;background:#f2f6f3;color:#183d42;margin:24px}.grid{display:grid;grid-template-columns:repeat(${columns},minmax(0,1fr));gap:16px}figure{margin:0;padding:16px;background:white;overflow-wrap:anywhere}img{width:100%;height:210px;object-fit:contain}@media(max-width:600px){.grid{grid-template-columns:1fr}}</style><h1>Ironmate Image Digest</h1><div class="grid">${images.map((i) => `<figure><img src="${i.src}" alt="${C.esc(i.name)}"><figcaption>${C.esc(i.name)}</figcaption></figure>`).join("")}</div></html>`;
     save("ironmate-digest.html", html, "text/html");
   });
-  generate();
-  window.IronmateWorkbench = {
-    get grid() {
-      return C.canonical(grid);
-    },
-    png,
-  };
-})();
 })();
 
-/* Slide document UI (data-page~="slides"): browser only. */
-if (typeof document !== "undefined" && document.body && (document.body.dataset.page || "").split(" ").includes("slides")) (function () {
-/* Multi-slide document state around the existing Image Studio editor. */
-"use strict";
-(async () => {
-  const C = window.StudioCore,
-    D = window.IronmateSlides,
-    E = window.IronmateStudio,
-    byId = (id) => document.getElementById(id);
-  let deck = { schema: D.SCHEMA, title: "Ironmate", slides: [{...E.scene, background: "#FFFFFF"}] },
-    active = 0,
-    saved = "",
-    busy = false;
-  const note = (message, error = false) => {
-    byId("deck-status").textContent = message;
-    byId("deck-status").dataset.error = error;
-  };
-  function snapshot() {
-    const next = C.clone(deck);
-    next.slides[active] = E.scene;
-    return D.validate(next);
-  }
-  const board = byId("board");
-  const grid = document.createElement("div");
-  grid.className = "slide-grid";
-  grid.hidden = true;
-  board.before(grid);
-  const gridMode = byId("slide-grid-mode");
-
-  function showGroup() {
-    grid.hidden = !gridMode.checked;
-    if (grid.hidden) {
-      grid.after(board);
-      grid.replaceChildren();
-      return;
-    }
-    const first = active - active % 4;
-    const cells = deck.slides.slice(first, first + 4).map((scene, offset) => {
-      const index = first + offset;
-      const cell = document.createElement("div");
-      const number = document.createElement("span");
-      number.className = "slide-number";
-      number.textContent = index === active ? `${index + 1} 枚目（編集中）` : `${index + 1} 枚目`;
-      cell.append(number);
-      if (index === active) {
-        cell.append(board);
-      } else {
-        const preview = document.createElement("button");
-        preview.className = "slide-preview";
-        preview.setAttribute("aria-label", `${index + 1} 枚目を編集`);
-        preview.addEventListener("click", () => switchSlide(index));
-        // Isolate SVG mask IDs, including those shared by duplicated slides.
-        const drawing = document.createElement("span").attachShadow({mode: "open"});
-        preview.append(drawing.host);
-        cell.append(preview);
-        E.imageSource(scene).then(source => {
-          if (!preview.isConnected) return;
-          drawing.innerHTML = C.svg(scene, source);
-          const svg = drawing.firstElementChild;
-          svg.setAttribute("width", "100%");
-          svg.removeAttribute("height");
-        }).catch(err => { if (preview.isConnected) note(err.message, true); });
-      }
-      return cell;
-    });
-    grid.replaceChildren(...cells);
-  }
-  gridMode.addEventListener("change", showGroup);
-  function selectList() {
-    const select = byId("slide-select");
-    select.replaceChildren(
-      ...deck.slides.map(
-        (s, i) =>
-          new Option(
-            `${i + 1} / ${s.layers.find((l) => l.kind === "text")?.text.slice(0, 24) || "白紙"}`,
-            i,
-          ),
-      ),
-    );
-    select.value = active;
-    showGroup();
-    byId("slide-delete").disabled = deck.slides.length === 1;
-    byId("slide-up").disabled = active === 0;
-    byId("slide-down").disabled = active === deck.slides.length - 1;
-  }
-  async function commit(next, index) {
-    const checked = D.validate(next);
-    await E.replaceScene(checked.slides[index]);
-    deck = checked;
-    active = index;
-    selectList();
-    note(
-      `${active + 1} / ${deck.slides.length} 枚目を編集中。全体の保存は「全スライドJSON保存」を使います。`,
-    );
-  }
-  function action(id, fn) {
-    byId(id).addEventListener("click", async () => {
-      if (busy) return;
-      busy = true;
-      try {
-        await fn();
-      } catch (e) {
-        note(e.message, true);
-      } finally {
-        busy = false;
-      }
-    });
-  }
-  const save = C.save;
-  async function imageForLayer(layer, scene) {
-    return D.layerPng(layer, await E.imageSource(scene)); // 📱 スマホ版と同じ（IronmateSlides.layerPng）
-  }
-  await E.ready;
-  await E.replaceScene(deck.slides[0]);
-  selectList();
-  saved = D.deckText(deck);
-  byId("fill").value = "#000000";
-  byId("stroke").value = "#000000";
-  byId("arrow-style").value = "triangle";
-  // ➕📑✖️⬆️⬇️ one page operation each, by the deck's own edit (PySaiyanWeBoo's slide-deck.js)
-  for (const [id, operation] of [
-    ["slide-add", "add"],
-    ["slide-duplicate", "duplicate"],
-    ["slide-delete", "delete"],
-    ["slide-up", "up"],
-    ["slide-down", "down"],
-  ])
-    action(id, async () => {
-      if (
-        operation === "delete" &&
-        (deck.slides.length === 1 || !confirm("このスライドを削除しますか？"))
-      )
-        return;
-      const next = D.edit(snapshot(), operation, active);
-      if (next.active !== active || operation === "delete")
-        await commit(next.deck, next.active);
-    });
-  async function switchSlide(index) {
-    if (busy) {
-      byId("slide-select").value = active;
-      return;
-    }
-    busy = true;
-    try {
-      const next = snapshot();
-      await commit(next, index);
-    } catch (err) {
-      byId("slide-select").value = active;
-      note(err.message, true);
-    } finally {
-      busy = false;
-    }
-  }
-  byId("slide-select").addEventListener("change", e => switchSlide(Number(e.target.value)));
-  action("deck-save", () => {
-    const next = snapshot(),
-      text = D.deckText(next);
-    save("ironmate-slides.json", text, "application/json");
-    deck = next;
-    saved = text;
-    selectList();
-    note("全スライドの編集用JSONを保存しました。");
-  });
-  byId("deck-open").addEventListener("change", async (e) => {
-    if (busy) {
-      e.target.value = "";
-      return;
-    }
-    const file = e.target.files[0];
-    if (!file) return;
-    busy = true;
-    try {
-      if (file.size > D.LIMIT) throw Error("JSONは32MiB以下です。");
-      const next = D.parse(await file.text());
-      for (const scene of next.slides) await E.imageSource(scene);
-      if (
-        D.deckText(snapshot()) !== saved &&
-        !confirm("現在の未保存のスライドを置き換えますか？")
-      )
-        return;
-      await commit(next, 0);
-      saved = D.deckText(next);
-      note("全スライドを読み込みました。");
-    } catch (err) {
-      note(err.message, true);
-    } finally {
-      busy = false;
-      e.target.value = "";
-    }
-  });
-  action("deck-pptx", async () => {
-    note("PPTXを作成しています…");
-    const current = snapshot(),
-      result = await D.exportPptx(current, imageForLayer);
-    save(
-      "ironmate-slides.pptx",
-      result.data,
-      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-    );
-    note(
-      `${result.slides}枚のPPTXを保存しました。編集可能な要素 ${result.native}、画像レイヤー ${result.images}。再編集用には全スライドJSONも保存してください。`,
-    );
-  });
-  window.addEventListener("beforeunload", (e) => {
-    let dirty = true;
-    try {
-      dirty = D.deckText(snapshot()) !== saved;
-    } catch {}
-    if (dirty) {
-      e.preventDefault();
-      e.returnValue = "";
-    }
-  });
-  window.IronmateSlideEditor = {
-    get deck() {
-      return snapshot();
-    },
-    get active() {
-      return active;
-    },
-    get ready() {
-      return !busy;
-    },
-  };
-})().catch((e) => {
-  const status = document.getElementById("deck-status");
-  if (status) {
-    status.textContent = e.message;
-    status.dataset.error = true;
-  }
-});
-})();
-/* ⬇️ pysaiyanweboo be49b945 (stage, pager): written by scripts/build_studio_css.py from the pinned commit; --check fails when it drifts */
+/* ⬇️ pysaiyanweboo 59dc4437 (stage, pager): written by scripts/build_studio_css.py from the pinned commit; --check fails when it drifts */
 (() => {
 /* A rotary dial over a range input (dial_html): drag around its centre, turn the wheel, or use the range's own keys. Value and events stay the input's. */
 function dialAngle(value,min,max){const span=max-min;const t=span>0?(Number(value)-min)/span:0;return -135+270*Math.min(1,Math.max(0,t))}
@@ -3404,8 +3426,9 @@ function keep() {
     localStorage.setItem(STORE, state());
     saveFailed = false;
   } catch {
-    saveFailed = true; // 端末の自動保存がいっぱい（画像が大きいとき）。💾 で JSON に保存できる
+    saveFailed = true; // 端末の自動保存がいっぱい（画像が大きいとき）。📤 で JSON に保存できる
   }
+  saves += 1;
   note();
 }
 function record(before) {
@@ -3443,20 +3466,87 @@ function render() {
     l = picked();
   box.hidden = !l;
   if (l)
-    Object.assign(box.style, { left: pct(l.x, s.width), top: pct(l.y, s.height), width: pct(l.w, s.width), height: pct(l.h, s.height) });
-  const off = { edit: l?.kind !== "text", delete: !l, undo: !past.length, redo: !future.length,
+    Object.assign(box.style, { left: pct(l.x, s.width), top: pct(l.y, s.height), width: pct(l.w, s.width), height: pct(l.h, s.height),
+      transform: `rotate(${l.rotation}deg)` });
+  layerList(s);
+  pageList();
+  const off = { edit: !["text", "clock"].includes(l?.kind), look: !l, turn: !l,
+    front: !l || s.layers.at(-1) === l, back: !l || s.layers[0] === l,
+    delete: !l, undo: !past.length, redo: !future.length,
     "slide-delete": deck.slides.length < 2, smaller: level === 0, bigger: level === scales.length - 1, reset: level === plain };
   for (const [act, disabled] of Object.entries(off)) document.querySelector(`[data-act="${act}"]`).disabled = disabled;
+}
+let pagesOpen = false,
+  saves = 0; // 🗂️ 一覧の絵は保存のたびに描き直す（ドラッグ中は描かない）
+function pageList() {
+  const row = $("phone-pages"),
+    key = pagesOpen && `${saves} ${active} ${deck.slides.length}`;
+  if (row.dataset.key === String(key)) return;
+  row.dataset.key = key;
+  row.hidden = !pagesOpen;
+  row.classList.toggle("phone-row", pagesOpen);
+  row.replaceChildren(...(pagesOpen ? deck.slides : []).map((s, i) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.innerHTML = C.svg(s, (l) => l.src);
+    const picture = b.firstElementChild;
+    picture.setAttribute("width", 80);
+    picture.setAttribute("height", Math.round((80 * s.height) / s.width));
+    picture.setAttribute("aria-hidden", "true");
+    b.append(String(i + 1)); // 番号に今のページの下線が付く
+    b.setAttribute("aria-label", `${i + 1}/${deck.slides.length}`);
+    if (i === active) b.setAttribute("aria-current", "step");
+    b.addEventListener("pointerdown", (e) => e.preventDefault());
+    b.addEventListener("click", () => {
+      finishEdit();
+      active = i;
+      selected = null;
+      keep();
+      render();
+    });
+    return b;
+  }));
+}
+function layerList(s) {
+  // 📚 奥 → 手前。2 つ以上あるときだけ出し、重なって触れないものもここから選べる（文字は先頭 3 字、ほかは形の記号）
+  const row = $("phone-layers"),
+    faces = s.layers.map((l) => (l.kind === "text" && [...new Intl.Segmenter().segment(l.text.trim())].slice(0, 3).map((g) => g.segment).join(""))
+      || { text: "🔤", rect: "▭", ellipse: "◯", triangle: "△", arrow: "→", clock: "🕒", image: "🖼️" }[l.kind] || "▫️"),
+    key = JSON.stringify([faces, s.layers.map((l) => l.id), selected]);
+  if (row.dataset.key === key) return;
+  row.dataset.key = key;
+  row.hidden = s.layers.length < 2;
+  row.classList.toggle("phone-row", !row.hidden);
+  row.replaceChildren(...(row.hidden ? [] : s.layers).map((l, i) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = faces[i];
+    b.setAttribute("aria-label", `${i + 1} ${faces[i]}`);
+    if (l.id === selected) b.setAttribute("aria-current", "step");
+    b.addEventListener("pointerdown", (e) => e.preventDefault());
+    b.addEventListener("click", () => {
+      finishEdit();
+      selected = l.id;
+      render();
+    });
+    return b;
+  }));
 }
 function later() {
   if (!frame) frame = requestAnimationFrame(() => ((frame = 0), render()));
 }
+const clockText = (l) => `${String(l.hour).padStart(2, "0")}:${String(l.minute).padStart(2, "0")}`;
+function clockSet(l, text) {
+  // 🕒 14:30 / 9:05（時 0–23、分 0–59）。読めないうちは前の時刻のまま
+  const m = /^\s*(\d{1,2})\s*[:：]\s*(\d{2})\s*$/.exec(text);
+  if (m && +m[1] < 24 && +m[2] < 60) [l.hour, l.minute] = [+m[1], +m[2]];
+}
 function startEdit(before = state()) {
   const l = picked();
-  if (!l || l.kind !== "text") return;
+  if (!l || !["text", "clock"].includes(l.kind)) return;
   editing = l.id;
   editBefore = before;
-  edit.value = l.text;
+  edit.value = l.kind === "clock" ? clockText(l) : l.text;
   edit.hidden = false; // ⌨️ 固定したスライドのすぐ下で打つ（16 px なのでスマホが拡大しない）
   edit.dataset.least = l.h;
   render();
@@ -3468,7 +3558,8 @@ function finishEdit() {
     l = s.layers.find((x) => x.id === editing);
   editing = null;
   edit.hidden = true;
-  if (l) {
+  if (l?.kind === "clock") clockSet(l, edit.value);
+  else if (l) {
     l.text = edit.value.slice(0, 2000);
     if (l.text.trim()) fit(l, Number(edit.dataset.least));
     else {
@@ -3482,8 +3573,11 @@ function finishEdit() {
 edit.addEventListener("input", () => {
   const l = slide().layers.find((x) => x.id === editing);
   if (!l) return;
-  l.text = edit.value.slice(0, 2000);
-  fit(l, Number(edit.dataset.least));
+  if (l.kind === "clock") clockSet(l, edit.value);
+  else {
+    l.text = edit.value.slice(0, 2000);
+    fit(l, Number(edit.dataset.least));
+  }
   later();
 });
 edit.addEventListener("blur", finishEdit);
@@ -3542,7 +3636,7 @@ stage.addEventListener("pointerup", () => {
   const d = drag;
   drag = null;
   if (d.moved) record(d.before);
-  else if (d.again && picked()?.kind === "text") startEdit();
+  else if (d.again && ["text", "clock"].includes(picked()?.kind)) startEdit();
   render();
 });
 stage.addEventListener("pointercancel", () => {
@@ -3563,6 +3657,51 @@ function place(make) {
 function shape(kind) {
   return (s) => ({ id: uid(kind), kind, name: kind, x: s.width * 0.375, y: s.height * 0.375, w: s.width * 0.25, h: s.height * 0.25,
     rotation: 0, opacity: 1, fill: "#18A7A1", stroke: "#183C42", strokeWidth: 4 });
+}
+  /* 🔷 😊 (^^) 候補から置く（Image Studio と同じ候補）。🕒 はいまの時刻。選んだものは 🅱️ 太字・🎨 色・⏫ 手前へ */
+function stamp(text) {
+  const size = textSize * textFactor * 2;
+  return place((s) => {
+    const l = { id: uid("text"), kind: "text", name: "text", x: 0, y: 0, w: Math.min(s.width * 0.9, ([...text].length + 1) * size),
+      h: Math.ceil(size * 1.3), rotation: 0, opacity: 1, text, fill: "#000000", fontSize: size, font: "sans", mono: false, bold: false,
+      wrap: true };
+    fit(l);
+    l.x = (s.width - l.w) / 2;
+    l.y = (s.height - l.h) / 2;
+    return l;
+  });
+}
+function offer(tool) {
+  // 候補の列は 1 つ。同じ道具をもう一度押すと閉じる（閉じた列は場所を取らない: .phone-row は開いている間だけ）
+  const row = $("phone-candidates"),
+    again = row.dataset.tool === tool && !row.hidden;
+  row.dataset.tool = again ? "" : tool;
+  row.hidden = again;
+  row.classList.toggle("phone-row", !again);
+  const button = document.querySelector(`[data-act="${tool}"]`),
+    { candidates, acts: named = "", words = "" } = button.dataset,
+    actions = named.split(" "),
+    said = words.split("|");
+  if (!again) button.closest(".phone-row").after(row); // 候補は押したボタンの列のすぐ下に開く
+  row.replaceChildren(...(again ? [] : candidates.split(" ")).map((value, i) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = value;
+    b.setAttribute("aria-label", said[i] || value);
+    b.title = said[i] || value;
+    b.addEventListener("pointerdown", (e) => e.preventDefault());
+    b.addEventListener("click", () => {
+      finishEdit();
+      run(() => (actions[i] ? acts[actions[i]]() : record(stamp(value)))); // 🔷 💾 name an action (data-acts); 😊 (^^) stamp the text
+    });
+    return b;
+  }));
+}
+const COLORS = ["#000000", "#18A7A1", "#D7263D", "#1B6EF3", "#F5B700", "#FFFFFF"], // 🎨 🖌 黒・青緑・赤・青・黄・白
+  nextColor = (c) => COLORS[(COLORS.indexOf(String(c).toUpperCase()) + 1) % COLORS.length];
+function restyle(fn) {
+  const l = picked();
+  if (l) change(() => fn(l));
 }
 function scaleText(next) {
   // 🔽 🔄 🔼 すべてのページの文字を同じ倍率で（タイトルと本文の比は保つ）
@@ -3603,7 +3742,49 @@ const acts = {
   arrow: () => record(place((s) => ({ id: uid("arrow"), kind: "arrow", name: "arrow", x: s.width * 0.25, y: s.height * 0.45,
     w: s.width * 0.5, h: s.height * 0.1, rotation: 0, opacity: 1, fill: "#000000", stroke: "#000000", strokeWidth: 4,
     headSize: 28, headPlacement: "tip", headStyle: "triangle" }))),
+  shape: () => offer("shape"),
+  emoji: () => offer("emoji"),
+  kaomoji: () => offer("kaomoji"),
+  clock() {
+    const now = new Date();
+    record(place((s) => ({ id: uid("clock"), kind: "clock", name: "clock", x: s.width * 0.5 - s.height * 0.15, y: s.height * 0.35,
+      w: s.height * 0.3, h: s.height * 0.3, rotation: 0, opacity: 1, hour: now.getHours(), minute: now.getMinutes(),
+      fill: "#FFFFFF", stroke: "#183C42", strokeWidth: 4 })));
+  },
   edit: () => startEdit(),
+  look: () => offer("look"), // 🎨 ↻ 候補から（選んだものに効かない候補は何もしない）
+  turn: () => offer("turn"),
+  fill: () => restyle((l) => {
+    l.fill = nextColor(l.fill);
+    if (l.kind === "arrow") l.stroke = l.fill;
+  }),
+  stroke: () => restyle((l) => {
+    if (!("stroke" in l)) return;
+    l.stroke = nextColor(l.stroke);
+    if (l.kind === "arrow") l.fill = l.stroke;
+  }),
+  fade: () => restyle((l) => {
+    const steps = [1, 0.75, 0.5, 0.25];
+    l.opacity = steps[(steps.indexOf(steps.reduce((a, b) => (Math.abs(b - l.opacity) < Math.abs(a - l.opacity) ? b : a))) + 1) % steps.length];
+  }),
+  bold: () => restyle((l) => l.kind === "text" && ((l.bold = !l.bold), fit(l))),
+  font: () => restyle((l) => l.kind === "text" && ((l.font = l.font === "mono" ? "sans" : "mono"), fit(l))),
+  cw: () => restyle((l) => (l.rotation = (l.rotation + 15) % 360)),
+  ccw: () => restyle((l) => (l.rotation = (l.rotation - 15) % 360)),
+  upright: () => restyle((l) => (l.rotation = 0)),
+  pages() {
+    pagesOpen = !pagesOpen; // 🗂️ 見るためのもの: ↩️ にも資料にも入らない
+  },
+  front: () => change(() => {
+    const s = slide(),
+      l = picked();
+    s.layers = [...s.layers.filter((x) => x !== l), l];
+  }),
+  back: () => change(() => {
+    const s = slide(),
+      l = picked();
+    s.layers = [l, ...s.layers.filter((x) => x !== l)];
+  }),
   delete: () => change(() => {
     slide().layers = slide().layers.filter((l) => l.id !== selected);
     selected = null;
@@ -3656,7 +3837,30 @@ const acts = {
       localStorage.setItem(STORE + ":pager", pages.dataset.uiPager);
     } catch {}
   },
-  save: () => C.save("ironmate-slides.json", D.deckText(deck), "application/json"),
+  import: () => offer("import"), // 📥 📤 形式は押してから選ぶ
+  export: () => offer("export"),
+  open: () => document.querySelector('input[data-file="open"]').click(),
+  image: () => document.querySelector('input[data-file="image"]').click(),
+  json: () => C.save("ironmate-slides.json", D.deckText(deck), "application/json"),
+  svg: () => C.save(`ironmate-slide-${active + 1}.svg`, C.svg(slide(), (l) => l.src), "image/svg+xml"),
+  async png() {
+    // 🖼 このページを見えているとおりに（SVG → canvas）。大きさはスライドの大きさ
+    const s = slide(),
+      size = C.outputSize(s),
+      url = URL.createObjectURL(new Blob([C.svg(s, (l) => l.src)], { type: "image/svg+xml" }));
+    try {
+      const img = new Image();
+      img.src = url;
+      await img.decode();
+      const canvas = Object.assign(document.createElement("canvas"), size);
+      canvas.getContext("2d").drawImage(img, 0, 0, size.width, size.height);
+      const blob = await new Promise((done) => canvas.toBlob(done, "image/png"));
+      if (!blob) throw Error("⚠️ PNG");
+      C.save(`ironmate-slide-${active + 1}.png`, blob, "image/png");
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  },
   async pptx() {
     note("📤 …");
     const result = await D.exportPptx(deck, (l) => D.layerPng(l, (x) => x.src));
@@ -3751,46 +3955,23 @@ window.IronmatePhone = {
 })();
 """
 
-SLIDES_PANEL_HTML = r"""<section class="slide-controls" aria-label="スライド編集">
-  <div class="slide-toolbar">
-    <strong>スライド作成</strong
-    ><select id="slide-select" aria-label="スライド"></select
-    ><label class="check"><input type="checkbox" id="slide-grid-mode" />4枚表示</label
-    ><button id="slide-add">＋ 白紙</button
-    ><button id="slide-duplicate">スライド複製</button
-    ><button id="slide-up">前へ移動</button
-    ><button id="slide-down">後へ移動</button
-    ><button id="slide-delete">スライド削除</button
-    ><button id="deck-save">全スライドJSON保存</button
-    ><label class="button"
-      >全スライドを開く<input
-        id="deck-open"
-        type="file"
-        accept=".json,application/json" /></label
-    ><button id="deck-pptx" class="primary">PPTXを書き出す</button>
-  </div>
-  <p id="deck-status" role="status">
-    全スライドは同じ寸法です。
-  </p>
-  <details class="ui-panel"><summary>PPTXの制限・出力形式</summary><p class="slide-hint">
-    文字はボックス幅で折り返します。文字サイズは自動縮小しません。長文では高さ・位置も調整してください。
-    最大20枚・JSON合計32MiB。テキスト・通常図形・三角の矢羽根はPPTXの編集可能な要素になります。時計・ヒートマップ・単色スタンプ・🔰の矢印は、レイヤー単位の画像として保存します。フォントは表示先の端末に依存します。
-  </p></details>
-</section>
-"""
 
 # 📱 Phone slides (slides/phone/): the slide stays pinned on top and every control is an emoji; the words live in
 # aria-label / title only. Each row is (data-act, emoji, words); the browser script binds data-act by name.
 PHONE_TOOLS = (
-    (("text", "🔤", "テキストボックスを追加"), ("rect", "🟦", "四角を追加"), ("ellipse", "⚪", "丸を追加"),
-     ("triangle", "🔺", "三角を追加"), ("arrow", "↗️", "矢印を追加"), ("image", "🖼️", "画像を追加")),
-    (("smaller", "🔽", "文字をすべて小さく"), ("reset", "🔄", "文字をすべて元の大きさに"), ("bigger", "🔼", "文字をすべて大きく")),
-    (("edit", "✏️", "選んだ文字を編集（選んだ文字をもう一度タップしても編集）"), ("delete", "🗑️", "選んだものを削除"),
+    (("text", "🔤", "テキストボックスを追加"), ("shape", "🔷", "図形（四角・丸・三角・矢印）を候補から追加"),
+     ("emoji", "😊", "絵文字を候補から追加"), ("kaomoji", "(^^)", "顔文字を候補から追加"), ("clock", "🕒", "いまの時刻の時計を追加")),
+    (("smaller", "🔽", "文字をすべて小さく"), ("reset", "🔄", "文字をすべて元の大きさに"), ("bigger", "🔼", "文字をすべて大きく"),
      ("undo", "↩️", "戻す"), ("redo", "↪️", "やり直す")),
+    (("edit", "✏️", "選んだ文字・時計を編集（選んだものをもう一度タップしても編集。時計は 14:30 のように）"),
+     ("look", "🎨", "選んだものの見た目（塗り・線の色・不透明度・太字・等幅）"), ("turn", "↻", "選んだものを回す"),
+     ("front", "⏫", "選んだものをいちばん手前へ"), ("back", "⏬", "選んだものをいちばん奥へ"),
+     ("delete", "🗑️", "選んだものを削除")),
     (("slide-add", "➕📄", "白紙のページを追加"), ("slide-copy", "📑", "ページを複製"), ("slide-delete", "✖️📄", "ページを削除"),
-     ("new", "🆕", "最初から（白紙 1 枚）"), ("pager", "🧭", "ページ移動の形を切り替え（矢印・十字キー・端まで・点・スライダー・ダイヤル）")),
-    (("save", "💾", "全スライドJSONで保存（Slide Studio でも開ける）"), ("open", "📂", "全スライドJSONを開く"),
-     ("pptx", "📤", "PPTXを書き出す"), ("studio", "🖥️", "Slide Studio（PC 向け）"), ("home", "🏠", "Image Studio")),
+     ("pages", "🗂️", "ページの一覧（タップでそのページへ）"), ("pager", "🧭", "ページ移動の形を切り替え（矢印・十字キー・端まで・点・スライダー・ダイヤル）")),
+    (("new", "🆕", "最初から（白紙 1 枚）"), ("import", "📥", "インポート（押してから形式を選ぶ: 全スライドJSON・画像）"),
+     ("export", "📤", "エクスポート（押してから形式を選ぶ: PPTX・全スライドJSON・PNG・SVG）"),
+     ("home", "🏠", "Image Studio")),
 )
 # 🔽 🔄 🔼 multiply every text box by the next / plain / previous step; new boxes are 32 px on the 1280×720 slide.
 PHONE_TEXT = {"size": 32, "scale": (0.5, 0.75, 1, 1.25, 1.5, 2, 2.5)}
@@ -3827,21 +4008,38 @@ def _phone_html() -> str:
 
     def control(act: str, emoji: str, words: str) -> str:
         label = f'aria-label="{escape(words)}" title="{escape(words)}"'
-        if act in ("image", "open"):
-            accept = "image/png,image/jpeg,image/webp" if act == "image" else ".json,application/json"
-            return f'<label class="button" data-act="{act}" {label}>{emoji}<input type="file" data-file="{act}" accept="{accept}" /></label>'
-        if act in ("studio", "home"):
-            return f'<a class="button" href="{"../" if act == "studio" else "../../"}" data-act="{act}" {label}>{emoji}</a>'
+        if act == "home":
+            return f'<a class="button" href="../" data-act="{act}" {label}>{emoji}</a>'
+        if act in candidates:                       # 🔷 😊 (^^): the same candidates as Image Studio's tools, read from its markup
+            acts, said = choices.get(act, ("", ""))   # 🔷 📥 📤: a candidate that is an action names it; 😊 (^^) ones are stamped as text
+            more = f' data-acts="{acts}" data-words="{escape(said)}"' if acts else ""
+            return f'<button type="button" data-act="{act}" data-candidates="{escape(candidates[act])}"{more} {label}>{emoji}</button>'
         return f'<button type="button" data-act="{act}" {label}>{emoji}</button>'
 
-    rows = "".join('<div class="phone-row">' + "".join(control(*tool) for tool in row) + "</div>" for row in PHONE_TOOLS)
+    import re
+    # 📥 📤: two ways in and out; the format is picked after (one candidate row, like 🔷)
+    candidates = dict(re.findall(r'data-tool="(shape|emoji|kaomoji)"[^>]*data-candidates="([^"]*)"', STUDIO_HTML)) | {
+        "import": "📦 🖼", "export": "📽️ 📦 🖼 📐", "look": "🎨 🖌 🌗 🅱️ 🔠", "turn": "↻ ↺ ⏹"}
+    choices = {"shape": ("rect ellipse triangle arrow", "四角|丸|三角|矢印"),
+               "look": ("fill stroke fade bold font", "塗りを次の色へ|線を次の色へ|不透明度（1 → ¾ → ½ → ¼）|太字|等幅 ⇄ ふつう"),
+               "turn": ("cw ccw upright", "右へ 15°|左へ 15°|まっすぐに戻す"),
+               "import": ("open image", "全スライドJSON|画像（PNG・JPEG・WebP をこのページに）"),
+               "export": ("pptx json png svg", "PPTX（全スライド、PowerPoint で編集できる）|全スライドJSON（また開ける）|このページを PNG|このページを SVG")}
+    files = ('<input type="file" data-file="open" accept=".json,application/json" aria-label="全スライドJSON" />'
+             '<input type="file" data-file="image" accept="image/png,image/jpeg,image/webp" aria-label="画像" />')
+    rows = ['<div class="phone-row">' + "".join(control(*tool) for tool in row) + "</div>" for row in PHONE_TOOLS]
+    rows[-1] += files                                            # 📥's file choosers: no face of their own, and no place in a row
+    # 📚 the page's layers, back to front, sit right above the row that acts on the selected one (PySaiyanWeBoo's current-item mark)
+    rows[3] += '<div id="phone-pages" class="ui-current-items" role="group" aria-label="ページの一覧" hidden></div>'   # 🗂️
+    rows = (rows[0] + '<div id="phone-candidates" role="group" aria-label="候補" hidden></div>' + rows[1]
+            + '<div id="phone-layers" class="ui-current-items" role="group" aria-label="レイヤー（奥から手前）" hidden></div>' + "".join(rows[2:]))
     slide = ('<div id="phone-svg" class="phone-svg" data-ui-fill></div>'
              '<div id="phone-pick" class="phone-pick" hidden><span class="phone-grip" data-grip aria-hidden="true">↘</span></div>')
     head = STUDIO_HTML[:STUDIO_HTML.index("</head>")]
     for name in ("style.css", "studio.js", "brand/manifest.webmanifest", "brand/apple-touch-icon.png", "brand/favicon.ico",
                  "brand/icon.svg"):
-        head = head.replace(f'"{name}"', f'"../../{name}"')
-    head = head.replace("Ironmate — Image Studio", "Ironmate — Phone Slides")
+        head = head.replace(f'"{name}"', f'"../{name}"')
+    head = head.replace("Ironmate — Image Studio", "Ironmate — Slides")
     scale = " ".join(f"{v:g}" for v in PHONE_TEXT["scale"])
     return (head + "</head>\n"
             f'  <body class="ui-elements" data-ui-theme="green" data-page="phone" data-text-size="{PHONE_TEXT["size"]}" data-text-scale="{scale}">\n'
@@ -3855,6 +4053,126 @@ def _phone_html() -> str:
 
 
 PHONE_HTML = _phone_html()
+
+BROWSER_TASK_JS = r"""/* PSWB async-task.js */
+/**
+ * Run a browser task with optional deadline. cancel() rejects the pending result,
+ * and the operation can observe the AbortSignal to stop its own work.
+ */
+export function startTask(run, {timeoutMs} = {}) {
+  if (timeoutMs !== undefined && (!Number.isFinite(timeoutMs) || timeoutMs < 0 || timeoutMs > 2147483647))
+    throw new RangeError("timeoutMs must be a non-negative timer value");
+  const controller = new AbortController();
+  const {signal} = controller;
+  let timer, onAbort, finished = false;
+  const stopped = new Promise((_, reject) => {
+    onAbort = () => reject(signal.reason);
+    signal.addEventListener("abort", onAbort, {once: true});
+  });
+  if (timeoutMs !== undefined) {
+    timer = setTimeout(() => controller.abort(new DOMException("Task timed out", "TimeoutError")), timeoutMs);
+  }
+  const work = Promise.resolve().then(() => {
+    signal.throwIfAborted();
+    return run(signal);
+  });
+  const promise = Promise.race([stopped, work]).finally(() => {
+    finished = true;
+    clearTimeout(timer);
+    signal.removeEventListener("abort", onAbort);
+  });
+  return {promise, cancel() { if (!finished) controller.abort(); }};
+}
+/* End PSWB async-task.js */
+"""
+
+RECORDS_JS = r"""/* PSWB records.js */
+/** Record boards: a text and a status filter over table rows or cards, per-field drafts kept in localStorage (best effort), each step's state on its card, and JSON export/import of those drafts (tied to a source version when the board names one). No fetch; values are text, never HTML. */
+const KEY=/^[A-Za-z0-9_.:/#@-]{1,200}$/;
+function storage(){try{const s=globalThis.localStorage;s.getItem("");return s}catch{return null}}
+function value(field){return field.type==="checkbox"?(field.checked?"1":""):field.value}
+function assign(field,text){if(field.type==="checkbox")field.checked=text==="1";else field.value=text;field.dispatchEvent(new Event("input",{bubbles:true}))}
+/** The rows of a table's bodies, or the [data-ui-item] elements of a board. */
+function items(target){return target.tBodies?[...target.tBodies].flatMap(body=>[...body.rows]):[...target.querySelectorAll("[data-ui-item]")]}
+/** Show the items of target (table rows, or its [data-ui-item] elements) whose text contains the query and, when status is given, whose data-status is it; returns the number still shown. */
+export function filterItems(target,query="",status=""){const q=String(query||"").trim().toLowerCase();let shown=0;for(const item of items(target)){const hit=(!q||item.textContent.toLowerCase().includes(q))&&(!status||item.dataset.status===status);item.hidden=!hit;if(hit)shown++}return shown}
+/** input[data-ui-filter="#target"] (text) and select[data-ui-filter-status="#target"] (status) filter one target together; data-ui-filter-count="#out" receives the shown count. One run function per target. */
+export function bindFilter(root=document){const targets=new Map();for(const control of[...root.querySelectorAll("input[data-ui-filter]"),...root.querySelectorAll("select[data-ui-filter-status]")]){const target=root.querySelector(control.dataset.uiFilter||control.dataset.uiFilterStatus);if(!target)continue;const t=targets.get(target)||{text:null,status:null,count:null};targets.set(target,t);if(control.dataset.uiFilterStatus!==undefined)t.status=control;else t.text=control;if(control.dataset.uiFilterCount)t.count=root.querySelector(control.dataset.uiFilterCount)}return[...targets].map(([target,t])=>{const run=()=>{const n=filterItems(target,t.text?t.text.value:"",t.status?t.status.value:"");if(t.count)t.count.textContent=String(n)};if(t.text)t.text.addEventListener("input",run);if(t.status)t.status.addEventListener("change",run);target.addEventListener("ui-status",run);run();return run})}
+/** select[data-ui-status] (a step's state) writes its value to the closest [data-ui-item] as data-status and its option's text to that item's [data-ui-status-tag], then tells the filters (event ui-status). */
+export function bindStatus(root=document){const fields=[...root.querySelectorAll("select[data-ui-status]")];for(const field of fields){const item=field.closest?field.closest("[data-ui-item]"):null;if(!item)continue;const tag=item.querySelector("[data-ui-status-tag]");const sync=()=>{item.dataset.status=field.value;const option=field.selectedOptions&&field.selectedOptions[0];if(tag)tag.textContent=option?option.textContent:field.value;item.dispatchEvent(new Event("ui-status",{bubbles:true}))};field.addEventListener("input",sync);field.addEventListener("change",sync);sync()}return fields}
+/** Fields with data-ui-draft="key" restore from and save to localStorage under scope:key. Returns the bound fields. */
+export function bindDrafts(root=document,{scope="web-ui-drafts"}={}){const store=storage();const fields=[...root.querySelectorAll("[data-ui-draft]")].filter(f=>KEY.test(f.dataset.uiDraft));for(const field of fields){const key=scope+":"+field.dataset.uiDraft;const saved=store?store.getItem(key):null;if(saved!==null)assign(field,saved);field.addEventListener("input",()=>{try{if(store)store.setItem(key,value(field))}catch{}})}return fields}
+/** Non-empty draft values keyed by their data-ui-draft name. */
+export function collectDrafts(root=document){const out={};for(const field of root.querySelectorAll("[data-ui-draft]")){const text=value(field);if(text!=="")out[field.dataset.uiDraft]=text}return out}
+/** Apply {key: text} to the matching draft fields; unknown keys are ignored. Returns the number applied. */
+export function applyDrafts(root,drafts){let n=0;if(!drafts||typeof drafts!=="object")return 0;for(const field of root.querySelectorAll("[data-ui-draft]")){const text=drafts[field.dataset.uiDraft];if(typeof text==="string"){assign(field,text);n++}}return n}
+/** Apply a file's drafts. When the board names its source (data-ui-records-source, a commit) and the file names another, the states (select[data-ui-status]) go back to their first option: records of another version are to be checked again. Returns "loaded", "stale" or "bad". */
+export function importDrafts(root,data){if(!data||typeof data!=="object"||Array.isArray(data))return"bad";const drafts=data.drafts&&typeof data.drafts==="object"?data.drafts:data;const board=root.matches&&root.matches("[data-ui-records-source]")?root:root.querySelector("[data-ui-records-source]");const source=board?board.dataset.uiRecordsSource:"";if(!applyDrafts(root,drafts))return"bad";if(!source||data.source===source)return"loaded";for(const field of root.querySelectorAll("select[data-ui-status][data-ui-draft]"))if(field.options&&field.options.length)assign(field,field.options[0].value);return"stale"}
+/** [data-ui-export] downloads the drafts as JSON (with the board's source when it names one); input[type=file][data-ui-import] reads such a file back; [data-ui-records-message] says how it went. */
+export function bindRecordsIO(root=document,{filename="records.json"}={}){const board=root.matches&&root.matches("[data-ui-records-source]")?root:root.querySelector("[data-ui-records-source]");const source=board?board.dataset.uiRecordsSource:undefined;const say=state=>{for(const out of root.querySelectorAll("[data-ui-records-message]")){const text=out.getAttribute("data-ui-msg-"+state);if(text!==null)out.textContent=text}};for(const button of root.querySelectorAll("[data-ui-export]"))button.addEventListener("click",()=>downloadText(button.dataset.uiExport||filename,JSON.stringify({schema:"web-ui-drafts/1",exported:new Date().toISOString(),...(source?{source}:{}),drafts:collectDrafts(root)},null,2)));for(const input of root.querySelectorAll("input[type=file][data-ui-import]"))input.addEventListener("change",async()=>{const file=input.files&&input.files[0];if(!file)return;let state="bad";try{state=importDrafts(root,JSON.parse(await file.text()))}catch{}say(state);input.value=""})}
+/** Save text as a file in the browser (a Blob link, revoked after the click). */
+export function downloadText(filename,text,type="application/json"){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type}));a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+/** [data-ui-download="name.json"] saves the text of its data-ui-download-source (a <script type="application/json">) as that file. Returns the buttons. */
+export function bindDownloads(root=document){const buttons=[...root.querySelectorAll("[data-ui-download]")];for(const button of buttons){const source=root.querySelector(button.dataset.uiDownloadSource||"#none");if(source)button.addEventListener("click",()=>downloadText(button.dataset.uiDownload,source.textContent))}return buttons}
+/** select[data-ui-choice="name"] shows the [data-ui-choice-panel="name"] whose data-ui-choice-value is its value and hides the others (without JS every panel shows). With data-ui-draft the choice is kept like any draft. Returns the bound selects. */
+export function bindChoice(root=document){const fields=[...root.querySelectorAll("select[data-ui-choice]")];for(const field of fields){const panels=[...root.querySelectorAll("[data-ui-choice-panel]")].filter(p=>p.dataset.uiChoicePanel===field.dataset.uiChoice);const sync=()=>{for(const p of panels)p.hidden=p.dataset.uiChoiceValue!==field.value};field.addEventListener("change",sync);field.addEventListener("input",sync);sync()}return fields}
+/* 📦📜 A saved state as text, so a page can go on where it stopped on another device or after its storage is gone (no DOM, no storage: the
+   page decides what its state is). saveText / saveState: portable JSON as one base64url line (copy it, keep it in a file) — or, with
+   kinds, deflated when that is shorter and written as a spell (a Promise then: browsers deflate asynchronously). spellText / spellBytes:
+   bytes as a spell (ふっかつのじゅもん) in lines of 5 7 5, of kinds 64 (hiragana, 6 bits a character: to write down and type back), 128
+   (with を ん, katakana and A–Z: 7 bits) or 4096 (with JIS kanji: 12 bits, half the characters of base64 — to paste, not to type). Each
+   kind holds the one before. bitsPack / bitsUnpack: whole numbers packed by a layout into a few bytes (JSON is too long to type). Every
+   text carries a 16-bit check (CRC-16/CCITT-FALSE; the line and a spell of 64 start with it, a spell of 128 or 4096 ends its bytes with
+   it, then a 1): in a spell of 64 or 128, one wrong character or two swapped neighbours never pass; any other change passes once in
+   65,536. pysaiyanweboo's save_text, save_state, spell_text, spell_bytes, bits_pack and bits_unpack are their twins and read what these
+   write. Numbers must fit in JavaScript’s safe range. */
+const KANA="あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわがぎぐげござじずぜぞだぢづでどばびぶべぼをんアイエオクケコサシスソタチツテトナニヌネノハヒフホマミムメユヨラルレロワABCDEFGHIJKLMNOPQRSTUVWXYZ";
+let KANJI="";
+/** The characters of a spell of kinds 64, 128 or 4096: KANA's first 64 (hiragana), all of it (を ん, the katakana no hiragana looks like, A–Z), or it and the first 3968 JIS X 0208 kanji in their own (EUC-JP) order — in every Japanese font, and no table to carry. */
+function spellKinds(kinds){if(kinds===64||kinds===128)return KANA.slice(0,kinds);if(kinds!==4096)throw new Error("kinds is 64, 128 or 4096");
+ if(!KANJI){const jis=new TextDecoder("euc-jp",{fatal:true});let found="";for(let row=16;row<85;row++)for(let cell=1;cell<95;cell++)try{found+=jis.decode(Uint8Array.of(160+row,160+cell))}catch{}KANJI=found.slice(0,3968)}return KANA+KANJI}
+function crc16(bytes){let c=0xFFFF;for(const b of bytes){c^=b<<8;for(let i=0;i<8;i++)c=(c&0x8000?c<<1^0x1021:c<<1)&0xFFFF}return c}
+function checked(bytes){const c=crc16(bytes),out=new Uint8Array(bytes.length+2);out[0]=c>>8;out[1]=c&255;out.set(bytes,2);return out}
+function unchecked(raw,wrong){if(raw.length<2||crc16(raw.subarray(2))!==(raw[0]<<8|raw[1]))throw new Error(wrong);return raw.subarray(2)}
+function portableNumber(_,value){
+ if(typeof value==="number"&&!(value>=-Number.MAX_SAFE_INTEGER&&value<=Number.MAX_SAFE_INTEGER))throw new Error("use text for numbers outside the portable JSON range");
+ return value
+}
+async function through(bytes,stream){return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer())}
+/** Portable JSON as one base64url line: a 16-bit check, then its compact UTF-8 JSON. With kinds (64, 128 or 4096) a Promise of a spell instead: 0 and the JSON, or 1 and it deflated when that is shorter. */
+export function saveText(state,kinds){const bytes=()=>{const json=JSON.stringify(state,portableNumber);if(typeof json!=="string")throw new Error("a save must be a JSON value");return new TextEncoder().encode(json)};
+ if(kinds)return (async()=>{const raw=bytes(),small=await through(raw,new CompressionStream("deflate")),body=small.length<raw.length?small:raw,out=new Uint8Array(body.length+1);out[0]=body===small?1:0;out.set(body,1);return spellText(out,kinds)})();
+ let text="";for(const b of checked(bytes()))text+=String.fromCharCode(b);return btoa(text).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")}
+/** The value saveText (or save_text) wrote, with the same kinds (a Promise then); an Error when the text was cut or changed. Spaces and line breaks in it are ignored. */
+export function saveState(text,kinds){const wrong="the save text is cut or changed",parse=raw=>JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(raw),portableNumber);
+ if(kinds)return (async()=>{try{const bytes=spellBytes(text,kinds);if(!bytes.length||bytes[0]>1)throw 0;return parse(bytes[0]?await through(bytes.subarray(1),new DecompressionStream("deflate")):bytes.subarray(1))}catch{throw new Error(wrong)}})();
+ try{const raw=atob(String(text).replace(/[ \t\r\n]/g,"").replace(/-/g,"+").replace(/_/g,"/"));return parse(unchecked(Uint8Array.from(raw,c=>c.charCodeAt(0)),wrong))}catch{throw new Error(wrong)}}
+/** Bytes (a Uint8Array or an array of 0..255) as a spell of kinds 64 (the default), 128 or 4096, in lines of 5 7 5. 12 bytes are 19, 17 or 10 characters. */
+export function spellText(data,kinds=64){const chars=spellKinds(kinds),width=Math.log2(kinds),bytes=Uint8Array.from(data),byte=b=>b.toString(2).padStart(8,"0");let bits="";
+ if(kinds===64)for(const b of checked(bytes))bits+=byte(b);                                                  // 64: the check, the bytes
+ else{for(const b of bytes)bits+=byte(b);bits+=crc16(bytes).toString(2).padStart(16,"0")+"1"}                // 128, 4096: the bytes, the check, a 1 (so their end is known)
+ bits+="0".repeat((width-bits.length%width)%width);let text="";for(let i=0;i<bits.length;i+=width)text+=chars[parseInt(bits.slice(i,i+width),2)];const lines=[];
+ for(let i=0;i<text.length;i+=17)lines.push([text.slice(i,i+5),text.slice(i+5,i+12),text.slice(i+12,i+17)].filter(Boolean).join(" "));return lines.join("\n")}
+/** The bytes spellText (or spell_text) wrote with the same kinds, as a Uint8Array; spaces and line breaks are ignored, and in a spell of 64 katakana reads as hiragana. A spell that is not one throws Error("じゅもんが ちがいます"). */
+export function spellBytes(text,kinds=64){const wrong="じゅもんが ちがいます",chars=spellKinds(kinds),width=Math.log2(kinds),at=new Map([...chars].map((c,i)=>[c,i]));let bits="";
+ for(let c of String(text)){if(" \t\r\n　".includes(c))continue;if(kinds===64&&c>="ァ"&&c<="ヶ")c=String.fromCharCode(c.charCodeAt(0)-96);if(!at.has(c))throw new Error(wrong);bits+=at.get(c).toString(2).padStart(width,"0")}
+ const bytes=n=>Uint8Array.from({length:n},(_,i)=>parseInt(bits.slice(i*8,i*8+8),2));
+ if(kinds===64){const n=bits.length>>3;if(!bits.length||bits.length-n*8>=6||bits.slice(n*8).includes("1"))throw new Error(wrong);return unchecked(bytes(n),wrong)}
+ const end=bits.lastIndexOf("1");if(end<16||bits.length-end>width||end%8)throw new Error(wrong);
+ const raw=bytes(end/8),n=raw.length-2;if(crc16(raw.subarray(0,n))!==(raw[n]<<8|raw[n+1]))throw new Error(wrong);return raw.subarray(0,n)}
+function layoutBits(layout){for(const[name,width]of layout)if(typeof name!=="string"||!Number.isInteger(width)||width<1||width>32)throw new Error("a layout is [name, width in bits (1 to 32)] pairs");if(new Set(layout.map(f=>f[0])).size!==layout.length)throw new Error("a layout names each field once");return layout.reduce((sum,f)=>sum+f[1],0)}
+/** Whole numbers packed by layout ([["version",4],["level",7],["gold",16]]: name and width in bits, first field first), zero-padded to whole bytes. A missing value is 0. */
+export function bitsPack(layout,values={}){const total=layoutBits(layout),names=new Set(layout.map(f=>f[0]));for(const name of Object.keys(values))if(!names.has(name))throw new Error("no field "+name);let bits="";
+ for(const[name,width]of layout){const value=Number(values[name]??0);if(!Number.isInteger(value)||value<0||value>=2**width)throw new Error(name+" does not fit "+width+" bits");bits+=value.toString(2).padStart(width,"0")}
+ bits+="0".repeat((8-total%8)%8);return Uint8Array.from({length:bits.length/8},(_,i)=>parseInt(bits.slice(i*8,i*8+8),2))}
+/** The numbers bitsPack (or bits_pack) packed by the same layout; an Error when the bytes are not that layout's. */
+export function bitsUnpack(layout,data){const total=layoutBits(layout),bits=[...Uint8Array.from(data)].map(b=>b.toString(2).padStart(8,"0")).join("");if(bits.length!==Math.ceil(total/8)*8||bits.slice(total).includes("1"))throw new Error("the bytes are not this layout's");
+ const out={};let at=0;for(const[name,width]of layout){out[name]=parseInt(bits.slice(at,at+width),2);at+=width}return out}
+/** Bind everything inside root; pages mark the board with data-ui-records (or carry a data download) so loading the module is enough. */
+export function mount(root=document,options={}){bindDrafts(root,options);bindChoice(root);bindStatus(root);bindFilter(root);bindRecordsIO(root,options);bindDownloads(root);return root}
+if(typeof document!=="undefined"&&(document.querySelector("[data-ui-records]")||document.querySelector("[data-ui-download]"))){const start=()=>mount(document);if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start,{once:true});else start()}
+/* End PSWB records.js */
+"""
 
 TOOLS_HTML = r"""<!doctype html>
 <html lang="ja">
@@ -3874,6 +4192,7 @@ TOOLS_HTML = r"""<!doctype html>
     <link rel="icon" type="image/svg+xml" href="../brand/icon.svg" sizes="any" />
     <link rel="stylesheet" href="../style.css" />
     <script defer src="../studio.js"></script>
+    <script type="module" src="./records.js"></script>
   </head>
   <body class="ui-elements" data-ui-theme="green" data-page="tools">
     <header>
@@ -3891,95 +4210,10 @@ TOOLS_HTML = r"""<!doctype html>
         画像とJSONは端末内で処理します。
       </p>
       <div class="jump">
-        <a href="#pixels">ドット絵</a><a href="#digest">画像一覧</a
-        ><a href="#capacity">Base64容量</a><a href="#features">CLI対応表</a>
+        <a href="#digest">画像一覧</a
+        ><a href="#composition">🎵 作曲</a><a href="#features">CLI対応表</a>
       </div>
-      <p id="message" role="status" aria-live="polite">準備しています…</p>
-      <section id="pixels">
-        <div class="section-heading">
-          <h2>ドット絵</h2>
-        </div>
-        <div class="workspace">
-          <div class="controls">
-            <label>形<select id="mask"></select></label>
-            <div class="pair">
-              <label>元サイズ<select id="size"></select></label
-              ><label>加工<select id="effect"></select></label>
-            </div>
-            <label>配色ID<select id="palette"></select></label
-            ><button id="generate" class="primary">プリセットから生成</button>
-            <p class="hint">
-              形・サイズ・加工・配色を選んで生成します。
-            </p>
-            <label class="file"
-              >グリッドJSONを開く<input
-                id="grid-file"
-                type="file"
-                accept=".json,application/json"
-            /></label>
-            <div class="pair">
-              <label
-                >幅<input
-                  id="width"
-                  type="number"
-                  min="1"
-                  max="256"
-                  value="32" /></label
-              ><label
-                >高さ<input
-                  id="height"
-                  type="number"
-                  min="1"
-                  max="256"
-                  value="32"
-              /></label>
-            </div>
-            <button id="resize">最近傍でサイズ変更</button>
-            <p class="hint">
-              縮小では細部が失われます。配色変更は5役割のグリッドのみ。
-            </p>
-            <button id="recolor">選択した配色IDを適用</button>
-            <div class="pair">
-              <label>描く色番号<select id="ink"></select></label
-              ><label
-                >出力倍率<select id="scale">
-                  <option>1</option>
-                  <option>2</option>
-                  <option selected>8</option>
-                  <option>16</option>
-                </select></label
-              >
-            </div>
-            <button id="undo-grid">ひとつ戻す</button>
-          </div>
-          <div class="preview">
-            <canvas
-              id="grid"
-              width="32"
-              height="32"
-              aria-label="ドット絵。クリックすると選択した色番号で描画"
-              tabindex="0"
-            ></canvas>
-            <p id="grid-info"></p>
-            <div class="exports">
-              <button id="grid-json">JSON保存</button
-              ><button id="grid-svg">SVG</button
-              ><button id="grid-png">PNG</button
-              ><button id="grid-base64">Base64</button>
-            </div>
-            <label
-              >PNG data URI<textarea
-                id="base64-output"
-                rows="3"
-                readonly
-              ></textarea>
-            </label>
-            <p class="hint">
-              JSONは色番号を、PNGは色表と寸法を保持します。
-            </p>
-          </div>
-        </div>
-      </section>
+      <p id="message" role="status" aria-live="polite"></p>
       <section id="digest">
         <div class="section-heading">
           <h2>画像一覧</h2>
@@ -4002,7 +4236,7 @@ TOOLS_HTML = r"""<!doctype html>
               <option>4</option>
               <option>5</option>
             </select></label
-          ><button id="digest-png" disabled>一覧PNG</button
+          ><button id="images-cancel" type="button" hidden>読み込みを中止</button><button id="digest-png" disabled>一覧PNG</button
           ><button id="digest-html" disabled>一覧HTML</button>
         </div>
         <p class="hint">
@@ -4010,16 +4244,22 @@ TOOLS_HTML = r"""<!doctype html>
         </p>
         <div id="image-list" class="image-list"></div>
       </section>
-      <section id="capacity">
-        <div class="section-heading">
-          <h2>Base64容量</h2>
-        </div>
-        <label
-          >任意のファイルを選ぶ<input id="capacity-file" type="file"
-        /></label>
-        <p id="capacity-result">
-          ファイル本体は読み込まず、サイズから標準Base64文字数を計算します。
-        </p>
+      <section id="composition" data-ui-records>
+        <h2>🎵 Composition Studio</h2>
+
+        <label>歌詞<textarea id="song-lyrics" data-ui-draft="ironmate-song-lyrics" rows="4"></textarea></label>
+        <label>パート別コード進行（パート名 = ローマ数字）<textarea id="song-parts" data-ui-draft="ironmate-song-parts" rows="3">Aメロ = I V vi IV
+サビ = IV V I I</textarea></label>
+        <label>曲順（空白区切り）<input id="song-order" data-ui-draft="ironmate-song-order" value="Aメロ サビ サビ"></label>
+        <button id="song-arrange">曲順に展開</button>
+        <ol class="ui-current-items" id="song-sections" aria-label="曲順"></ol>
+        <label>曲全体のコード進行<textarea id="song-progression" rows="2" readonly></textarea></label>
+        <fieldset id="song-audio" hidden><legend>曲を試聴</legend>
+          <label>キー<select id="song-key" data-ui-draft="ironmate-song-key"><option>C</option><option>D</option><option>E</option><option>F</option><option>G</option><option>A</option><option>B</option></select></label>
+          <label>BPM<input type="number" id="song-bpm" data-ui-draft="ironmate-song-bpm" value="120" min="30" max="300" required></label>
+          <button id="song-play">▶ 曲順で試聴</button><button id="song-stop">■ 停止</button>
+        </fieldset>
+        <p id="song-status" role="status"></p>
       </section>
       <details id="features" class="ui-panel">
         <summary>ブラウザとCLIの対応表</summary>
@@ -4027,9 +4267,9 @@ TOOLS_HTML = r"""<!doctype html>
           <thead><tr><th>操作</th><th>ブラウザ</th><th>CLI</th></tr></thead>
           <tbody>
             <tr><td>画像・レイヤー編集</td><td><a href="../">画像編集</a></td><td>image_studio.py / studio_ingress.py</td></tr>
-            <tr><td>ドット絵</td><td><a href="#pixels">グリッド編集</a></td><td>pixel_grid.py / grid_tools.py</td></tr>
+            <tr><td>ドット絵</td><td>Image Studio のグリッド編集</td><td>pixel_grid.py / grid_tools.py</td></tr>
             <tr><td>画像一覧・比較</td><td><a href="#digest">一覧作成</a></td><td>image_digest.py / browser_matrix.py</td></tr>
-            <tr><td>Base64容量</td><td><a href="#capacity">文字数</a></td><td>ironlib/size_estimate.py</td></tr>
+            <tr><td>Base64容量</td><td><a href="https://myon-bioinformatics.github.io/CaChereCyCle/#capacity">CCCCで計算</a></td><td>ironlib/size_estimate.py</td></tr>
             <tr><td>PPTX</td><td><a href="../slides/">スライド編集</a></td><td>pptx_pipeline.py / pptx_replace.py / ironlib/pptx_preview.py</td></tr>
           </tbody>
         </table></div>

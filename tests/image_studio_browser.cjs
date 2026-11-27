@@ -73,6 +73,8 @@ const failures = [],
   page.on("dialog", (dialog) =>
     dialog.type() === "confirm" && !acceptHistoryTrim ? dialog.dismiss() : dialog.accept());
   await page.goto(url);
+  assert.equal(await page.locator("#png").isVisible(), false);
+  await page.locator("#studio-export summary").click();
   for (const id of ["save", "save-workspace", "trim-history", "open-workspace"])
     assert.equal(await page.locator(`#${id}`).count(), 1, `required Studio control: ${id}`);
   await page.waitForFunction(() => !!window.IronmateStudio, null, {timeout:10000});
@@ -326,6 +328,15 @@ const failures = [],
     .click();
   await page.selectOption("#export-scale", "2");
   await download("#png", "composition-2x.png");
+  // 🧰 a row of a host's header: its key presses this page's own control (a PNG's size is the row's own), with the menus shut
+  const fromHost = (key) => page.evaluate((k) => document.dispatchEvent(new CustomEvent("ui-chrome-action", {detail: {key: k}})), key);
+  const hosted = page.waitForEvent("download");
+  await fromHost("png-4");
+  assert.match((await hosted).suggestedFilename(), /\.png$/);
+  assert.equal(await page.inputValue("#export-scale"), "4");
+  await fromHost("shelf");
+  assert.equal(await page.evaluate(() => document.getElementById("shelf-dialog").open), true);
+  await page.evaluate(() => document.getElementById("shelf-dialog").close());
   const enlarged = fs.readFileSync(path.join(out, "composition-2x.png"));
   assert.equal(enlarged.readUInt32BE(16), saved.width * 2);
   assert.equal(enlarged.readUInt32BE(20), saved.height * 2);
@@ -437,6 +448,18 @@ const failures = [],
   await page.locator("#error button").click();
   // Isolate the new ingress smoke from legacy editor tool/selection state.
   await page.goto(url);
+  await page.locator("#pixel-editor summary").click();
+  await page.waitForFunction(() => !!window.IronmateWorkbench?.grid);
+  await page.locator("#grid").click();
+  await page.locator("#place-grid").click();
+  await page.waitForFunction(() => IronmateStudio.scene.layers.some(layer => layer.name === "ドット絵.png"));
+  for (const tool of ["emoji", "kaomoji"]) {
+    await page.locator('[data-tool="' + tool + '"]').click();
+    await page.locator("#keyboard-focus").click();
+    assert.equal(await page.evaluate(() => document.activeElement.id), tool + "-text");
+  }
+  assert.equal(await page.locator("#png").isVisible(), false);
+  await page.locator("#studio-export summary").click();
   await page.evaluate(() => window.IronmateStudio.ready);
   // Same real browser: feed exported PNG back via Base64 and clipboard.
   const pngIn = await page.evaluate(async () => Array.from(

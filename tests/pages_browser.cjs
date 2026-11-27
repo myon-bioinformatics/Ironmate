@@ -26,9 +26,8 @@ const out = path.resolve("build/pages-evidence");
     page.on("request", (r) => requests.push(r.url()));
     await page.goto(url);
     await page.waitForFunction(() => !!window.IronmateStudio);
-    await page.click('a[href="tools/"]');
+    await page.click("#pixel-editor summary");
     await page.waitForFunction(() => !!window.IronmateWorkbench);
-    assert.match(page.url(), /\/Ironmate\/tools\/$/);
     await page.screenshot({
       path: path.join(out, "desktop.png"),
       fullPage: true,
@@ -81,9 +80,26 @@ const out = path.resolve("build/pages-evidence");
       buffer: Buffer.from('{"schema":"wrong"}'),
     });
     await page.waitForFunction(
-      () => document.getElementById("message").dataset.error === "true",
+      () => document.getElementById("pixel-status").dataset.error === "true",
     );
     assert.deepEqual(await page.evaluate(() => IronmateWorkbench.grid), g);
+    const alphaGrid = {
+      schema: "ironmate-pixel-grid/1",
+      width: 2,
+      height: 1,
+      colors: ["#12345600", "#ABCDEF80"],
+      pixels: [[0, 1]],
+    };
+    await page.setInputFiles("#grid-file", {
+      name: "alpha.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(alphaGrid)),
+    });
+    await page.waitForFunction(() => IronmateWorkbench.grid.width === 2);
+    await download("grid-png", "alpha.png");
+    fs.writeFileSync(path.join(out, "alpha.json"), JSON.stringify(alphaGrid));
+    await page.goto(url + "tools/");
+    assert.equal(await page.locator("#grid").count(), 0);
     // Use real PNG bytes and a hostile filename to cover thumbnail decoding and HTML escaping.
     const image = fs.readFileSync(path.join(out, "grid.png"));
     await page.setInputFiles("#images", [
@@ -102,30 +118,44 @@ const out = path.resolve("build/pages-evidence");
     const digest = fs.readFileSync(path.join(out, "digest.html"), "utf8");
     assert(digest.includes("&lt;img onerror=alert(1)&gt;.png"));
     assert(!digest.includes("<img onerror="));
-    await page.setInputFiles("#capacity-file", {
-      name: "seven.bin",
-      mimeType: "application/octet-stream",
-      buffer: Buffer.alloc(7),
+    const previousImages = await page.locator("#image-list figcaption").allTextContents();
+    await page.evaluate(() => {
+      const decode = HTMLImageElement.prototype.decode;
+      HTMLImageElement.prototype.decode = function () {
+        if (this.src.startsWith("blob:")) {
+          HTMLImageElement.prototype.decode = decode;
+          return new Promise((resolve, reject) => {
+            window.releaseImageDecode = () => decode.call(this).then(resolve, reject);
+          });
+        }
+        return decode.call(this);
+      };
     });
-    assert.match(await page.textContent("#capacity-result"), /Base64 12文字/);
-    const alphaGrid = {
-      schema: "ironmate-pixel-grid/1",
-      width: 2,
-      height: 1,
-      colors: ["#12345600", "#ABCDEF80"],
-      pixels: [[0, 1]],
-    };
-    await page.setInputFiles("#grid-file", {
-      name: "alpha.json",
-      mimeType: "application/json",
-      buffer: Buffer.from(JSON.stringify(alphaGrid)),
-    });
-    await page.waitForFunction(() => IronmateWorkbench.grid.width === 2);
-    await download("grid-png", "alpha.png");
-    fs.writeFileSync(path.join(out, "alpha.json"), JSON.stringify(alphaGrid));
+    await page.setInputFiles("#images", { name: "cancel.png", mimeType: "image/png", buffer: image });
+    await page.waitForFunction(() => !!window.releaseImageDecode);
+    await page.click("#images-cancel");
+    assert.match(await page.textContent("#message"), /中止/);
+    await page.evaluate(() => window.releaseImageDecode());
+    assert.deepEqual(await page.locator("#image-list figcaption").allTextContents(), previousImages);
+    assert.equal(await page.locator("#digest-html").isEnabled(), true);
+    await page.fill("#song-lyrics", "Verse draft");
+    await page.fill("#song-parts", "A = I V\nB = IV");
+    await page.fill("#song-order", "B A B");
+    await page.click("#song-arrange");
+    assert.equal(await page.inputValue("#song-progression"), "IV I V IV");
+    assert.deepEqual(await page.locator("#song-sections li").allTextContents(), ["B", "A", "B"]);
+    await page.fill("#song-order", "missing");
+    await page.click("#song-arrange");
+    assert.equal(await page.inputValue("#song-progression"), "");
+    assert.equal(await page.locator("#song-sections li").count(), 0);
+    await page.fill("#song-order", "B A B");
+    await page.reload();
+    assert.equal(await page.inputValue("#song-lyrics"), "Verse draft");
+    assert.equal(await page.inputValue("#song-parts"), "A = I V\nB = IV");
+    assert.equal(await page.inputValue("#song-order"), "B A B");
+    await page.click("#song-arrange");
+    assert.equal(await page.inputValue("#song-progression"), "IV I V IV");
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto(url + "tools/");
-    await page.waitForFunction(() => !!window.IronmateWorkbench);
     assert.equal(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,
@@ -155,7 +185,7 @@ const out = path.resolve("build/pages-evidence");
     assert.equal(check.status, 0, check.stderr);
     console.log(check.stdout.trim());
     console.log(
-      "Static Studio navigation, presets, PNG/SVG/JSON/Base64, resize/undo, invalid import, digest, filename escaping, capacity and mobile layout passed",
+      "Static Studio navigation, presets, PNG/SVG/JSON/Base64, resize/undo, invalid import, digest, filename escaping, composition link and mobile layout passed",
     );
   } finally {
     await browser.close();

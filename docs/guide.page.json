@@ -77,19 +77,15 @@
                 },
                 {
                   "type": "card",
-                  "title": "Slide Studio・Phone Slides",
-                  "text": "複数スライドを編集し、デッキ JSON と PPTX を出力。スマホ版では文字ボックス編集とページ切替を小さい画面で行う。",
+                  "title": "Slide Studio",
+                  "text": "複数スライドを編集し、デッキ JSON と PPTX を出力。スマホでも PC でも同じ 1 つの画面（スライドは上に固定、道具は絵文字）。",
                   "blocks": [
                     {
                       "type": "links",
                       "items": [
                         {
-                          "label": "PC向け",
+                          "label": "開く",
                           "href": "https://myon-bioinformatics.github.io/tools/slide-studio/"
-                        },
-                        {
-                          "label": "スマホ向け",
-                          "href": "https://myon-bioinformatics.github.io/tools/slide-studio/phone/"
                         }
                       ]
                     },
@@ -341,7 +337,7 @@
                 {
                   "type": "card",
                   "title": "スライドを作る",
-                  "text": "Slide Studio でスライドに文字や図形を置く。編集用にはデッキ JSON、共有用には PPTX を保存する。スマホ版でも同じデッキ JSON を開ける。",
+                  "text": "Slide Studio でスライドに文字や図形を置く。編集用にはデッキ JSON、共有用には PPTX を保存する。スマホでも PC でも同じ画面で、同じデッキ JSON を開ける。",
                   "blocks": [
                     {
                       "type": "links",
@@ -349,10 +345,6 @@
                         {
                           "label": "Slide Studio を開く",
                           "href": "https://myon-bioinformatics.github.io/tools/slide-studio/"
-                        },
-                        {
-                          "label": "スマホ版を開く",
-                          "href": "https://myon-bioinformatics.github.io/tools/slide-studio/phone/"
                         }
                       ]
                     }

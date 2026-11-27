@@ -2,35 +2,14 @@
 
 https://myon-bioinformatics.github.io/tools/slide-studio/
 
-Image Studio's shape, text and image editing is reused per slide.
+Text, shapes, arrows, emoji, clocks and pictures on several slides, saved as a PowerPoint file that stays editable.
 No installation, external CDN or server processing is needed. Input images and in-progress JSON are not sent anywhere.
 
 ## Usage
 
-1. The first slide is blank. Choose `T 文字列` (text), type into its field on the left and click the canvas; a title and a body are two such text boxes. `T 文字列`, `✦ スタンプ` (stamp), `絵文字` (emoji) and `顔文字` (kaomoji) each keep a field of their own, so one never overwrites another; an empty field places its example.
-2. To change something already placed, select it and use `✏️ 編集` (edit) on the right: the words, `太字` (bold), `斜体` (italic), fill and line colors, the shape, a clock's time. Each applies as it is set; `✏️ 編集を適用` (apply) commits the words. Position, size and font size are below it.
-3. `図形(▭)` (shape) is one tool whose candidates are `▭ ◯ △ →`; `→` places a straight line with a triangular arrowhead, which stays editable in PowerPoint. Moving, scaling, rotating and recoloring work as in Image Studio. The centered arrowhead is also available. `◷ 時計` (clock) starts at the current time.
-4. Build a deck with `白紙` (blank), `スライド複製` (duplicate slide), slide selection, reordering and deletion. All slides use the same canvas size. Switching slides keeps the current layout and restarts the edit history.
-   Enable `4枚表示` to edit a group of up to four slides in place. Choose a slide in the grid to use the same text, shape and arrow controls on it. The selector reaches other groups. Adding, duplicating, moving or deleting a slide keeps the edited slide in view.
-5. `PPTXを書き出す` (export PPTX) saves all slides. Also using `全スライドJSON保存` (save all slides as JSON) lets you reload the editable data, images included, later. The regular `JSON保存` (save JSON) and `作業履歴を保存` (save work history) save only the current slide.
-
-When several layers render to identical PNG bytes, the PPTX stores one media
-part. Each placement retains its own size, position and opacity. This applies
-across slides as well as within one slide.
-
-Python consumers can inspect the generated PPTX directly with
-`pptx_inspect.inspect(deck_bytes)`. A program that writes raw PPTX to stdout can
-pipe it to `python -S pptx_inspect.py -` and read the slide report as JSON.
-
-Unsaved changes are confirmed when leaving the page. There is no autosave or re-import of PPTX files.
-
-## 📱 Phone slides
-
-https://myon-bioinformatics.github.io/tools/slide-studio/phone/
-
 <img src="assets/phone-slides.gif" width="240" alt="Phone slides in a 390×844 browser: blank slide, text box, editing later, bigger text, 🔷 😊 (^^) 🕒 placed from candidates, page 2, ⬅️ back to page 1, then 🧭 through the six pager shapes">
 
-A phone-first page for the same deck. The slide stays pinned at the top while you work, and every control is an emoji (its words are only in the tooltip / screen-reader label). Landscape puts the controls beside the slide. The pinned slide and the page controls are PySaiyanWeBoo's `stage` and `pager` components (`scripts/build_studio_css.py` writes them from the pinned commit).
+One editor for phones and PCs, phone-first. The slide stays pinned at the top while you work, and every control is an emoji (its words are only in the tooltip / screen-reader label). A phone held sideways and a PC window (960 px and wider) put the controls beside the slide, every row on one line. `/tools/slide-studio/phone/`, its address before it became the entrance, sends on to it. The pinned slide and the page controls are PySaiyanWeBoo's `stage` and `pager` components (`scripts/build_studio_css.py` writes them from the pinned commit).
 
 | | |
 | --- | --- |
@@ -46,11 +25,35 @@ A phone-first page for the same deck. The slide stays pinned at the top while yo
 | 🧭 | The shape of the page controls, one tap each, no reload (kept on this device): ⬅️ 1/N ➡️ → ● dots → 🎚️ slider → 🎛️ dial → ✚ cross-key (⬆️ first, ⬇️ last) → ⏮️ ⬅️ 1/N ➡️ ⏭️ |
 | ➕📄 📑 ✖️📄 🆕 | Add a blank page, duplicate, delete, start over |
 | 🗑️ ↩️ ↪️ | Delete the selection, undo, redo (64 steps) |
-| 💾 📂 📤 | All-slide JSON save / open (the same file Slide Studio opens, so arrows, images and fonts can be finished on a PC) and PPTX export |
+| 💾 📂 📤 | All-slide JSON save / open (the same file the PC studio opens) and PPTX export |
+| 🖥️ 🏠 | The PC studio this editor replaces (below) and Image Studio |
 
 The GIF is the frames `tests/slides_browser.cjs` saves (`build/pages-evidence/phone-*.png`, 390×844; `phone-frames.json` lists them) at 1.4 s each, 0.9 s for the 🧭 shapes.
 
 The deck is also kept in the browser's local storage, so a reload or a killed tab comes back where it was. Nothing is sent anywhere. If the local storage is full (large pictures), the status shows ⚠️ 💾; save with 💾.
+
+When several layers render to identical PNG bytes, the PPTX stores one media
+part. Each placement retains its own size, position and opacity. This applies
+across slides as well as within one slide.
+
+Python consumers can inspect the generated PPTX directly with
+`pptx_inspect.inspect(deck_bytes)`. A program that writes raw PPTX to stdout can
+pipe it to `python -S pptx_inspect.py -` and read the slide report as JSON.
+
+## 🖥️ The PC studio it replaces
+
+https://myon-bioinformatics.github.io/tools/slide-studio/pc/
+
+The editor above is the entrance, so that phones and PCs are built once. The PC studio it replaces stays here, as it was, until its remaining tools (PNG / SVG of a slide, fonts, rotation, line color, opacity, the 4-slide view) are in the one editor; nothing new is added to it, and it opens the same all-slide JSON.
+
+1. The first slide is blank. Choose `T 文字列` (text), type into its field on the left and click the canvas; a title and a body are two such text boxes. `T 文字列`, `✦ スタンプ` (stamp), `絵文字` (emoji) and `顔文字` (kaomoji) each keep a field of their own, so one never overwrites another; an empty field places its example.
+2. To change something already placed, select it and use `✏️ 編集` (edit) on the right: the words, `太字` (bold), `斜体` (italic), fill and line colors, the shape, a clock's time. Each applies as it is set; `✏️ 編集を適用` (apply) commits the words. Position, size and font size are below it.
+3. `図形(▭)` (shape) is one tool whose candidates are `▭ ◯ △ →`; `→` places a straight line with a triangular arrowhead, which stays editable in PowerPoint. Moving, scaling, rotating and recoloring work as in Image Studio. The centered arrowhead is also available. `◷ 時計` (clock) starts at the current time.
+4. Build a deck with `白紙` (blank), `スライド複製` (duplicate slide), slide selection, reordering and deletion. All slides use the same canvas size. Switching slides keeps the current layout and restarts the edit history.
+   Enable `4枚表示` to edit a group of up to four slides in place. Choose a slide in the grid to use the same text, shape and arrow controls on it. The selector reaches other groups. Adding, duplicating, moving or deleting a slide keeps the edited slide in view.
+5. `PPTXを書き出す` (export PPTX) saves all slides. Also using `全スライドJSON保存` (save all slides as JSON) lets you reload the editable data, images included, later. The regular `JSON保存` (save JSON) and `作業履歴を保存` (save work history) save only the current slide.
+
+Unsaved changes are confirmed when leaving the page. There is no autosave or re-import of PPTX files.
 
 ## What is editable in PowerPoint
 

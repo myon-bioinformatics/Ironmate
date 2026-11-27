@@ -26,7 +26,7 @@ const url =
     page.on("pageerror", (e) => errors.push(e.message));
     page.on("request", (r) => requests.push(r.url()));
     page.on("dialog", (d) => d.accept());
-    await page.goto(url);
+    await page.goto(url + "pc/"); // 🖥️ the PC studio the one editor replaces, kept until its remaining tools are there
     await page.locator("#studio-export summary").click();
     await page.waitForFunction(() => !!window.IronmateSlideEditor);
     assert.equal(
@@ -302,7 +302,7 @@ print('Long Japanese/English: visible SVG lines match native PPTX, explicit para
 `], { encoding: "utf8" });
     assert.equal(wrapped.status, 0, wrapped.stderr);
     console.log(wrapped.stdout.trim());
-    // 📱 Phone slides: the slide stays pinned on top, emoji controls, 🧭 PySaiyanWeBoo's pager in every shape, text editable later.
+    // 📽️ The one slide editor (slides/, phone-first): the slide stays pinned on top, emoji controls, 🧭 PySaiyanWeBoo's pager in every shape, text editable later.
     const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, acceptDownloads: true }),
       mobile = await phone.newPage(),
       shots = [];
@@ -325,7 +325,8 @@ print('Long Japanese/English: visible SVG lines match native PPTX, explicit para
       const box = await mobile.locator("#phone-stage").boundingBox();
       return { x: box.x + box.width * fx, y: box.y + box.height * fy };
     };
-    await mobile.goto(url + "phone/");
+    await mobile.goto(url + "phone/"); // 🚪 the editor's old address only sends on to the one entrance
+    await mobile.waitForURL(url);
     await mobile.waitForFunction(() => !!window.IronmatePhone);
     const stageBox = await mobile.locator("#phone-stage").boundingBox();
     assert.equal(Math.round(stageBox.y), 0); // 📌 pinned at the top, full width, 16:9
@@ -586,6 +587,25 @@ print('📱 phone: 2 slides, native text kept')
     await act("undo");
     await mobile.waitForFunction(() => IronmatePhone.deck.title === "font bounds");
     await phone.close();
+    // 🖥️ The same page in a PC window: the controls sit beside the slide, every row on one line, nothing to scroll.
+    const wide = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+    wide.on("pageerror", (e) => errors.push(e.message));
+    await wide.goto(url);
+    await wide.waitForFunction(() => !!window.IronmatePhone);
+    await wide.click('[data-act="shape"]');
+    await wide.click("#phone-candidates button >> nth=2");
+    await wide.click('[data-act="emoji"]');
+    await wide.click("#phone-candidates button >> nth=1");
+    const stage = await wide.locator("#phone-stage").boundingBox(),
+      tools = await wide.locator(".phone-tools").boundingBox();
+    assert.ok(tools.x >= stage.x + stage.width && stage.width >= 896, JSON.stringify({ stage, tools }));
+    assert.ok(tools.y + tools.height <= 800 && (await wide.evaluate(() => document.documentElement.scrollHeight)) === 800);
+    const wideRows = await wide.$$eval(".phone-row", (nodes) => nodes.filter((n) => n.id !== "phone-candidates")
+      .map((n) => new Set([...n.children].map((c) => c.offsetTop)).size));
+    assert.ok(wideRows.every((n) => n === 1), JSON.stringify(wideRows));
+    assert.equal(await wide.getAttribute('[data-act="studio"]', "href"), "pc/");
+    await wide.screenshot({ path: path.join(out, "slides-wide.png") });
+    await wide.close();
     assert(requests.every((r) => r.startsWith(new URL(url).origin + "/") || /^(blob|data):/.test(r)));
     assert.deepEqual(errors, []);
   } finally {

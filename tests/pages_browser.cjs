@@ -26,9 +26,8 @@ const out = path.resolve("build/pages-evidence");
     page.on("request", (r) => requests.push(r.url()));
     await page.goto(url);
     await page.waitForFunction(() => !!window.IronmateStudio);
-    await page.click('a[href="tools/"]');
+    await page.click("#pixel-editor summary");
     await page.waitForFunction(() => !!window.IronmateWorkbench);
-    assert.match(page.url(), /\/Ironmate\/tools\/$/);
     await page.screenshot({
       path: path.join(out, "desktop.png"),
       fullPage: true,
@@ -81,9 +80,26 @@ const out = path.resolve("build/pages-evidence");
       buffer: Buffer.from('{"schema":"wrong"}'),
     });
     await page.waitForFunction(
-      () => document.getElementById("message").dataset.error === "true",
+      () => document.getElementById("pixel-status").dataset.error === "true",
     );
     assert.deepEqual(await page.evaluate(() => IronmateWorkbench.grid), g);
+    const alphaGrid = {
+      schema: "ironmate-pixel-grid/1",
+      width: 2,
+      height: 1,
+      colors: ["#12345600", "#ABCDEF80"],
+      pixels: [[0, 1]],
+    };
+    await page.setInputFiles("#grid-file", {
+      name: "alpha.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(alphaGrid)),
+    });
+    await page.waitForFunction(() => IronmateWorkbench.grid.width === 2);
+    await download("grid-png", "alpha.png");
+    fs.writeFileSync(path.join(out, "alpha.json"), JSON.stringify(alphaGrid));
+    await page.goto(url + "tools/");
+    assert.equal(await page.locator("#grid").count(), 0);
     // Use real PNG bytes and a hostile filename to cover thumbnail decoding and HTML escaping.
     const image = fs.readFileSync(path.join(out, "grid.png"));
     await page.setInputFiles("#images", [
@@ -108,24 +124,7 @@ const out = path.resolve("build/pages-evidence");
       buffer: Buffer.alloc(7),
     });
     assert.match(await page.textContent("#capacity-result"), /Base64 12文字/);
-    const alphaGrid = {
-      schema: "ironmate-pixel-grid/1",
-      width: 2,
-      height: 1,
-      colors: ["#12345600", "#ABCDEF80"],
-      pixels: [[0, 1]],
-    };
-    await page.setInputFiles("#grid-file", {
-      name: "alpha.json",
-      mimeType: "application/json",
-      buffer: Buffer.from(JSON.stringify(alphaGrid)),
-    });
-    await page.waitForFunction(() => IronmateWorkbench.grid.width === 2);
-    await download("grid-png", "alpha.png");
-    fs.writeFileSync(path.join(out, "alpha.json"), JSON.stringify(alphaGrid));
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto(url + "tools/");
-    await page.waitForFunction(() => !!window.IronmateWorkbench);
     assert.equal(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,

@@ -2934,10 +2934,7 @@ if (typeof document !== "undefined" && document.body && (document.body.dataset.p
   action("grid-base64", async () => {
     const blob = await png(),
       bytes = new Uint8Array(await blob.arrayBuffer());
-    let binary = "";
-    for (let i = 0; i < bytes.length; i += 16384)
-      binary += String.fromCharCode(...bytes.subarray(i, i + 16384));
-    $("base64-output").value = "data:image/png;base64," + btoa(binary);
+    $("base64-output").value = StudioCore.pngPayload(bytes).dataUri;
     status(
       `PNG ${blob.size.toLocaleString()} bytes / data URI ${C.base64Length(blob.size, true).toLocaleString()}文字。選択してコピーできます。`,
     );

@@ -40,6 +40,7 @@ STUDIO_HTML = r"""<!doctype html>
           <button id="shelf-button">クリップボード・シェルフ</button>
           <label class="button">作業履歴を開く<input id="open-workspace" type="file" accept=".json,application/json" /></label>
           <label class="button">開く<input id="open" type="file" accept=".json" /></label>
+          <!-- deck-import -->
         </details>
         <details id="studio-export">
           <summary>↑ エクスポート</summary>
@@ -53,6 +54,7 @@ STUDIO_HTML = r"""<!doctype html>
             <option value="8">8×</option>
           </select>
           <button id="png" class="primary">PNGを書き出す ↗</button>
+          <!-- deck-export -->
         </details>
       </div>
     </header>
@@ -3771,13 +3773,7 @@ SLIDES_PANEL_HTML = r"""<section class="slide-controls" aria-label="スライド
     ><button id="slide-up">前へ移動</button
     ><button id="slide-down">後へ移動</button
     ><button id="slide-delete">スライド削除</button
-    ><button id="deck-save">全スライドJSON保存</button
-    ><label class="button"
-      >全スライドを開く<input
-        id="deck-open"
-        type="file"
-        accept=".json,application/json" /></label
-    ><button id="deck-pptx" class="primary">PPTXを書き出す</button>
+    >
   </div>
   <p id="deck-status" role="status">
     全スライドは同じ寸法です。

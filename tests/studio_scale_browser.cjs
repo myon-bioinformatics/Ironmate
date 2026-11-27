@@ -4,7 +4,7 @@ const fs = require("node:fs"),
   path = require("node:path"),
   assert = require("node:assert/strict"),
   { execFileSync } = require("node:child_process");
-module.exports = async function ({ page, out, root, download }) {
+module.exports = async function ({ page, out, root, download, reveal }) {
   const load = async (scene, name) => {
     const file = path.join(out, name + ".json");
     fs.writeFileSync(file, JSON.stringify(scene));
@@ -118,6 +118,7 @@ module.exports = async function ({ page, out, root, download }) {
   });
   await download("#save", "stamps-scene.json");
   await download("#png", "stamps.png");
+  await reveal("#export-scale");
   await page.selectOption("#export-scale", "4");
   await download("#svg", "stamps-4x.svg");
   await download("#png", "stamps-4x.png");
@@ -125,6 +126,7 @@ module.exports = async function ({ page, out, root, download }) {
     fs.readFileSync(path.join(out, "stamps-4x.png")).readUInt32BE(16),
     5120,
   );
+  await reveal("#export-scale");
   await page.selectOption("#export-scale", "1");
   const fixture =
     "data:image/png;base64," +

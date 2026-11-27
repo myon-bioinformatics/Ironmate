@@ -3119,31 +3119,64 @@ if (typeof document !== "undefined" && (document.getElementById("pixel-editor") 
       if (parts.has(match[1])) throw Error("同じパート名があります: " + match[1]);
       parts.set(match[1], match[2].trim().split(/\s+/));
     }
-    const chords = [];
+    const arrangement = [];
+    let chordCount = 0;
     for (const name of orderText.trim().split(/\s+/)) {
       if (!parts.has(name)) throw Error("曲順のパートを確認してください: " + name);
-      chords.push(...parts.get(name));
-      if (chords.length > 32) throw Error("曲全体を32コード以内にしてください。");
+      const chords = parts.get(name);
+      chordCount += chords.length;
+      if (chordCount > 32) throw Error("曲全体を32コード以内にしてください。");
+      arrangement.push({name, chords});
     }
-    return chords.join(" ");
+    return arrangement;
   }
-  $("song-arrange").onclick = () => {
+  const songSections = $("song-sections");
+  let currentSection = null;
+  function showSongSection(index) {
+    const item = songSections.children[index];
+    if (item === currentSection) return;
+    if (currentSection) {
+      currentSection.removeAttribute("aria-current");
+      currentSection.textContent = currentSection.textContent;
+    }
+    currentSection = item;
+    if (item) {
+      const mark = document.createElement("mark");
+      mark.textContent = item.textContent;
+      item.replaceChildren(mark);
+      item.setAttribute("aria-current", "step");
+    }
+  }
+  function updateArrangement() {
+    showSongSection(-1);
     try {
-      const progression = arrangeSong($("song-parts").value, $("song-order").value);
-      $("song-progression").value = progression;
+      const parts = arrangeSong($("song-parts").value, $("song-order").value);
+      songSections.replaceChildren(...parts.map(({name}) => {
+        const item = document.createElement("li");
+        item.textContent = name;
+        return item;
+      }));
+      $("song-progression").value = parts.flatMap(part => part.chords).join(" ");
       $("song-status").textContent = "曲順に展開しました。";
+      return parts;
     } catch (err) {
+      songSections.replaceChildren();
       $("song-progression").value = "";
       $("song-status").textContent = err.message;
+      return null;
     }
+  }
+  $("song-arrange").onclick = () => {
+    $("song-stop").click();
+    updateArrangement();
   };
-  function songNotes(progression, key, bpm) {
+  function songNotes(chords, key, bpm) {
     const tonic = {C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11}[key];
     const scale = [0, 2, 4, 5, 7, 9, 11];
     const degrees = ["I", "II", "III", "IV", "V", "VI", "VII"];
     const duration = 30 / bpm;
     const notes = [];
-    for (const chord of progression.split(" ")) {
+    for (const chord of chords) {
       const match = /^([IViv]+)(dim|°)?(7)?$/.exec(chord);
       const roman = match?.[1];
       const degree = degrees.indexOf(roman?.toUpperCase());
@@ -3160,17 +3193,27 @@ if (typeof document !== "undefined" && (document.getElementById("pixel-editor") 
   }
   $("song-stop").onclick = () => {
     document.dispatchEvent(new Event("studio-audio-stop"));
+    showSongSection(-1);
     $("song-status").textContent = "停止しました。";
   };
   $("song-play").onclick = () => {
     $("song-stop").click();
-    $("song-arrange").click();
-    const progression = $("song-progression").value;
-    if (!progression || !$("song-bpm").reportValidity()) return;
+    const parts = updateArrangement();
+    if (!parts || !$("song-bpm").reportValidity()) return;
     try {
-      const notes = songNotes(progression, $("song-key").value, Number($("song-bpm").value));
+      const key = $("song-key").value;
+      const bpm = Number($("song-bpm").value);
+      const notes = [];
+      const starts = parts.map(({chords}) => {
+        const start = notes.length * 30 / bpm;
+        for (const note of songNotes(chords, key, bpm))
+          notes.push({...note, start: note.start + start});
+        return start;
+      });
       document.dispatchEvent(new CustomEvent("studio-audio-play", { detail: {
-        notes, report: text => { $("song-status").textContent = text; },
+        notes,
+        report: text => { $("song-status").textContent = text; },
+        position: elapsed => showSongSection(elapsed === null ? -1 : starts.findLastIndex(start => start <= elapsed)),
       } }));
     } catch (err) { $("song-status").textContent = err.message; }
   };
@@ -4118,6 +4161,7 @@ TOOLS_HTML = r"""<!doctype html>
 サビ = IV V I I</textarea></label>
         <label>曲順（空白区切り）<input id="song-order" value="Aメロ サビ サビ"></label>
         <button id="song-arrange">曲順に展開</button>
+        <ol id="song-sections" aria-label="曲順"></ol>
         <label>曲全体のコード進行<textarea id="song-progression" rows="2" readonly></textarea></label>
         <fieldset id="song-audio" hidden><legend>曲を試聴</legend>
           <label>キー<select id="song-key"><option>C</option><option>D</option><option>E</option><option>F</option><option>G</option><option>A</option><option>B</option></select></label>

@@ -54,16 +54,17 @@ def chrome_specs() -> dict[str, dict]:
             ("📦 JSON（再編集用）", "json"), ("🕘 作業履歴", "workspace"), ("🔤 Base64 / 渡す", "base64")]
     opened = [("📦 JSON", "open-json"), ("🕘 作業履歴", "open-workspace")]
     github = {"label": "🐙 GitHub リポジトリ", "href": "https://github.com/myon-bioinformatics/Ironmate"}
-    music = {"label": "🎵 作曲", "href": "https://myon-bioinformatics.github.io/PySaiyanWeBoo/examples/composition-studio.html"}
 
     def spec(title, text, places, phone, save, opened):
         return {"id": "ironmate", "home": "https://myon-bioinformatics.github.io/#ironmate", "board": {"title": title, "items": [{"text": text}]},
-                "places": [*places, music, github], "settings": [{"label": "📱 スマホ版", "href": phone}], "screen": rows([("📋 クリップボード・シェルフ", "shelf")]),
+                "places": [*places, github], "settings": [{"label": "📱 スマホ版", "href": phone}], "screen": rows([("📋 クリップボード・シェルフ", "shelf")]),
                 "tools": {"💾": {"label": "保存", "label_en": "Save", "links": rows(save)}, "📂": {"label": "開く", "label_en": "Open", "links": rows(opened)}}}
     return {"studio": spec("IMAGE", "図形・文字・スタンプ・写真を重ねて PNG / SVG に。データはこの端末の中だけ。",
-                           [{"label": "📽️ スライド・PPTX作成", "href": "./slides/"}, {"label": "🟦 画像一覧・素材", "href": "./tools/"}], "./slides/phone/", save, opened),
+                           [{"label": "📽️ スライド・PPTX作成", "href": "./slides/"}, {"label": "🎵 作曲", "href": "./tools/#composition"},
+                            {"label": "🟦 画像一覧・素材", "href": "./tools/"}], "./slides/phone/", save, opened),
             "slides": spec("SLIDES", "スライドを作って PPTX に。文字と図形は PowerPoint でも編集できます。",
-                           [{"label": "🖼️ Image Studio", "href": "../"}, {"label": "🟦 画像一覧・素材", "href": "../tools/"}], "./phone/",
+                           [{"label": "🖼️ Image Studio", "href": "../"}, {"label": "🎵 作曲", "href": "../tools/#composition"},
+                            {"label": "🟦 画像一覧・素材", "href": "../tools/"}], "./phone/",
                            [("📽️ PPTX", "pptx"), ("📦 全スライド JSON", "deck-json"), *save], [("📦 全スライド JSON", "open-deck"), *opened])}
 
 

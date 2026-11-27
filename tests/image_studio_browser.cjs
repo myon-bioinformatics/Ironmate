@@ -63,9 +63,16 @@ const failures = [],
     viewport: { width: 1600, height: 1100 },
     acceptDownloads: true,
   });
+  // 🧰 💾 📂 ⋯ in the chrome: open the menu the row is in, then press the row (a PNG's size is the row's own: "#png-2").
+  const MENU = { "#save": "json", "#save-workspace": "workspace", "#deck-save": "deck-json", "#deck-pptx": "pptx" };
+  const press = async (selector) => {
+    const row = page.locator(`[data-chrome-action="${MENU[selector] ?? selector.slice(1)}"]`);
+    await row.locator("xpath=ancestor::details[1]/summary").click();
+    await row.click();
+  };
   const download = async (id, name) => {
     const wait = page.waitForEvent("download");
-    await page.click(id);
+    await press(id);
     await (await wait).saveAs(path.join(out, name));
   };
   page.on("pageerror", (e) => failures.push(e.message));
@@ -73,8 +80,10 @@ const failures = [],
   page.on("dialog", (dialog) =>
     dialog.type() === "confirm" && !acceptHistoryTrim ? dialog.dismiss() : dialog.accept());
   await page.goto(url);
-  assert.equal(await page.locator("#png").isVisible(), false);
-  await page.locator("#studio-export summary").click();
+  assert.equal(await page.locator("#png").isVisible(), false); // every format is a row of 💾, not a button of its own
+  assert.deepEqual(await page.locator(".ui-chrome summary").allTextContents(), ["💾", "📂", "⭐", "⚙️", "☰", "⋯"]);
+  assert.equal(await page.locator("#studios, #studio-import, #studio-export").count(), 0);
+  assert.equal(await page.locator('.ui-chrome a[href="./slides/phone/"]').count(), 1); // 📱 is a row of ⚙️
   for (const id of ["save", "save-workspace", "trim-history", "open-workspace"])
     assert.equal(await page.locator(`#${id}`).count(), 1, `required Studio control: ${id}`);
   await page.waitForFunction(() => !!window.IronmateStudio, null, {timeout:10000});
@@ -288,7 +297,7 @@ const failures = [],
     saved,
   );
   // Editing and exports continue after network is disabled.
-  await page.click("#base64");
+  await press("#base64");
   await page.waitForFunction(() =>
     document
       .getElementById("base64-text")
@@ -326,12 +335,11 @@ const failures = [],
     .locator("#base64-dialog button")
     .filter({ hasText: "閉じる" })
     .click();
-  await page.selectOption("#export-scale", "2");
-  await download("#png", "composition-2x.png");
+  await download("#png-2", "composition-2x.png");
+  assert.equal(await page.inputValue("#export-scale"), "2");
   const enlarged = fs.readFileSync(path.join(out, "composition-2x.png"));
   assert.equal(enlarged.readUInt32BE(16), saved.width * 2);
   assert.equal(enlarged.readUInt32BE(20), saved.height * 2);
-  await page.selectOption("#export-scale", "1");
   await page.context().setOffline(true);
   await download("#png", "offline.png");
   assert.deepEqual(
@@ -398,7 +406,7 @@ const failures = [],
   await page.context().setOffline(false);
   // Workspace history roundtrip: retain undo/redo states and selected index.
   const workspaceDownload = page.waitForEvent("download");
-  await page.click("#save-workspace");
+  await press("#save-workspace");
   const workspace = await workspaceDownload;
   const workspacePath = path.join(out, "workspace-history.json");
   await workspace.saveAs(workspacePath);
@@ -412,7 +420,7 @@ const failures = [],
   assert.deepEqual(await page.evaluate(() => IronmateStudio.scene), historyCurrent);
   assert.equal(await page.locator("#history-list li").count(), historyData.items.length);
   const restoredDownload = page.waitForEvent("download");
-  await page.click("#save-workspace");
+  await press("#save-workspace");
   const restoredPath = path.join(out, "workspace-restored.json");
   await (await restoredDownload).saveAs(restoredPath);
   assert.deepEqual(JSON.parse(fs.readFileSync(restoredPath, "utf8")), historyData);
@@ -450,7 +458,6 @@ const failures = [],
     assert.equal(await page.evaluate(() => document.activeElement.id), tool + "-text");
   }
   assert.equal(await page.locator("#png").isVisible(), false);
-  await page.locator("#studio-export summary").click();
   await page.evaluate(() => window.IronmateStudio.ready);
   // Same real browser: feed exported PNG back via Base64 and clipboard.
   const pngIn = await page.evaluate(async () => Array.from(

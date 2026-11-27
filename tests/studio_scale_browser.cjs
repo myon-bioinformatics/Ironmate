@@ -118,14 +118,12 @@ module.exports = async function ({ page, out, root, download }) {
   });
   await download("#save", "stamps-scene.json");
   await download("#png", "stamps.png");
-  await page.selectOption("#export-scale", "4");
-  await download("#svg", "stamps-4x.svg");
-  await download("#png", "stamps-4x.png");
+  await download("#svg", "stamps-4x.svg"); // a size belongs to a PNG row; SVG has none
+  await download("#png-4", "stamps-4x.png");
   assert.equal(
     fs.readFileSync(path.join(out, "stamps-4x.png")).readUInt32BE(16),
     5120,
   );
-  await page.selectOption("#export-scale", "1");
   const fixture =
     "data:image/png;base64," +
     fs.readFileSync(path.join(out, "fixture.png")).toString("base64");

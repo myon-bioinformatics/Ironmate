@@ -21,7 +21,7 @@ On GitHub Pages it runs without Python. Only fixed HTML/JS/CSS is published; ima
    Drag-scaling text also changes the font size. Change what is already placed with `✏️ 編集` (edit) on the right: the words, `太字` (bold), `斜体` (italic), fill and line colors, the shape, a clock's time.
 6. Edit layers with `前へ／後ろへ` (forward / backward) for stacking order and `複製／削除` (duplicate / delete). Undo/redo keeps up to 40 states.
    Loading JSON and `新しいキャンバス` (new canvas) are also recorded in history. The selection frame is not included in exported images.
-7. Download PNG or SVG. Use `JSON保存` (save JSON) for re-editing; it contains original images, values and layers.
+7. `💾` (save) at the top lists every format: PNG (the ×2, ×4 and ×8 rows are larger copies), SVG, `📦 JSON（再編集用）` for re-editing (it contains original images, values and layers), `🕘 作業履歴` (work history) and Base64. `📂` (open) reads them back; the clipboard shelf is under `⋯`, the other pages under `☰`.
    This JSON includes original images, so sharing it shares them too. Use PNG to share after applying a mosaic.
 
 PNG defaults to 1280×720, usable as a 16:9 image for documents. The background can be transparent.
@@ -216,7 +216,7 @@ History holds the whole scene including original images, so many images increase
 
 ### Saving, restoring and tidying work history
 
-`作業履歴を保存` (save work history) saves up to 40 states and the current position to
+`💾` → `🕘 作業履歴` (save work history) saves up to 40 states and the current position to
 `ironmate-studio-workspace/1` JSON. `作業履歴を開く` (open work history) restores past states with images,
 including the undo/redo position. It is a different file format from single-scene JSON.
 Save and load use the shared `StudioCore.workspaceText` / `workspaceHistory`,

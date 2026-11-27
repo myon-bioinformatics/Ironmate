@@ -27,7 +27,6 @@ const url =
     page.on("request", (r) => requests.push(r.url()));
     page.on("dialog", (d) => d.accept());
     await page.goto(url);
-    await page.locator("#studio-export summary").click();
     await page.waitForFunction(() => !!window.IronmateSlideEditor);
     assert.equal(
       (await page.evaluate(() => IronmateSlideEditor.deck)).slides.length,
@@ -137,9 +136,12 @@ const url =
     const restored = await page.evaluate(() => IronmateStudio.scene);
     assert.equal(restored.layers[0].text, "編集したタイトル <>&");
     assert.equal(restored.layers[0].fontSize, 64);
+    // 🧰 💾 in the chrome: the deck's JSON and the PPTX are rows of the one save
     const download = async (id, name) => {
       const pending = page.waitForEvent("download");
-      await page.click("#" + id);
+      const row = page.locator(`[data-chrome-action="${{ "deck-save": "deck-json", "deck-pptx": "pptx" }[id]}"]`);
+      await row.locator("xpath=ancestor::details[1]/summary").click();
+      await row.click();
       await (await pending).saveAs(path.join(out, name));
     };
     await download("deck-save", "slides.json");

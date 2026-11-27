@@ -56,7 +56,7 @@ def mosaic(artifact, cell=8, levels=256):
 
 def public_assets():
     """Explicit publication allowlist; no user scenes, globbing, or local images."""
-    from ironlib.studio_bundle import BRAND_HTML, PHONE_HTML, SLIDES_PANEL_HTML, STUDIO_PIXEL_PANEL, STUDIO_HTML, STUDIO_JS, STYLE_CSS, TOOLS_HTML
+    from ironlib.studio_bundle import BRAND_HTML, PHONE_HTML, PSWB_CHROME, SLIDES_PANEL_HTML, STUDIO_PIXEL_PANEL, STUDIO_HTML, STUDIO_JS, STYLE_CSS, TOOLS_HTML
     names = ('brand/mono.svg', 'brand/dark-green.svg',
              'brand/famicom.svg', 'brand/gameboy.svg', 'brand/pixel-3d.svg',
              'brand/manifest.webmanifest', 'brand/apple-touch-icon.png', 'brand/app-192.png',
@@ -74,8 +74,8 @@ def public_assets():
     for name in ('style.css', 'studio.js', 'brand/icon.svg', 'brand/heatmap.svg', 'brand/favicon.ico',
                  'brand/manifest.webmanifest', 'brand/apple-touch-icon.png'):
         page = page.replace('"' + name + '"', '"../' + name + '"')
-    page = page.replace('href="tools/"', 'href="../tools/"').replace('href="slides/phone/"', 'href="phone/"')
-    page = page.replace('<a href="slides/">スライド・PPTX作成 ↗</a>', '<a href="../">Image Studio ↗</a>')
+    assert PSWB_CHROME['studio'] in page
+    page = page.replace(PSWB_CHROME['studio'], PSWB_CHROME['slides'])  # 🧰 the slide page's own places, 💾 and 📂 rows
     page = page.replace('<body class="ui-elements" data-ui-theme="green" data-page="studio">', '<body class="ui-elements" data-ui-theme="green" data-page="studio slides" data-mode="slides">').replace('<h1>画像を編集</h1>', '<h1>スライドを編集</h1>')
     page = page.replace('<span>画像編集</span>', '<span>スライド編集</span>').replace('Ironmate — Image Studio', 'Ironmate — Slide Studio')
     page = page.replace('<!-- deck-import -->', '<label class="button">全スライドを開く<input id="deck-open" type="file" accept=".json,application/json" /></label>')

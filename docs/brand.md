@@ -22,7 +22,7 @@ The heatmap inside 🔰 uses discrete cells, with no gradients. Famicom/GameBoy 
 ## Replacing and regenerating
 
 - Favicon: `rel="icon"` in `STUDIO_HTML` and `TOOLS_HTML` (`ironlib/studio_bundle.py`). `icon.svg` is currently a compatibility name for Dark Green.
-- Header: `.brand img` in the same HTML. Slide Studio is generated from Image Studio, so it updates at the same time.
+- Header: `.brand img` in the same HTML. The slide editor carries the same tab icon and home-screen icon.
 - Hero: `.brand-hero` in `TOOLS_HTML` (`ironlib/studio_bundle.py`).
 - README: the image link at the top.
 - Home screen: `manifest.webmanifest` and `apple-touch-icon.png` (180 px). Provides 192 px and 512 px for Android, plus an opaque 512 px PNG for masking.

@@ -133,7 +133,6 @@ STUDIO_HTML = r"""<!doctype html>
           <button id="shelf-button">クリップボード・シェルフ</button>
           <label class="button">作業履歴を開く<input id="open-workspace" type="file" accept=".json,application/json" /></label>
           <label class="button">開く<input id="open" type="file" accept=".json" /></label>
-          <!-- deck-import -->
         </details>
         <details id="studio-export">
           <summary>↑ エクスポート</summary>
@@ -147,7 +146,6 @@ STUDIO_HTML = r"""<!doctype html>
             <option value="8">8×</option>
           </select>
           <button id="png" class="primary">PNGを書き出す ↗</button>
-          <!-- deck-export -->
         </details>
       </div>
     </header>
@@ -1754,13 +1752,7 @@ if (typeof document !== "undefined" && document.body && (document.body.dataset.p
 "use strict";
 const C = window.StudioCore,
   $ = (id) => document.getElementById(id),
-  copy = (value) => {
-    const doc = C.clone(value);
-    if (document.body.dataset.mode === "slides")
-      for (const l of doc.layers || [])
-        if (l.kind === "text" && !l.mono && l.wrap === undefined) l.wrap = true;
-    return doc;
-  };
+  copy = (value) => C.clone(value);
 let serial = 0,
   tool = "select",
   shape = "rect", // 図形(▭ ◯ △ →): the candidate the 図形 tool places
@@ -2055,8 +2047,8 @@ function textLayer(text, x, y) {
     fill: $("fill").value,
     fontSize: size,
     font: $("font-family").value,
-    mono: document.body.dataset.mode !== "slides",
-    wrap: document.body.dataset.mode === "slides",
+    mono: true,
+    wrap: false,
   };
 }
 function place(x, y) {
@@ -2078,8 +2070,7 @@ function place(x, y) {
       strokeWidth: 4,
       headSize: 28,
       headPlacement: $("arrow-placement").value,
-      // a slide's arrow has the triangular head a PPTX keeps editable; 🔰 is a choice in ✏️ afterwards
-      headStyle: document.body.dataset.mode === "slides" ? "triangle" : $("arrow-style").value,
+      headStyle: $("arrow-style").value,
     });
   else if (kind === "clock") {
     const [hour, minute] = $("clock-time").value.split(":").map(Number);
@@ -2180,7 +2171,7 @@ for (const button of document.querySelectorAll("[data-tool]"))
 // 🧰 A host's header (PySaiyanWeBoo chrome rows, declared in #ui-chrome-rows by image_studio.host_rows) sends a key;
 // each presses this page's own control, so a save from the header and one from the page are the same save.
 const HOST_ACTIONS = { png: "png", svg: "svg", json: "save", workspace: "save-workspace", base64: "base64", shelf: "shelf-button",
-  "open-json": "open", "open-workspace": "open-workspace", pptx: "deck-pptx", "deck-json": "deck-save", "open-deck": "deck-open" };
+  "open-json": "open", "open-workspace": "open-workspace" };
 document.addEventListener("ui-chrome-action", (e) => {
   const [key, scale] = String(e.detail?.key).split(/-(?=\d+$)/);
   if (key === "png" || key === "svg") $("export-scale").value = (key === "png" && scale) || "1"; // a size is a PNG row's own
@@ -2629,7 +2620,7 @@ $("blank").onclick = () => {
   message("新しいキャンバス（戻すで復帰できます）");
 };
 window.addEventListener("beforeunload", (e) => {
-  if (dirty && document.body.dataset.mode !== "slides") {
+  if (dirty) {
     e.preventDefault();
     e.returnValue = "";
   }
@@ -3331,238 +3322,6 @@ if (typeof document !== "undefined" && (document.getElementById("pixel-editor") 
   });
 })();
 
-/* Slide document UI (data-page~="slides"): browser only. */
-if (typeof document !== "undefined" && document.body && (document.body.dataset.page || "").split(" ").includes("slides")) (function () {
-/* Multi-slide document state around the existing Image Studio editor. */
-"use strict";
-(async () => {
-  const C = window.StudioCore,
-    D = window.IronmateSlides,
-    E = window.IronmateStudio,
-    byId = (id) => document.getElementById(id);
-  let deck = { schema: D.SCHEMA, title: "Ironmate", slides: [{...E.scene, background: "#FFFFFF"}] },
-    active = 0,
-    saved = "",
-    busy = false;
-  const note = (message, error = false) => {
-    byId("deck-status").textContent = message;
-    byId("deck-status").dataset.error = error;
-  };
-  function snapshot() {
-    const next = C.clone(deck);
-    next.slides[active] = E.scene;
-    return D.validate(next);
-  }
-  const board = byId("board");
-  const grid = document.createElement("div");
-  grid.className = "slide-grid";
-  grid.hidden = true;
-  board.before(grid);
-  const gridMode = byId("slide-grid-mode");
-
-  function showGroup() {
-    grid.hidden = !gridMode.checked;
-    if (grid.hidden) {
-      grid.after(board);
-      grid.replaceChildren();
-      return;
-    }
-    const first = active - active % 4;
-    const cells = deck.slides.slice(first, first + 4).map((scene, offset) => {
-      const index = first + offset;
-      const cell = document.createElement("div");
-      const number = document.createElement("span");
-      number.className = "slide-number";
-      number.textContent = index === active ? `${index + 1} 枚目（編集中）` : `${index + 1} 枚目`;
-      cell.append(number);
-      if (index === active) {
-        cell.append(board);
-      } else {
-        const preview = document.createElement("button");
-        preview.className = "slide-preview";
-        preview.setAttribute("aria-label", `${index + 1} 枚目を編集`);
-        preview.addEventListener("click", () => switchSlide(index));
-        // Isolate SVG mask IDs, including those shared by duplicated slides.
-        const drawing = document.createElement("span").attachShadow({mode: "open"});
-        preview.append(drawing.host);
-        cell.append(preview);
-        E.imageSource(scene).then(source => {
-          if (!preview.isConnected) return;
-          drawing.innerHTML = C.svg(scene, source);
-          const svg = drawing.firstElementChild;
-          svg.setAttribute("width", "100%");
-          svg.removeAttribute("height");
-        }).catch(err => { if (preview.isConnected) note(err.message, true); });
-      }
-      return cell;
-    });
-    grid.replaceChildren(...cells);
-  }
-  gridMode.addEventListener("change", showGroup);
-  function selectList() {
-    const select = byId("slide-select");
-    select.replaceChildren(
-      ...deck.slides.map(
-        (s, i) =>
-          new Option(
-            `${i + 1} / ${s.layers.find((l) => l.kind === "text")?.text.slice(0, 24) || "白紙"}`,
-            i,
-          ),
-      ),
-    );
-    select.value = active;
-    showGroup();
-    byId("slide-delete").disabled = deck.slides.length === 1;
-    byId("slide-up").disabled = active === 0;
-    byId("slide-down").disabled = active === deck.slides.length - 1;
-  }
-  async function commit(next, index) {
-    const checked = D.validate(next);
-    await E.replaceScene(checked.slides[index]);
-    deck = checked;
-    active = index;
-    selectList();
-    note(
-      `${active + 1} / ${deck.slides.length} 枚目を編集中。全体の保存は「全スライドJSON保存」を使います。`,
-    );
-  }
-  function action(id, fn) {
-    byId(id).addEventListener("click", async () => {
-      if (busy) return;
-      busy = true;
-      try {
-        await fn();
-      } catch (e) {
-        note(e.message, true);
-      } finally {
-        busy = false;
-      }
-    });
-  }
-  const save = C.save;
-  async function imageForLayer(layer, scene) {
-    return D.layerPng(layer, await E.imageSource(scene)); // 📱 スマホ版と同じ（IronmateSlides.layerPng）
-  }
-  await E.ready;
-  await E.replaceScene(deck.slides[0]);
-  selectList();
-  saved = D.deckText(deck);
-  byId("fill").value = "#000000";
-  byId("stroke").value = "#000000";
-  byId("arrow-style").value = "triangle";
-  // ➕📑✖️⬆️⬇️ one page operation each, by the deck's own edit (PySaiyanWeBoo's slide-deck.js)
-  for (const [id, operation] of [
-    ["slide-add", "add"],
-    ["slide-duplicate", "duplicate"],
-    ["slide-delete", "delete"],
-    ["slide-up", "up"],
-    ["slide-down", "down"],
-  ])
-    action(id, async () => {
-      if (
-        operation === "delete" &&
-        (deck.slides.length === 1 || !confirm("このスライドを削除しますか？"))
-      )
-        return;
-      const next = D.edit(snapshot(), operation, active);
-      if (next.active !== active || operation === "delete")
-        await commit(next.deck, next.active);
-    });
-  async function switchSlide(index) {
-    if (busy) {
-      byId("slide-select").value = active;
-      return;
-    }
-    busy = true;
-    try {
-      const next = snapshot();
-      await commit(next, index);
-    } catch (err) {
-      byId("slide-select").value = active;
-      note(err.message, true);
-    } finally {
-      busy = false;
-    }
-  }
-  byId("slide-select").addEventListener("change", e => switchSlide(Number(e.target.value)));
-  action("deck-save", () => {
-    const next = snapshot(),
-      text = D.deckText(next);
-    save("ironmate-slides.json", text, "application/json");
-    deck = next;
-    saved = text;
-    selectList();
-    note("全スライドの編集用JSONを保存しました。");
-  });
-  byId("deck-open").addEventListener("change", async (e) => {
-    if (busy) {
-      e.target.value = "";
-      return;
-    }
-    const file = e.target.files[0];
-    if (!file) return;
-    busy = true;
-    try {
-      if (file.size > D.LIMIT) throw Error("JSONは32MiB以下です。");
-      const next = D.parse(await file.text());
-      for (const scene of next.slides) await E.imageSource(scene);
-      if (
-        D.deckText(snapshot()) !== saved &&
-        !confirm("現在の未保存のスライドを置き換えますか？")
-      )
-        return;
-      await commit(next, 0);
-      saved = D.deckText(next);
-      note("全スライドを読み込みました。");
-    } catch (err) {
-      note(err.message, true);
-    } finally {
-      busy = false;
-      e.target.value = "";
-    }
-  });
-  action("deck-pptx", async () => {
-    note("PPTXを作成しています…");
-    const current = snapshot(),
-      result = await D.exportPptx(current, imageForLayer);
-    save(
-      "ironmate-slides.pptx",
-      result.data,
-      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-    );
-    note(
-      `${result.slides}枚のPPTXを保存しました。編集可能な要素 ${result.native}、画像レイヤー ${result.images}。再編集用には全スライドJSONも保存してください。`,
-    );
-  });
-  window.addEventListener("beforeunload", (e) => {
-    let dirty = true;
-    try {
-      dirty = D.deckText(snapshot()) !== saved;
-    } catch {}
-    if (dirty) {
-      e.preventDefault();
-      e.returnValue = "";
-    }
-  });
-  window.IronmateSlideEditor = {
-    get deck() {
-      return snapshot();
-    },
-    get active() {
-      return active;
-    },
-    get ready() {
-      return !busy;
-    },
-  };
-})().catch((e) => {
-  const status = document.getElementById("deck-status");
-  if (status) {
-    status.textContent = e.message;
-    status.dataset.error = true;
-  }
-});
-})();
 /* ⬇️ pysaiyanweboo 59dc4437 (stage, pager): written by scripts/build_studio_css.py from the pinned commit; --check fails when it drifts */
 (() => {
 /* A rotary dial over a range input (dial_html): drag around its centre, turn the wheel, or use the range's own keys. Value and events stay the input's. */
@@ -3667,8 +3426,9 @@ function keep() {
     localStorage.setItem(STORE, state());
     saveFailed = false;
   } catch {
-    saveFailed = true; // 端末の自動保存がいっぱい（画像が大きいとき）。💾 で JSON に保存できる
+    saveFailed = true; // 端末の自動保存がいっぱい（画像が大きいとき）。📤 で JSON に保存できる
   }
+  saves += 1;
   note();
 }
 function record(before) {
@@ -3706,13 +3466,46 @@ function render() {
     l = picked();
   box.hidden = !l;
   if (l)
-    Object.assign(box.style, { left: pct(l.x, s.width), top: pct(l.y, s.height), width: pct(l.w, s.width), height: pct(l.h, s.height) });
+    Object.assign(box.style, { left: pct(l.x, s.width), top: pct(l.y, s.height), width: pct(l.w, s.width), height: pct(l.h, s.height),
+      transform: `rotate(${l.rotation}deg)` });
   layerList(s);
-  const off = { edit: l?.kind !== "text", bold: l?.kind !== "text", color: !l || l.kind === "image",
+  pageList();
+  const off = { edit: !["text", "clock"].includes(l?.kind), look: !l, turn: !l,
     front: !l || s.layers.at(-1) === l, back: !l || s.layers[0] === l,
     delete: !l, undo: !past.length, redo: !future.length,
     "slide-delete": deck.slides.length < 2, smaller: level === 0, bigger: level === scales.length - 1, reset: level === plain };
   for (const [act, disabled] of Object.entries(off)) document.querySelector(`[data-act="${act}"]`).disabled = disabled;
+}
+let pagesOpen = false,
+  saves = 0; // 🗂️ 一覧の絵は保存のたびに描き直す（ドラッグ中は描かない）
+function pageList() {
+  const row = $("phone-pages"),
+    key = pagesOpen && `${saves} ${active} ${deck.slides.length}`;
+  if (row.dataset.key === String(key)) return;
+  row.dataset.key = key;
+  row.hidden = !pagesOpen;
+  row.classList.toggle("phone-row", pagesOpen);
+  row.replaceChildren(...(pagesOpen ? deck.slides : []).map((s, i) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.innerHTML = C.svg(s, (l) => l.src);
+    const picture = b.firstElementChild;
+    picture.setAttribute("width", 80);
+    picture.setAttribute("height", Math.round((80 * s.height) / s.width));
+    picture.setAttribute("aria-hidden", "true");
+    b.append(String(i + 1)); // 番号に今のページの下線が付く
+    b.setAttribute("aria-label", `${i + 1}/${deck.slides.length}`);
+    if (i === active) b.setAttribute("aria-current", "step");
+    b.addEventListener("pointerdown", (e) => e.preventDefault());
+    b.addEventListener("click", () => {
+      finishEdit();
+      active = i;
+      selected = null;
+      keep();
+      render();
+    });
+    return b;
+  }));
 }
 function layerList(s) {
   // 📚 奥 → 手前。2 つ以上あるときだけ出し、重なって触れないものもここから選べる（文字は先頭 3 字、ほかは形の記号）
@@ -3742,12 +3535,18 @@ function layerList(s) {
 function later() {
   if (!frame) frame = requestAnimationFrame(() => ((frame = 0), render()));
 }
+const clockText = (l) => `${String(l.hour).padStart(2, "0")}:${String(l.minute).padStart(2, "0")}`;
+function clockSet(l, text) {
+  // 🕒 14:30 / 9:05（時 0–23、分 0–59）。読めないうちは前の時刻のまま
+  const m = /^\s*(\d{1,2})\s*[:：]\s*(\d{2})\s*$/.exec(text);
+  if (m && +m[1] < 24 && +m[2] < 60) [l.hour, l.minute] = [+m[1], +m[2]];
+}
 function startEdit(before = state()) {
   const l = picked();
-  if (!l || l.kind !== "text") return;
+  if (!l || !["text", "clock"].includes(l.kind)) return;
   editing = l.id;
   editBefore = before;
-  edit.value = l.text;
+  edit.value = l.kind === "clock" ? clockText(l) : l.text;
   edit.hidden = false; // ⌨️ 固定したスライドのすぐ下で打つ（16 px なのでスマホが拡大しない）
   edit.dataset.least = l.h;
   render();
@@ -3759,7 +3558,8 @@ function finishEdit() {
     l = s.layers.find((x) => x.id === editing);
   editing = null;
   edit.hidden = true;
-  if (l) {
+  if (l?.kind === "clock") clockSet(l, edit.value);
+  else if (l) {
     l.text = edit.value.slice(0, 2000);
     if (l.text.trim()) fit(l, Number(edit.dataset.least));
     else {
@@ -3773,8 +3573,11 @@ function finishEdit() {
 edit.addEventListener("input", () => {
   const l = slide().layers.find((x) => x.id === editing);
   if (!l) return;
-  l.text = edit.value.slice(0, 2000);
-  fit(l, Number(edit.dataset.least));
+  if (l.kind === "clock") clockSet(l, edit.value);
+  else {
+    l.text = edit.value.slice(0, 2000);
+    fit(l, Number(edit.dataset.least));
+  }
   later();
 });
 edit.addEventListener("blur", finishEdit);
@@ -3833,7 +3636,7 @@ stage.addEventListener("pointerup", () => {
   const d = drag;
   drag = null;
   if (d.moved) record(d.before);
-  else if (d.again && picked()?.kind === "text") startEdit();
+  else if (d.again && ["text", "clock"].includes(picked()?.kind)) startEdit();
   render();
 });
 stage.addEventListener("pointercancel", () => {
@@ -3894,6 +3697,12 @@ function offer(tool) {
     return b;
   }));
 }
+const COLORS = ["#000000", "#18A7A1", "#D7263D", "#1B6EF3", "#F5B700", "#FFFFFF"], // 🎨 🖌 黒・青緑・赤・青・黄・白
+  nextColor = (c) => COLORS[(COLORS.indexOf(String(c).toUpperCase()) + 1) % COLORS.length];
+function restyle(fn) {
+  const l = picked();
+  if (l) change(() => fn(l));
+}
 function scaleText(next) {
   // 🔽 🔄 🔼 すべてのページの文字を同じ倍率で（タイトルと本文の比は保つ）
   if (!scales[next] || next === level) return;
@@ -3943,18 +3752,29 @@ const acts = {
       fill: "#FFFFFF", stroke: "#183C42", strokeWidth: 4 })));
   },
   edit: () => startEdit(),
-  bold: () => change(() => {
-    const l = picked();
-    l.bold = !l.bold;
-    fit(l);
-  }),
-  color: () => change(() => {
-    // 🎨 次の色へ（黒・青緑・赤・青・黄・白）
-    const l = picked(),
-      colors = ["#000000", "#18A7A1", "#D7263D", "#1B6EF3", "#F5B700", "#FFFFFF"];
-    l.fill = colors[(colors.indexOf(String(l.fill).toUpperCase()) + 1) % colors.length];
+  look: () => offer("look"), // 🎨 ↻ 候補から（選んだものに効かない候補は何もしない）
+  turn: () => offer("turn"),
+  fill: () => restyle((l) => {
+    l.fill = nextColor(l.fill);
     if (l.kind === "arrow") l.stroke = l.fill;
   }),
+  stroke: () => restyle((l) => {
+    if (!("stroke" in l)) return;
+    l.stroke = nextColor(l.stroke);
+    if (l.kind === "arrow") l.fill = l.stroke;
+  }),
+  fade: () => restyle((l) => {
+    const steps = [1, 0.75, 0.5, 0.25];
+    l.opacity = steps[(steps.indexOf(steps.reduce((a, b) => (Math.abs(b - l.opacity) < Math.abs(a - l.opacity) ? b : a))) + 1) % steps.length];
+  }),
+  bold: () => restyle((l) => l.kind === "text" && ((l.bold = !l.bold), fit(l))),
+  font: () => restyle((l) => l.kind === "text" && ((l.font = l.font === "mono" ? "sans" : "mono"), fit(l))),
+  cw: () => restyle((l) => (l.rotation = (l.rotation + 15) % 360)),
+  ccw: () => restyle((l) => (l.rotation = (l.rotation - 15) % 360)),
+  upright: () => restyle((l) => (l.rotation = 0)),
+  pages() {
+    pagesOpen = !pagesOpen; // 🗂️ 見るためのもの: ↩️ にも資料にも入らない
+  },
   front: () => change(() => {
     const s = slide(),
       l = picked();
@@ -4135,27 +3955,6 @@ window.IronmatePhone = {
 })();
 """
 
-SLIDES_PANEL_HTML = r"""<section class="slide-controls" aria-label="スライド編集">
-  <div class="slide-toolbar">
-    <strong>スライド作成</strong
-    ><select id="slide-select" aria-label="スライド"></select
-    ><label class="check"><input type="checkbox" id="slide-grid-mode" />4枚表示</label
-    ><button id="slide-add">＋ 白紙</button
-    ><button id="slide-duplicate">スライド複製</button
-    ><button id="slide-up">前へ移動</button
-    ><button id="slide-down">後へ移動</button
-    ><button id="slide-delete">スライド削除</button
-    >
-  </div>
-  <p id="deck-status" role="status">
-    全スライドは同じ寸法です。
-  </p>
-  <details class="ui-panel"><summary>PPTXの制限・出力形式</summary><p class="slide-hint">
-    文字はボックス幅で折り返します。文字サイズは自動縮小しません。長文では高さ・位置も調整してください。
-    最大20枚・JSON合計32MiB。テキスト・通常図形・三角の矢羽根はPPTXの編集可能な要素になります。時計・ヒートマップ・単色スタンプ・🔰の矢印は、レイヤー単位の画像として保存します。フォントは表示先の端末に依存します。
-  </p></details>
-</section>
-"""
 
 # 📱 Phone slides (slides/phone/): the slide stays pinned on top and every control is an emoji; the words live in
 # aria-label / title only. Each row is (data-act, emoji, words); the browser script binds data-act by name.
@@ -4164,14 +3963,15 @@ PHONE_TOOLS = (
      ("emoji", "😊", "絵文字を候補から追加"), ("kaomoji", "(^^)", "顔文字を候補から追加"), ("clock", "🕒", "いまの時刻の時計を追加")),
     (("smaller", "🔽", "文字をすべて小さく"), ("reset", "🔄", "文字をすべて元の大きさに"), ("bigger", "🔼", "文字をすべて大きく"),
      ("undo", "↩️", "戻す"), ("redo", "↪️", "やり直す")),
-    (("edit", "✏️", "選んだ文字を編集（選んだ文字をもう一度タップしても編集）"), ("bold", "🅱️", "選んだ文字の太字を切り替え"),
-     ("color", "🎨", "選んだものの色を次の色へ"), ("front", "⏫", "選んだものをいちばん手前へ"), ("back", "⏬", "選んだものをいちばん奥へ"),
+    (("edit", "✏️", "選んだ文字・時計を編集（選んだものをもう一度タップしても編集。時計は 14:30 のように）"),
+     ("look", "🎨", "選んだものの見た目（塗り・線の色・不透明度・太字・等幅）"), ("turn", "↻", "選んだものを回す"),
+     ("front", "⏫", "選んだものをいちばん手前へ"), ("back", "⏬", "選んだものをいちばん奥へ"),
      ("delete", "🗑️", "選んだものを削除")),
     (("slide-add", "➕📄", "白紙のページを追加"), ("slide-copy", "📑", "ページを複製"), ("slide-delete", "✖️📄", "ページを削除"),
-     ("new", "🆕", "最初から（白紙 1 枚）"), ("pager", "🧭", "ページ移動の形を切り替え（矢印・十字キー・端まで・点・スライダー・ダイヤル）")),
-    (("import", "📥", "インポート（押してから形式を選ぶ: 全スライドJSON・画像）"),
+     ("pages", "🗂️", "ページの一覧（タップでそのページへ）"), ("pager", "🧭", "ページ移動の形を切り替え（矢印・十字キー・端まで・点・スライダー・ダイヤル）")),
+    (("new", "🆕", "最初から（白紙 1 枚）"), ("import", "📥", "インポート（押してから形式を選ぶ: 全スライドJSON・画像）"),
      ("export", "📤", "エクスポート（押してから形式を選ぶ: PPTX・全スライドJSON・PNG・SVG）"),
-     ("studio", "🖥️", "以前の PC 版 Slide Studio（新しい機能は足さない）"), ("home", "🏠", "Image Studio")),
+     ("home", "🏠", "Image Studio")),
 )
 # 🔽 🔄 🔼 multiply every text box by the next / plain / previous step; new boxes are 32 px on the 1280×720 slide.
 PHONE_TEXT = {"size": 32, "scale": (0.5, 0.75, 1, 1.25, 1.5, 2, 2.5)}
@@ -4208,8 +4008,8 @@ def _phone_html() -> str:
 
     def control(act: str, emoji: str, words: str) -> str:
         label = f'aria-label="{escape(words)}" title="{escape(words)}"'
-        if act in ("studio", "home"):
-            return f'<a class="button" href="{"pc/" if act == "studio" else "../"}" data-act="{act}" {label}>{emoji}</a>'
+        if act == "home":
+            return f'<a class="button" href="../" data-act="{act}" {label}>{emoji}</a>'
         if act in candidates:                       # 🔷 😊 (^^): the same candidates as Image Studio's tools, read from its markup
             acts, said = choices.get(act, ("", ""))   # 🔷 📥 📤: a candidate that is an action names it; 😊 (^^) ones are stamped as text
             more = f' data-acts="{acts}" data-words="{escape(said)}"' if acts else ""
@@ -4219,8 +4019,10 @@ def _phone_html() -> str:
     import re
     # 📥 📤: two ways in and out; the format is picked after (one candidate row, like 🔷)
     candidates = dict(re.findall(r'data-tool="(shape|emoji|kaomoji)"[^>]*data-candidates="([^"]*)"', STUDIO_HTML)) | {
-        "import": "📦 🖼", "export": "📽️ 📦 🖼 📐"}
+        "import": "📦 🖼", "export": "📽️ 📦 🖼 📐", "look": "🎨 🖌 🌗 🅱️ 🔠", "turn": "↻ ↺ ⏹"}
     choices = {"shape": ("rect ellipse triangle arrow", "四角|丸|三角|矢印"),
+               "look": ("fill stroke fade bold font", "塗りを次の色へ|線を次の色へ|不透明度（1 → ¾ → ½ → ¼）|太字|等幅 ⇄ ふつう"),
+               "turn": ("cw ccw upright", "右へ 15°|左へ 15°|まっすぐに戻す"),
                "import": ("open image", "全スライドJSON|画像（PNG・JPEG・WebP をこのページに）"),
                "export": ("pptx json png svg", "PPTX（全スライド、PowerPoint で編集できる）|全スライドJSON（また開ける）|このページを PNG|このページを SVG")}
     files = ('<input type="file" data-file="open" accept=".json,application/json" aria-label="全スライドJSON" />'
@@ -4228,6 +4030,7 @@ def _phone_html() -> str:
     rows = ['<div class="phone-row">' + "".join(control(*tool) for tool in row) + "</div>" for row in PHONE_TOOLS]
     rows[-1] += files                                            # 📥's file choosers: no face of their own, and no place in a row
     # 📚 the page's layers, back to front, sit right above the row that acts on the selected one (PySaiyanWeBoo's current-item mark)
+    rows[3] += '<div id="phone-pages" class="ui-current-items" role="group" aria-label="ページの一覧" hidden></div>'   # 🗂️
     rows = (rows[0] + '<div id="phone-candidates" role="group" aria-label="候補" hidden></div>' + rows[1]
             + '<div id="phone-layers" class="ui-current-items" role="group" aria-label="レイヤー（奥から手前）" hidden></div>' + "".join(rows[2:]))
     slide = ('<div id="phone-svg" class="phone-svg" data-ui-fill></div>'

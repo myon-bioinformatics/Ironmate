@@ -122,9 +122,11 @@ const out = path.resolve("build/pages-evidence");
     await page.fill("#song-order", "B A B");
     await page.click("#song-arrange");
     assert.equal(await page.inputValue("#song-progression"), "IV I V IV");
+    assert.deepEqual(await page.locator("#song-sections li").allTextContents(), ["B", "A", "B"]);
     await page.fill("#song-order", "missing");
     await page.click("#song-arrange");
     assert.equal(await page.inputValue("#song-progression"), "");
+    assert.equal(await page.locator("#song-sections li").count(), 0);
     await page.setViewportSize({ width: 390, height: 844 });
     assert.equal(
       await page.evaluate(

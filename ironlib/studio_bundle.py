@@ -23,28 +23,37 @@ STUDIO_HTML = r"""<!doctype html>
     <header>
       <div class="brand"><img src="brand/heatmap.svg" width="48" height="48" alt="I’m — 🔰がアポストロフィのIronmateロゴ" /><div>IRONMATE <span>画像編集</span></div></div>
       <div class="top-actions">
-        <a href="slides/">スライド・PPTX作成 ↗</a>
-        <a href="slides/phone/" title="スマホで作るスライド">📱 スマホ ↗</a>
-        <a href="tools/">ドット絵・画像一覧 ↗</a>
-        <a href="https://myon-bioinformatics.github.io/#ironmate">🏠 ポートフォリオ ↗</a>
-        <a href="https://github.com/myon-bioinformatics/Ironmate">🐙 GitHub リポジトリ ↗</a>
+        <details id="studios">
+          <summary>工房一覧</summary>
+          <a href="slides/">スライド・PPTX作成 ↗</a>
+          <a href="slides/phone/" title="スマホで作るスライド">📱 スマホ ↗</a>
+          <a href="tools/">ドット絵・画像一覧 ↗</a>
+          <a href="https://myon-bioinformatics.github.io/#ironmate">🏠 ポートフォリオ ↗</a>
+          <a href="https://github.com/myon-bioinformatics/Ironmate">🐙 GitHub リポジトリ ↗</a>
+        </details>
         <button id="undo-2" data-steps="2" title="2つ戻す" aria-label="2つ戻す">⏪</button>
         <button id="undo">↶ 戻す</button>
         <button id="redo">↷ やり直す</button>
         <button id="redo-2" data-steps="2" title="2つやり直す" aria-label="2つやり直す">⏩</button>
-        <button id="save">JSON保存</button>
-        <button id="shelf-button">クリップボード・シェルフ</button>
-        <button id="save-workspace">作業履歴を保存</button>
-        <label class="button">作業履歴を開く<input id="open-workspace" type="file" accept=".json,application/json" /></label>
-        <label class="button">開く<input id="open" type="file" accept=".json" /></label>
-        <button id="svg">SVG</button><button id="base64">Base64 / 渡す</button>
-        <select id="export-scale" aria-label="出力倍率">
-          <option value="1">1×</option>
-          <option value="2">2×</option>
-          <option value="4">4×</option>
-          <option value="8">8×</option>
-        </select>
-        <button id="png" class="primary">PNGを書き出す ↗</button>
+        <details id="studio-import">
+          <summary>↓ インポート</summary>
+          <button id="shelf-button">クリップボード・シェルフ</button>
+          <label class="button">作業履歴を開く<input id="open-workspace" type="file" accept=".json,application/json" /></label>
+          <label class="button">開く<input id="open" type="file" accept=".json" /></label>
+        </details>
+        <details id="studio-export">
+          <summary>↑ エクスポート</summary>
+          <button id="save">JSON保存</button>
+          <button id="save-workspace">作業履歴を保存</button>
+          <button id="svg">SVG</button><button id="base64">Base64 / 渡す</button>
+          <select id="export-scale" aria-label="出力倍率">
+            <option value="1">1×</option>
+            <option value="2">2×</option>
+            <option value="4">4×</option>
+            <option value="8">8×</option>
+          </select>
+          <button id="png" class="primary">PNGを書き出す ↗</button>
+        </details>
       </div>
     </header>
     <main>
@@ -333,7 +342,8 @@ body:where([data-page~="studio"]){font-size:13px;line-height:1.5;margin:0}
 :where([data-page~="studio"]) .brand span{font-weight:400;font-size:10px;display:block;letter-spacing:3px;margin:5px 0 0;color:var(--ui-muted)}
 :where([data-page~="studio"]) .brand img{flex:none;image-rendering:pixelated}
 :where([data-page~="studio"]) .top-actions{display:flex;flex-wrap:wrap;gap:7px}
-:where([data-page~="studio"]) .top-actions>a{color:var(--ui-accent);align-self:center;padding:7px 3px;text-underline-offset:3px}
+:where([data-page~="studio"]) .top-actions summary{cursor:pointer;padding:7px}
+:where([data-page~="studio"]) .top-actions details a{color:var(--ui-accent);align-self:center;padding:7px 3px;text-underline-offset:3px}
 :where([data-page~="studio"]) button,:where([data-page~="studio"]) .button{display:inline-flex;align-items:center;justify-content:center;gap:5px;text-decoration:none;min-height:38px;padding:10px 12px}
 :where([data-page~="studio"]) .button{font:inherit;cursor:pointer;background:var(--ui-panel);color:var(--ui-fg);border:1px solid var(--ui-border);border-radius:var(--ui-radius)}
 :where([data-page~="studio"]) button:hover,:where([data-page~="studio"]) .button:hover{border-color:var(--ui-accent);background:color-mix(in srgb,var(--ui-accent) 12%,var(--ui-panel))}

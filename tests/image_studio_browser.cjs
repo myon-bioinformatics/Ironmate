@@ -439,6 +439,16 @@ const failures = [],
   await page.locator("#error button").click();
   // Isolate the new ingress smoke from legacy editor tool/selection state.
   await page.goto(url);
+  await page.locator("#pixel-editor summary").click();
+  await page.waitForFunction(() => !!window.IronmateWorkbench?.grid);
+  await page.locator("#grid").click();
+  await page.locator("#place-grid").click();
+  await page.waitForFunction(() => IronmateStudio.scene.layers.some(layer => layer.name === "ドット絵.png"));
+  for (const tool of ["emoji", "kaomoji"]) {
+    await page.locator('[data-tool="' + tool + '"]').click();
+    await page.locator("#keyboard-focus").click();
+    assert.equal(await page.evaluate(() => document.activeElement.id), tool + "-text");
+  }
   assert.equal(await page.locator("#png").isVisible(), false);
   await page.locator("#studio-export summary").click();
   await page.evaluate(() => window.IronmateStudio.ready);

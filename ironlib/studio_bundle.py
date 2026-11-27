@@ -3875,9 +3875,11 @@ function offer(tool) {
   row.dataset.tool = again ? "" : tool;
   row.hidden = again;
   row.classList.toggle("phone-row", !again);
-  const { candidates, acts: named = "", words = "" } = document.querySelector(`[data-act="${tool}"]`).dataset,
+  const button = document.querySelector(`[data-act="${tool}"]`),
+    { candidates, acts: named = "", words = "" } = button.dataset,
     actions = named.split(" "),
     said = words.split("|");
+  if (!again) button.closest(".phone-row").after(row); // 候補は押したボタンの列のすぐ下に開く
   row.replaceChildren(...(again ? [] : candidates.split(" ")).map((value, i) => {
     const b = document.createElement("button");
     b.type = "button";
@@ -4015,7 +4017,10 @@ const acts = {
       localStorage.setItem(STORE + ":pager", pages.dataset.uiPager);
     } catch {}
   },
-  save: () => offer("save"), // 💾 形式は押してから選ぶ
+  import: () => offer("import"), // 📥 📤 形式は押してから選ぶ
+  export: () => offer("export"),
+  open: () => document.querySelector('input[data-file="open"]').click(),
+  image: () => document.querySelector('input[data-file="image"]').click(),
   json: () => C.save("ironmate-slides.json", D.deckText(deck), "application/json"),
   svg: () => C.save(`ironmate-slide-${active + 1}.svg`, C.svg(slide(), (l) => l.src), "image/svg+xml"),
   async png() {
@@ -4156,8 +4161,7 @@ SLIDES_PANEL_HTML = r"""<section class="slide-controls" aria-label="スライド
 # aria-label / title only. Each row is (data-act, emoji, words); the browser script binds data-act by name.
 PHONE_TOOLS = (
     (("text", "🔤", "テキストボックスを追加"), ("shape", "🔷", "図形（四角・丸・三角・矢印）を候補から追加"),
-     ("emoji", "😊", "絵文字を候補から追加"), ("kaomoji", "(^^)", "顔文字を候補から追加"), ("clock", "🕒", "いまの時刻の時計を追加"),
-     ("image", "🖼️", "画像を追加")),
+     ("emoji", "😊", "絵文字を候補から追加"), ("kaomoji", "(^^)", "顔文字を候補から追加"), ("clock", "🕒", "いまの時刻の時計を追加")),
     (("smaller", "🔽", "文字をすべて小さく"), ("reset", "🔄", "文字をすべて元の大きさに"), ("bigger", "🔼", "文字をすべて大きく"),
      ("undo", "↩️", "戻す"), ("redo", "↪️", "やり直す")),
     (("edit", "✏️", "選んだ文字を編集（選んだ文字をもう一度タップしても編集）"), ("bold", "🅱️", "選んだ文字の太字を切り替え"),
@@ -4165,7 +4169,8 @@ PHONE_TOOLS = (
      ("delete", "🗑️", "選んだものを削除")),
     (("slide-add", "➕📄", "白紙のページを追加"), ("slide-copy", "📑", "ページを複製"), ("slide-delete", "✖️📄", "ページを削除"),
      ("new", "🆕", "最初から（白紙 1 枚）"), ("pager", "🧭", "ページ移動の形を切り替え（矢印・十字キー・端まで・点・スライダー・ダイヤル）")),
-    (("save", "💾", "保存（押してから形式を選ぶ: PPTX・全スライドJSON・PNG・SVG）"), ("open", "📂", "全スライドJSONを開く"),
+    (("import", "📥", "インポート（押してから形式を選ぶ: 全スライドJSON・画像）"),
+     ("export", "📤", "エクスポート（押してから形式を選ぶ: PPTX・全スライドJSON・PNG・SVG）"),
      ("studio", "🖥️", "以前の PC 版 Slide Studio（新しい機能は足さない）"), ("home", "🏠", "Image Studio")),
 )
 # 🔽 🔄 🔼 multiply every text box by the next / plain / previous step; new boxes are 32 px on the 1280×720 slide.
@@ -4203,22 +4208,25 @@ def _phone_html() -> str:
 
     def control(act: str, emoji: str, words: str) -> str:
         label = f'aria-label="{escape(words)}" title="{escape(words)}"'
-        if act in ("image", "open"):
-            accept = "image/png,image/jpeg,image/webp" if act == "image" else ".json,application/json"
-            return f'<label class="button" data-act="{act}" {label}>{emoji}<input type="file" data-file="{act}" accept="{accept}" /></label>'
         if act in ("studio", "home"):
             return f'<a class="button" href="{"pc/" if act == "studio" else "../"}" data-act="{act}" {label}>{emoji}</a>'
         if act in candidates:                       # 🔷 😊 (^^): the same candidates as Image Studio's tools, read from its markup
-            acts, said = choices.get(act, ("", ""))   # 🔷 💾: a candidate that is an action names it; 😊 (^^) ones are stamped as text
+            acts, said = choices.get(act, ("", ""))   # 🔷 📥 📤: a candidate that is an action names it; 😊 (^^) ones are stamped as text
             more = f' data-acts="{acts}" data-words="{escape(said)}"' if acts else ""
             return f'<button type="button" data-act="{act}" data-candidates="{escape(candidates[act])}"{more} {label}>{emoji}</button>'
         return f'<button type="button" data-act="{act}" {label}>{emoji}</button>'
 
     import re
-    candidates = dict(re.findall(r'data-tool="(shape|emoji|kaomoji)"[^>]*data-candidates="([^"]*)"', STUDIO_HTML)) | {"save": "📽️ 📦 🖼 📐"}
+    # 📥 📤: two ways in and out; the format is picked after (one candidate row, like 🔷)
+    candidates = dict(re.findall(r'data-tool="(shape|emoji|kaomoji)"[^>]*data-candidates="([^"]*)"', STUDIO_HTML)) | {
+        "import": "📦 🖼", "export": "📽️ 📦 🖼 📐"}
     choices = {"shape": ("rect ellipse triangle arrow", "四角|丸|三角|矢印"),
-               "save": ("pptx json png svg", "PPTX（全スライド、PowerPoint で編集できる）|全スライドJSON（また開ける）|このページを PNG|このページを SVG")}
+               "import": ("open image", "全スライドJSON|画像（PNG・JPEG・WebP をこのページに）"),
+               "export": ("pptx json png svg", "PPTX（全スライド、PowerPoint で編集できる）|全スライドJSON（また開ける）|このページを PNG|このページを SVG")}
+    files = ('<input type="file" data-file="open" accept=".json,application/json" aria-label="全スライドJSON" />'
+             '<input type="file" data-file="image" accept="image/png,image/jpeg,image/webp" aria-label="画像" />')
     rows = ['<div class="phone-row">' + "".join(control(*tool) for tool in row) + "</div>" for row in PHONE_TOOLS]
+    rows[-1] += files                                            # 📥's file choosers: no face of their own, and no place in a row
     # 📚 the page's layers, back to front, sit right above the row that acts on the selected one (PySaiyanWeBoo's current-item mark)
     rows = (rows[0] + '<div id="phone-candidates" role="group" aria-label="候補" hidden></div>' + rows[1]
             + '<div id="phone-layers" class="ui-current-items" role="group" aria-label="レイヤー（奥から手前）" hidden></div>' + "".join(rows[2:]))

@@ -14,7 +14,7 @@ One editor for phones and PCs, phone-first. The slide stays pinned at the top wh
 | | |
 | --- | --- |
 | ⬜ | Starts blank (one 1280×720 slide) |
-| 🔤 🖼️ | Add a text box (type right away) or a picture (photos become PNG, at most 4 MP and 1920 px on the long side) |
+| 🔤 | Add a text box (type right away) |
 | 🔷 😊 (^^) | One row of candidates opens under the tools; tap one and it is placed: ▭ ◯ △ → for shapes, emoji, kaomoji (the same candidates as Image Studio's tools). Tap the tool again to close the row |
 | 🕒 | A clock showing the time now |
 | 📚 | With two or more things on the page, a row lists them from back to front (a text shows its first three characters, a shape its sign); tap one to select it, even when it is covered. The selected one is underlined |
@@ -25,8 +25,7 @@ One editor for phones and PCs, phone-first. The slide stays pinned at the top wh
 | 🧭 | The shape of the page controls, one tap each, no reload (kept on this device): ⬅️ 1/N ➡️ → ● dots → 🎚️ slider → 🎛️ dial → ✚ cross-key (⬆️ first, ⬇️ last) → ⏮️ ⬅️ 1/N ➡️ ⏭️ |
 | ➕📄 📑 ✖️📄 🆕 | Add a blank page, duplicate, delete, start over |
 | 🗑️ ↩️ ↪️ | Delete the selection, undo, redo (64 steps) |
-| 💾 | Save: the formats open in the candidate row, one tap each: 📽️ PPTX (every slide, editable in PowerPoint), 📦 all-slide JSON (opens again here and in the PC studio), 🖼 PNG and 📐 SVG of this page at the slide's own size, as it looks |
-| 📂 | Open an all-slide JSON |
+| 📥 📤 | Import and export; the format is picked after, in the candidate row. 📥: 📦 all-slide JSON (the same file the PC studio opens), 🖼 a picture onto this page (photos become PNG, at most 4 MP and 1920 px on the long side). 📤: 📽️ PPTX (every slide, editable in PowerPoint), 📦 all-slide JSON, 🖼 PNG or 📐 SVG of this page as it looks |
 | 🖥️ 🏠 | The PC studio this editor replaces (below) and Image Studio |
 
 The GIF is the frames `tests/slides_browser.cjs` saves (`build/pages-evidence/phone-*.png`, 390×844; `phone-frames.json` lists them) at 1.4 s each, 0.9 s for the 🧭 shapes.

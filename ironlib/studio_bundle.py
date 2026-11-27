@@ -120,7 +120,7 @@ STUDIO_HTML = r"""<!doctype html>
           <summary>工房一覧</summary>
           <a href="slides/">スライド・PPTX作成 ↗</a>
           <a href="slides/phone/" title="スマホで作るスライド">📱 スマホ ↗</a>
-          <a href="tools/">画像一覧・素材 ↗</a>
+          <a href="tools/">作曲・画像一覧・素材 ↗</a>
           <a href="https://myon-bioinformatics.github.io/#ironmate">🏠 ポートフォリオ ↗</a>
           <a href="https://github.com/myon-bioinformatics/Ironmate">🐙 GitHub リポジトリ ↗</a>
         </details>
@@ -3111,12 +3111,40 @@ if (typeof document !== "undefined" && (document.getElementById("pixel-editor") 
     return;
   }
   let images = [];
-  $("capacity-file").addEventListener("change", (e) => {
-    const f = e.target.files[0];
-    if (f)
-      $("capacity-result").textContent =
-        `${f.name}: ${f.size.toLocaleString()} bytes → 標準Base64 ${C.base64Length(f.size).toLocaleString()}文字 / PNG data URIなら ${C.base64Length(f.size, true).toLocaleString()}文字。画像かどうかの判定・圧縮後サイズの推定はしません。`;
-  });
+  // Composition Studio: derive beat position from elapsed time so background tabs do not accumulate drift.
+  const start = $("tempo-start"), beat = $("tempo-beat"), bpm = $("tempo-bpm");
+  let origin = 0, animation = null, taps = [];
+  function stopTempo() {
+    cancelAnimationFrame(animation);
+    animation = null;
+    start.textContent = "開始";
+    beat.textContent = "—";
+  }
+  function tick(now) {
+    const beats = Number($("tempo-meter").value);
+    const index = Math.floor((now - origin) * Number(bpm.value) / 60000) % beats;
+    beat.textContent = Array.from({length: beats}, (_, n) => n === index ? "●" : "○").join(" ");
+    animation = requestAnimationFrame(tick);
+  }
+  start.onclick = () => {
+    if (animation !== null) return stopTempo();
+    if (!bpm.reportValidity()) return;
+    origin = performance.now();
+    tick(origin);
+    start.textContent = "停止";
+  };
+  bpm.oninput = stopTempo;
+  $("tempo-meter").onchange = stopTempo;
+  $("tempo-tap").onclick = () => {
+    const now = performance.now();
+    if (taps.length && now - taps.at(-1) > 2000) taps = [];
+    taps.push(now);
+    taps = taps.slice(-5);
+    if (taps.length > 1 && now > taps[0]) {
+      bpm.value = Math.max(30, Math.min(300, Math.round(60000 * (taps.length - 1) / (now - taps[0]))));
+      stopTempo();
+    }
+  };
   let imageGeneration = 0;
   $("images").addEventListener("change", async (e) => {
     const generation = ++imageGeneration,
@@ -4019,7 +4047,7 @@ TOOLS_HTML = r"""<!doctype html>
       </p>
       <div class="jump">
         <a href="#digest">画像一覧</a
-        ><a href="#capacity">Base64容量</a><a href="#features">CLI対応表</a>
+        ><a href="#composition">🎵 作曲</a><a href="#features">CLI対応表</a>
       </div>
       <p id="message" role="status" aria-live="polite"></p>
       <section id="digest">
@@ -4052,16 +4080,14 @@ TOOLS_HTML = r"""<!doctype html>
         </p>
         <div id="image-list" class="image-list"></div>
       </section>
-      <section id="capacity">
-        <div class="section-heading">
-          <h2>Base64容量</h2>
-        </div>
-        <label
-          >任意のファイルを選ぶ<input id="capacity-file" type="file"
-        /></label>
-        <p id="capacity-result">
-          ファイル本体は読み込まず、サイズから標準Base64文字数を計算します。
-        </p>
+      <section id="composition">
+        <h2>🎵 Composition Studio</h2>
+        <label>BPM <input id="tempo-bpm" type="number" min="30" max="300" value="120" required></label>
+        <label>拍子 <select id="tempo-meter"><option value="3">3/4</option><option value="4" selected>4/4</option><option value="6">6/8</option></select></label>
+        <button id="tempo-start">開始</button><button id="tempo-tap">タップでBPMを測る</button>
+        <p id="tempo-beat" aria-label="現在の拍">—</p>
+        <label>歌詞<textarea rows="4"></textarea></label>
+        <label>コード進行<textarea rows="2"></textarea></label>
       </section>
       <details id="features" class="ui-panel">
         <summary>ブラウザとCLIの対応表</summary>
@@ -4071,7 +4097,7 @@ TOOLS_HTML = r"""<!doctype html>
             <tr><td>画像・レイヤー編集</td><td><a href="../">画像編集</a></td><td>image_studio.py / studio_ingress.py</td></tr>
             <tr><td>ドット絵</td><td>Image Studio のグリッド編集</td><td>pixel_grid.py / grid_tools.py</td></tr>
             <tr><td>画像一覧・比較</td><td><a href="#digest">一覧作成</a></td><td>image_digest.py / browser_matrix.py</td></tr>
-            <tr><td>Base64容量</td><td><a href="#capacity">文字数</a></td><td>ironlib/size_estimate.py</td></tr>
+            <tr><td>Base64容量</td><td><a href="https://myon-bioinformatics.github.io/CaChereCyCle/#capacity">CCCCで計算</a></td><td>ironlib/size_estimate.py</td></tr>
             <tr><td>PPTX</td><td><a href="../slides/">スライド編集</a></td><td>pptx_pipeline.py / pptx_replace.py / ironlib/pptx_preview.py</td></tr>
           </tbody>
         </table></div>

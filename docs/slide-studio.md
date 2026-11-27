@@ -31,7 +31,7 @@ One editor for phones and PCs, phone-first. The slide stays pinned at the top wh
 | 🗂️ ⊞ | All pages as thumbnails, or four at a time. In four-up, select any tile and edit it in place with the same tools. Views are not undoable |
 | 🆕 | Start over (one blank page) |
 | 🗑️ ↩️ ↪️ | Delete the selection, undo, redo (64 steps) |
-| 📥 📤 | Import and export. Beside each, a list asks the format: 📥 どの形式から？ 📦 all-slide JSON (also those the PC studio saved) or 🖼 a picture onto this page (photos become PNG, at most 4 MP and 1920 px on the long side); 📤 どの形式に？ 📽️ PPTX (every slide, editable in PowerPoint), 📦 all-slide JSON, 🖼 PNG or 📐 SVG of this page as it looks |
+| 📥 📤 | Import and export. The formats open in the candidate row, in words, like 🔷's: 📥 どの形式から？ JSON (all slides, also those the PC studio saved) or 画像 (a picture onto this page; photos become PNG, at most 4 MP and 1920 px on the long side); 📤 どの形式に？ PPTX (every slide, editable in PowerPoint), JSON, PNG or SVG (this page as it looks). A pick does it and the row hides again |
 | 🏠 | Image Studio |
 | 💻 ⇄ 📱 | 💻 To textual: short words in place of the emoji, as on a PC; 📱 To iconic: the emoji again (the default). The same page, no reload; remembered in this browser. On the site the switch is under ⋯ in the header. The rows are groups (make, adjust, change, pages, file) with a light dashed line between them |
 

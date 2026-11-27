@@ -130,22 +130,22 @@ STUDIO_HTML = r"""<!doctype html>
         <button id="redo-2" data-steps="2" data-ui-word="2つやり直す" title="2つやり直す" aria-label="2つやり直す">⏩</button>
         <details id="studio-import">
           <summary data-ui-word="インポート" title="インポート" aria-label="インポート">📥</summary>
-          <button id="shelf-button" data-ui-word="クリップボード・シェルフ" title="クリップボード・シェルフ" aria-label="クリップボード・シェルフ">📋</button>
-          <label class="button" data-ui-word="作業履歴を開く" title="作業履歴を開く" aria-label="作業履歴を開く">🕘<input id="open-workspace" type="file" accept=".json,application/json" /></label>
-          <label class="button" data-ui-word="JSONを開く" title="JSONを開く" aria-label="JSONを開く">📦<input id="open" type="file" accept=".json" /></label>
+          <button id="shelf-button" title="クリップボード・シェルフ" aria-label="クリップボード・シェルフ">シェルフ</button>
+          <label class="button" title="作業履歴を開く" aria-label="作業履歴を開く">作業履歴<input id="open-workspace" type="file" accept=".json,application/json" /></label>
+          <label class="button" title="JSONを開く" aria-label="JSONを開く">JSON<input id="open" type="file" accept=".json" /></label>
         </details>
         <details id="studio-export">
           <summary data-ui-word="エクスポート" title="エクスポート" aria-label="エクスポート">📤</summary>
-          <button id="save" data-ui-word="JSON" title="JSON" aria-label="JSON">📦</button>
-          <button id="save-workspace" data-ui-word="作業履歴" title="作業履歴" aria-label="作業履歴">🕘</button>
-          <button id="svg" data-ui-word="SVG" title="SVG" aria-label="SVG">📐</button><button id="base64" data-ui-word="Base64 / 渡す" title="Base64 / 渡す" aria-label="Base64 / 渡す">🔤</button>
+          <button id="save" title="JSON（再編集用）" aria-label="JSON（再編集用）">JSON</button>
+          <button id="save-workspace" title="作業履歴を保存" aria-label="作業履歴を保存">作業履歴</button>
+          <button id="svg" title="SVG" aria-label="SVG">SVG</button><button id="base64" title="Base64 / 渡す" aria-label="Base64 / 渡す">Base64</button>
           <select id="export-scale" aria-label="出力倍率">
             <option value="1">1×</option>
             <option value="2">2×</option>
             <option value="4">4×</option>
             <option value="8">8×</option>
           </select>
-          <button id="png" class="primary" data-ui-word="PNG" title="PNG" aria-label="PNG">🖼</button>
+          <button id="png" class="primary" title="PNG" aria-label="PNG">PNG</button>
         </details>
       </div>
     </header>
@@ -2169,6 +2169,11 @@ for (const button of document.querySelectorAll("[data-tool]"))
 const HOST_ACTIONS = { png: "png", svg: "svg", json: "save", workspace: "save-workspace", base64: "base64", shelf: "shelf-button",
   "open-json": "open", "open-workspace": "open-workspace" };
 queueMicrotask(() => globalThis.PySaiyanWeBoo.bindLabels()); // 💻 To textual ⇄ 📱 To iconic（ページ内と ⋯ の行）
+for (const menu of [$("studio-import"), $("studio-export")]) {
+  // 📥 📤 選んだら中の候補は隠れる（図形・顔文字の候補と同じ）。倍率の選択では閉じない
+  menu.addEventListener("click", (e) => e.target.closest("button") && (menu.open = false));
+  menu.addEventListener("change", (e) => e.target.type === "file" && (menu.open = false));
+}
 document.addEventListener("ui-chrome-action", (e) => {
   const [key, scale] = String(e.detail?.key).split(/-(?=\d+$)/);
   if (key === "png" || key === "svg") $("export-scale").value = (key === "png" && scale) || "1"; // a size is a PNG row's own
@@ -3833,6 +3838,7 @@ function offer(tool) {
     b.addEventListener("click", () => {
       finishEdit();
       run(() => (actions[i] ? acts[actions[i]]() : record(stamp(value)))); // 🔷 💾 name an action (data-acts); 😊 (^^) stamp the text
+      if (button.dataset.close !== undefined) offer(tool); // 📥 📤 選んだら候補は隠れる
     });
     return b;
   }));
@@ -3979,8 +3985,8 @@ const acts = {
       localStorage.setItem(STORE + ":pager", pages.dataset.uiPager);
     } catch {}
   },
-  import: () => acts[document.querySelector('[data-format="import"]').value](), // 📥 📤 隣で選んだ形式から・形式に
-  export: () => acts[document.querySelector('[data-format="export"]').value](),
+  import: () => offer("import"), // 📥 どの形式から？ 📤 どの形式に？ 候補から選ぶと列は隠れる
+  export: () => offer("export"),
   open: () => document.querySelector('input[data-file="open"]').click(),
   image: () => document.querySelector('input[data-file="image"]').click(),
   json: () => C.save("ironmate-slides.json", D.deckText(deck), "application/json"),
@@ -4125,9 +4131,8 @@ PHONE_TOOLS = (
     ("pages", (("slide-add", "➕📄", "ページ追加", "白紙のページを追加"), ("slide-copy", "📑", "複製", "ページを複製"),
                ("slide-delete", "✖️📄", "ページ削除", "ページを削除"), ("pages", "🗂️", "一覧", "ページの一覧（タップでそのページへ）"),
                ("pager", "🧭", "ページ送り", "ページ移動の形を切り替え（矢印・十字キー・端まで・点・スライダー・ダイヤル）"))),
-    ("file", (("import", "📥", "インポート", "インポート（どの形式から？ 隣で選ぶ）"),
-              ("export", "📤", "エクスポート", "エクスポート（どの形式に？ 隣で選ぶ）"))),
-    ("more", (("new", "🆕", "新規", "最初から（白紙 1 枚）"), ("home", "🏠", "Image Studio", "Image Studio"))),
+    ("file", (("new", "🆕", "新規", "最初から（白紙 1 枚）"), ("import", "📥", "インポート", "インポート（どの形式から？ 候補から選ぶ）"),
+              ("export", "📤", "エクスポート", "エクスポート（どの形式に？ 候補から選ぶ）"), ("home", "🏠", "Image Studio", "Image Studio"))),
     ("detail", (("inspect", "🎛️", "詳細", "選んだものの詳細（位置・大きさ・種類別の設定）"), ("grid", "⊞", "4枚表示", "4枚表示（その場で編集）"))),
 )
 # 🔽 🔄 🔼 multiply every text box by the next / plain / previous step; new boxes are 32 px on the 1280×720 slide.
@@ -4169,25 +4174,22 @@ def _phone_html() -> str:
         label = f'data-ui-word="{escape(word)}" aria-label="{escape(words)}" title="{escape(words)}"'
         if act == "home":
             return f'<a class="button" href="../" data-act="{act}" {label}>{emoji}</a>'
-        if act in formats:                          # 📥 どの形式から？ 📤 どの形式に？ — one select beside the button
-            question, options = formats[act]
-            listed = "".join(f'<option value="{value}">{escape(text)}</option>' for value, text in options)
-            return (f'<button type="button" data-act="{act}" {label}>{emoji}</button>'
-                    f'<select data-format="{act}" aria-label="{question}" title="{question}">{listed}</select>')
         if act in candidates:                       # 🔷 😊 (^^): the same candidates as Image Studio's tools, read from its markup
             acts, said = choices.get(act, ("", ""))   # 🔷 📥 📤: a candidate that is an action names it; 😊 (^^) ones are stamped as text
             more = f' data-acts="{acts}" data-words="{escape(said)}"' if acts else ""
+            more += " data-close" if act in ("import", "export") else ""
             return f'<button type="button" data-act="{act}" data-candidates="{escape(candidates[act])}"{more} {label}>{emoji}</button>'
         return f'<button type="button" data-act="{act}" {label}>{emoji}</button>'
 
     import re
     candidates = dict(re.findall(r'data-tool="(shape|emoji|kaomoji)"[^>]*data-candidates="([^"]*)"', STUDIO_HTML)) | {
-        "look": "🎨 🖌 🌗 🅱️ 🔠", "turn": "↻ ↺ ⏹"}
-    formats = {"import": ("どの形式から？", (("open", "📦 JSON"), ("image", "🖼 画像"))),
-               "export": ("どの形式に？", (("pptx", "📽️ PPTX"), ("json", "📦 JSON"), ("png", "🖼 PNG"), ("svg", "📐 SVG")))}
+        "look": "🎨 🖌 🌗 🅱️ 🔠", "turn": "↻ ↺ ⏹", "import": "JSON 画像", "export": "PPTX JSON PNG SVG"}
     choices = {"shape": ("rect ellipse triangle arrow", "四角|丸|三角|矢印"),
                "look": ("fill stroke fade bold font", "塗りを次の色へ|線を次の色へ|不透明度（1 → ¾ → ½ → ¼）|太字|等幅 ⇄ ふつう"),
                "turn": ("cw ccw upright", "右へ 15°|左へ 15°|まっすぐに戻す"),
+               # 📥 どの形式から？ 📤 どの形式に？ the formats in words; a pick hides the row (data-close)
+               "import": ("open image", "JSON（全スライド。PC 版で保存したものも）|画像（PNG・JPEG・WebP をこのページに）"),
+               "export": ("pptx json png svg", "PPTX（全スライド、PowerPoint で編集できる）|JSON（全スライド、また開ける）|PNG（このページ）|SVG（このページ）"),
                }
     files = ('<input type="file" data-file="open" accept=".json,application/json" aria-label="全スライドJSON" />'
              '<input type="file" data-file="image" accept="image/png,image/jpeg,image/webp" aria-label="画像" />')
@@ -4205,7 +4207,7 @@ def _phone_html() -> str:
           '<option value="tip">端</option><option value="middle">中央</option></select></label></fieldset>')
     rows = [f'<div class="phone-row" data-ui-group="{group}">' + "".join(control(*tool) for tool in row) + "</div>"
             for group, row in PHONE_TOOLS]
-    at = [group for group, _row in PHONE_TOOLS].index("more")
+    at = [group for group, _row in PHONE_TOOLS].index("file")
     rows[at] = rows[at].replace("</div>", PSWB_PHONE["labels"] + "</div>")   # 💻 ⇄ 📱 PySaiyanWeBoo's switch, at the end of the more row
     rows[-1] += inspector
     rows[-1] += files                                            # 📥's file choosers: no face of their own, and no place in a row

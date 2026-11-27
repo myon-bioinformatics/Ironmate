@@ -1694,10 +1694,62 @@ const IronmateSlides = (function (root) {
   return api;
 })(globalThis);
 
+const IronmateComposition = (() => {
+  function arrangeSong(partsText, orderText) {
+    const parts = new Map();
+    for (const line of partsText.split("\n").filter(line => line.trim())) {
+      const match = /^\s*([^\s=]+)\s*=\s*([^=]+)$/.exec(line);
+      if (!match || !match[2].trim()) throw Error("パート名 = コード進行 の形で入力してください。");
+      if (parts.has(match[1])) throw Error("同じパート名があります: " + match[1]);
+      parts.set(match[1], match[2].trim().split(/\s+/));
+    }
+    const arrangement = [];
+    let chordCount = 0;
+    for (const name of orderText.trim().split(/\s+/)) {
+      if (!parts.has(name)) throw Error("曲順のパートを確認してください: " + name);
+      const chords = parts.get(name);
+      chordCount += chords.length;
+      if (chordCount > 32) throw Error("曲全体を32コード以内にしてください。");
+      arrangement.push({name, chords});
+    }
+    return arrangement;
+  }
+  function planSong(parts, key, bpm) {
+    const tonic = {C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11}[key];
+    if (!Number.isInteger(tonic) || !Number.isInteger(bpm) || bpm < 30 || bpm > 300)
+      throw Error("キーまたはBPMを確認してください。");
+    const scale = [0, 2, 4, 5, 7, 9, 11];
+    const degrees = ["I", "II", "III", "IV", "V", "VI", "VII"];
+    const intervalSeconds = 30 / bpm;
+    const notes = [];
+    const starts = [];
+    for (const {chords} of parts) {
+      starts.push(notes.length * intervalSeconds);
+      for (const chord of chords) {
+        const match = /^([IViv]+)(dim|°)?(7)?$/.exec(chord);
+        const roman = match?.[1];
+        const degree = degrees.indexOf(roman?.toUpperCase());
+        if (degree < 0 || (roman !== roman.toUpperCase() && roman !== roman.toLowerCase()))
+          throw Error("未対応のコード: " + chord);
+        const diminished = Boolean(match[2]);
+        const intervals = [0, diminished || roman === roman.toLowerCase() ? 3 : 4, diminished ? 6 : 7];
+        if (match[3]) intervals.push(diminished ? 9 : 10);
+        for (const semitones of intervals) {
+          const midi = 60 + tonic + scale[degree] + semitones;
+          const hz = 440 * 2 ** ((midi - 69) / 12);
+          notes.push({hz, start: notes.length * intervalSeconds, duration: intervalSeconds * 0.85});
+        }
+      }
+    }
+    return {notes, starts};
+  }
+  return {arrangeSong, planSong};
+})();
+
 /* Node: require("./studio/studio.js") is the composition model, with .tools, .slides and .slideShell beside it.
    Browser: the same objects as globals, then each page's UI below runs only on the page that names it in data-page. */
 if (typeof module === "object" && module.exports)
-  module.exports = Object.assign({}, StudioCore, {tools: IronmateTools, slides: IronmateSlides, slideShell: IronmateSlideShell});
+  module.exports = Object.assign({}, StudioCore, {tools: IronmateTools, slides: IronmateSlides, slideShell: IronmateSlideShell, composition: IronmateComposition});
 else Object.assign(globalThis, {StudioCore, IronmateTools, IronmateSlides, IronmateSlideShell});
 
 /* Image Studio UI (data-page~="studio"): browser only. */
@@ -3126,30 +3178,11 @@ if (typeof document !== "undefined" && (document.getElementById("pixel-editor") 
     });
     return;
   }
-  function arrangeSong(partsText, orderText) {
-    const parts = new Map();
-    for (const line of partsText.split("\n").filter(line => line.trim())) {
-      const match = /^\s*([^\s=]+)\s*=\s*([^=]+)$/.exec(line);
-      if (!match || !match[2].trim()) throw Error("パート名 = コード進行 の形で入力してください。");
-      if (parts.has(match[1])) throw Error("同じパート名があります: " + match[1]);
-      parts.set(match[1], match[2].trim().split(/\s+/));
-    }
-    const arrangement = [];
-    let chordCount = 0;
-    for (const name of orderText.trim().split(/\s+/)) {
-      if (!parts.has(name)) throw Error("曲順のパートを確認してください: " + name);
-      const chords = parts.get(name);
-      chordCount += chords.length;
-      if (chordCount > 32) throw Error("曲全体を32コード以内にしてください。");
-      arrangement.push({name, chords});
-    }
-    return arrangement;
-  }
   const songSections = $("song-sections");
   function updateArrangement() {
     setCurrentItem(songSections, null);
     try {
-      const parts = arrangeSong($("song-parts").value, $("song-order").value);
+      const parts = IronmateComposition.arrangeSong($("song-parts").value, $("song-order").value);
       songSections.replaceChildren(...parts.map(({name}) => {
         const item = document.createElement("li");
         item.textContent = name;
@@ -3169,27 +3202,6 @@ if (typeof document !== "undefined" && (document.getElementById("pixel-editor") 
     $("song-stop").click();
     updateArrangement();
   };
-  function songNotes(chords, key, bpm) {
-    const tonic = {C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11}[key];
-    const scale = [0, 2, 4, 5, 7, 9, 11];
-    const degrees = ["I", "II", "III", "IV", "V", "VI", "VII"];
-    const duration = 30 / bpm;
-    const notes = [];
-    for (const chord of chords) {
-      const match = /^([IViv]+)(dim|°)?(7)?$/.exec(chord);
-      const roman = match?.[1];
-      const degree = degrees.indexOf(roman?.toUpperCase());
-      if (degree < 0 || (roman !== roman.toUpperCase() && roman !== roman.toLowerCase()))
-        throw Error("未対応のコード: " + chord);
-      const intervals = [0, match[2] || roman === roman.toLowerCase() ? 3 : 4, match[2] ? 6 : 7];
-      if (match[3]) intervals.push(10);
-      for (const interval of intervals) {
-        const midi = 60 + tonic + scale[degree] + interval;
-        notes.push({hz: 440 * 2 ** ((midi - 69) / 12), start: notes.length * duration, duration: duration * 0.85});
-      }
-    }
-    return notes;
-  }
   $("song-stop").onclick = () => {
     document.dispatchEvent(new Event("studio-audio-stop"));
     setCurrentItem(songSections, null);
@@ -3202,13 +3214,7 @@ if (typeof document !== "undefined" && (document.getElementById("pixel-editor") 
     try {
       const key = $("song-key").value;
       const bpm = Number($("song-bpm").value);
-      const notes = [];
-      const starts = parts.map(({chords}) => {
-        const start = notes.length * 30 / bpm;
-        for (const note of songNotes(chords, key, bpm))
-          notes.push({...note, start: note.start + start});
-        return start;
-      });
+      const {notes, starts} = IronmateComposition.planSong(parts, key, bpm);
       document.dispatchEvent(new CustomEvent("studio-audio-play", { detail: {
         notes,
         report: text => { $("song-status").textContent = text; },

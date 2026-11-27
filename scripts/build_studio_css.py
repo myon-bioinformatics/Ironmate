@@ -39,7 +39,7 @@ def bundles() -> dict[Path, dict]:
     the pages' layout, PySaiyanWeBoo's ``studio-pages.css`` (scoped by ``<body data-page="...">``; the slides page is
     ``data-page="studio slides"``)."""
     import pysaiyanweboo
-    sheets = [*dict.fromkeys(sheet for name in PSWB for sheet in pysaiyanweboo.COMPONENTS[name]["css"]), "studio-pages.css"]
+    sheets = [*dict.fromkeys(sheet for name in PSWB for sheet in pysaiyanweboo.COMPONENTS[name]["css"]), "current-item.css", "studio-pages.css"]
     return {STUDIO / "style.css": {"theme": THEME, "extra_css": "\n".join(map(pysaiyanweboo.css_source, sheets))}}
 
 
@@ -106,6 +106,9 @@ def with_parts(src: str) -> str:
     begin, end = "/* PSWB pixel-editor.js */", "/* End PSWB pixel-editor.js */"
     editor = classic_script(pysaiyanweboo.js_source("pixel-editor.js"))
     src = replace_region(src, begin, end, f"{begin}\n{editor}{end}")
+    begin, end = "/* PSWB current-item.js */", "/* End PSWB current-item.js */"
+    current_item = classic_script(pysaiyanweboo.js_source("current-item.js"))
+    src = replace_region(src, begin, end, f"{begin}\n{current_item}{end}")
     parts = pswb_parts()
     lines = lambda html: "".join(f"\n        {part!r}" for part in re.split(r"(?<=>)(?=<)", html))
     block = (f"# ⬇️ pysaiyanweboo: {NOTE} writes PSWB_PHONE from the pinned commit (--check fails when it drifts)\n"

@@ -16,7 +16,7 @@ test = [
     "pyyaml>=6",
     # The studio stylesheet, components and heatmap colors are generated from PySaiyanWeBoo (scripts/build_studio_css.py); the pin is a
     # commit. Move it with: uv lock --upgrade-package pysaiyanweboo
-    "pysaiyanweboo @ git+https://github.com/myon-bioinformatics/PySaiyanWeBoo@579fde5039453b84f202cac02e1746e662d6bc55",
+    "pysaiyanweboo @ git+https://github.com/myon-bioinformatics/PySaiyanWeBoo@865d973080d2746fd7c7213014f431c149443e31",
 ]
 stdlib-test = [
     "pytest>=8",

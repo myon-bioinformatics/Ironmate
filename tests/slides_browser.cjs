@@ -27,6 +27,7 @@ const url =
     page.on("request", (r) => requests.push(r.url()));
     page.on("dialog", (d) => d.accept());
     await page.goto(url);
+    await page.locator("#studio-export summary").click();
     await page.waitForFunction(() => !!window.IronmateSlideEditor);
     assert.equal(
       (await page.evaluate(() => IronmateSlideEditor.deck)).slides.length,
@@ -136,15 +137,18 @@ const url =
     const restored = await page.evaluate(() => IronmateStudio.scene);
     assert.equal(restored.layers[0].text, "編集したタイトル <>&");
     assert.equal(restored.layers[0].fontSize, 64);
-    // 🧰 💾 in the chrome: the deck's JSON and the PPTX are rows of the one save
     const download = async (id, name) => {
       const pending = page.waitForEvent("download");
-      const row = page.locator(`[data-chrome-action="${{ "deck-save": "deck-json", "deck-pptx": "pptx" }[id]}"]`);
-      await row.locator("xpath=ancestor::details[1]/summary").click();
-      await row.click();
+      await page.click("#" + id);
       await (await pending).saveAs(path.join(out, name));
     };
     await download("deck-save", "slides.json");
+    // 🧰 the page declares its rows for a host's header and answers a row's key with its own control: the PPTX from the key alone
+    assert.ok(JSON.parse(await page.locator("#ui-chrome-rows").textContent()).tools["💾"].links.some((row) => row.key === "pptx"));
+    assert.equal(await page.locator("[data-ui-chrome]").count(), 0); // no header of its own
+    const hosted = page.waitForEvent("download");
+    await page.evaluate(() => document.dispatchEvent(new CustomEvent("ui-chrome-action", { detail: { key: "pptx" } })));
+    assert.match((await hosted).suggestedFilename(), /\.pptx$/);
     const saved = await page.evaluate(() => IronmateSlideEditor.deck);
     await page.setInputFiles("#deck-open", {
       name: "invalid.json",

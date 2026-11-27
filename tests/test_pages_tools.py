@@ -53,7 +53,7 @@ def test_static_allowlist_excludes_private_scenes_and_generation_inputs(tmp_path
         'brand/favicon-32.png', 'brand/favicon-48.png', 'brand/icon-192.png',
         'slides/index.html', 'slides/phone/index.html'}
     assert not list(target.rglob('*.py')) and not list(target.rglob('*.json'))
-    assert 'href="./tools/"' in (target / 'index.html').read_text()
+    assert 'href="tools/"' in (target / 'index.html').read_text()
     assert 'connect-src \'none\'' in (target / 'tools/index.html').read_text()
     link = tmp_path / 'link'
     link.symlink_to(tmp_path / 'missing')

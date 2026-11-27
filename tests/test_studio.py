@@ -1039,27 +1039,31 @@ def test_build_site_contains_only_public_client_assets_and_relative_paths(tmp_pa
     assert (target/'keep.txt').read_text()=='local'
 
 
-def test_studios_carry_the_shared_chrome_with_one_save_and_one_open():
-    """🧰 PySaiyanWeBoo's chrome on the image and slide studios: 💾 lists every format (a size is a PNG row's own), 📂 every file to open,
-    ⚙️ the 📱 layout, ☰ the other pages, ⋯ the shelf. Each key presses a control that exists, hidden: no button a format in the header."""
+def test_studios_declare_the_rows_a_hosts_header_shows_and_carry_no_header_of_their_own():
+    """🧰 image_studio.host_rows: one 💾 with every format (a size is a PNG row's own), one 📂, 📱 under ⚙️, the shelf under ⋯, as data.
+    Every key presses a control the page has, and ``replaces`` names menus the page has: the host shows the rows and hides those."""
     import image_studio
     from ironlib import studio_bundle as b
     assets = image_studio.public_assets()
-    studio, slides = assets['index.html'].decode('utf-8'), assets['slides/index.html'].decode('utf-8')
-    keys = lambda html: re.findall(r'data-chrome-action="([a-z0-9-]+)"', html)
-    assert keys(studio) == ['png', 'png-2', 'png-4', 'png-8', 'svg', 'json', 'workspace', 'base64', 'open-json', 'open-workspace', 'shelf']
-    assert keys(slides) == ['pptx', 'deck-json', *keys(studio)[:8], 'open-deck', 'open-json', 'open-workspace', 'shelf']
-    actions = dict(re.findall(r'"?([a-z0-9-]+)"?: "([a-z0-9-]+)"', b.STUDIO_JS[b.STUDIO_JS.index('const CHROME_ACTIONS = {'):].split('};', 1)[0]))
-    for html in (studio, slides):
-        assert html.count('data-ui-chrome') == 1 and html.index('data-ui-chrome') < html.index('<header>')
-        hidden = html[html.index('<div hidden>'):html.index('</header>')]
-        for key in keys(html):
-            assert f'id="{actions[re.sub(r"-[0-9]+$", "", key)]}"' in hidden, key                 # the row presses a control that is there
-        for gone in ('id="studios"', 'id="studio-import"', 'id="studio-export"', '↗</a>'):
-            assert gone not in html[:html.index('<main')], gone                                   # no row of links, no disclosure of buttons
-    assert '<a href="./slides/phone/">📱 スマホ版</a>' in studio and '<a href="./phone/">📱 スマホ版</a>' in slides
-    assert 'href="./slides/"' in studio and 'href="../"' in slides and 'href="../tools/"' in slides
-    assert "bindChrome();" in b.STUDIO_JS and b.PSWB_CHROME['studio'] in b.STUDIO_HTML and ' style="' not in b.PSWB_CHROME['slides']
+    actions = dict(re.findall(r'"?([a-z0-9-]+)"?: "([a-z0-9-]+)"', b.STUDIO_JS[b.STUDIO_JS.index('const HOST_ACTIONS = {'):].split('};', 1)[0]))
+    keys = {}
+    for name in ('index.html', 'slides/index.html'):
+        html = assets[name].decode('utf-8')
+        assert 'data-ui-chrome' not in html and html.count('id="ui-chrome-rows"') == 1                  # the header is the host's
+        spec = json.loads(re.search(r'<script type="application/json" id="ui-chrome-rows">(.*?)</script>', html, re.S)[1])
+        assert set(spec) == {'tools', 'settings', 'screen', 'replaces'} and list(spec['tools']) == ['💾', '📂']
+        rows = [row for tool in spec['tools'].values() for row in tool['links']] + spec['settings'] + spec['screen']
+        assert all(set(row) == {'label', 'key'} for row in rows)                                         # no link a host would have to re-route
+        keys[name] = [row['key'] for row in rows]
+        for key in keys[name]:
+            if key == 'phone':
+                assert re.search(r'<details id="studios">.*?href="[^"]*phone/"', html, re.S)
+            else:
+                assert f'id="{actions[re.sub(r"-[0-9]+$", "", key)]}"' in html, key                      # the row presses a control that is there
+        assert re.fullmatch(r'#[a-z-]+(,#[a-z-]+)*', spec['replaces']) and all(f'id="{i[1:]}"' in html for i in spec['replaces'].split(','))
+    assert keys['index.html'] == ['png', 'png-2', 'png-4', 'png-8', 'svg', 'json', 'workspace', 'base64', 'open-json', 'open-workspace', 'phone', 'shelf']
+    assert keys['slides/index.html'] == ['pptx', 'deck-json', *keys['index.html'][:8], 'open-deck', 'open-json', 'open-workspace', 'phone', 'shelf']
+    assert 'id="ui-chrome-rows"' not in b.STUDIO_HTML and '</script>' not in image_studio.host_rows()[:-9]
 
 
 def test_phone_page_is_emoji_only_and_every_control_is_bound():
@@ -1097,7 +1101,7 @@ def test_phone_page_is_emoji_only_and_every_control_is_bound():
     assert b.PSWB_PHONE['pager'] in html and 'data-ui-pager="arrows"' in html and 'data-ui-pager-keys' in html   # ⬅️ 1/N ➡️ first, ← → too
     assert b.PSWB_PHONE['stage'].split('{slide}')[0] + '<div id="phone-svg" class="phone-svg" data-ui-fill>' in html
     assert ' style="' not in html                                                                 # the CSP allows no inline style
-    assert "globalThis.PySaiyanWeBoo = { pagerSet, pagerIndex, bindChrome }" in b.STUDIO_JS and not re.search(r"^\s*(import|export) ", b.STUDIO_JS, re.M)  # a classic script
+    assert "globalThis.PySaiyanWeBoo = { pagerSet, pagerIndex }" in b.STUDIO_JS and not re.search(r"^\s*(import|export) ", b.STUDIO_JS, re.M)  # a classic script
     script = b.STUDIO_JS[b.STUDIO_JS.index('/* Phone slides UI'):]
     for act in acts:
         if act in ('studio', 'home'):
@@ -1105,7 +1109,7 @@ def test_phone_page_is_emoji_only_and_every_control_is_bound():
         assert re.search(rf'(^|[\s{{,])("{re.escape(act)}"|{re.escape(act)})(\(|:)', script, re.M), act  # acts.x / files.x
     assert 1 in b.PHONE_TEXT['scale'] and b.PHONE_TEXT['size'] % 8 == 0
     assert f'data-text-scale="{" ".join(f"{v:g}" for v in b.PHONE_TEXT["scale"])}"' in html
-    assert 'href="./slides/phone/"' in b.STUDIO_HTML and 'href="./phone/"' in image_studio.public_assets()['slides/index.html'].decode()
+    assert 'href="slides/phone/"' in b.STUDIO_HTML and 'href="phone/"' in image_studio.public_assets()['slides/index.html'].decode()
 
 
 def test_base64_payload_is_standard_padded_png_and_existing_decoder_accepts_it():

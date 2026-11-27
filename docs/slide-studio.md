@@ -12,7 +12,7 @@ No installation, external CDN or server processing is needed. Input images and i
 3. `図形(▭)` (shape) is one tool whose candidates are `▭ ◯ △ →`; `→` places a straight line with a triangular arrowhead, which stays editable in PowerPoint. Moving, scaling, rotating and recoloring work as in Image Studio. The centered arrowhead is also available. `◷ 時計` (clock) starts at the current time.
 4. Build a deck with `白紙` (blank), `スライド複製` (duplicate slide), slide selection, reordering and deletion. All slides use the same canvas size. Switching slides keeps the current layout and restarts the edit history.
    Enable `4枚表示` to edit a group of up to four slides in place. Choose a slide in the grid to use the same text, shape and arrow controls on it. The selector reaches other groups. Adding, duplicating, moving or deleting a slide keeps the edited slide in view.
-5. `💾` (save) at the top lists every format: `📽️ PPTX` saves all slides, and `📦 全スライド JSON` (all slides as JSON) lets you reload the editable data, images included, later through `📂` (open). `📦 JSON（再編集用）` and `🕘 作業履歴` (work history) save only the current slide; `🖼 PNG` rows carry their own size (×2, ×4, ×8). The clipboard shelf is under `⋯`, the other pages under `☰`, and `⚙️` leads to the 📱 phone layout.
+5. `PPTXを書き出す` (export PPTX) saves all slides. Also using `全スライドJSON保存` (save all slides as JSON) lets you reload the editable data, images included, later. The regular `JSON保存` (save JSON) and `作業履歴を保存` (save work history) save only the current slide.
 
 When several layers render to identical PNG bytes, the PPTX stores one media
 part. Each placement retains its own size, position and opacity. This applies

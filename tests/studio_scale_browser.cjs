@@ -98,8 +98,11 @@ module.exports = async function ({ page, out, root, download }) {
   await page.click("#undo");
   await page.evaluate(() => IronmateStudio.ready);
   await page.locator("#layers button").filter({ hasText: "10:10" }).click();
-  await page.locator("#clock-time").fill("03:30");
-  await page.locator("#clock-time").dispatchEvent("change");
+  const nextClock = await page.inputValue("#clock-time");
+  assert.equal(await page.inputValue("#edit-time"), "10:10");
+  await page.locator("#edit-time").fill("03:30"); // ✏️ 編集 changes the placed clock ...
+  await page.locator("#edit-time").dispatchEvent("change");
+  assert.equal(await page.inputValue("#clock-time"), nextClock); // ... and leaves the next clock's time alone
   await page.evaluate(() => IronmateStudio.ready);
   assert.equal(
     await page.evaluate(

@@ -55,31 +55,27 @@ STUDIO_HTML = r"""<!doctype html>
         </p>
         <div id="tools" class="tool-grid">
           <button data-tool="select" class="active">↖ 選択</button
-          ><button data-tool="rect">▭ 四角</button
-          ><button data-tool="ellipse">◯ 丸</button
-          ><button data-tool="triangle">△ 三角</button
-          ><button data-tool="text">T 文字</button
-          ><button data-tool="stamp">✦ スタンプ</button>
-          <button data-tool="arrow">→ 矢印</button
+          ><button data-tool="text">T 文字列</button
+          ><button data-tool="shape" data-label="図形" data-candidates="▭ ◯ △ →">図形(▭)</button
+          ><button data-tool="stamp">✦ スタンプ</button
+          ><button data-tool="emoji" data-label="絵文字" data-candidates="❤️ 😊 🌱 📊 ✨ 📌 🔰">絵文字(😊)</button
+          ><button data-tool="kaomoji" data-label="顔文字" data-candidates="(・∀・) (｡•̀ᴗ-)✧ ٩(๑❛ᴗ❛๑)۶">顔文字(^^)</button
           ><button data-tool="clock">◷ 時計</button>
         </div>
-        <div id="kaomojis" class="emojis kaomojis">
-          <button>(・∀・)</button><button>(｡•̀ᴗ-)✧</button
-          ><button>٩(๑❛ᴗ❛๑)۶</button>
+        <div id="candidates" class="emojis" role="group" aria-label="候補"></div>
+        <label
+          >T 文字列<textarea id="text" rows="2" placeholder="文字列 😊 (・∀・)"></textarea
+        ></label>
+        <label
+          >✦ スタンプ<textarea id="stamp-text" rows="1" placeholder="済 ✨ (｡•̀ᴗ-)✧"></textarea
+        ></label>
+        <div class="two">
+          <label>絵文字<input id="emoji-text" placeholder="😊" /></label
+          ><label>顔文字<input id="kaomoji-text" placeholder="(・∀・)" /></label>
         </div>
         <label
-          >時計の時刻<input id="clock-time" type="time" value="10:10"
+          >◷ 時計の時刻<input id="clock-time" type="time" value="10:10"
         /></label>
-        <label
-          >文字・カスタムスタンプ<textarea id="text" rows="2">
-検証できたら、次へ。</textarea
-          >
-        </label>
-        <div id="emojis" class="emojis">
-          <button>❤️</button><button>😊</button><button>🌱</button
-          ><button>📊</button><button>✨</button><button>📌</button
-          ><button>🔰</button>
-        </div>
         <div class="two">
           <label>塗り<input id="fill" type="color" value="#18a7a1" /></label
           ><label>線<input id="stroke" type="color" value="#183c42" /></label>
@@ -164,6 +160,23 @@ STUDIO_HTML = r"""<!doctype html>
         </div>
         <div class="section">
           <h2 id="selection">レイヤーを選択</h2>
+          <label
+            >✏️ 編集<textarea id="edit-text" rows="2" placeholder="選んだ文字を後から変更"></textarea
+          ></label>
+          <div class="two">
+            <label class="check"><input id="bold" type="checkbox" />太字</label
+            ><label class="check"><input id="italic" type="checkbox" />斜体</label
+            ><label>塗り<input id="edit-fill" type="color" /></label
+            ><label>線<input id="edit-stroke" type="color" /></label
+            ><label
+              >図形<select id="edit-shape">
+                <option value="rect">▭ 四角</option>
+                <option value="ellipse">◯ 丸</option>
+                <option value="triangle">△ 三角</option>
+              </select></label
+            ><label>時刻<input id="edit-time" type="time" /></label>
+          </div>
+          <button id="apply-text" class="wide">✏️ 編集を適用</button>
           <div class="two">
             <label>X<input id="x" type="number" /></label
             ><label>Y<input id="y" type="number" /></label
@@ -198,7 +211,6 @@ STUDIO_HTML = r"""<!doctype html>
               <option value="mono">等幅（ASCIIアート・顔文字）</option>
             </select></label
           >
-          <button id="apply-text" class="wide">入力した文字・色を適用</button>
           <label class="check"
             ><input
               id="monochrome"
@@ -624,6 +636,7 @@ const StudioCore = (function (root) {
       if (l.kind === "text") {
         if (l.wrap !== undefined && typeof l.wrap !== "boolean") fail("折り返しの指定が不正です");
         if (l.bold !== undefined && typeof l.bold !== "boolean") fail("太字の指定が不正です");
+        if (l.italic !== undefined && typeof l.italic !== "boolean") fail("斜体の指定が不正です");
         if (l.font !== undefined && !["sans", "mono"].includes(l.font))
           fail("フォント設定が不正です");
         if (
@@ -802,7 +815,7 @@ const StudioCore = (function (root) {
       textContext = canvas?.getContext("2d") || null;
     }
     if (textContext) {
-      textContext.font = `${l.bold ? 700 : 400} ${l.fontSize}px ${textFont(l)}`;
+      textContext.font = `${l.italic ? "italic " : ""}${l.bold ? 700 : 400} ${l.fontSize}px ${textFont(l)}`;
       return textContext.measureText(text).width;
     }
     return Array.from(text).reduce((n, c) => n + (/^[\x20-\x7e]$/.test(c) ? 0.65 : 1), 0) * l.fontSize;
@@ -845,7 +858,7 @@ const StudioCore = (function (root) {
         body = `<polygon points="${l.w / 2},0 ${l.w},${l.h} 0,${l.h}" ${attrs}/>`;
     } else if (l.kind === "text") {
       body =
-        `<text xml:space="preserve" fill="${l.fill}" font-family="${textFont(l)}" font-size="${l.fontSize}" font-weight="${l.bold ? "700" : "400"}" dominant-baseline="text-before-edge">` +
+        `<text xml:space="preserve" fill="${l.fill}" font-family="${textFont(l)}" font-size="${l.fontSize}" font-weight="${l.bold ? "700" : "400"}"${l.italic ? ' font-style="italic"' : ""} dominant-baseline="text-before-edge">` +
         textLayout(l).flat()
           .map(
             (line, i) =>
@@ -1387,7 +1400,7 @@ const IronmateSlides = (function (root) {
             throw Error(
               "PPTXの文字サイズが1〜4000ptの範囲を超えています。キャンバスまたは文字サイズを調整してください。",
             );
-          const properties = `<a:rPr lang="ja-JP" sz="${size}" b="${l.bold ? 1 : 0}">${fill(l.fill, l.opacity)}<a:latin typeface="${font}"/><a:ea typeface="${font}"/></a:rPr>`;
+          const properties = `<a:rPr lang="ja-JP" sz="${size}" b="${l.bold ? 1 : 0}"${l.italic ? ' i="1"' : ""}>${fill(l.fill, l.opacity)}<a:latin typeface="${font}"/><a:ea typeface="${font}"/></a:rPr>`;
           // Explicit input newlines remain paragraphs; measured soft wraps are
           // editable line breaks. Preserve the source text only in deck JSON.
           const paragraphs = C.textLayout(l)
@@ -1587,6 +1600,8 @@ const C = window.StudioCore,
   };
 let serial = 0,
   tool = "select",
+  shape = "rect", // 図形(▭ ◯ △ →): the candidate the 図形 tool places
+  edited = { id: null, text: "" }, // what ✏️ 編集 last showed, so a repaint never undoes typing
   selected = null,
   template = null,
   dirty = false,
@@ -1699,6 +1714,25 @@ function updateHistoryTimeline() {
     list.append(row);
   });
 }
+// ✏️ 編集: the control, the layers it changes, and the change (each applies as soon as it is set)
+const SHAPE_NAMES = { rect: "四角", ellipse: "丸", triangle: "三角" },
+  clockText = (l) => String(l.hour).padStart(2, "0") + ":" + String(l.minute).padStart(2, "0"),
+  EDITS = [
+    ["bold", ["text"], (l, input) => { l.bold = input.checked; }],
+    ["italic", ["text"], (l, input) => { l.italic = input.checked; }],
+    ["edit-fill", ["text", "image", "rect", "ellipse", "triangle", "arrow", "clock"], (l, input) => { l.fill = input.value; }],
+    ["edit-stroke", ["rect", "ellipse", "triangle", "arrow", "clock"], (l, input) => { l.stroke = input.value; }],
+    ["edit-shape", ["rect", "ellipse", "triangle"], (l, input) => {
+      if (l.name === SHAPE_NAMES[l.kind]) l.name = SHAPE_NAMES[input.value];
+      l.kind = input.value;
+    }],
+    ["edit-time", ["clock"], (l, input) => {
+      const [hour, minute] = input.value.split(":").map(Number);
+      if (l.name === "時計 " + clockText(l)) l.name = "時計 " + input.value;
+      l.hour = hour;
+      l.minute = minute;
+    }],
+  ];
 function updateInspector() {
   const l = selectedLayer();
   $("selection").textContent = l ? `${l.name || l.kind}` : "レイヤーを選択";
@@ -1715,9 +1749,19 @@ function updateInspector() {
   $("arrow-style").disabled = l?.kind !== "arrow";
   $("arrow-style").value =
     l?.kind === "arrow" ? (l.headStyle ?? "triangle") : "beginner";
-  if (l?.kind === "clock")
-    $("clock-time").value =
-      String(l.hour).padStart(2, "0") + ":" + String(l.minute).padStart(2, "0");
+  const text = l?.kind === "text" ? l.text : "";
+  if (edited.id !== (l?.id ?? null) || edited.text !== text) {
+    $("edit-text").value = text;
+    edited = { id: l?.id ?? null, text };
+  }
+  $("edit-text").disabled = l?.kind !== "text";
+  for (const [id, kinds] of EDITS) $(id).disabled = !kinds.includes(l?.kind);
+  $("bold").checked = !!l?.bold;
+  $("italic").checked = !!l?.italic;
+  if (/^#[0-9a-f]{6}$/i.test(l?.fill ?? "")) $("edit-fill").value = l.fill.toLowerCase();
+  if (/^#[0-9a-f]{6}$/i.test(l?.stroke ?? "")) $("edit-stroke").value = l.stroke.toLowerCase();
+  if (!$("edit-shape").disabled) $("edit-shape").value = l.kind;
+  $("edit-time").value = l?.kind === "clock" ? clockText(l) : "";
   $("font-family").disabled = l?.kind !== "text";
   $("font-family").value = l?.font ?? "sans";
   $("font-size").disabled = l?.kind !== "text";
@@ -1750,7 +1794,6 @@ function updateInspector() {
     if (layer.id === selected) button.classList.add("active");
     button.onclick = () => {
       selected = layer.id;
-      if (layer.kind === "text") $("text").value = layer.text;
       render();
     };
     $("layers").append(button);
@@ -1784,11 +1827,47 @@ function add(layer) {
   change((doc) => doc.layers.push(layer));
   message(`${layer.name || layer.kind}を追加しました`);
 }
+const SHAPES = { "▭": "rect", "◯": "ellipse", "△": "triangle", "→": "arrow" };
 function setTool(value) {
   tool = value;
   document
     .querySelectorAll("[data-tool]")
     .forEach((b) => b.classList.toggle("active", b.dataset.tool === value));
+  candidates();
+}
+function candidates() {
+  // One row for whichever tool has candidates (図形・絵文字・顔文字): a tap picks what the next press on the canvas places.
+  const button = document.querySelector(`[data-tool="${tool}"]`),
+    list = button?.dataset.candidates;
+  $("candidates").classList.toggle("kaomojis", tool === "kaomoji");
+  $("candidates").replaceChildren(
+    ...(list ? list.split(" ") : []).map((value) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.textContent = value;
+      b.setAttribute(
+        "aria-pressed",
+        tool === "shape" ? SHAPES[value] === shape : $(tool + "-text").value === value,
+      );
+      b.onclick = () => {
+        if (tool === "shape") {
+          shape = SHAPES[value];
+          button.textContent = `${button.dataset.label}(${value})`;
+        } else {
+          $(tool + "-text").value = value;
+          if (value === "🔰") $("fill").value = "#000000";
+        }
+        candidates();
+        $("stamp-note").textContent = `${value}をキャンバスに押せます`;
+      };
+      return b;
+    }),
+  );
+}
+function toolText() {
+  // 文字列・スタンプ・絵文字・顔文字 each keep an input of their own; an empty one places its example.
+  const input = $(tool === "text" ? "text" : tool + "-text");
+  return input.value || input.placeholder;
 }
 function textLayer(text, x, y) {
   const size = 48,
@@ -1817,16 +1896,16 @@ function textLayer(text, x, y) {
   };
 }
 function place(x, y) {
-  if (tool === "stamp") {
-    if (template) {
-      const l = copy(template);
-      l.id = uid();
-      l.x = x - l.w / 2;
-      l.y = y - l.h / 2;
-      add(l);
-    } else add(textLayer($("text").value, x, y));
-  } else if (tool === "text") add(textLayer($("text").value, x, y));
-  else if (tool === "arrow")
+  const kind = tool === "shape" ? shape : tool;
+  if (kind === "stamp" && template) {
+    const l = copy(template);
+    l.id = uid();
+    l.x = x - l.w / 2;
+    l.y = y - l.h / 2;
+    add(l);
+  } else if (["text", "stamp", "emoji", "kaomoji"].includes(kind))
+    add(textLayer(toolText(), x, y));
+  else if (kind === "arrow")
     add({
       ...base("arrow", x, y, 200, 80),
       name: "直線＋矢羽根",
@@ -1835,9 +1914,10 @@ function place(x, y) {
       strokeWidth: 4,
       headSize: 28,
       headPlacement: $("arrow-placement").value,
-      headStyle: $("arrow-style").value,
+      // a slide's arrow has the triangular head a PPTX keeps editable; 🔰 is a choice in ✏️ afterwards
+      headStyle: document.body.dataset.mode === "slides" ? "triangle" : $("arrow-style").value,
     });
-  else if (tool === "clock") {
+  else if (kind === "clock") {
     const [hour, minute] = $("clock-time").value.split(":").map(Number);
     add({
       ...base("clock", x, y, 160, 160),
@@ -1850,8 +1930,8 @@ function place(x, y) {
     });
   } else
     add({
-      ...base(tool, x, y),
-      name: { rect: "四角", ellipse: "丸", triangle: "三角" }[tool],
+      ...base(kind, x, y),
+      name: { rect: "四角", ellipse: "丸", triangle: "三角" }[kind],
       fill: $("outline").checked ? "none" : $("fill").value,
       stroke: $("stroke").value,
       strokeWidth: 3,
@@ -1932,17 +2012,12 @@ $("board").addEventListener("pointercancel", () => {
 });
 for (const button of document.querySelectorAll("[data-tool]"))
   button.onclick = () => setTool(button.dataset.tool);
-for (const button of [...$("emojis").children, ...$("kaomojis").children])
-  button.onclick = () => {
-    $("text").value = button.textContent;
-    if (button.textContent === "🔰") $("fill").value = "#000000";
-    template = null;
-    setTool("stamp");
-    $("stamp-note").textContent = `${button.textContent}をキャンバスに押せます`;
-  };
-$("text").oninput = () => {
+for (const [id, name] of [["text", "text"], ["stamp-text", "stamp"], ["emoji-text", "emoji"], ["kaomoji-text", "kaomoji"]])
+  $(id).onfocus = () => setTool(name); // typing into an input means its tool
+$("stamp-text").oninput = () => {
   template = null;
 };
+$("clock-time").value = new Date().toTimeString().slice(0, 5); // ◷ starts at the time now
 $("custom").onclick = () => {
   const l = selectedLayer();
   if (l) {
@@ -2003,21 +2078,22 @@ $("apply-text").onclick = guarded(() => {
   change((doc) => {
     const l = doc.layers.find((l) => l.id === selected);
     if (l.kind === "text") {
-      l.text = $("text").value;
+      if (l.name === "文字 / " + l.text.slice(0, 12))
+        l.name = "文字 / " + $("edit-text").value.slice(0, 12); // the layer list follows the new words
+      l.text = $("edit-text").value;
       l.font = $("font-family").value;
-      l.fill = $("fill").value;
-      l.mono = $("monochrome").checked;
-    } else if (l.kind === "image") {
-      l.fill = $("fill").value;
-      l.mono = $("monochrome").checked;
-    } else if (
-      ["rect", "ellipse", "triangle", "arrow", "clock"].includes(l.kind)
-    ) {
-      l.fill = $("outline").checked ? "none" : $("fill").value;
-      l.stroke = $("stroke").value;
     }
+    if (["text", "image"].includes(l.kind)) l.mono = $("monochrome").checked;
+    for (const [id, kinds] of EDITS.filter(([id]) => id === "edit-fill" || id === "edit-stroke"))
+      if (kinds.includes(l.kind)) l[id.slice(5)] = $(id).value;
+    if (l.kind in SHAPE_NAMES && $("outline").checked) l.fill = "none"; // 枠線だけにする still empties a placed shape
   });
 });
+for (const [id, kinds, set] of EDITS)
+  $(id).onchange = guarded(() => {
+    if (kinds.includes(selectedLayer()?.kind))
+      change((doc) => set(doc.layers.find((l) => l.id === selected), $(id)));
+  });
 $("font-family").onchange = () => {
   if (selectedLayer()?.kind === "text")
     change((doc) => {
@@ -2052,13 +2128,6 @@ $("arrow-placement").onchange = () => {
         $("arrow-placement").value;
     });
 };
-$("clock-time").onchange = guarded(() => {
-  if (selectedLayer()?.kind === "clock")
-    change((doc) => {
-      const l = doc.layers.find((l) => l.id === selected);
-      [l.hour, l.minute] = $("clock-time").value.split(":").map(Number);
-    });
-});
 for (const [id, field] of [
   ["cell", "cell"],
   ["levels", "levels"],
@@ -3156,53 +3225,6 @@ if (typeof document !== "undefined" && document.body && (document.body.dataset.p
     }
   }
   byId("slide-select").addEventListener("change", e => switchSlide(Number(e.target.value)));
-  action("slide-template", async () => {
-    const next = E.scene,
-      added = D.template(
-        next.width,
-        next.height,
-        byId("slide-title").value,
-        byId("slide-body").value,
-      ).layers;
-    added.forEach((l, i) => (l.id = "template-" + Date.now() + "-" + i));
-    next.layers.push(...added);
-    C.validate(next);
-    await E.replaceScene(next);
-    note(
-      "タイトルと本文を追加しました。レイヤーを選択して文字・位置・サイズを変更できます。",
-    );
-  });
-  action("slide-arrow", async () => {
-    const next = E.scene;
-    next.layers.push({
-      id: "arrow-" + Date.now(),
-      kind: "arrow",
-      name: "矢印",
-      x: next.width * 0.2,
-      y: next.height * 0.65,
-      w: next.width * 0.5,
-      h: next.height * 0.1,
-      rotation: 0,
-      opacity: 1,
-      fill: "#000000",
-      stroke: "#000000",
-      strokeWidth: 4,
-      headSize: 28,
-      headPlacement: "tip",
-      headStyle: "triangle",
-    });
-    await E.replaceScene(next);
-    note("編集可能な直線と三角の矢羽根を追加しました。");
-  });
-  action("slide-bold", () => {
-    const layer = E.scene.layers.find((l) => l.id === E.selectedId);
-    if (layer?.kind !== "text")
-      throw Error("先に文字レイヤーを選択してください。");
-    E.patchSelected({ bold: !layer.bold });
-  });
-  byId("font-sample").addEventListener("change", (e) => {
-    if (e.target.value) byId("slide-body").value = e.target.value;
-  });
   action("deck-save", () => {
     const next = snapshot(),
       text = D.deckText(next);
@@ -3750,40 +3772,6 @@ SLIDES_PANEL_HTML = r"""<section class="slide-controls" aria-label="スライド
         accept=".json,application/json" /></label
     ><button id="deck-pptx" class="primary">PPTXを書き出す</button>
   </div>
-  <details open>
-    <summary>タイトル・本文とフォント見本</summary>
-    <div class="slide-template">
-      <label
-        >タイトル<input
-          id="slide-title"
-          placeholder="タイトルを入力"
-          value="スライドのタイトル" /></label
-      ><label
-        >本文<textarea
-          id="slide-body"
-          rows="2"
-          placeholder="本文を入力。幅で自動折り返し。改行も使用できます。"
-        >
-ここに本文を入力します。
-テキストはPowerPointでも編集できます。</textarea></label
-      ><label
-        >文字の見本<select id="font-sample">
-          <option value="">見本を選ぶ</option>
-          <option value="日本語の文章と ABC abc 0123456789">
-            日本語・英数字
-          </option>
-          <option value="あいうえお　アイウエオ　漢字の見本">
-            ひらがな・カタカナ・漢字
-          </option>
-          <option value="The quick brown fox jumps over the lazy dog.">
-            英文
-          </option>
-        </select></label
-      ><button id="slide-template">タイトル＋本文を追加</button
-      ><button id="slide-arrow">編集できる矢印を追加</button
-      ><button id="slide-bold">選択した文字の太字を切替</button>
-    </div>
-  </details>
   <p id="deck-status" role="status">
     全スライドは同じ寸法です。
   </p>

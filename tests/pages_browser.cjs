@@ -119,6 +119,13 @@ const out = path.resolve("build/pages-evidence");
     assert(digest.includes("&lt;img onerror=alert(1)&gt;.png"));
     assert(!digest.includes("<img onerror="));
     assert.equal(await page.locator("#composition a").getAttribute("href"), "https://myon-bioinformatics.github.io/PySaiyanWeBoo/examples/composition-studio.html");
+    await page.fill("#song-parts", "A = I V\nB = IV");
+    await page.fill("#song-order", "B A B");
+    await page.click("#song-arrange");
+    assert.equal(await page.inputValue("#song-progression"), "IV I V IV");
+    await page.fill("#song-order", "missing");
+    await page.click("#song-arrange");
+    assert.equal(await page.inputValue("#song-progression"), "");
     await page.setViewportSize({ width: 390, height: 844 });
     assert.equal(
       await page.evaluate(

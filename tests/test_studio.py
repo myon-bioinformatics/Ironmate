@@ -1021,6 +1021,9 @@ def test_build_site_contains_only_public_client_assets_and_relative_paths(tmp_pa
         assert (target/'brand'/name).is_file()
         expected = BRAND_HTML.encode('utf-8') if name == 'index.html' else (ROOT/'studio/brand'/name).read_bytes()
         assert (target/'brand'/name).read_bytes() == expected
+    from ironlib.studio_bundle import BROWSER_TASK_JS, RECORDS_JS
+    assert (target/'tools/async-task.js').read_text(encoding='utf-8') == BROWSER_TASK_JS
+    assert (target/'tools/records.js').read_text(encoding='utf-8') == RECORDS_JS
     for page in ('index.html', 'tools/index.html', 'slides/index.html', 'slides/phone/index.html', 'brand/index.html'):
         html = (target/page).read_text()
         assert 'src="/' not in html and 'href="/' not in html

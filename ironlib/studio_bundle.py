@@ -295,7 +295,7 @@ STUDIO_HTML = r"""<!doctype html>
 </html>
 """
 
-STYLE_CSS = r"""/* web-ui-bundle/1 commit=901b790f14ad7a04a4280409bfd274d8f6926fa7 sha256=b2579ab6f0851448276b1f656f7faf61d105a927530407daa35cf94fee2a24b9 scripts/build_studio_css.py*/
+STYLE_CSS = r"""/* web-ui-bundle/1 commit=2c4ce296047373a97da24892f4f76704b92e9a83 sha256=10144bca5a229ee3f192f4660c5f88bc0e1a4819164a0579ab6b4549fb40426f scripts/build_studio_css.py*/
 @layer base,components,theme;
 /* css/tokens.css */
 :root{--ui-bg:#0d1117;--ui-panel:#101820;--ui-fg:#d1f7c4;--ui-muted:#8b949e;--ui-border:#58a6ff;--ui-accent:#7ee787;--ui-danger:#cf222e;--ui-radius:0;--ui-text:16px;--ui-space:1rem;--ui-max:960px;--ui-font:Meiryo,メイリオ,sans-serif;--ui-font-mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
@@ -316,21 +316,21 @@ body[data-ui-theme="terminal"]{--ui-bg:#0a0e10;--ui-panel:#11171a;--ui-fg:#d5dee
 @layer components{.ui-dial{position:relative;display:inline-block;width:48px;height:48px;border-radius:50%;border:2px solid var(--ui-border);background:var(--ui-panel);box-sizing:border-box;touch-action:none;cursor:grab;vertical-align:middle}.ui-dial[data-ui-dial-drag]{cursor:grabbing}.ui-dial::after{content:"";position:absolute;left:50%;top:4px;width:4px;height:16px;border-radius:2px;background:var(--ui-accent);transform-origin:50% 18px;transform:translateX(-50%) rotate(var(--ui-dial-angle,-135deg))}.ui-dial>input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;pointer-events:none}.ui-dial:focus-within{outline:2px solid var(--ui-accent);outline-offset:2px}}
 /* studio layout */
 body:where([data-page~="studio"]){font-size:13px;line-height:1.5;margin:0}
-:where([data-page~="studio"]) header{min-height:76px;background:var(--ui-fg);color:#fff;padding:18px 26px;display:flex;align-items:center;justify-content:space-between;gap:20px}
+:where([data-page~="studio"]) header{min-height:76px;background:var(--ui-panel);color:var(--ui-fg);box-shadow:inset 0 -1px var(--ui-border);padding:18px 26px;display:flex;align-items:center;justify-content:space-between;gap:20px}
 :where([data-page~="studio"]) .brand{display:flex;align-items:center;gap:12px;font-weight:800;letter-spacing:2px;font-size:19px;white-space:nowrap}
-:where([data-page~="studio"]) .brand span{font-weight:400;font-size:10px;display:block;letter-spacing:3px;margin:5px 0 0;color:#99c5bc}
+:where([data-page~="studio"]) .brand span{font-weight:400;font-size:10px;display:block;letter-spacing:3px;margin:5px 0 0;color:var(--ui-muted)}
 :where([data-page~="studio"]) .brand img{flex:none;image-rendering:pixelated}
 :where([data-page~="studio"]) .top-actions{display:flex;flex-wrap:wrap;gap:7px}
-:where([data-page~="studio"]) .top-actions>a{color:#c7f58a;align-self:center;padding:7px 3px;text-underline-offset:3px}
+:where([data-page~="studio"]) .top-actions>a{color:var(--ui-accent);align-self:center;padding:7px 3px;text-underline-offset:3px}
 :where([data-page~="studio"]) button,:where([data-page~="studio"]) .button{display:inline-flex;align-items:center;justify-content:center;gap:5px;text-decoration:none;min-height:38px;padding:10px 12px}
 :where([data-page~="studio"]) .button{font:inherit;cursor:pointer;background:var(--ui-panel);color:var(--ui-fg);border:1px solid var(--ui-border);border-radius:var(--ui-radius)}
-:where([data-page~="studio"]) button:hover,:where([data-page~="studio"]) .button:hover{border-color:var(--ui-accent);background:#ecf5ef}
-:where([data-page~="studio"]) .primary{background:#bdf06c;border-color:#bdf06c;font-weight:700}
-:where([data-page~="studio"]) header button,:where([data-page~="studio"]) header .button,:where([data-page~="studio"]) header select{border-color:#406261;background:#244a49;color:#fff}
-:where([data-page~="studio"]) header .primary{background:#c7f58a;color:#183b34;border-color:#c7f58a}
+:where([data-page~="studio"]) button:hover,:where([data-page~="studio"]) .button:hover{border-color:var(--ui-accent);background:color-mix(in srgb,var(--ui-accent) 12%,var(--ui-panel))}
+:where([data-page~="studio"]) .primary{background:var(--ui-accent);border-color:var(--ui-accent);color:var(--ui-bg);font-weight:700}
+:where([data-page~="studio"]) header button,:where([data-page~="studio"]) header .button,:where([data-page~="studio"]) header select{border-color:var(--ui-border);background:var(--ui-bg);color:var(--ui-fg)}
+:where([data-page~="studio"]) header .primary{background:var(--ui-accent);color:var(--ui-bg);border-color:var(--ui-accent)}
 :where([data-page~="studio"]) input[type=file]{display:none}
 :where([data-page~="studio"]) main{display:grid;grid-template-columns:250px minmax(0,1fr) 238px;min-height:calc(100vh - 76px)}
-:where([data-page~="studio"]) aside{padding:24px 20px;background:#fafbf8}
+:where([data-page~="studio"]) aside{padding:24px 20px;background:var(--ui-panel)}
 :where([data-page~="studio"]) aside.tools{border-right:1px solid var(--ui-border)}
 :where([data-page~="studio"]) aside.inspector{border-left:1px solid var(--ui-border)}
 :where([data-page~="studio"]) h1{font-size:25px;line-height:1.55;letter-spacing:-1px;margin:12px 0}
@@ -340,7 +340,7 @@ body:where([data-page~="studio"]){font-size:13px;line-height:1.5;margin:0}
 :where([data-page~="studio"]) .note{margin-top:18px}
 :where([data-page~="studio"]) .tool-grid,:where([data-page~="studio"]) .two{display:grid;grid-template-columns:1fr 1fr;gap:7px}
 :where([data-page~="studio"]) .tool-grid{margin:24px 0 18px}
-:where([data-page~="studio"]) .active{background:#d8eee3!important;border-color:#59937d!important;color:#0a544d!important;font-weight:700}
+:where([data-page~="studio"]) .active{background:color-mix(in srgb,var(--ui-accent) 22%,var(--ui-panel))!important;border-color:var(--ui-accent)!important;color:var(--ui-fg)!important;font-weight:700}
 :where([data-page~="studio"]) label{display:block;font-size:11px;margin:12px 0 7px}
 :where([data-page~="studio"]) input,:where([data-page~="studio"]) textarea,:where([data-page~="studio"]) select{display:block;width:100%;font-size:13px;padding:9px;margin-top:5px}
 :where([data-page~="studio"]) select{width:auto;max-width:100%;padding:8px}
@@ -357,7 +357,7 @@ body:where([data-page~="studio"]){font-size:13px;line-height:1.5;margin:0}
 :where([data-page~="studio"]) .canvas-heading{display:flex;justify-content:space-between;align-items:end;gap:12px;margin:5px 0 24px}
 :where([data-page~="studio"]) .canvas-heading h2{font-size:22px;font-weight:500;letter-spacing:-.5px}
 :where([data-page~="studio"]) .canvas-heading span{font-size:11px;white-space:nowrap;color:var(--ui-muted)}
-:where([data-page~="studio"]) .board{position:relative;aspect-ratio:16/9;background:repeating-conic-gradient(#e4e9e2 0 25%,#f7f9f4 0 50%) 0/20px 20px;box-shadow:0 12px 45px #244d3c15;outline:none;touch-action:none}
+:where([data-page~="studio"]) .board{position:relative;aspect-ratio:16/9;background:repeating-conic-gradient(#e4e9e2 0 25%,#f7f9f4 0 50%) 0/20px 20px;box-shadow:0 12px 45px color-mix(in srgb,var(--ui-fg) 8%,transparent);outline:none;touch-action:none}
 :where([data-page~="studio"]) .board svg{width:100%;height:100%;display:block;user-select:none}
 :where([data-page~="studio"]) .board g[data-layer]{cursor:move}
 :where([data-page~="studio"]) .board .selection{pointer-events:none}
@@ -374,13 +374,13 @@ body:where([data-page~="studio"]){font-size:13px;line-height:1.5;margin:0}
 :where([data-page~="studio"]) output{float:right;color:var(--ui-accent)}
 :where([data-page~="studio"]) .inspector h2{font-size:14px;margin-bottom:20px}
 :where([data-page~="studio"]) dialog{border:1px solid var(--ui-border);border-radius:14px;max-width:480px;padding:30px;color:var(--ui-fg)}
-:where([data-page~="studio"]) dialog::backdrop{background:#123d3b66}
+:where([data-page~="studio"]) dialog::backdrop{background:color-mix(in srgb,var(--ui-bg) 60%,transparent)}
 :where([data-page~="studio"]) dialog textarea{max-width:100%;word-break:break-all}
 :where([data-page~="studio"]) #error-text{white-space:pre-wrap;line-height:1.8}
 :where([data-page~="studio"]) #shelf-dialog,:where([data-page~="studio"]) #base64-dialog{width:min(600px,92vw);max-width:600px}
 :where([data-page~="studio"]) .shelf-actions{display:flex;gap:10px;margin:12px 0}
 :where([data-page~="studio"]) .shelf-list{max-height:320px;overflow-y:auto;margin:15px 0;display:flex;flex-direction:column;gap:10px}
-:where([data-page~="studio"]) .shelf-card{display:flex;align-items:center;justify-content:space-between;background:#f4f7f4;border:1px solid var(--ui-border);border-radius:8px;padding:10px 14px;gap:12px}
+:where([data-page~="studio"]) .shelf-card{display:flex;align-items:center;justify-content:space-between;background:var(--ui-panel);border:1px solid var(--ui-border);border-radius:8px;padding:10px 14px;gap:12px}
 :where([data-page~="studio"]) .shelf-card-info{display:flex;align-items:center;gap:12px;overflow:hidden}
 :where([data-page~="studio"]) .shelf-thumb{width:48px;height:48px;object-fit:contain;background:repeating-conic-gradient(#e4e9e2 0 25%,#f7f9f4 0 50%) 0/10px 10px;border:1px solid var(--ui-border);border-radius:4px;flex-shrink:0}
 :where([data-page~="studio"]) .shelf-details{font-size:11px;overflow:hidden}
@@ -419,16 +419,16 @@ body:where([data-page~="tools"]){font-size:15px;line-height:1.65;margin:0}
 :where([data-page~="tools"]) button,:where([data-page~="tools"]) select,:where([data-page~="tools"]) input,:where([data-page~="tools"]) textarea{max-width:100%;min-width:0}
 :where([data-page~="tools"]) button,:where([data-page~="tools"]) select,:where([data-page~="tools"]) input[type=number],:where([data-page~="tools"]) textarea{padding:10px 12px}
 :where([data-page~="tools"]) button{font-weight:650}
-:where([data-page~="tools"]) button:hover{background:#eaf3ed}
-:where([data-page~="tools"]) .primary{background:var(--ui-accent);border-color:var(--ui-accent);color:#fff}
-:where([data-page~="tools"]) .primary:hover{background:#12554d}
+:where([data-page~="tools"]) button:hover{background:color-mix(in srgb,var(--ui-accent) 12%,var(--ui-panel))}
+:where([data-page~="tools"]) .primary{background:var(--ui-accent);border-color:var(--ui-accent);color:var(--ui-bg)}
+:where([data-page~="tools"]) .primary:hover{background:color-mix(in srgb,var(--ui-accent) 80%,var(--ui-fg))}
 :where([data-page~="tools"]) .hint{color:var(--ui-muted);font-size:12px;font-weight:400;margin:0}
 :where([data-page~="tools"]) .preview{display:flex;flex-direction:column;gap:16px;justify-content:center;align-items:stretch}
 :where([data-page~="tools"]) .preview canvas{display:block;width:min(100%,480px);height:auto;image-rendering:pixelated;margin:auto;border:1px solid var(--ui-border);background:repeating-conic-gradient(#e1e8e3 0% 25%,#fff 0% 50%) 0 0/20px 20px;cursor:crosshair;touch-action:manipulation}
 :where([data-page~="tools"]) textarea{width:100%;font-size:11px;overflow-wrap:anywhere}
 :where([data-page~="tools"]) #grid-info{font-size:13px;color:var(--ui-muted)}
-:where([data-page~="tools"]) #message{border-left:3px solid var(--ui-accent);padding:8px 16px;min-height:42px;background:#e2eee7}
-:where([data-page~="tools"]) #message[data-error=true]{border-color:var(--ui-danger);color:#983c30}
+:where([data-page~="tools"]) #message{border-left:3px solid var(--ui-accent);padding:8px 16px;min-height:42px;background:color-mix(in srgb,var(--ui-accent) 12%,var(--ui-panel))}
+:where([data-page~="tools"]) #message[data-error=true]{border-color:var(--ui-danger);color:var(--ui-danger)}
 :where([data-page~="tools"]) .image-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-top:24px}
 :where([data-page~="tools"]) .image-list figure{margin:0;padding:14px;background:var(--ui-panel);border:1px solid var(--ui-border);border-radius:10px;overflow:hidden}
 :where([data-page~="tools"]) .image-list img{width:100%;height:160px;object-fit:contain}
@@ -438,17 +438,17 @@ body:where([data-page~="tools"]){font-size:15px;line-height:1.65;margin:0}
 :where([data-page~="tools"]) .table-wrap{overflow-x:auto}
 :where([data-page~="tools"]) table{background:var(--ui-panel);font-size:13px}
 :where([data-page~="tools"]) th,:where([data-page~="tools"]) td{padding:16px;min-width:180px}
-:where([data-page~="tools"]) th{background:#e4eee8}
+:where([data-page~="tools"]) th{background:color-mix(in srgb,var(--ui-accent) 10%,var(--ui-panel))}
 :where([data-page~="tools"]) footer{padding:30px;text-align:center;color:var(--ui-muted);font-size:12px;border-top:1px solid var(--ui-border)}
 @media(max-width:760px){:where([data-page~="tools"]) main{padding:30px 16px}:where([data-page~="tools"]) .workspace{grid-template-columns:1fr}:where([data-page~="tools"]) .controls,:where([data-page~="tools"]) .preview{padding:18px}:where([data-page~="tools"]) header{padding:18px}:where([data-page~="tools"]) h2{font-size:25px}:where([data-page~="tools"]) .exports{gap:8px}}
 
 /* slide studio panel (loaded after style.css) */
 :where([data-page~="slides"]) .slide-grid:not([hidden]){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:12px}
 :where([data-page~="slides"]) .slide-grid>div{min-width:0}
-:where([data-page~="slides"]) .slide-grid .board{outline:2px solid #126fef}
+:where([data-page~="slides"]) .slide-grid .board{outline:2px solid var(--ui-accent)}
 :where([data-page~="slides"]) .slide-grid .slide-preview{display:block;width:100%;padding:0;overflow:hidden}
 :where([data-page~="slides"]) .slide-grid .slide-number{display:block;font-size:12px;margin-bottom:4px}
-:where([data-page~="slides"]) .slide-controls{padding:14px 24px;background:#e6f0e9;border-bottom:1px solid var(--ui-border)}
+:where([data-page~="slides"]) .slide-controls{padding:14px 24px;background:var(--ui-panel);border-bottom:1px solid var(--ui-border)}
 :where([data-page~="slides"]) .slide-toolbar,:where([data-page~="slides"]) .slide-template{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 :where([data-page~="slides"]) .slide-toolbar select{width:auto;min-width:180px}
 :where([data-page~="slides"]) .slide-controls details{margin:14px 0}
@@ -463,16 +463,16 @@ body:where([data-page~="tools"]){font-size:15px;line-height:1.65;margin:0}
 @media(max-width:700px){:where([data-page~="slides"]) .slide-controls{padding:14px}:where([data-page~="slides"]) .slide-toolbar{gap:8px}:where([data-page~="slides"]) .slide-template{display:grid;grid-template-columns:1fr}:where([data-page~="slides"]) .slide-template label{max-width:none}:where([data-page~="slides"]) .slide-toolbar label{max-width:100%}:where([data-page~="slides"]) .slide-toolbar select{max-width:100%}}
 
 /* 📱 phone slides: the slide is pinned on top (PySaiyanWeBoo's .ui-stage) and the emoji controls scroll under it (landscape: beside it) */
-body:where([data-page~="phone"]){margin:0;background:#dfe8df}
+body:where([data-page~="phone"]){margin:0;background:var(--ui-bg)}
 :where([data-page~="phone"]) input[type=file]{display:none}
 :where([data-page~="phone"]) .button{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;cursor:pointer;text-decoration:none;background:var(--ui-panel);color:var(--ui-fg);border:1px solid var(--ui-border);border-radius:var(--ui-radius)}
 :where([data-page~="phone"]) .phone{display:flex;flex-direction:column;height:100dvh;max-width:960px;margin:0 auto}
 :where([data-page~="phone"]) .ui-stage{background:#fff;border:0;box-shadow:0 8px 24px rgba(0,0,0,.16);touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 :where([data-page~="phone"]) .phone-svg svg{position:absolute;inset:0;width:100%;height:100%;display:block}
-:where([data-page~="phone"]) .phone-pick{position:absolute;box-sizing:border-box;border:2px dashed #126fef;pointer-events:none}
+:where([data-page~="phone"]) .phone-pick{position:absolute;box-sizing:border-box;border:2px dashed var(--ui-accent);pointer-events:none}
 :where([data-page~="phone"]) .phone-pick[hidden],:where([data-page~="phone"]) .phone-edit[hidden]{display:none}
-:where([data-page~="phone"]) .phone-grip{position:absolute;right:-16px;bottom:-16px;width:32px;height:32px;display:grid;place-items:center;border-radius:50%;background:#126fef;color:#fff;font-size:16px;pointer-events:auto;touch-action:none}
-:where([data-page~="phone"]) .phone-edit{flex:1 1 100%;box-sizing:border-box;margin:0;min-height:88px;padding:8px;font-size:16px;line-height:1.5;border:2px solid #126fef;resize:vertical}
+:where([data-page~="phone"]) .phone-grip{position:absolute;right:-16px;bottom:-16px;width:32px;height:32px;display:grid;place-items:center;border-radius:50%;background:var(--ui-accent);color:var(--ui-bg);font-size:16px;pointer-events:auto;touch-action:none}
+:where([data-page~="phone"]) .phone-edit{flex:1 1 100%;box-sizing:border-box;margin:0;min-height:88px;padding:8px;font-size:16px;line-height:1.5;border:2px solid var(--ui-accent);resize:vertical}
 :where([data-page~="phone"]) .phone-deck{flex:1;min-height:0;overflow:auto;display:flex;flex-wrap:wrap;align-items:flex-start;align-content:flex-start;gap:16px;padding:16px}
 :where([data-page~="phone"]) .phone-tools{flex:1 1 328px;min-width:0;display:flex;flex-direction:column;gap:8px}
 :where([data-page~="phone"]) .phone-row{display:flex;flex-wrap:wrap;gap:8px}
@@ -511,7 +511,7 @@ const StudioCore = (function (root) {
   const fail = (message) => {
     throw new Error(message);
   };
-  /* PSWB heatmap-color.js @ 901b790f14ad7a04a4280409bfd274d8f6926fa7. Generated by scripts/build_studio_css.py. */
+  /* PSWB heatmap-color.js @ 2c4ce296047373a97da24892f4f76704b92e9a83. Generated by scripts/build_studio_css.py. */
   const heatmapDefaultPalette=["#440154", "#3B528B", "#21918C", "#5EC962", "#FDE725"];
   function heatmapColor(v,lo,hi,levels=0,palette=heatmapDefaultPalette){
    if(!Array.isArray(palette)||palette.length<2||palette.length>256||
@@ -1056,57 +1056,38 @@ const StudioCore = (function (root) {
 /* Browser/Node shared operations. Pixel coordinates follow grid_tools.py. */
 const IronmateTools = (function (root) {
   "use strict";
-  const SCHEMA = "ironmate-pixel-grid/1";
-  function canonical(value) {
-    const g = JSON.parse(JSON.stringify(value));
-    if (
-      !g ||
-      g.schema !== SCHEMA ||
-      !Number.isInteger(g.width) ||
-      !Number.isInteger(g.height) ||
-      g.width < 1 ||
-      g.height < 1 ||
-      g.width > 256 ||
-      g.height > 256
-    )
-      throw Error("グリッドは1〜256セル／辺です。");
-    if (
-      !Array.isArray(g.colors) ||
-      !g.colors.length ||
-      g.colors.length > 65536 ||
-      g.colors.some((c) => typeof c !== "string" || !/^#[0-9a-f]{8}$/i.test(c))
-    )
-      throw Error("色表は#RRGGBBAAで指定してください。");
-    if (
-      !Array.isArray(g.pixels) ||
-      g.pixels.length !== g.height ||
-      g.pixels.some(
-        (r) =>
-          !Array.isArray(r) ||
-          r.length !== g.width ||
-          r.some((i) => !Number.isInteger(i) || i < 0 || i >= g.colors.length),
-      )
-    )
-      throw Error("色番号または行列の寸法が不正です。");
-    return g;
-  }
-  function resize(value, width, height) {
-    const g = canonical(value);
-    if (
-      ![width, height].every((n) => Number.isInteger(n) && n >= 1 && n <= 256)
-    )
-      throw Error("幅・高さは1〜256の整数です。");
-    const pixels = Array.from({ length: height }, (_, y) =>
-      Array.from(
-        { length: width },
-        (_, x) =>
-          g.pixels[
-            Math.min(g.height - 1, Math.floor(((y + 0.5) * g.height) / height))
-          ][Math.min(g.width - 1, Math.floor(((x + 0.5) * g.width) / width))],
-      ),
-    );
-    return { ...g, width, height, pixels, resampling: "nearest" };
-  }
+  /* PSWB pixel-grid.js @ 2c4ce296047373a97da24892f4f76704b92e9a83. Generated by scripts/build_studio_css.py. */
+  /* web-ui pixel-grid: a dot-art grid checked, resized, drawn as SVG and described for a PNG; Base64 length; PNG chunks. pysaiyanweboo.py (pixel_grid_*, base64_length) is the reference; this must agree. */
+  const PIXEL_GRID_SCHEMA="ironmate-pixel-grid/1";
+  function pixelGridValidate(value){
+   const g=JSON.parse(JSON.stringify(value));
+   if(!g||typeof g!=="object"||Array.isArray(g)||g.schema!==PIXEL_GRID_SCHEMA||![g.width,g.height].every(n=>Number.isInteger(n)&&n>=1&&n<=256))throw new Error("グリッドは1〜256セル／辺です。");
+   if(!Array.isArray(g.colors)||!g.colors.length||g.colors.length>65536||g.colors.some(c=>typeof c!=="string"||!/^#[0-9a-f]{8}$/i.test(c)))throw new Error("色表は#RRGGBBAAで指定してください。");
+   if(!Array.isArray(g.pixels)||g.pixels.length!==g.height||g.pixels.some(r=>!Array.isArray(r)||r.length!==g.width||r.some(i=>!Number.isInteger(i)||i<0||i>=g.colors.length)))throw new Error("色番号または行列の寸法が不正です。");
+   return g}
+  function pixelGridResize(value,width,height){
+   const g=pixelGridValidate(value);
+   if(![width,height].every(n=>Number.isInteger(n)&&n>=1&&n<=256))throw new Error("幅・高さは1〜256の整数です。");
+   const pixels=Array.from({length:height},(_,y)=>Array.from({length:width},(_,x)=>g.pixels[Math.min(g.height-1,Math.floor(((y+0.5)*g.height)/height))][Math.min(g.width-1,Math.floor(((x+0.5)*g.width)/width))]));
+   return{...g,width,height,pixels,resampling:"nearest"}}
+  function pixelGridSvg(value,scale=1){
+   const g=pixelGridValidate(value);
+   if(!Number.isInteger(scale)||scale<1||scale>16)throw new Error("倍率は1〜16です。");
+   const cells=[];
+   g.pixels.forEach((row,y)=>row.forEach((i,x)=>{const c=g.colors[i],a=parseInt(c.slice(7),16)/255;if(a)cells.push(`<rect x="${x}" y="${y}" width="1" height="1" fill="${c.slice(0,7)}" fill-opacity="${a}"/>`)}));
+   return`<svg xmlns="http://www.w3.org/2000/svg" width="${g.width*scale}" height="${g.height*scale}" viewBox="0 0 ${g.width} ${g.height}" shape-rendering="crispEdges">${cells.join("")}</svg>`}
+  function pixelGridHeader(value){
+   const g=pixelGridValidate(value),always=["schema","width","height","colors"];
+   return Object.fromEntries([...always,"mask","palette","effect","resampling"].filter(k=>Object.hasOwn(g,k)&&(always.includes(k)||g[k]===null||(typeof g[k]==="string"&&/^[A-Za-z0-9_./-]{1,64}$/.test(g[k])))).map(k=>[k,g[k]]))}
+  function base64Length(bytes,dataUri=false){
+   if(!Number.isSafeInteger(bytes)||bytes<0||bytes>Number.MAX_SAFE_INTEGER/2)throw new Error("ファイルサイズが大きすぎます。");
+   return 4*Math.ceil(bytes/3)+(dataUri?22:0)}
+  function crc32(bytes){let c=0xffffffff;for(const b of bytes){c^=b;for(let k=0;k<8;k++)c=(c>>>1)^(c&1?0xedb88320:0)}return(c^0xffffffff)>>>0}
+  function pngChunk(type,body){
+   const out=new Uint8Array(body.length+12),view=new DataView(out.buffer);
+   view.setUint32(0,body.length);out.set(new TextEncoder().encode(type),4);out.set(body,8);view.setUint32(out.length-4,crc32(out.subarray(4,out.length-4)));
+   return out}
+  /* End PSWB pixel-grid.js */
   const esc = (s) =>
     String(s).replace(
       /[&<>"']/g,
@@ -1119,81 +1100,13 @@ const IronmateTools = (function (root) {
           "'": "&#39;",
         })[c],
     );
-  function svg(value, scale = 1) {
-    const g = canonical(value);
-    if (!Number.isInteger(scale) || scale < 1 || scale > 16)
-      throw Error("倍率は1〜16です。");
-    const cells = [];
-    g.pixels.forEach((row, y) =>
-      row.forEach((i, x) => {
-        const c = g.colors[i],
-          a = parseInt(c.slice(7), 16) / 255;
-        if (a)
-          cells.push(
-            `<rect x="${x}" y="${y}" width="1" height="1" fill="${c.slice(0, 7)}" fill-opacity="${a}"/>`,
-          );
-      }),
-    );
-    return `<svg xmlns="http://www.w3.org/2000/svg" width="${g.width * scale}" height="${g.height * scale}" viewBox="0 0 ${g.width} ${g.height}" shape-rendering="crispEdges">${cells.join("")}</svg>`;
-  }
-  function base64Length(bytes, prefix = false) {
-    if (
-      !Number.isSafeInteger(bytes) ||
-      bytes < 0 ||
-      bytes > Number.MAX_SAFE_INTEGER / 2
-    )
-      throw Error("ファイルサイズが大きすぎます。");
-    return 4 * Math.ceil(bytes / 3) + (prefix ? 22 : 0);
-  }
-  function crc32(bytes) {
-    let c = 0xffffffff;
-    for (const b of bytes) {
-      c ^= b;
-      for (let k = 0; k < 8; k++) c = (c >>> 1) ^ (c & 1 ? 0xedb88320 : 0);
-    }
-    return (c ^ 0xffffffff) >>> 0;
-  }
-  function pngHeader(value) {
-    const g = canonical(value),
-      keys = [
-        "schema",
-        "width",
-        "height",
-        "colors",
-        "mask",
-        "palette",
-        "effect",
-        "resampling",
-      ];
-    return Object.fromEntries(
-      keys
-        .filter(
-          (k) =>
-            k in g &&
-            (["schema", "width", "height", "colors"].includes(k) ||
-              g[k] === null ||
-              (typeof g[k] === "string" &&
-                /^[A-Za-z0-9_./-]{1,64}$/.test(g[k]))),
-        )
-        .map((k) => [k, g[k]]),
-    );
-  }
-  function pngChunk(type, body) {
-    const out = new Uint8Array(body.length + 12),
-      view = new DataView(out.buffer);
-    view.setUint32(0, body.length);
-    out.set(new TextEncoder().encode(type), 4);
-    out.set(body, 8);
-    view.setUint32(out.length - 4, crc32(out.subarray(4, out.length - 4)));
-    return out;
-  }
   const api = {
-    canonical,
-    resize,
-    svg,
+    canonical: pixelGridValidate,
+    resize: pixelGridResize,
+    svg: pixelGridSvg,
     esc,
     base64Length,
-    pngHeader,
+    pngHeader: pixelGridHeader,
     pngChunk,
   };
   return api;
@@ -3351,7 +3264,7 @@ if (typeof document !== "undefined" && document.body && (document.body.dataset.p
   }
 });
 })();
-/* ⬇️ pysaiyanweboo 901b790f (stage, pager): written by scripts/build_studio_css.py from the pinned commit; --check fails when it drifts */
+/* ⬇️ pysaiyanweboo 2c4ce296 (stage, pager): written by scripts/build_studio_css.py from the pinned commit; --check fails when it drifts */
 (() => {
 /* A rotary dial over a range input (dial_html): drag around its centre, turn the wheel, or use the range's own keys. Value and events stay the input's. */
 function dialAngle(value,min,max){const span=max-min;const t=span>0?(Number(value)-min)/span:0;return -135+270*Math.min(1,Math.max(0,t))}

@@ -954,9 +954,8 @@ def test_studio_stylesheets_match_the_generator():
         assert f':where([data-page~="{page}"])' in text, page  # page layout is scoped, with zero added specificity
     for page, html in (('studio', STUDIO_HTML), ('tools', TOOLS_HTML)):
         assert f'data-page="{page}"' in html, page
-    assert module.scoped('body{a:b}.x,y z{c:d}@media(max-width:1px){.w{e:f}}', 'p') == (
-        'body:where([data-page~="p"]){a:b}:where([data-page~="p"]) .x,:where([data-page~="p"]) y z{c:d}'
-        '@media(max-width:1px){:where([data-page~="p"]) .w{e:f}}')
+    assert pysaiyanweboo.css_source('studio-pages.css').strip('\n') in text  # the pages' layout is PySaiyanWeBoo's (first written here)
+    assert not hasattr(module, 'STUDIO_RULES') and '#bdf06c' not in text and '#126fef' not in text  # no page colour of its own: the theme's tokens
     assert module.THEME in pysaiyanweboo.CANDIDATE_THEMES and pysaiyanweboo.check_theme(pysaiyanweboo.theme_palettes()[module.THEME]) == []
 
 

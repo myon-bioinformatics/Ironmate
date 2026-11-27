@@ -405,10 +405,6 @@
       "type": "links",
       "items": [
         {
-          "label": "📦 リポジトリ",
-          "href": "https://github.com/myon-bioinformatics/Ironmate"
-        },
-        {
           "label": "🧭 ポートフォリオ",
           "href": "https://myon-bioinformatics.github.io/#ironmate"
         }

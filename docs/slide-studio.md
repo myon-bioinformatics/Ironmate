@@ -18,12 +18,17 @@ One editor for phones and PCs, phone-first. The slide stays pinned at the top wh
 | 🔷 😊 (^^) | One row of candidates opens under the tools; tap one and it is placed: ▭ ◯ △ → for shapes, emoji, kaomoji (the same candidates as Image Studio's tools). Tap the tool again to close the row |
 | 🕒 | A clock showing the time now |
 | 📚 | With two or more things on the page, a row lists them from back to front (a text shows its first three characters, a shape its sign); tap one to select it, even when it is covered. The selected one is underlined |
-| ✏️ 🅱️ 🎨 ⏫ ⏬ | For the selection: edit the text, bold on / off, the next colour (black, teal, red, blue, yellow, white), bring to the front, send to the back |
+| ✏️ | Edit the selected text, or a clock's time (`14:30`; what is not a time leaves it as it was). Tapping a selected text or clock again does the same |
+| 🎨 | The selection's look, from the candidate row: 🎨 fill and 🖌 line to the next colour (black, teal, red, blue, yellow, white), 🌗 opacity 1 → ¾ → ½ → ¼, 🅱️ bold, 🔠 monospace ⇄ regular. A candidate that does not apply (bold on a shape) does nothing |
+| ↻ | Turn the selection: ↻ 15° right, ↺ 15° left, ⏹ upright. The selection frame turns with it |
+| ⏫ ⏬ | Bring to the front, send to the back |
 | 👆 ↘ | Tap to select, drag to move, drag ↘ to resize. Tap a selected text box again (or ✏️) to edit it later; the editor sits under the slide at 16 px so phones do not zoom, and the slide updates as you type. A box left empty is removed |
 | 🔽 🔄 🔼 | Every text box on every slide together: 0.5, 0.75, 1, 1.25, 1.5, 2, 2.5 × (titles keep their ratio to body text). New boxes start at 32 px × the current step |
 | ⬅️ ➡️ | Previous / next page, right under the slide; the middle shows page / pages. Keyboard ← / → (Home / End: first / last) do the same |
 | 🧭 | The shape of the page controls, one tap each, no reload (kept on this device): ⬅️ 1/N ➡️ → ● dots → 🎚️ slider → 🎛️ dial → ✚ cross-key (⬆️ first, ⬇️ last) → ⏮️ ⬅️ 1/N ➡️ ⏭️ |
-| ➕📄 📑 ✖️📄 🆕 | Add a blank page, duplicate, delete, start over |
+| ➕📄 📑 ✖️📄 | Add a blank page, duplicate, delete |
+| 🗂️ | Every page as a small picture with its number (the current one underlined); tap one to go there. A view: not in ↩️ |
+| 🆕 | Start over (one blank page) |
 | 🗑️ ↩️ ↪️ | Delete the selection, undo, redo (64 steps) |
 | 📥 📤 | Import and export; the format is picked after, in the candidate row. 📥: 📦 all-slide JSON (the same file the PC studio opens), 🖼 a picture onto this page (photos become PNG, at most 4 MP and 1920 px on the long side). 📤: 📽️ PPTX (every slide, editable in PowerPoint), 📦 all-slide JSON, 🖼 PNG or 📐 SVG of this page as it looks |
 | 🖥️ 🏠 | The PC studio this editor replaces (below) and Image Studio |
@@ -44,7 +49,7 @@ pipe it to `python -S pptx_inspect.py -` and read the slide report as JSON.
 
 https://myon-bioinformatics.github.io/tools/slide-studio/pc/
 
-The editor above is the entrance, so that phones and PCs are built once. The PC studio it replaces stays here, as it was, until its remaining tools (PNG / SVG of a slide, fonts, rotation, line color, opacity, the 4-slide view) are in the one editor; nothing new is added to it, and it opens the same all-slide JSON.
+The editor above is the entrance, so that phones and PCs are built once. The PC studio it replaces stays here, as it was, until its remaining tools (line width, the centred arrowhead, italic, typed position and size, mosaic pictures, editing four slides in place) are in the one editor or dropped; nothing new is added to it, and it opens the same all-slide JSON.
 
 1. The first slide is blank. Choose `T 文字列` (text), type into its field on the left and click the canvas; a title and a body are two such text boxes. `T 文字列`, `✦ スタンプ` (stamp), `絵文字` (emoji) and `顔文字` (kaomoji) each keep a field of their own, so one never overwrites another; an empty field places its example.
 2. To change something already placed, select it and use `✏️ 編集` (edit) on the right: the words, `太字` (bold), `斜体` (italic), fill and line colors, the shape, a clock's time. Each applies as it is set; `✏️ 編集を適用` (apply) commits the words. Position, size and font size are below it.

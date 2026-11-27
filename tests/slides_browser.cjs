@@ -400,9 +400,29 @@ print('Long Japanese/English: visible SVG lines match native PPTX, explicit para
     assert.deepEqual(extra.map((l) => [l.kind, l.text ?? ""]), [["text", "🌱"], ["text", "(・∀・)"], ["clock", ""], ["triangle", ""]]);
     assert.ok(extra[2].hour >= 0 && extra[2].hour < 24 && extra[2].w === extra[2].h);
     assert.ok(extra[0].w <= 1280 * 0.9 && extra[0].x > 0 && extra[1].wrap === true);          // a stamp is a text box that fits its words
-    for (const name of ["edit", "bold"]) assert.equal(await mobile.isDisabled(`[data-act="${name}"]`), true); // the triangle is selected
-    await act("color");
+    assert.equal(await mobile.isDisabled('[data-act="edit"]'), true);                          // the triangle is selected
+    await pick("look", "🎨");
     assert.equal((await state()).deck.slides[2].layers[3].fill, "#D7263D");                    // 🎨 teal → the next colour
+    // 🎨 🖌 🌗 and ↻ ↺ ⏹ on the triangle, then ↩️ back to just the 🎨 step
+    const triangle = () => mobile.evaluate(() => IronmatePhone.deck.slides[2].layers[3]);
+    assert.deepEqual(await mobile.locator("#phone-candidates button").allTextContents(), ["🎨", "🖌", "🌗", "🅱️", "🔠"]);
+    await pick("look", "🖌");
+    await pick("look", "🌗");
+    await pick("look", "🅱️");                                                                    // not a text: nothing happens
+    let t = await triangle();
+    assert.ok(t.stroke === "#000000" && t.opacity === 0.75 && !("bold" in t), JSON.stringify(t));
+    await pick("turn", "↻");
+    await pick("turn", "↻");
+    await pick("turn", "↺");
+    assert.equal((await triangle()).rotation, 15);
+    assert.match(await mobile.evaluate(() => document.querySelector("#phone-pick").style.transform), /rotate\(15deg\)/); // the frame turns too
+    await pick("turn", "⏹");
+    assert.equal((await triangle()).rotation, 0);
+    for (let i = 0; i < 6; i++) await act("undo");
+    t = await triangle();
+    assert.ok(t.fill === "#D7263D" && t.stroke === "#183C42" && t.opacity === 1 && t.rotation === 0, JSON.stringify(t));
+    assert.equal((await state()).selected, null);                                              // ↩️ leaves nothing selected
+    await mobile.locator("#phone-layers button").nth(3).tap();                                 // 📚 pick the triangle again
     // 📚 the page's layers, back to front: the kaomoji is under the clock and the triangle, and is picked from the row
     const layerFaces = () => mobile.locator("#phone-layers button").allTextContents();
     assert.deepEqual(await layerFaces(), ["🌱", "(・∀", "🕒", "△"]);
@@ -411,8 +431,7 @@ print('Long Japanese/English: visible SVG lines match native PPTX, explicit para
     const kao = extra[1];
     await mobile.locator("#phone-layers button").nth(1).tap();
     assert.equal((await state()).selected, kao.id);
-    assert.equal(await mobile.isDisabled('[data-act="bold"]'), false);
-    await act("bold");
+    await pick("look", "🅱️");
     await act("front");
     extra = (await state()).deck.slides[2].layers;
     assert.deepEqual(extra.map((l) => l.kind), ["text", "clock", "triangle", "text"]);
@@ -426,6 +445,33 @@ print('Long Japanese/English: visible SVG lines match native PPTX, explicit para
     for (let i = 0; i < 4; i++) await act("undo");
     extra = (await state()).deck.slides[2].layers;
     assert.ok(extra[1].id === kao.id && extra[1].bold === false && extra[3].fill === "#18A7A1", JSON.stringify(extra));
+    // ✏️ a clock's time is edited like words: 14:30, and what is not a time leaves it as it was
+    await mobile.locator("#phone-layers button").nth(2).tap();
+    await act("edit");
+    assert.match(await mobile.inputValue("#phone-edit"), /^\d\d:\d\d$/);
+    await mobile.fill("#phone-edit", "14:30");
+    await mobile.evaluate(() => document.activeElement.blur());
+    let clock = (await state()).deck.slides[2].layers[2];
+    assert.deepEqual([clock.kind, clock.hour, clock.minute], ["clock", 14, 30]);
+    await act("edit");
+    await mobile.fill("#phone-edit", "25:00");
+    await mobile.evaluate(() => document.activeElement.blur());
+    clock = (await state()).deck.slides[2].layers[2];
+    assert.deepEqual([clock.hour, clock.minute], [14, 30]);
+    // 🗂️ every page as a picture; a tap goes there, and it is a view (not in ↩️)
+    assert.equal(await mobile.locator("#phone-pages").isHidden(), true);
+    await act("pages");
+    assert.equal(await mobile.locator("#phone-pages button").count(), 3);
+    assert.equal(await mobile.getAttribute('#phone-pages [aria-current="step"]', "aria-label"), "3/3");
+    assert.equal(await mobile.locator("#phone-pages button svg").first().getAttribute("width"), "80");
+    assert.deepEqual(await mobile.$$eval("#phone-pages button", (b) => b.map((x) => x.lastChild.textContent)), ["1", "2", "3"]); // under the picture
+    await snap("pages");
+    await mobile.locator("#phone-pages button").first().tap();
+    assert.equal(await pageNo(), "1/3");
+    await mobile.locator("#phone-pages button").nth(2).tap();
+    assert.equal(await pageNo(), "3/3");
+    await act("pages");
+    assert.equal(await mobile.locator("#phone-pages").isHidden(), true);
     await act("slide-delete");
     assert.equal(await pageNo(), "2/2");
     await act("text");

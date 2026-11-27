@@ -261,8 +261,7 @@ const url =
       c.getContext("2d").fillRect(0, 0, 8, 8);
       return c.toDataURL("image/png").split(",")[1];
     });
-    await mobile.selectOption('[data-format="import"]', "image");                              // 📥 どの形式から？ 🖼 画像
-    const [chooser] = await Promise.all([mobile.waitForEvent("filechooser"), act("import")]);
+    const [chooser] = await Promise.all([mobile.waitForEvent("filechooser"), pick("import", "画像")]); // 📥 どの形式から？ 画像
     assert.equal(await chooser.element().getAttribute("accept"), "image/png,image/jpeg,image/webp");
     await chooser.setFiles({ name: "photo.png", mimeType: "image/png", buffer: Buffer.from(photo, "base64") });
     await mobile.waitForFunction(() => IronmatePhone.deck.slides[1].layers.length === 4);
@@ -281,23 +280,23 @@ const url =
     assert.equal(s.deck.slides.length, 2);
     assert.equal(s.deck.slides[0].layers[0].text, "あとから編集した文字\n2 行目");
     assert.equal(await mobile.evaluate(() => IronmatePhone.pager), "dots"); // 🧭 the shape survives the reload too
-    // 📤 export, どの形式に？ chosen beside it: 📽️ PPTX, 📦 JSON (the same all-slide JSON the PC studio opens), 🖼 PNG, 📐 SVG.
-    // No button per format: the two selects say the formats, and 📥 📤 do it.
-    const saveAs = (format) => mobile.selectOption('[data-format="export"]', format).then(() => act("export"));
-    assert.deepEqual(await mobile.$$eval('[data-format="export"] option', (o) => o.map((x) => [x.value, x.textContent])),
-      [["pptx", "📽️ PPTX"], ["json", "📦 JSON"], ["png", "🖼 PNG"], ["svg", "📐 SVG"]]);
-    assert.deepEqual(await mobile.$$eval('[data-format="import"] option', (o) => o.map((x) => x.value)), ["open", "image"]);
-    assert.equal(await mobile.getAttribute('[data-format="export"]', "aria-label"), "どの形式に？");
-    const [pptx] = await Promise.all([mobile.waitForEvent("download"), saveAs("pptx")]);
+    // 📤 どの形式に？ the candidates, in words like 図形・顔文字's: PPTX, JSON (the same all-slide JSON the PC studio opens), PNG,
+    // SVG; a pick does it and the row hides again.
+    const saveAs = (format) => pick("export", format);
+    await act("export");
+    assert.deepEqual(await mobile.locator("#phone-candidates button").allTextContents(), ["PPTX", "JSON", "PNG", "SVG"]);
+    assert.equal(await mobile.getAttribute('#phone-candidates button >> nth=2', "title"), "PNG（このページ）");
+    const [pptx] = await Promise.all([mobile.waitForEvent("download"), mobile.locator("#phone-candidates button", { hasText: "PPTX" }).tap()]);
+    assert.equal(await mobile.locator("#phone-candidates").isHidden(), true);                       // 選んだら候補は隠れる
     await pptx.saveAs(path.join(out, "phone.pptx"));
-    const [json] = await Promise.all([mobile.waitForEvent("download"), saveAs("json")]);
+    const [json] = await Promise.all([mobile.waitForEvent("download"), saveAs("JSON")]);
     await json.saveAs(path.join(out, "phone.json"));
-    const [png] = await Promise.all([mobile.waitForEvent("download"), saveAs("png")]);
+    const [png] = await Promise.all([mobile.waitForEvent("download"), saveAs("PNG")]);
     assert.equal(png.suggestedFilename(), `ironmate-slide-${(await state()).active + 1}.png`);
     const pngBytes = fs.readFileSync(await png.path());
     assert.deepEqual([...pngBytes.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
     assert.deepEqual([pngBytes.readUInt32BE(16), pngBytes.readUInt32BE(20)], [1280, 720]);  // the slide's own size
-    const [svg] = await Promise.all([mobile.waitForEvent("download"), saveAs("svg")]);
+    const [svg] = await Promise.all([mobile.waitForEvent("download"), saveAs("SVG")]);
     assert.match(fs.readFileSync(await svg.path(), "utf8"), /^<svg [^>]*width="1280" height="720"/);
     await snap("saved");
     const phoneCheck = spawnSync(process.env.PYTHON || "python", ["-S", "-c", `
@@ -366,8 +365,7 @@ print('📱 phone: 2 slides, native text kept')
     assert.equal(await pageNo(), "1/1");
     assert.equal(await mobile.evaluate(() => IronmatePhone.active), 0);
     assert.ok(await mobile.locator('[data-act="redo"]').isDisabled());
-    await mobile.selectOption('[data-format="export"]', "json");
-    const [stillExportable] = await Promise.all([mobile.waitForEvent("download"), act("export")]);
+    const [stillExportable] = await Promise.all([mobile.waitForEvent("download"), pick("export", "JSON")]);
     assert.equal(await stillExportable.failure(), null);
     await act("undo");
     await mobile.waitForFunction(() => IronmatePhone.deck.title === "font bounds");
@@ -405,7 +403,9 @@ print('📱 phone: 2 slides, native text kept')
     assert.ok(exportWord.content === '"エクスポート"' && (await look('[data-act="export"]', null)).size === "0px", JSON.stringify(exportWord));
     assert.equal((await look("[data-ui-labels-switch]", "::after")).content, '"📱 To iconic"');   // the way back
     assert.equal((await look('[data-act="home"]', null)).size, "0px");                          // a link button too: only its word
-    assert.equal(await wide.locator('#phone-candidates button[title^="PPTX"]').count(), 0);     // 🙅 no button per format
+    await wide.click('[data-act="export"]');
+    assert.equal((await look('#phone-candidates button[title^="PPTX"]', "::after")).content, '"PPTX"'); // the format's own word
+    await wide.click('[data-act="export"]');                                                        // a second press hides them
     await wide.screenshot({ path: path.join(out, "slides-words.png") });
     await wide.reload();
     await wide.waitForFunction(() => !!window.IronmatePhone);
@@ -435,8 +435,11 @@ print('📱 phone: 2 slides, native text kept')
       assert.ok(item.widths.every((w) => w <= item.layer.w + 1), JSON.stringify(item));
     }
     fs.writeFileSync(path.join(out, "slides-wrapped-layout.json"), JSON.stringify(manifest, null, 2));
-    await wide.selectOption('[data-format="export"]', "pptx");
-    const [wrappedPptx] = await Promise.all([wide.waitForEvent("download"), wide.click('[data-act="export"]')]);
+    const exportAs = async (format) => {
+      await wide.click('[data-act="export"]');
+      return wide.locator("#phone-candidates button", { hasText: format }).click();
+    };
+    const [wrappedPptx] = await Promise.all([wide.waitForEvent("download"), exportAs("PPTX")]);
     await wrappedPptx.saveAs(path.join(out, "slides-wrapped.pptx"));
     await wide.screenshot({ path: path.join(out, "slides-wrapped-desktop.png") });
     // Legacy PC controls: use the same editor and prove the exact state and the rendered/exported result.
@@ -494,11 +497,9 @@ print('📱 phone: 2 slides, native text kept')
     const mosaic = await wide.locator("#phone-svg image").getAttribute("href");
     assert.ok(mosaic?.startsWith("data:image/png;base64,") && mosaic !== parity);
     assert.equal(await wide.evaluate(() => IronmatePhone.deck.slides[2].layers[0].src), parity);
-    await wide.selectOption('[data-format="export"]', "svg");
-    const [mosaicSvg] = await Promise.all([wide.waitForEvent("download"), wide.click('[data-act="export"]')]);
+    const [mosaicSvg] = await Promise.all([wide.waitForEvent("download"), exportAs("SVG")]);
     assert.ok(fs.readFileSync(await mosaicSvg.path(), "utf8").includes(mosaic));
-    await wide.selectOption('[data-format="export"]', "pptx");
-    const [mosaicPptx] = await Promise.all([wide.waitForEvent("download"), wide.click('[data-act="export"]')]);
+    const [mosaicPptx] = await Promise.all([wide.waitForEvent("download"), exportAs("PPTX")]);
     await mosaicPptx.saveAs(path.join(out, "slides-parity.pptx"));
     fs.writeFileSync(path.join(out, "slides-parity-mosaic.png"), Buffer.from(mosaic.split(",")[1], "base64"));
     const packageCheck = spawnSync(process.env.PYTHON || "python", ["-S", "-c", `

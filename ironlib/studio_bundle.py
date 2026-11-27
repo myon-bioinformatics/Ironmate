@@ -3111,6 +3111,35 @@ if (typeof document !== "undefined" && (document.getElementById("pixel-editor") 
     });
     return;
   }
+  function arrangeSong(partsText, orderText) {
+    const parts = new Map();
+    for (const line of partsText.split("\n").filter(line => line.trim())) {
+      const match = /^\s*([^\s=]+)\s*=\s*([^=]+)$/.exec(line);
+      if (!match || !match[2].trim()) throw Error("パート名 = コード進行 の形で入力してください。");
+      if (parts.has(match[1])) throw Error("同じパート名があります: " + match[1]);
+      parts.set(match[1], match[2].trim().split(/\s+/));
+    }
+    const chords = [];
+    for (const name of orderText.trim().split(/\s+/)) {
+      if (!parts.has(name)) throw Error("曲順のパートを確認してください: " + name);
+      chords.push(...parts.get(name));
+      if (chords.length > 32) throw Error("曲全体を32コード以内にしてください。");
+    }
+    return chords.join(" ");
+  }
+  $("song-arrange").onclick = () => {
+    try {
+      const progression = arrangeSong($("song-parts").value, $("song-order").value);
+      $("song-progression").value = progression;
+      $("song-status").textContent = "曲順に展開しました。";
+      $("song-arrange").dispatchEvent(new CustomEvent("ironmate-arrangement", {
+        bubbles: true, detail: { progression },
+      }));
+    } catch (err) {
+      $("song-progression").value = "";
+      $("song-status").textContent = err.message;
+    }
+  };
   let images = [];
   let imageGeneration = 0;
   $("images").addEventListener("change", async (e) => {
@@ -4051,7 +4080,12 @@ TOOLS_HTML = r"""<!doctype html>
         <h2>🎵 Composition Studio</h2>
         <a href="https://myon-bioinformatics.github.io/PySaiyanWeBoo/examples/composition-studio.html" target="_blank" rel="noopener">🎵 作曲スタジオを開く ↗</a>
         <label>歌詞<textarea rows="4"></textarea></label>
-        <label>コード進行<textarea rows="2"></textarea></label>
+        <label>パート別コード進行（パート名 = ローマ数字）<textarea id="song-parts" rows="3">Aメロ = I V vi IV
+サビ = IV V I I</textarea></label>
+        <label>曲順（空白区切り）<input id="song-order" value="Aメロ サビ サビ"></label>
+        <button id="song-arrange">曲順に展開</button>
+        <label>曲全体のコード進行<textarea id="song-progression" rows="2" readonly></textarea></label>
+        <p id="song-status" role="status"></p>
       </section>
       <details id="features" class="ui-panel">
         <summary>ブラウザとCLIの対応表</summary>

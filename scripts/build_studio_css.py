@@ -77,6 +77,11 @@ def with_parts(src: str) -> str:
     """Rewrite the PySaiyanWeBoo regions in studio_bundle.py."""
     import pysaiyanweboo
 
+    html = pysaiyanweboo.pixel_editor_html()
+    src = re.sub(r'PIXEL_EDITOR_HTML = r""".*?"""', lambda _: 'PIXEL_EDITOR_HTML = r"""' + html + '"""', src, count=1, flags=re.S)
+    begin, end = "/* PSWB pixel-editor.js */", "/* End PSWB pixel-editor.js */"
+    editor = classic_script(pysaiyanweboo.js_source("pixel-editor.js"))
+    src = replace_region(src, begin, end, f"{begin}\n{editor}{end}")
     parts = pswb_parts()
     lines = lambda html: "".join(f"\n        {part!r}" for part in re.split(r"(?<=>)(?=<)", html))
     block = (f"# ⬇️ pysaiyanweboo: {NOTE} writes PSWB_PHONE from the pinned commit (--check fails when it drifts)\n"

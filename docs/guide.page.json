@@ -28,7 +28,7 @@
                 {
                   "type": "card",
                   "title": "Image Studio",
-                  "text": "画像・図形・文字・ヒートマップを重ね、モザイクや色階調を調整。PNG・SVG・Base64に書き出し、シーンや作業履歴を JSON で保存・再読込する。",
+                  "text": "ドット絵を作成し、画像・図形・文字・ヒートマップを重ね、モザイクや色階調を調整。PNG・SVG・Base64に書き出し、シーンや作業履歴を JSON で保存・再読込する。",
                   "blocks": [
                     {
                       "type": "links",
@@ -53,7 +53,7 @@
                 {
                   "type": "card",
                   "title": "Browser Tools",
-                  "text": "ドット絵・画像グリッドを作成・変換し、PNG／Base64のサイズを見積もる。",
+                  "text": "画像一覧を作成し、Base64のサイズを見積もる。",
                   "blocks": [
                     {
                       "type": "links",

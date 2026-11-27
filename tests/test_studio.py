@@ -1056,9 +1056,12 @@ def test_studios_declare_the_rows_a_hosts_header_shows_and_carry_no_header_of_th
         assert all(set(row) == {'label', 'key'} for row in rows)                                         # no link a host would have to re-route
         keys[name] = [row['key'] for row in rows]
         for key in keys[name]:
+            if key == 'labels':                                                                          # 💻 ⇄ 📱 PySaiyanWeBoo's bindLabels answers it
+                assert 'id="labels-switch" data-ui-labels-switch' in html and 'PySaiyanWeBoo.bindLabels()' in b.STUDIO_JS
+                continue
             assert f'id="{actions[re.sub(r"-[0-9]+$", "", key)]}"' in html, key                          # the row presses a control that is there
         assert re.fullmatch(r'#[a-z-]+(,#[a-z-]+)*', spec['replaces']) and all(f'id="{i[1:]}"' in html for i in spec['replaces'].split(','))
-    assert keys['index.html'] == ['png', 'png-2', 'png-4', 'png-8', 'svg', 'json', 'workspace', 'base64', 'open-json', 'open-workspace', 'shelf']
+    assert keys['index.html'] == ['png', 'png-2', 'png-4', 'png-8', 'svg', 'json', 'workspace', 'base64', 'open-json', 'open-workspace', 'shelf', 'labels']
     slides = json.loads(re.search(r'id="ui-chrome-rows">(.*?)</script>', assets['slides/index.html'].decode('utf-8'), re.S)[1])
     assert slides == {'screen': [{'label': '💻 To textual ⇄ 📱 To iconic', 'key': 'labels'}], 'replaces': '#labels-switch'}   # the one editor: ⋯ only
     assert 'id="ui-chrome-rows"' not in b.STUDIO_HTML and '</script>' not in image_studio.host_rows()[:-9]

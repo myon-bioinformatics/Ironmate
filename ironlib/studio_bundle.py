@@ -117,35 +117,35 @@ STUDIO_HTML = r"""<!doctype html>
       <div class="brand"><img src="brand/heatmap.svg" width="48" height="48" alt="I’m — 🔰がアポストロフィのIronmateロゴ" /><div>IRONMATE <span>画像編集</span></div></div>
       <div class="top-actions">
         <details id="studios">
-          <summary>工房一覧</summary>
+          <summary data-ui-word="工房一覧" title="工房一覧" aria-label="工房一覧">🏭</summary>
           <a href="slides/">スライド・PPTX作成 ↗</a>
           <a href="tools/#composition">🎵 作曲 ↗</a>
           <a href="tools/">画像一覧・素材 ↗</a>
           <a href="https://myon-bioinformatics.github.io/#ironmate">🏠 ポートフォリオ ↗</a>
           <a href="https://github.com/myon-bioinformatics/Ironmate">🐙 GitHub リポジトリ ↗</a>
         </details>
-        <button id="undo-2" data-steps="2" title="2つ戻す" aria-label="2つ戻す">⏪</button>
-        <button id="undo">↶ 戻す</button>
-        <button id="redo">↷ やり直す</button>
-        <button id="redo-2" data-steps="2" title="2つやり直す" aria-label="2つやり直す">⏩</button>
+        <button id="undo-2" data-steps="2" data-ui-word="2つ戻す" title="2つ戻す" aria-label="2つ戻す">⏪</button>
+        <button id="undo" data-ui-word="戻す" title="戻す" aria-label="戻す">↩️</button>
+        <button id="redo" data-ui-word="やり直す" title="やり直す" aria-label="やり直す">↪️</button>
+        <button id="redo-2" data-steps="2" data-ui-word="2つやり直す" title="2つやり直す" aria-label="2つやり直す">⏩</button>
         <details id="studio-import">
-          <summary>↓ インポート</summary>
-          <button id="shelf-button">クリップボード・シェルフ</button>
-          <label class="button">作業履歴を開く<input id="open-workspace" type="file" accept=".json,application/json" /></label>
-          <label class="button">開く<input id="open" type="file" accept=".json" /></label>
+          <summary data-ui-word="インポート" title="インポート" aria-label="インポート">📥</summary>
+          <button id="shelf-button" data-ui-word="クリップボード・シェルフ" title="クリップボード・シェルフ" aria-label="クリップボード・シェルフ">📋</button>
+          <label class="button" data-ui-word="作業履歴を開く" title="作業履歴を開く" aria-label="作業履歴を開く">🕘<input id="open-workspace" type="file" accept=".json,application/json" /></label>
+          <label class="button" data-ui-word="JSONを開く" title="JSONを開く" aria-label="JSONを開く">📦<input id="open" type="file" accept=".json" /></label>
         </details>
         <details id="studio-export">
-          <summary>↑ エクスポート</summary>
-          <button id="save">JSON保存</button>
-          <button id="save-workspace">作業履歴を保存</button>
-          <button id="svg">SVG</button><button id="base64">Base64 / 渡す</button>
+          <summary data-ui-word="エクスポート" title="エクスポート" aria-label="エクスポート">📤</summary>
+          <button id="save" data-ui-word="JSON" title="JSON" aria-label="JSON">📦</button>
+          <button id="save-workspace" data-ui-word="作業履歴" title="作業履歴" aria-label="作業履歴">🕘</button>
+          <button id="svg" data-ui-word="SVG" title="SVG" aria-label="SVG">📐</button><button id="base64" data-ui-word="Base64 / 渡す" title="Base64 / 渡す" aria-label="Base64 / 渡す">🔤</button>
           <select id="export-scale" aria-label="出力倍率">
             <option value="1">1×</option>
             <option value="2">2×</option>
             <option value="4">4×</option>
             <option value="8">8×</option>
           </select>
-          <button id="png" class="primary">PNGを書き出す ↗</button>
+          <button id="png" class="primary" data-ui-word="PNG" title="PNG" aria-label="PNG">🖼</button>
         </details>
       </div>
     </header>
@@ -156,13 +156,13 @@ STUDIO_HTML = r"""<!doctype html>
           ツールを選び、キャンバスを押して配置します。
         </p>
         <div id="tools" class="tool-grid">
-          <button data-tool="select" class="active">↖ 選択</button
-          ><button data-tool="text">T 文字列</button
-          ><button data-tool="shape" data-label="図形" data-candidates="▭ ◯ △ →">図形(▭)</button
-          ><button data-tool="stamp">✦ スタンプ</button
-          ><button data-tool="emoji" data-label="絵文字" data-candidates="❤️ 😊 🌱 📊 ✨ 📌 🔰">絵文字(😊)</button
-          ><button data-tool="kaomoji" data-label="顔文字" data-candidates="(・∀・) (｡•̀ᴗ-)✧ ٩(๑❛ᴗ❛๑)۶">顔文字(^^)</button
-          ><button data-tool="clock">◷ 時計</button>
+          <button data-tool="select" class="active" data-ui-word="選択" title="選択" aria-label="選択">👆</button
+          ><button data-tool="text" data-ui-word="文字列" title="文字列" aria-label="文字列">🔤</button
+          ><button data-tool="shape" data-label="図形" data-candidates="▭ ◯ △ →" data-ui-word="図形(▭)" title="図形(▭)" aria-label="図形(▭)">▭</button
+          ><button data-tool="stamp" data-ui-word="スタンプ" title="スタンプ" aria-label="スタンプ">✦</button
+          ><button data-tool="emoji" data-label="絵文字" data-candidates="❤️ 😊 🌱 📊 ✨ 📌 🔰" data-ui-word="絵文字(😊)" title="絵文字(😊)" aria-label="絵文字(😊)">😊</button
+          ><button data-tool="kaomoji" data-label="顔文字" data-candidates="(・∀・) (｡•̀ᴗ-)✧ ٩(๑❛ᴗ❛๑)۶" data-ui-word="顔文字(^^)" title="顔文字(^^)" aria-label="顔文字(^^)">(^^)</button
+          ><button data-tool="clock" data-ui-word="時計" title="時計" aria-label="時計">🕒</button>
         </div>
 """ + STUDIO_PIXEL_PANEL + r"""
         <div id="candidates" class="emojis" role="group" aria-label="候補"></div>
@@ -262,8 +262,8 @@ STUDIO_HTML = r"""<!doctype html>
         <p class="eyebrow">レイヤー</p>
         <div id="layers" class="layers"></div>
         <div class="two">
-          <button id="duplicate">複製</button><button id="delete">削除</button
-          ><button id="front">前へ</button><button id="back">後ろへ</button>
+          <button id="duplicate" data-ui-word="複製" title="複製" aria-label="複製">📑</button><button id="delete" data-ui-word="削除" title="削除" aria-label="削除">🗑️</button
+          ><button id="front" data-ui-word="前へ" title="前へ" aria-label="前へ">⏫</button><button id="back" data-ui-word="後ろへ" title="後ろへ" aria-label="後ろへ">⏬</button>
         </div>
         <div class="section">
           <h2 id="selection">レイヤーを選択</h2>
@@ -283,7 +283,7 @@ STUDIO_HTML = r"""<!doctype html>
               </select></label
             ><label>時刻<input id="edit-time" type="time" /></label>
           </div>
-          <button id="apply-text" class="wide">✏️ 編集を適用</button>
+          <button id="apply-text" class="wide" data-ui-word="編集を適用" title="編集を適用" aria-label="編集を適用">✏️</button>
           <div class="two">
             <label>X<input id="x" type="number" /></label
             ><label>Y<input id="y" type="number" /></label
@@ -414,7 +414,7 @@ STUDIO_HTML = r"""<!doctype html>
 </html>
 """
 
-STYLE_CSS = r"""/* web-ui-bundle/1 commit=a6de7103f43e91edbe0e39988d9c2da10fde1bbe sha256=03a73d09f388dab19d3e4b104130452de66ae64911c09d812355fefe76bfeb37 scripts/build_studio_css.py*/
+STYLE_CSS = r"""/* web-ui-bundle/1 commit=8046218ba409c4006cc11bf54ce00af8176290a3 sha256=03b8e081e65608ef5c04d143b42d2905c23b65c8ffe621bffa825bded0bcc245 scripts/build_studio_css.py*/
 @layer base,components,theme;
 /* css/tokens.css */
 :root{--ui-bg:#0d1117;--ui-panel:#101820;--ui-fg:#d1f7c4;--ui-muted:#8b949e;--ui-border:#58a6ff;--ui-accent:#7ee787;--ui-danger:#cf222e;--ui-radius:0;--ui-text:16px;--ui-space:1rem;--ui-max:960px;--ui-font:Meiryo,メイリオ,sans-serif;--ui-font-mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
@@ -567,6 +567,8 @@ body:where([data-page~="tools"]){font-size:15px;line-height:1.65;margin:0}
 :where([data-page~="tools"]) footer{padding:30px;text-align:center;color:var(--ui-muted);font-size:12px;border-top:1px solid var(--ui-border)}
 @media(max-width:760px){:where([data-page~="tools"]) main{padding:30px 16px}:where([data-page~="tools"]) .workspace{grid-template-columns:1fr}:where([data-page~="tools"]) .controls,:where([data-page~="tools"]) .preview{padding:18px}:where([data-page~="tools"]) header{padding:18px}:where([data-page~="tools"]) h2{font-size:25px}:where([data-page~="tools"]) .exports{gap:8px}}
 
+/* 💻 ⇄ 📱 an emoji face (a control with data-ui-word) is read at 20 px, not at the studio's small text size */
+:where([data-page~="studio"]) button[data-ui-word],:where([data-page~="studio"]) summary[data-ui-word],:where([data-page~="studio"]) label[data-ui-word]{font-size:20px;line-height:1}
 
 /* 📱 phone slides: the slide is pinned on top (PySaiyanWeBoo's .ui-stage) and the emoji controls scroll under it (landscape: beside it) */
 body:where([data-page~="phone"]){margin:0;background:var(--ui-bg)}
@@ -628,7 +630,7 @@ const StudioCore = (function (root) {
   const fail = (message) => {
     throw new Error(message);
   };
-  /* PSWB heatmap-color.js @ a6de7103f43e91edbe0e39988d9c2da10fde1bbe. Generated by scripts/build_studio_css.py. */
+  /* PSWB heatmap-color.js @ 8046218ba409c4006cc11bf54ce00af8176290a3. Generated by scripts/build_studio_css.py. */
   const heatmapDefaultPalette=["#440154", "#3B528B", "#21918C", "#5EC962", "#FDE725"];
   function heatmapColor(v,lo,hi,levels=0,palette=heatmapDefaultPalette){
    if(!Array.isArray(palette)||palette.length<2||palette.length>256||
@@ -1192,7 +1194,7 @@ const StudioCore = (function (root) {
 /* Browser/Node shared operations. Pixel coordinates follow grid_tools.py. */
 const IronmateTools = (function (root) {
   "use strict";
-  /* PSWB pixel-grid.js @ a6de7103f43e91edbe0e39988d9c2da10fde1bbe. Generated by scripts/build_studio_css.py. */
+  /* PSWB pixel-grid.js @ 8046218ba409c4006cc11bf54ce00af8176290a3. Generated by scripts/build_studio_css.py. */
   /* web-ui pixel-grid: a dot-art grid checked, resized, drawn as SVG and described for a PNG; Base64 length; PNG chunks. pysaiyanweboo.py (pixel_grid_*, base64_length) is the reference; this must agree. */
   const PIXEL_GRID_SCHEMA="ironmate-pixel-grid/1";
   function pixelGridValidate(value){
@@ -1258,7 +1260,7 @@ const IronmateSlides = (function (root) {
   "use strict";
   const C = StudioCore;
   const shell = IronmateSlideShell;
-  /* PSWB slide-deck.js @ a6de7103f43e91edbe0e39988d9c2da10fde1bbe. Generated by scripts/build_studio_css.py. */
+  /* PSWB slide-deck.js @ 8046218ba409c4006cc11bf54ce00af8176290a3. Generated by scripts/build_studio_css.py. */
   /* web-ui slide-deck: several scenes of the image studio as one deck (checked, kept as JSON, pages added, copied, deleted and moved) and written as a PPTX in the page: text, rectangles, ellipses, triangles and arrows stay editable, anything else is a picture. slideDeck(core, shell): core is js/imagestudio.js (or the same functions), shell the empty package the slides go into (part name to text). pysaiyanweboo.py (slide_deck_*) is the reference; this must agree. */
   function slideDeck(C, shell) {
     const SCHEMA = "ironmate-slide-deck/1",
@@ -2000,7 +2002,9 @@ function candidates() {
       b.onclick = () => {
         if (tool === "shape") {
           shape = SHAPES[value];
-          button.textContent = `${button.dataset.label}(${value})`;
+          button.textContent = value; // 💻 の表示では「図形(◯)」（data-ui-word）
+          button.dataset.uiWord = button.title = `${button.dataset.label}(${value})`;
+          button.setAttribute("aria-label", button.title);
         } else {
           $(tool + "-text").value = value;
           if (value === "🔰") $("fill").value = "#000000";
@@ -2164,6 +2168,7 @@ for (const button of document.querySelectorAll("[data-tool]"))
 // each presses this page's own control, so a save from the header and one from the page are the same save.
 const HOST_ACTIONS = { png: "png", svg: "svg", json: "save", workspace: "save-workspace", base64: "base64", shelf: "shelf-button",
   "open-json": "open", "open-workspace": "open-workspace" };
+queueMicrotask(() => globalThis.PySaiyanWeBoo.bindLabels()); // 💻 To textual ⇄ 📱 To iconic（ページ内と ⋯ の行）
 document.addEventListener("ui-chrome-action", (e) => {
   const [key, scale] = String(e.detail?.key).split(/-(?=\d+$)/);
   if (key === "png" || key === "svg") $("export-scale").value = (key === "png" && scale) || "1"; // a size is a PNG row's own
@@ -3314,7 +3319,7 @@ if (typeof document !== "undefined" && (document.getElementById("pixel-editor") 
   });
 })();
 
-/* ⬇️ pysaiyanweboo a6de7103 (stage, pager, labels-switch): written by scripts/build_studio_css.py from the pinned commit; --check fails when it drifts */
+/* ⬇️ pysaiyanweboo 8046218b (stage, pager, labels-switch): written by scripts/build_studio_css.py from the pinned commit; --check fails when it drifts */
 (() => {
 /* A rotary dial over a range input (dial_html): drag around its centre, turn the wheel, or use the range's own keys. Value and events stay the input's. */
 function dialAngle(value,min,max){const span=max-min;const t=span>0?(Number(value)-min)/span:0;return -135+270*Math.min(1,Math.max(0,t))}

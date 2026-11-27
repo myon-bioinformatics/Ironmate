@@ -68,14 +68,14 @@ def host_rows(page: str = 'studio') -> str:
             ('📦 JSON（再編集用）', 'json'), ('🕘 作業履歴', 'workspace'), ('🔤 Base64 / 渡す', 'base64')]
     opened = [('📦 JSON', 'open-json'), ('🕘 作業履歴', 'open-workspace')]
     spec = {'tools': {'💾': {'label': '保存', 'label_en': 'Save', 'links': rows(save)}, '📂': {'label': '開く', 'label_en': 'Open', 'links': rows(opened)}},
-            'screen': rows([('📋 クリップボード・シェルフ', 'shelf')]),
-            'replaces': '#studios,#studio-import,#studio-export'}
+            'screen': rows([('📋 クリップボード・シェルフ', 'shelf'), ('💻 To textual ⇄ 📱 To iconic', 'labels')]),
+            'replaces': '#studios,#studio-import,#studio-export,#labels-switch'}
     return '<script type="application/json" id="ui-chrome-rows">' + json.dumps(spec, ensure_ascii=False).replace('<', '\\u003c') + '</script>'
 
 
 def public_assets():
     """Explicit publication allowlist; no user scenes, globbing, or local images."""
-    from ironlib.studio_bundle import BRAND_HTML, BROWSER_TASK_JS, PHONE_HTML, RECORDS_JS, STUDIO_HTML, STUDIO_JS, STYLE_CSS, TOOLS_HTML
+    from ironlib.studio_bundle import BRAND_HTML, BROWSER_TASK_JS, PHONE_HTML, PSWB_PHONE, RECORDS_JS, STUDIO_HTML, STUDIO_JS, STYLE_CSS, TOOLS_HTML
     names = ('brand/mono.svg', 'brand/dark-green.svg',
              'brand/famicom.svg', 'brand/gameboy.svg', 'brand/pixel-3d.svg',
              'brand/manifest.webmanifest', 'brand/apple-touch-icon.png', 'brand/app-192.png',
@@ -83,7 +83,10 @@ def public_assets():
              'brand/icon.svg', 'brand/heatmap.svg', 'brand/hero.svg', 'brand/favicon.ico', 'brand/favicon-16.png',
              'brand/favicon-32.png', 'brand/favicon-48.png', 'brand/icon-192.png')
     assets = {name: (ROOT / 'studio' / name).read_bytes() for name in names}
-    assets['index.html'] = STUDIO_HTML.replace('<header>', host_rows() + '<header>', 1).encode('utf-8')
+    # 💻 ⇄ 📱 the same switch as the slide editor's, at the end of the top actions (a host's ⋯ row stands in for it)
+    page = STUDIO_HTML.replace('<header>', host_rows() + '<header>', 1)
+    page = page.replace('      </div>\n    </header>', '        ' + PSWB_PHONE['labels'] + '\n      </div>\n    </header>', 1)
+    assets['index.html'] = page.encode('utf-8')
     assets['style.css'] = STYLE_CSS.encode('utf-8')
     from scripts.pages_catalog import catalog_script
     assets['studio.js'] = STUDIO_JS.encode('utf-8') + b'\n' + catalog_script()

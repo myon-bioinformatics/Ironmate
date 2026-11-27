@@ -83,6 +83,23 @@ const failures = [],
     path: path.join(out, "desktop.png"),
     fullPage: true,
   });
+  // 💻 To textual ⇄ 📱 To iconic: emoji faces by default, short words on the same page with no reload, remembered
+  const face = (sel, pseudo) => page.evaluate(([q, p]) => { const st = getComputedStyle(document.querySelector(q), p);
+    return { content: st.content, size: st.fontSize }; }, [sel, pseudo]);
+  assert.equal(await page.evaluate(() => document.body.dataset.uiLabels), "emoji");
+  assert.deepEqual([await page.textContent("#undo"), (await face("#undo", null)).size], ["↩️", "20px"]);
+  await page.click("#labels-switch");
+  assert.equal(await page.evaluate(() => document.body.dataset.uiLabels), "words");
+  assert.deepEqual([(await face("#undo", "::after")).content, (await face("#undo", null)).size], ['"戻す"', "0px"]);
+  assert.equal((await face('[data-tool="text"]', "::after")).content, '"文字列"');
+  await page.screenshot({ path: path.join(out, "desktop-words.png"), fullPage: true });
+  await page.reload();
+  await page.waitForFunction(() => !!window.IronmateStudio, null, {timeout:10000});
+  await page.evaluate(() => window.IronmateStudio.ready);
+  assert.equal(await page.evaluate(() => document.body.dataset.uiLabels), "words");
+  await page.click("#labels-switch");
+  assert.equal(await page.evaluate(() => document.body.dataset.uiLabels), "emoji");
+  await page.locator("#studio-export summary").click();                                     // the reload closed 📤
   const initial = await page.evaluate(() => window.IronmateStudio.scene);
   assert.deepEqual(initial.layers, []);
   assert.equal(await page.locator("#demo, #stamp-demo, #example-view").count(), 0);
@@ -115,7 +132,8 @@ const failures = [],
   await page.click('[data-tool="shape"]'); // 図形(▭ ◯ △ →): one tool, the shape is a candidate
   assert.deepEqual(await page.locator("#candidates button").allTextContents(), ["▭", "◯", "△", "→"]);
   await page.locator("#candidates button", {hasText: "△"}).click();
-  assert.equal(await page.textContent('[data-tool="shape"]'), "図形(△)");
+  assert.equal(await page.textContent('[data-tool="shape"]'), "△");                          // 📱 the face is the sign
+  assert.equal(await page.getAttribute('[data-tool="shape"]', "data-ui-word"), "図形(△)");   // 💻 the word names it
   let box = await page.locator("#board").boundingBox();
   await page.mouse.click(box.x + box.width * 0.25, box.y + box.height * 0.2);
   await page.evaluate(() => window.IronmateStudio.ready);

@@ -1112,6 +1112,12 @@ def test_phone_page_is_emoji_only_and_every_control_is_bound():
             continue  # plain links
         assert re.search(rf'(^|[\s{{,])("{re.escape(act)}"|{re.escape(act)})(\(|:)', script, re.M), act  # acts.x / files.x
     assert 1 in b.PHONE_TEXT['scale'] and b.PHONE_TEXT['size'] % 8 == 0
+    # 🔷 💾: a candidate that is an action names it in the markup, and the script has it; 😊 (^^) candidates are only stamped
+    named = dict(re.findall(r'data-act="([a-z]+)" data-candidates="[^"]*" data-acts="([a-z ]+)"', html))
+    assert named == {'shape': 'rect ellipse triangle arrow', 'save': 'pptx json png svg'}, named
+    for act in ' '.join(named.values()).split():
+        assert re.search(rf'(^|[\s{{,])("{act}"|{act})(\(|:)', script, re.M), act
+    assert 'data-act="pptx"' not in html                                                          # 📤 is one of 💾's formats now
     assert f'data-text-scale="{" ".join(f"{v:g}" for v in b.PHONE_TEXT["scale"])}"' in html
 
 

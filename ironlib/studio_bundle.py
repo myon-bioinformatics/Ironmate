@@ -3856,7 +3856,6 @@ function shape(kind) {
     rotation: 0, opacity: 1, fill: "#18A7A1", stroke: "#183C42", strokeWidth: 4 });
 }
   /* 🔷 😊 (^^) 候補から置く（Image Studio と同じ候補）。🕒 はいまの時刻。選んだものは 🅱️ 太字・🎨 色・⏫ 手前へ */
-const CANDIDATE_SHAPES = { "▭": "rect", "◯": "ellipse", "△": "triangle", "→": "arrow" };
 function stamp(text) {
   const size = textSize * textFactor * 2;
   return place((s) => {
@@ -3876,15 +3875,19 @@ function offer(tool) {
   row.dataset.tool = again ? "" : tool;
   row.hidden = again;
   row.classList.toggle("phone-row", !again);
-  row.replaceChildren(...(again ? [] : document.querySelector(`[data-act="${tool}"]`).dataset.candidates.split(" ")).map((value) => {
+  const { candidates, acts: named = "", words = "" } = document.querySelector(`[data-act="${tool}"]`).dataset,
+    actions = named.split(" "),
+    said = words.split("|");
+  row.replaceChildren(...(again ? [] : candidates.split(" ")).map((value, i) => {
     const b = document.createElement("button");
     b.type = "button";
     b.textContent = value;
-    b.setAttribute("aria-label", value);
+    b.setAttribute("aria-label", said[i] || value);
+    b.title = said[i] || value;
     b.addEventListener("pointerdown", (e) => e.preventDefault());
     b.addEventListener("click", () => {
       finishEdit();
-      run(() => (tool === "shape" ? acts[CANDIDATE_SHAPES[value]]() : record(stamp(value))));
+      run(() => (actions[i] ? acts[actions[i]]() : record(stamp(value)))); // 🔷 💾 name an action (data-acts); 😊 (^^) stamp the text
     });
     return b;
   }));
@@ -4012,7 +4015,27 @@ const acts = {
       localStorage.setItem(STORE + ":pager", pages.dataset.uiPager);
     } catch {}
   },
-  save: () => C.save("ironmate-slides.json", D.deckText(deck), "application/json"),
+  save: () => offer("save"), // 💾 形式は押してから選ぶ
+  json: () => C.save("ironmate-slides.json", D.deckText(deck), "application/json"),
+  svg: () => C.save(`ironmate-slide-${active + 1}.svg`, C.svg(slide(), (l) => l.src), "image/svg+xml"),
+  async png() {
+    // 🖼 このページを見えているとおりに（SVG → canvas）。大きさはスライドの大きさ
+    const s = slide(),
+      size = C.outputSize(s),
+      url = URL.createObjectURL(new Blob([C.svg(s, (l) => l.src)], { type: "image/svg+xml" }));
+    try {
+      const img = new Image();
+      img.src = url;
+      await img.decode();
+      const canvas = Object.assign(document.createElement("canvas"), size);
+      canvas.getContext("2d").drawImage(img, 0, 0, size.width, size.height);
+      const blob = await new Promise((done) => canvas.toBlob(done, "image/png"));
+      if (!blob) throw Error("⚠️ PNG");
+      C.save(`ironmate-slide-${active + 1}.png`, blob, "image/png");
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  },
   async pptx() {
     note("📤 …");
     const result = await D.exportPptx(deck, (l) => D.layerPng(l, (x) => x.src));
@@ -4142,8 +4165,8 @@ PHONE_TOOLS = (
      ("delete", "🗑️", "選んだものを削除")),
     (("slide-add", "➕📄", "白紙のページを追加"), ("slide-copy", "📑", "ページを複製"), ("slide-delete", "✖️📄", "ページを削除"),
      ("new", "🆕", "最初から（白紙 1 枚）"), ("pager", "🧭", "ページ移動の形を切り替え（矢印・十字キー・端まで・点・スライダー・ダイヤル）")),
-    (("save", "💾", "全スライドJSONで保存（Slide Studio でも開ける）"), ("open", "📂", "全スライドJSONを開く"),
-     ("pptx", "📤", "PPTXを書き出す"), ("studio", "🖥️", "以前の PC 版 Slide Studio（新しい機能は足さない）"), ("home", "🏠", "Image Studio")),
+    (("save", "💾", "保存（押してから形式を選ぶ: PPTX・全スライドJSON・PNG・SVG）"), ("open", "📂", "全スライドJSONを開く"),
+     ("studio", "🖥️", "以前の PC 版 Slide Studio（新しい機能は足さない）"), ("home", "🏠", "Image Studio")),
 )
 # 🔽 🔄 🔼 multiply every text box by the next / plain / previous step; new boxes are 32 px on the 1280×720 slide.
 PHONE_TEXT = {"size": 32, "scale": (0.5, 0.75, 1, 1.25, 1.5, 2, 2.5)}
@@ -4186,11 +4209,15 @@ def _phone_html() -> str:
         if act in ("studio", "home"):
             return f'<a class="button" href="{"pc/" if act == "studio" else "../"}" data-act="{act}" {label}>{emoji}</a>'
         if act in candidates:                       # 🔷 😊 (^^): the same candidates as Image Studio's tools, read from its markup
-            return f'<button type="button" data-act="{act}" data-candidates="{escape(candidates[act])}" {label}>{emoji}</button>'
+            acts, said = choices.get(act, ("", ""))   # 🔷 💾: a candidate that is an action names it; 😊 (^^) ones are stamped as text
+            more = f' data-acts="{acts}" data-words="{escape(said)}"' if acts else ""
+            return f'<button type="button" data-act="{act}" data-candidates="{escape(candidates[act])}"{more} {label}>{emoji}</button>'
         return f'<button type="button" data-act="{act}" {label}>{emoji}</button>'
 
     import re
-    candidates = dict(re.findall(r'data-tool="(shape|emoji|kaomoji)"[^>]*data-candidates="([^"]*)"', STUDIO_HTML))
+    candidates = dict(re.findall(r'data-tool="(shape|emoji|kaomoji)"[^>]*data-candidates="([^"]*)"', STUDIO_HTML)) | {"save": "📽️ 📦 🖼 📐"}
+    choices = {"shape": ("rect ellipse triangle arrow", "四角|丸|三角|矢印"),
+               "save": ("pptx json png svg", "PPTX（全スライド、PowerPoint で編集できる）|全スライドJSON（また開ける）|このページを PNG|このページを SVG")}
     rows = ['<div class="phone-row">' + "".join(control(*tool) for tool in row) + "</div>" for row in PHONE_TOOLS]
     # 📚 the page's layers, back to front, sit right above the row that acts on the selected one (PySaiyanWeBoo's current-item mark)
     rows = (rows[0] + '<div id="phone-candidates" role="group" aria-label="候補" hidden></div>' + rows[1]

@@ -510,11 +510,20 @@ print('Long Japanese/English: visible SVG lines match native PPTX, explicit para
     assert.equal(s.deck.slides.length, 2);
     assert.equal(s.deck.slides[0].layers[0].text, "あとから編集した文字\n2 行目");
     assert.equal(await mobile.evaluate(() => IronmatePhone.pager), "dots"); // 🧭 the shape survives the reload too
-    // 📤 PPTX and 💾 JSON (the same all-slide JSON Slide Studio opens)
-    const [pptx] = await Promise.all([mobile.waitForEvent("download"), act("pptx")]);
+    // 💾 one button, the format picked after it: 📽️ PPTX, 📦 JSON (the same all-slide JSON the PC studio opens), 🖼 PNG, 📐 SVG
+    assert.equal(await mobile.getAttribute('[data-act="save"]', "data-candidates"), "📽️ 📦 🖼 📐");
+    const [pptx] = await Promise.all([mobile.waitForEvent("download"), pick("save", "📽️")]);
     await pptx.saveAs(path.join(out, "phone.pptx"));
-    const [json] = await Promise.all([mobile.waitForEvent("download"), act("save")]);
+    assert.equal(await mobile.getAttribute('#phone-candidates button >> nth=0', "aria-label"), "PPTX（全スライド、PowerPoint で編集できる）");
+    const [json] = await Promise.all([mobile.waitForEvent("download"), pick("save", "📦")]);
     await json.saveAs(path.join(out, "phone.json"));
+    const [png] = await Promise.all([mobile.waitForEvent("download"), pick("save", "🖼")]);
+    assert.equal(png.suggestedFilename(), `ironmate-slide-${(await state()).active + 1}.png`);
+    const pngBytes = fs.readFileSync(await png.path());
+    assert.deepEqual([...pngBytes.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
+    assert.deepEqual([pngBytes.readUInt32BE(16), pngBytes.readUInt32BE(20)], [1280, 720]);  // the slide's own size
+    const [svg] = await Promise.all([mobile.waitForEvent("download"), pick("save", "📐")]);
+    assert.match(fs.readFileSync(await svg.path(), "utf8"), /^<svg [^>]*width="1280" height="720"/);
     await snap("saved");
     const phoneCheck = spawnSync(process.env.PYTHON || "python", ["-S", "-c", `
 from pathlib import Path
@@ -582,7 +591,7 @@ print('📱 phone: 2 slides, native text kept')
     assert.equal(await pageNo(), "1/1");
     assert.equal(await mobile.evaluate(() => IronmatePhone.active), 0);
     assert.ok(await mobile.locator('[data-act="redo"]').isDisabled());
-    const [stillExportable] = await Promise.all([mobile.waitForEvent("download"), act("save")]);
+    const [stillExportable] = await Promise.all([mobile.waitForEvent("download"), pick("save", "📦")]);
     assert.equal(await stillExportable.failure(), null);
     await act("undo");
     await mobile.waitForFunction(() => IronmatePhone.deck.title === "font bounds");

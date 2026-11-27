@@ -25,7 +25,8 @@ One editor for phones and PCs, phone-first. The slide stays pinned at the top wh
 | 🧭 | The shape of the page controls, one tap each, no reload (kept on this device): ⬅️ 1/N ➡️ → ● dots → 🎚️ slider → 🎛️ dial → ✚ cross-key (⬆️ first, ⬇️ last) → ⏮️ ⬅️ 1/N ➡️ ⏭️ |
 | ➕📄 📑 ✖️📄 🆕 | Add a blank page, duplicate, delete, start over |
 | 🗑️ ↩️ ↪️ | Delete the selection, undo, redo (64 steps) |
-| 💾 📂 📤 | All-slide JSON save / open (the same file the PC studio opens) and PPTX export |
+| 💾 | Save: the formats open in the candidate row, one tap each: 📽️ PPTX (every slide, editable in PowerPoint), 📦 all-slide JSON (opens again here and in the PC studio), 🖼 PNG and 📐 SVG of this page at the slide's own size, as it looks |
+| 📂 | Open an all-slide JSON |
 | 🖥️ 🏠 | The PC studio this editor replaces (below) and Image Studio |
 
 The GIF is the frames `tests/slides_browser.cjs` saves (`build/pages-evidence/phone-*.png`, 390×844; `phone-frames.json` lists them) at 1.4 s each, 0.9 s for the 🧭 shapes.

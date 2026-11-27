@@ -86,6 +86,13 @@ PIXEL_EDITOR_HTML = r"""      <section id="pixels">
         </div>
       </section>"""
 
+STUDIO_PIXEL_PANEL = r"""        <details id="pixel-editor">
+          <summary>▦ ドット絵</summary>
+""" + PIXEL_EDITOR_HTML + r"""
+          <button id="place-grid">画像にレイヤーとして追加</button>
+          <p id="pixel-status" role="status"></p>
+        </details>"""
+
 STUDIO_HTML = r"""<!doctype html>
 <html lang="ja">
   <head>
@@ -159,12 +166,7 @@ STUDIO_HTML = r"""<!doctype html>
           ><button data-tool="kaomoji" data-label="顔文字" data-candidates="(・∀・) (｡•̀ᴗ-)✧ ٩(๑❛ᴗ❛๑)۶">顔文字(^^)</button
           ><button data-tool="clock">◷ 時計</button>
         </div>
-        <details id="pixel-editor">
-          <summary>▦ ドット絵</summary>
-""" + PIXEL_EDITOR_HTML + r"""
-          <button id="place-grid">画像にレイヤーとして追加</button>
-          <p id="pixel-status" role="status"></p>
-        </details>
+""" + STUDIO_PIXEL_PANEL + r"""
         <div id="candidates" class="emojis" role="group" aria-label="候補"></div>
         <div id="keyboard-input" hidden>
           <button id="keyboard-focus">⌨ ほかの文字を入力</button>
@@ -3075,13 +3077,10 @@ function bindPixelEditor({ root, catalog, gridTools: C, save, pngPayload, status
 /* End PSWB pixel-editor.js */
 
 /* Tools page UI (data-page~="tools"): browser only. */
-if (typeof document !== "undefined" && document.getElementById("pixels")) (function () {
+if (typeof document !== "undefined" && (document.getElementById("pixel-editor") || document.getElementById("digest"))) (function () {
 "use strict";
-function initPixelEditor() {
-  const $ = (id) => document.getElementById(id),
-    C = IronmateTools,
-    catalog = buildIronmateCatalog();
-  let images = [];
+  const $ = (id) => document.getElementById(id);
+  const C = IronmateTools;
   const status = (text, error = false) => {
     const output = $("pixel-status") || $("message");
     output.textContent = text;
@@ -3094,17 +3093,24 @@ function initPixelEditor() {
         .catch((e) => status(e.message, true)),
     );
   const { save, picture } = StudioCore;
-  const workbench = bindPixelEditor({
-    root: $("pixels"), catalog, gridTools: C, save, pngPayload: StudioCore.pngPayload, status,
-  });
-  window.IronmateWorkbench = workbench;
-  if ($("place-grid")) {
-    action("place-grid", async () => {
-      await window.IronmateStudio.importImageFile(new File([await workbench.png()], "ドット絵.png", { type: "image/png" }));
-      $("pixel-editor").open = false;
+  const editor = $("pixel-editor");
+  if (editor) {
+    editor.addEventListener("toggle", function start() {
+      if (!editor.open) return;
+      editor.removeEventListener("toggle", start);
+      const workbench = bindPixelEditor({
+        root: $("pixels"), catalog: buildIronmateCatalog(), gridTools: C, save,
+        pngPayload: StudioCore.pngPayload, status,
+      });
+      window.IronmateWorkbench = workbench;
+      action("place-grid", async () => {
+        await window.IronmateStudio.importImageFile(new File([await workbench.png()], "ドット絵.png", { type: "image/png" }));
+        editor.open = false;
+      });
     });
     return;
   }
+  let images = [];
   $("capacity-file").addEventListener("change", (e) => {
     const f = e.target.files[0];
     if (f)
@@ -3193,15 +3199,6 @@ function initPixelEditor() {
       html = `<!doctype html><html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; base-uri 'none'"><title>Ironmate Image Digest</title><style>body{font:14px system-ui;background:#f2f6f3;color:#183d42;margin:24px}.grid{display:grid;grid-template-columns:repeat(${columns},minmax(0,1fr));gap:16px}figure{margin:0;padding:16px;background:white;overflow-wrap:anywhere}img{width:100%;height:210px;object-fit:contain}@media(max-width:600px){.grid{grid-template-columns:1fr}}</style><h1>Ironmate Image Digest</h1><div class="grid">${images.map((i) => `<figure><img src="${i.src}" alt="${C.esc(i.name)}"><figcaption>${C.esc(i.name)}</figcaption></figure>`).join("")}</div></html>`;
     save("ironmate-digest.html", html, "text/html");
   });
-}
-
-const editor = document.getElementById("pixel-editor");
-if (editor) editor.addEventListener("toggle", function start() {
-  if (!editor.open) return;
-  editor.removeEventListener("toggle", start);
-  initPixelEditor();
-});
-else initPixelEditor();
 })();
 
 /* Slide document UI (data-page~="slides"): browser only. */
@@ -4021,11 +4018,10 @@ TOOLS_HTML = r"""<!doctype html>
         画像とJSONは端末内で処理します。
       </p>
       <div class="jump">
-        <a href="#pixels">ドット絵</a><a href="#digest">画像一覧</a
+        <a href="#digest">画像一覧</a
         ><a href="#capacity">Base64容量</a><a href="#features">CLI対応表</a>
       </div>
-      <p id="message" role="status" aria-live="polite">準備しています…</p>
-""" + PIXEL_EDITOR_HTML + r"""
+      <p id="message" role="status" aria-live="polite"></p>
       <section id="digest">
         <div class="section-heading">
           <h2>画像一覧</h2>
@@ -4073,7 +4069,7 @@ TOOLS_HTML = r"""<!doctype html>
           <thead><tr><th>操作</th><th>ブラウザ</th><th>CLI</th></tr></thead>
           <tbody>
             <tr><td>画像・レイヤー編集</td><td><a href="../">画像編集</a></td><td>image_studio.py / studio_ingress.py</td></tr>
-            <tr><td>ドット絵</td><td><a href="#pixels">グリッド編集</a></td><td>pixel_grid.py / grid_tools.py</td></tr>
+            <tr><td>ドット絵</td><td>Image Studio のグリッド編集</td><td>pixel_grid.py / grid_tools.py</td></tr>
             <tr><td>画像一覧・比較</td><td><a href="#digest">一覧作成</a></td><td>image_digest.py / browser_matrix.py</td></tr>
             <tr><td>Base64容量</td><td><a href="#capacity">文字数</a></td><td>ironlib/size_estimate.py</td></tr>
             <tr><td>PPTX</td><td><a href="../slides/">スライド編集</a></td><td>pptx_pipeline.py / pptx_replace.py / ironlib/pptx_preview.py</td></tr>

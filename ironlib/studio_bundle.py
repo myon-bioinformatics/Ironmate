@@ -603,6 +603,15 @@ body:where([data-page~="phone"]){margin:0;background:var(--ui-bg)}
 :where([data-page~="phone"]) .phone-tools button,:where([data-page~="phone"]) .phone-tools .button{min-width:48px;min-height:48px;padding:0 8px;font-size:24px;line-height:1;touch-action:manipulation}
 :where([data-page~="phone"]) .phone-tools button:disabled{opacity:.32}
 :where([data-page~="phone"]) .phone-status{flex:1 1 128px;margin:0;align-self:center;min-height:24px;font-size:16px;overflow-wrap:anywhere}
+#phone-inspector:not([hidden]){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;min-width:0}
+#phone-inspector label:not([hidden]){display:flex;align-items:center;gap:6px}
+#phone-inspector input:not([type=checkbox]),#phone-inspector select{min-width:0;width:100%;font-size:16px}
+#phone-grid:not([hidden]){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;gap:6px;flex:0 0 auto;width:100%}
+#phone-grid>div{min-width:0}
+#phone-grid .ui-stage,#phone-grid button{width:100%;max-width:100%;margin:0;position:relative;top:auto}
+#phone-grid .ui-stage{outline:2px solid var(--ui-accent)}
+#phone-grid button{padding:0;display:block}
+@media(min-width:960px){#phone-grid:not([hidden]){width:calc(100vw - 376px);max-height:100dvh;overflow:auto}}
 :where([data-page~="phone"]) .phone-status[data-error=true]{color:var(--ui-danger)}
 @media(orientation:landscape) and (max-height:560px),(min-width:960px){:where([data-page~="phone"]) .phone{flex-direction:row;max-width:none}:where([data-page~="phone"]) .ui-stage{max-width:72vw;--ui-stage-room:100dvh}:where([data-page~="phone"]) .phone-deck{flex-direction:column;flex-wrap:nowrap}:where([data-page~="phone"]) .phone-tools,:where([data-page~="phone"]) .phone-status{flex:none}}
 @media(min-width:960px){:where([data-page~="phone"]) .ui-stage{max-width:calc(100vw - 376px)}}
@@ -1160,7 +1169,17 @@ const StudioCore = (function (root) {
     canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
     return { canvas, src: canvas.toDataURL("image/png"), w: canvas.width, h: canvas.height };
   }
+  function mosaicSource(img, cell, levels) {
+    const canvas = Object.assign(document.createElement("canvas"), { width: img.naturalWidth, height: img.naturalHeight });
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    ctx.drawImage(img, 0, 0);
+    const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    data.data.set(mosaicRGBA(data.data, canvas.width, canvas.height, cell, levels));
+    ctx.putImageData(data, 0, 0);
+    return canvas.toDataURL("image/png");
+  }
   const api = {
+    mosaicSource,
     SCHEMA,
     WORKSPACE_SCHEMA,
     WORKSPACE_MAX_BYTES,
@@ -1828,17 +1847,7 @@ async function prepare(doc) {
       sources.set(key, l.src);
       continue;
     }
-    const canvas = document.createElement("canvas");
-    canvas.width = img.naturalWidth;
-    canvas.height = img.naturalHeight;
-    const ctx = canvas.getContext("2d", { willReadFrequently: true });
-    ctx.drawImage(img, 0, 0);
-    const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    data.data.set(
-      C.mosaicRGBA(data.data, canvas.width, canvas.height, l.cell, l.levels),
-    );
-    ctx.putImageData(data, 0, 0);
-    processed.set(key, canvas.toDataURL("image/png"));
+    processed.set(key, C.mosaicSource(img, l.cell, l.levels));
     sources.set(key, processed.get(key));
     // Processed previews are disposable; the immutable source always remains in JSON.
     if (processed.size > 16) processed.delete(processed.keys().next().value);
@@ -3458,9 +3467,53 @@ function fit(l, least = 0) {
   // 📏 文字は箱の幅で折り返し、高さは行数に合わせて伸ばす（書き出しと同じ 1.3 行送り）
   if (l.kind === "text") l.h = Math.max(least, Math.ceil(C.textLayout(l).flat().length * l.fontSize * 1.3));
 }
+const mosaics = new Map(),
+  mosaicKey = (l) => l.src + ":" + l.cell + ":" + l.levels,
+  needsMosaic = (l) => l.kind === "image" && (l.cell !== 1 || l.levels !== 256);
+function mosaic(l) {
+  const key = mosaicKey(l);
+  if (mosaics.has(key)) return mosaics.get(key);
+  const img = new Image(), { cell, levels } = l;
+  img.src = l.src;
+  const entry = { src: l.src };
+  entry.ready = img.decode().then(() => { entry.src = C.mosaicSource(img, cell, levels); });
+  mosaics.set(key, entry);
+  if (mosaics.size > 16) mosaics.delete(mosaics.keys().next().value);
+  return entry;
+}
+function slideImages(s) {
+  const entries = new Map();
+  for (const l of s.layers) if (needsMosaic(l)) {
+    const key = mosaicKey(l);
+    if (!entries.has(key)) entries.set(key, mosaic(l));
+  }
+  return { source: (l) => needsMosaic(l) ? entries.get(mosaicKey(l)).src : l.src, pending: [...entries.values()] };
+}
+async function slideSource(s) {
+  const { source, pending } = slideImages(s);
+  await Promise.all(pending.map((e) => e.ready));
+  return source;
+}
+const paintVersions = new WeakMap();
+function paint(node, s, format = () => {}) {
+  const token = {};
+  paintVersions.set(node, token);
+  const draw = (source) => {
+    if (paintVersions.get(node) !== token) return;
+    node.innerHTML = C.svg(s, source);
+    format(node.firstElementChild);
+  };
+  const { source, pending } = slideImages(s);
+  draw(source);
+  if (pending.length) Promise.all(pending.map((e) => e.ready)).then(() => draw(source)).catch((e) => {
+    if (paintVersions.get(node) === token && (node.isConnected || node.host?.isConnected)) note(e.message, true);
+  });
+}
 function render() {
   const s = slide();
-  $("phone-svg").innerHTML = C.svg(s, (l) => l.src); // 👀 打っている文字もそのままスライドに出る
+  paint($("phone-svg"), s); // 👀 打っている文字もそのままスライドに出る
+  renderGrid();
+  renderInspector();
   PySaiyanWeBoo.pagerSet(pages, active, deck.slides.length);
   const box = $("phone-pick"),
     l = picked();
@@ -3470,7 +3523,7 @@ function render() {
       transform: `rotate(${l.rotation}deg)` });
   layerList(s);
   pageList();
-  const off = { edit: !["text", "clock"].includes(l?.kind), look: !l, turn: !l,
+  const off = { edit: !["text", "clock"].includes(l?.kind), look: !l, turn: !l, inspect: !l,
     front: !l || s.layers.at(-1) === l, back: !l || s.layers[0] === l,
     delete: !l, undo: !past.length, redo: !future.length,
     "slide-delete": deck.slides.length < 2, smaller: level === 0, bigger: level === scales.length - 1, reset: level === plain };
@@ -3488,11 +3541,13 @@ function pageList() {
   row.replaceChildren(...(pagesOpen ? deck.slides : []).map((s, i) => {
     const b = document.createElement("button");
     b.type = "button";
-    b.innerHTML = C.svg(s, (l) => l.src);
-    const picture = b.firstElementChild;
-    picture.setAttribute("width", 80);
-    picture.setAttribute("height", Math.round((80 * s.height) / s.width));
-    picture.setAttribute("aria-hidden", "true");
+    const label = document.createElement("span");
+    paint(label, s, (picture) => {
+      picture.setAttribute("width", 80);
+      picture.setAttribute("height", Math.round((80 * s.height) / s.width));
+      picture.setAttribute("aria-hidden", "true");
+    });
+    b.append(label);
     b.append(String(i + 1)); // 番号に今のページの下線が付く
     b.setAttribute("aria-label", `${i + 1}/${deck.slides.length}`);
     if (i === active) b.setAttribute("aria-current", "step");
@@ -3507,6 +3562,82 @@ function pageList() {
     return b;
   }));
 }
+let gridOpen = false, inspectorOpen = false;
+const grid = $("phone-grid"), inspector = $("phone-inspector");
+stage.tabIndex = -1;
+function renderGrid() {
+  const first = active - active % 4, key = gridOpen ? `${saves} ${active} ${deck.slides.length}` : "";
+  if (grid.dataset.key === key) return;
+  grid.dataset.key = key;
+  grid.hidden = !gridOpen;
+  document.querySelector('[data-act="grid"]').setAttribute("aria-pressed", String(gridOpen));
+  if (!gridOpen) {
+    grid.before(stage);
+    grid.replaceChildren();
+    return;
+  }
+  const slots = deck.slides.slice(first, first + 4).map((s, i) => {
+    const index = first + i, slot = document.createElement("div");
+    if (index === active) return slot;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.setAttribute("aria-label", `${index + 1} 枚目を編集`);
+    const drawing = document.createElement("span").attachShadow({mode: "open"});
+    paint(drawing, s, (svg) => {
+      svg.setAttribute("width", "100%");
+      svg.removeAttribute("height");
+      svg.setAttribute("aria-hidden", "true");
+    });
+    button.append(drawing.host);
+    button.addEventListener("click", () => {
+      finishEdit();
+      active = index;
+      selected = null;
+      keep();
+      render();
+      stage.focus({ preventScroll: true });
+    });
+    slot.append(button);
+    return slot;
+  });
+  const editorSlot = slots[active - first];
+  // During a save keep the focused stage in place, including an open text editor.
+  if (stage.parentElement?.parentElement === grid && grid.children[active - first] === stage.parentElement) {
+    slots[active - first] = stage.parentElement;
+    for (const [i, slot] of slots.entries()) if (i !== active - first) {
+      if (grid.children[i]) grid.children[i].replaceWith(slot);
+      else grid.append(slot);
+    }
+    while (grid.children.length > slots.length) grid.lastElementChild.remove();
+  } else {
+    editorSlot.append(stage);
+    grid.replaceChildren(...slots);
+  }
+}
+function renderInspector() {
+  const l = picked();
+  inspector.hidden = !inspectorOpen || !l;
+  document.querySelector('[data-act="inspect"]').setAttribute("aria-expanded", String(!inspector.hidden));
+  for (const input of inspector.querySelectorAll("[data-property]")) {
+    const key = input.dataset.property;
+    input.closest("label").hidden = !l || (input.dataset.kinds && !input.dataset.kinds.split(" ").includes(l.kind));
+    if (!l || input.closest("label").hidden || document.activeElement === input) continue;
+    if (input.type === "checkbox") input.checked = Boolean(l[key]);
+    else input.value = l[key] ?? (key === "headPlacement" ? "tip" : "");
+  }
+}
+inspector.addEventListener("change", (e) => {
+  const input = e.target, key = input.dataset.property, l = picked();
+  if (!key || !l || (input.dataset.kinds && !input.dataset.kinds.split(" ").includes(l.kind))) return;
+  if (input.type === "number" && (!input.value || !input.checkValidity())) {
+    input.value = l[key];
+    return;
+  }
+  run(() => change(() => {
+    l[key] = input.type === "number" ? input.valueAsNumber : input.type === "checkbox" ? input.checked : input.value;
+    if (l.kind === "text" && (key === "italic" || key === "w")) fit(l);
+  }));
+});
 function layerList(s) {
   // 📚 奥 → 手前。2 つ以上あるときだけ出し、重なって触れないものもここから選べる（文字は先頭 3 字、ほかは形の記号）
   const row = $("phone-layers"),
@@ -3772,6 +3903,8 @@ const acts = {
   cw: () => restyle((l) => (l.rotation = (l.rotation + 15) % 360)),
   ccw: () => restyle((l) => (l.rotation = (l.rotation - 15) % 360)),
   upright: () => restyle((l) => (l.rotation = 0)),
+  inspect() { inspectorOpen = !inspectorOpen; },
+  grid() { gridOpen = !gridOpen; },
   pages() {
     pagesOpen = !pagesOpen; // 🗂️ 見るためのもの: ↩️ にも資料にも入らない
   },
@@ -3842,12 +3975,15 @@ const acts = {
   open: () => document.querySelector('input[data-file="open"]').click(),
   image: () => document.querySelector('input[data-file="image"]').click(),
   json: () => C.save("ironmate-slides.json", D.deckText(deck), "application/json"),
-  svg: () => C.save(`ironmate-slide-${active + 1}.svg`, C.svg(slide(), (l) => l.src), "image/svg+xml"),
+  async svg() {
+    const s = slide();
+    C.save(`ironmate-slide-${active + 1}.svg`, C.svg(s, await slideSource(s)), "image/svg+xml");
+  },
   async png() {
     // 🖼 このページを見えているとおりに（SVG → canvas）。大きさはスライドの大きさ
     const s = slide(),
       size = C.outputSize(s),
-      url = URL.createObjectURL(new Blob([C.svg(s, (l) => l.src)], { type: "image/svg+xml" }));
+      url = URL.createObjectURL(new Blob([C.svg(s, await slideSource(s))], { type: "image/svg+xml" }));
     try {
       const img = new Image();
       img.src = url;
@@ -3863,7 +3999,12 @@ const acts = {
   },
   async pptx() {
     note("📤 …");
-    const result = await D.exportPptx(deck, (l) => D.layerPng(l, (x) => x.src));
+    const sources = new Map();
+    for (const s of deck.slides) {
+      const source = await slideSource(s);
+      for (const l of s.layers) if (needsMosaic(l)) sources.set(mosaicKey(l), source(l));
+    }
+    const result = await D.exportPptx(deck, (l) => D.layerPng(l, (x) => (needsMosaic(x) ? sources.get(mosaicKey(x)) : x.src)));
     C.save("ironmate-slides.pptx", result.data, "application/vnd.openxmlformats-officedocument.presentationml.presentation");
     note(`📤 ✅ ${result.slides}📄`);
   },
@@ -3965,13 +4106,14 @@ PHONE_TOOLS = (
      ("undo", "↩️", "戻す"), ("redo", "↪️", "やり直す")),
     (("edit", "✏️", "選んだ文字・時計を編集（選んだものをもう一度タップしても編集。時計は 14:30 のように）"),
      ("look", "🎨", "選んだものの見た目（塗り・線の色・不透明度・太字・等幅）"), ("turn", "↻", "選んだものを回す"),
-     ("front", "⏫", "選んだものをいちばん手前へ"), ("back", "⏬", "選んだものをいちばん奥へ"),
+      ("front", "⏫", "選んだものをいちばん手前へ"), ("back", "⏬", "選んだものをいちばん奥へ"),
      ("delete", "🗑️", "選んだものを削除")),
     (("slide-add", "➕📄", "白紙のページを追加"), ("slide-copy", "📑", "ページを複製"), ("slide-delete", "✖️📄", "ページを削除"),
      ("pages", "🗂️", "ページの一覧（タップでそのページへ）"), ("pager", "🧭", "ページ移動の形を切り替え（矢印・十字キー・端まで・点・スライダー・ダイヤル）")),
     (("new", "🆕", "最初から（白紙 1 枚）"), ("import", "📥", "インポート（押してから形式を選ぶ: 全スライドJSON・画像）"),
      ("export", "📤", "エクスポート（押してから形式を選ぶ: PPTX・全スライドJSON・PNG・SVG）"),
      ("home", "🏠", "Image Studio")),
+    (("inspect", "🎛️", "選んだものの詳細（位置・大きさ・種類別の設定）"), ("grid", "⊞", "4枚表示（その場で編集）")),
 )
 # 🔽 🔄 🔼 multiply every text box by the next / plain / previous step; new boxes are 32 px on the 1280×720 slide.
 PHONE_TEXT = {"size": 32, "scale": (0.5, 0.75, 1, 1.25, 1.5, 2, 2.5)}
@@ -4027,7 +4169,20 @@ def _phone_html() -> str:
                "export": ("pptx json png svg", "PPTX（全スライド、PowerPoint で編集できる）|全スライドJSON（また開ける）|このページを PNG|このページを SVG")}
     files = ('<input type="file" data-file="open" accept=".json,application/json" aria-label="全スライドJSON" />'
              '<input type="file" data-file="image" accept="image/png,image/jpeg,image/webp" aria-label="画像" />')
-    rows = ['<div class="phone-row">' + "".join(control(*tool) for tool in row) + "</div>" for row in PHONE_TOOLS]
+    numbers = (
+        ("x", "横の位置", -8192, 8192, "any", ""), ("y", "縦の位置", -8192, 8192, "any", ""),
+        ("w", "幅", 1, 8192, "any", ""), ("h", "高さ", 1, 8192, "any", ""),
+        ("strokeWidth", "線幅", 0, 64, "any", "rect ellipse triangle arrow clock"),
+        ("cell", "モザイクの幅", 1, 512, 1, "image"), ("levels", "色の段階", 2, 256, 1, "image"),
+    )
+    inspector = ('<fieldset id="phone-inspector" hidden><legend>詳細設定</legend>' + "".join(
+        f'<label>{label}<input type="number" data-property="{key}" data-kinds="{kinds}" min="{lo}" max="{hi}" step="{step}"></label>'
+        for key, label, lo, hi, step, kinds in numbers)
+        + '<label><input type="checkbox" data-property="italic" data-kinds="text">斜体</label>'
+        + '<label>矢印の先端<select data-property="headPlacement" data-kinds="arrow">'
+          '<option value="tip">端</option><option value="middle">中央</option></select></label></fieldset>')
+    rows = ['<div class="phone-row">'  + "".join(control(*tool) for tool in row) + "</div>" for row in PHONE_TOOLS]
+    rows[-1] += inspector
     rows[-1] += files                                            # 📥's file choosers: no face of their own, and no place in a row
     # 📚 the page's layers, back to front, sit right above the row that acts on the selected one (PySaiyanWeBoo's current-item mark)
     rows[3] += '<div id="phone-pages" class="ui-current-items" role="group" aria-label="ページの一覧" hidden></div>'   # 🗂️
@@ -4045,6 +4200,7 @@ def _phone_html() -> str:
             f'  <body class="ui-elements" data-ui-theme="green" data-page="phone" data-text-size="{PHONE_TEXT["size"]}" data-text-scale="{scale}">\n'
             '    <main class="phone">\n'
             f'      {PSWB_PHONE["stage"].replace("{slide}", slide)}\n'
+            '      <div id="phone-grid" role="group" aria-label="4枚表示" hidden></div>\n'
             '      <div class="phone-deck"><textarea id="phone-edit" class="phone-edit" hidden aria-label="文字" rows="3" spellcheck="false"></textarea>'
             f'{PSWB_PHONE["pager"]}'
             '<p id="phone-status" class="phone-status" role="status"></p>'

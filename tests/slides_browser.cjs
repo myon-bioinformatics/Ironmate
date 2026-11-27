@@ -412,6 +412,82 @@ print('📱 phone: 2 slides, native text kept')
     const [wrappedPptx] = await Promise.all([wide.waitForEvent("download"), wide.click('#phone-candidates button[title^="PPTX"]')]);
     await wrappedPptx.saveAs(path.join(out, "slides-wrapped.pptx"));
     await wide.screenshot({ path: path.join(out, "slides-wrapped-desktop.png") });
+    // Legacy PC controls: use the same editor and prove the exact state and the rendered/exported result.
+    const parity = await wide.evaluate(() => {
+      const canvas = Object.assign(document.createElement("canvas"), { width: 2, height: 2 });
+      const c = canvas.getContext("2d");
+      c.fillStyle = "#F00"; c.fillRect(0, 0, 1, 2);
+      c.fillStyle = "#00F"; c.fillRect(1, 0, 1, 2);
+      return canvas.toDataURL();
+    });
+    const geometry = { x: 10, y: 10, w: 140, h: 70, rotation: 0, opacity: 1 };
+    const scene = (layers) => ({ ...legacy.slides[0], layers });
+    const deck = { ...legacy, title: "PC controls", slides: [
+      scene([words("italic", "Edit me", {})]),
+      scene([{ ...geometry, id: "arrow", kind: "arrow", stroke: "#000000", fill: "#000000", strokeWidth: 4,
+        headSize: 28, headPlacement: "tip" }]),
+      scene([{ ...geometry, id: "photo", kind: "image", src: parity, cell: 1, levels: 256 }]),
+      scene([]),
+    ] };
+    await wide.setInputFiles('input[data-file="open"]', { name: "parity.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(deck)) });
+    await wide.waitForFunction(() => IronmatePhone.deck.title === "PC controls");
+    await wide.click('[data-act="grid"]');
+    assert.equal(await wide.locator("#phone-grid > div").count(), 4);
+    assert.equal(await wide.locator("#phone-grid #phone-stage").count(), 1);
+    const selectLayer = async (id) => {
+      await wide.locator(`#phone-svg [data-layer="${id}"]`).click();
+      await wide.waitForFunction(() => Boolean(IronmatePhone.selected));
+      if (!(await wide.locator("#phone-inspector").isVisible())) await wide.click('[data-act="inspect"]');
+    };
+    const number = async (key, value) => {
+      const el = wide.locator(`[data-property="${key}"]`);
+      await el.fill(String(value)); await el.press("Tab");
+    };
+    await selectLayer("italic");
+    await wide.locator('[data-property="italic"]').check();
+    await number("x", 55);
+    await number("w", 420);
+    assert.equal(await wide.locator('#phone-svg text[font-style="italic"]').count(), 1);
+    assert.equal(await wide.evaluate(() => IronmatePhone.deck.slides[0].layers[0].w), 420);
+    assert.equal(await wide.evaluate(() => IronmatePhone.deck.slides[0].layers[0].x), 55);
+    await wide.getByRole("button", {name: "2 枚目を編集"}).click();
+    assert.equal(await wide.locator("#phone-grid > div").nth(1).locator("#phone-stage").count(), 1);
+    await selectLayer("arrow");
+    await number("strokeWidth", 12);
+    await wide.locator('[data-property="headPlacement"]').selectOption("middle");
+    assert.equal(await wide.evaluate(() => IronmatePhone.deck.slides[1].layers[0].headPlacement), "middle");
+    assert.equal(await wide.locator('#phone-svg line').getAttribute("stroke-width"), "12");
+    await wide.getByRole("button", {name: "3 枚目を編集"}).click();
+    await selectLayer("photo");
+    await number("cell", 2);
+    await wide.waitForFunction((src) => {
+      const image = document.querySelector("#phone-svg image");
+      return image && image.getAttribute("href") !== src;
+    }, parity);
+    const mosaic = await wide.locator("#phone-svg image").getAttribute("href");
+    assert.ok(mosaic?.startsWith("data:image/png;base64,") && mosaic !== parity);
+    assert.equal(await wide.evaluate(() => IronmatePhone.deck.slides[2].layers[0].src), parity);
+    const exportChoices = wide.locator("#phone-candidates");
+    if (!(await exportChoices.isVisible()) || await exportChoices.getAttribute("data-tool") !== "export")
+      await wide.click('[data-act="export"]');
+    const [mosaicSvg] = await Promise.all([wide.waitForEvent("download"), wide.click('#phone-candidates button[title$="SVG"]')]);
+    assert.ok(fs.readFileSync(await mosaicSvg.path(), "utf8").includes(mosaic));
+    const [mosaicPptx] = await Promise.all([wide.waitForEvent("download"), wide.click('#phone-candidates button[title^="PPTX"]')]);
+    await mosaicPptx.saveAs(path.join(out, "slides-parity.pptx"));
+    fs.writeFileSync(path.join(out, "slides-parity-mosaic.png"), Buffer.from(mosaic.split(",")[1], "base64"));
+    const packageCheck = spawnSync(process.env.PYTHON || "python", ["-S", "-c", `
+from pathlib import Path
+from zipfile import ZipFile
+with ZipFile('build/pages-evidence/slides-parity.pptx') as z:
+ assert len([n for n in z.namelist() if n.startswith('ppt/slides/slide') and n.endswith('.xml')]) == 4
+ assert any(z.read(n) == Path('build/pages-evidence/slides-parity-mosaic.png').read_bytes()
+            for n in z.namelist() if n.startswith('ppt/media/'))
+`], { encoding: "utf8" });
+    assert.equal(packageCheck.status, 0, packageCheck.stderr);
+    await wide.screenshot({ path: path.join(out, "slides-four-up.png") });
+    await wide.click('[data-act="grid"]');
+    assert.ok(await wide.locator("#phone-grid").isHidden());
+    assert.equal(await wide.locator(".phone > #phone-stage").count(), 1);
     await wide.close();
     const wrapped = spawnSync(process.env.PYTHON || "python", ["-S", "-c", `
 import json

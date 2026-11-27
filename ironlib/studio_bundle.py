@@ -3132,9 +3132,6 @@ if (typeof document !== "undefined" && (document.getElementById("pixel-editor") 
       const progression = arrangeSong($("song-parts").value, $("song-order").value);
       $("song-progression").value = progression;
       $("song-status").textContent = "曲順に展開しました。";
-      $("song-arrange").dispatchEvent(new CustomEvent("ironmate-arrangement", {
-        bubbles: true, detail: { progression },
-      }));
     } catch (err) {
       $("song-progression").value = "";
       $("song-status").textContent = err.message;
@@ -4085,6 +4082,11 @@ TOOLS_HTML = r"""<!doctype html>
         <label>曲順（空白区切り）<input id="song-order" value="Aメロ サビ サビ"></label>
         <button id="song-arrange">曲順に展開</button>
         <label>曲全体のコード進行<textarea id="song-progression" rows="2" readonly></textarea></label>
+        <fieldset id="song-audio" hidden><legend>曲を試聴</legend>
+          <label>キー<select id="song-key"><option>C</option><option>D</option><option>E</option><option>F</option><option>G</option><option>A</option><option>B</option></select></label>
+          <label>BPM<input type="number" id="song-bpm" value="120" min="30" max="300" required></label>
+          <button id="song-play">▶ 曲順で試聴</button><button id="song-stop">■ 停止</button>
+        </fieldset>
         <p id="song-status" role="status"></p>
       </section>
       <details id="features" class="ui-panel">

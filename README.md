@@ -39,7 +39,7 @@ not a guarantee of faithfully reproducing edited PPTX in HTML.
 
 [Open Slide Studio](https://myon-bioinformatics.github.io/tools/slide-studio/). One editor for phones and PCs: the slide stays pinned on top (beside the controls in a PC window), every control is an emoji, and ⬅️ ➡️ turn the pages. Place text, shapes, arrows, emoji, clocks and pictures, and save multiple slides to PPTX. Text and ordinary shapes are output in a form editable in PowerPoint. [Usage and scope](docs/slide-studio.md).
 
-<img src="docs/assets/phone-slides.gif" width="240" alt="Phone slides: a blank slide pinned on top, adding a text box, editing it later, making every text bigger, shapes, emoji, kaomoji and a clock placed from one row of candidates, a second page with a rectangle and an arrow, turning pages with ⬅️ ➡️, and 🧭 switching the page controls between six shapes">
+<img src="docs/assets/phone-slides.gif" width="240" alt="Phone slides: a blank slide pinned on top, adding a text box, editing it later, making every text bigger, shapes, emoji, kaomoji and a clock placed from one row of candidates, a second page with a rectangle and an arrow, turning pages with ⬅️ ➡️, and saving">
 
 ## PPTX conversion and editing
 

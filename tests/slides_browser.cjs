@@ -210,46 +210,14 @@ const url =
     await snap("page-back");
     assert.ok(await mobile.locator('[data-ui-pager-go="prev"]').isDisabled());
     await mobile.tap('[data-ui-pager-go="next"]');
-    // 🧭 one tap per shape, no reload: each fits the phone with nothing overlapping, and each turns the page its own way
-    const shapes = [];
-    const there = async (shape, tap) => {
-      await tap();
-      assert.equal(await pageNo(), "1/2", shape);
-      assert.equal((await state()).active, 0, shape);
-    };
-    for (let i = 0; i < 6; i++) {
-      await act("pager");
-      const shape = await mobile.evaluate(() => IronmatePhone.pager),
-        parts = await mobile.$$eval("#phone-pager > *", (cs) =>
-          cs.filter((c) => c.checkVisibility()).map((c) => [c.dataset.uiPagerPart, ...Object.values(c.getBoundingClientRect().toJSON()).slice(0, 4)]));
-      shapes.push(shape);
-      for (const [name, x, , w] of parts) assert.ok(x >= 0 && x + w <= 390, `${shape}: ${name} leaves the screen`);
-      for (let a = 0; a < parts.length; a++)
-        for (let b = 0; b < a; b++) {
-          const [n1, x1, y1, w1, h1] = parts[a], [n2, x2, y2, w2, h2] = parts[b];
-          assert.ok(!(x1 < x2 + w2 && x2 < x1 + w1 && y1 < y2 + h2 && y2 < y1 + h1), `${shape}: ${n1} overlaps ${n2}`);
-        }
-      if (shape === "dots") {
-        await there(shape, () => mobile.tap('[data-ui-pager-to="0"]'));
-        await mobile.tap('[data-ui-pager-to="1"]');
-      } else if (shape === "slider") {
-        await there(shape, () => mobile.fill('#phone-pager input[data-ui-pager-part="slider"]', "1"));
-        await mobile.fill('#phone-pager input[data-ui-pager-part="slider"]', "2");
-      } else if (shape === "dial") {
-        await mobile.focus("#phone-pager .ui-dial input");
-        await there(shape, () => mobile.keyboard.press("ArrowLeft"));
-        await mobile.keyboard.press("ArrowRight");
-        await mobile.evaluate(() => document.activeElement.blur());
-      } else if (shape === "dpad" || shape === "ends") {
-        await there(shape, () => mobile.tap(`[data-ui-pager-part="${shape === "dpad" ? "up" : "first"}"]`));
-        await mobile.tap(`[data-ui-pager-part="${shape === "dpad" ? "down" : "last"}"]`);
-      }
-      assert.equal(await pageNo(), "2/2", shape);
-      assert.equal((await state()).active, 1, shape);
-      await snap(`pager-${shape}`);
-    }
-    assert.deepEqual(shapes, ["dots", "slider", "dial", "dpad", "ends", "arrows"]); // 🧭 comes back to ⬅️ 1/N ➡️
-    await act("pager"); // ● dots, kept across the reload below
+    // ⬅️ ➡️ the one shape of the pager (🧭 is gone: 🗂️ shows every page); ← → keys too
+    assert.equal(await mobile.getAttribute("#phone-pager", "data-ui-pager"), "arrows");
+    assert.equal(await mobile.locator('[data-act="pager"]').count(), 0);
+    await mobile.tap('[data-ui-pager-part="prev"]');
+    assert.equal(await pageNo(), "1/2");
+    await mobile.tap('[data-ui-pager-part="next"]');
+    assert.equal(await pageNo(), "2/2");
+    await snap("pager");
     // ↩️ undo the last box, ↪️ redo it
     await act("undo");
     assert.deepEqual((await state()).deck.slides[1].layers.map((l) => l.kind), ["rect", "arrow"]);
@@ -279,7 +247,6 @@ const url =
     s = await state();
     assert.equal(s.deck.slides.length, 2);
     assert.equal(s.deck.slides[0].layers[0].text, "あとから編集した文字\n2 行目");
-    assert.equal(await mobile.evaluate(() => IronmatePhone.pager), "dots"); // 🧭 the shape survives the reload too
     // 📤 どの形式に？ the candidates, in words like 図形・顔文字's: PPTX, JSON (the same all-slide JSON the PC studio opens), PNG,
     // SVG; a pick does it and the row hides again.
     const saveAs = (format) => pick("export", format);

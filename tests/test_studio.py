@@ -76,6 +76,38 @@ def node(script, data=None, *args):
     return json.loads(run.stdout) if run.stdout.strip() else None
 
 
+def test_song_beep_plan_keeps_frequency_transposition_and_part_order():
+    result = node('''
+const {arrangeSong, planSong} = c.composition;
+const parts = arrangeSong("Verse = I V\\nChorus = vi", "Chorus Verse Chorus");
+console.log(JSON.stringify({parts, c120: planSong(parts, "C", 120), d60: planSong(parts, "D", 60)}));
+''')
+    assert [part["name"] for part in result["parts"]] == ["Chorus", "Verse", "Chorus"]
+    midi = [69, 72, 76, 60, 64, 67, 67, 71, 74, 69, 72, 76]
+    for key, shift, step in [("c120", 0, 0.25), ("d60", 2, 0.5)]:
+        plan = result[key]
+        assert plan["starts"] == [0, 3 * step, 9 * step]
+        assert [note["hz"] for note in plan["notes"]] == pytest.approx(
+            [440 * 2 ** ((pitch + shift - 69) / 12) for pitch in midi]
+        )
+        assert [note["start"] for note in plan["notes"]] == [i * step for i in range(12)]
+        assert [note["duration"] for note in plan["notes"]] == pytest.approx([step * 0.85] * 12)
+
+
+def test_song_beep_plan_rejects_invalid_keys_tempos_and_chords():
+    node('''
+const assert = require("node:assert/strict");
+const {arrangeSong, planSong} = c.composition;
+const parts = arrangeSong("A = I", "A");
+assert.throws(() => planSong(parts, "H", 120), /キー/);
+assert.throws(() => planSong(parts, "C", 120.5), /BPM/);
+assert.throws(() => planSong(arrangeSong("A = IX", "A"), "C", 120), /IX/);
+assert.throws(() => arrangeSong("A = I", "B"), /B/);
+const diminished = planSong(arrangeSong("A = viidim7", "A"), "C", 120).notes;
+assert.ok(Math.abs(diminished[3].hz / diminished[0].hz - 2 ** (9 / 12)) < 1e-12);
+''')
+
+
 def test_heatmap_keeps_values_gaps_labels_and_source_across_python_js():
     source = {'data': [{'type': 'heatmap', 'z': [[-2.123456789012345, None, 4], [0, 1, 2]],
                         'x': [2024, 2025, 2026], 'y': ['中日', '巨人'], 'zmin': -4, 'zmax': 8}],

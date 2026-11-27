@@ -82,7 +82,7 @@ npm ci --ignore-scripts
 python -S scripts/build_slide_shell.py
 ```
 
-The Open XML writer in `STUDIO_JS` (`IronmateSlides` in `ironlib/studio_bundle.py`) assembles slide order, native text, shapes and image Open XML onto this skeleton and stores it in a standard ZIP with CRCs. Required parts and relationships are generated explicitly; no arbitrary XML, ZIP paths or external references are accepted from input JSON.
+The Open XML writer in `STUDIO_JS` (`IronmateSlides` in `ironlib/studio_bundle.py`) assembles slide order, native text, shapes and image Open XML onto this skeleton and stores it in a standard ZIP with CRCs. Required parts and relationships are generated explicitly; no arbitrary XML, ZIP paths or external references are accepted from input JSON. The deck itself (its check, the all-slide JSON, the title/body template and the add, duplicate, delete and reorder operations) is PySaiyanWeBoo's `slide-deck.js`, written into `STUDIO_JS` from the pinned commit by `scripts/build_studio_css.py`; the Open XML writer stays here.
 Only the generated XML, the one JS and CSS file, and the editor screen are added to `image_studio.py --build-site` and Docker's public allowlist. User output such as PPTX and images is not included in the public build.
 
 ## Verification

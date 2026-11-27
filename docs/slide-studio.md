@@ -7,9 +7,9 @@ No installation, external CDN or server processing is needed. Input images and i
 
 ## Usage
 
-1. The first slide is blank. Add a text box or use the title/body template. Select a layer, paste into the text field on the left, and press `入力した文字・色を適用` (apply entered text and color). Adjust with the position, size and font size on the right.
-2. Text boxes with content can be added from the title and body fields at the top. `文字の見本` (text samples) inserts Japanese, alphanumeric and English text into the body field. Titles are bold. You can also select a text layer and use `太字を切替` (toggle bold).
-3. `編集できる矢印を追加` (add an editable arrow) places a straight line with a triangular arrowhead. Moving, scaling, rotating and recoloring work as in Image Studio. The centered arrowhead is also available.
+1. The first slide is blank. Choose `T 文字列` (text), type into its field on the left and click the canvas; a title and a body are two such text boxes. `T 文字列`, `✦ スタンプ` (stamp), `絵文字` (emoji) and `顔文字` (kaomoji) each keep a field of their own, so one never overwrites another; an empty field places its example.
+2. To change something already placed, select it and use `✏️ 編集` (edit) on the right: the words, `太字` (bold), `斜体` (italic), fill and line colors, the shape, a clock's time. Each applies as it is set; `✏️ 編集を適用` (apply) commits the words. Position, size and font size are below it.
+3. `図形(▭)` (shape) is one tool whose candidates are `▭ ◯ △ →`; `→` places a straight line with a triangular arrowhead, which stays editable in PowerPoint. Moving, scaling, rotating and recoloring work as in Image Studio. The centered arrowhead is also available. `◷ 時計` (clock) starts at the current time.
 4. Build a deck with `白紙` (blank), `スライド複製` (duplicate slide), slide selection, reordering and deletion. All slides use the same canvas size. Switching slides keeps the current layout and restarts the edit history.
    Enable `4枚表示` to edit a group of up to four slides in place. Choose a slide in the grid to use the same text, shape and arrow controls on it. The selector reaches other groups. Adding, duplicating, moving or deleting a slide keeps the edited slide in view.
 5. `PPTXを書き出す` (export PPTX) saves all slides. Also using `全スライドJSON保存` (save all slides as JSON) lets you reload the editable data, images included, later. The regular `JSON保存` (save JSON) and `作業履歴を保存` (save work history) save only the current slide.

@@ -13,12 +13,12 @@ On GitHub Pages it runs without Python. Only fixed HTML/JS/CSS is published; ima
 
 ## Usage
 
-1. Choose `四角` (rectangle), `丸` (circle), `三角` (triangle) or `文字` (text) and click the canvas to place it. Works without photos.
-2. Choose an emoji button and click repeatedly. Any string can also be entered in `文字・カスタムスタンプ` (text / custom stamp).
+1. Choose `T 文字列` (text) or `図形(▭)` (shape; its candidates are `▭ ◯ △ →`) and click the canvas to place it. Works without photos.
+2. Choose `絵文字` (emoji) or `顔文字` (kaomoji), pick a candidate and click repeatedly. Any string can be entered in `✦ スタンプ` (stamp). The four tools (text, stamp, emoji, kaomoji) each keep a field of their own; an empty one places its example. `◷ 時計` (clock) starts at the current time.
 3. Place local PNG/JPEG/WebP files with `写真・画像スタンプ` (photo / image stamp). Multiple images can be layered.
 4. Select a layer and use `選択したレイヤーをスタンプに` (make the selected layer a stamp) to duplicate and stamp shapes, text, images or matrices.
 5. In `選択` (select) mode, drag the inside to move and the blue dot at the bottom right to scale. Change position, size, angle and opacity with the inputs on the right.
-   Drag-scaling text also changes the font size. Change text content and color with `入力した文字・色を適用` (apply entered text and color).
+   Drag-scaling text also changes the font size. Change what is already placed with `✏️ 編集` (edit) on the right: the words, `太字` (bold), `斜体` (italic), fill and line colors, the shape, a clock's time.
 6. Edit layers with `前へ／後ろへ` (forward / backward) for stacking order and `複製／削除` (duplicate / delete). Undo/redo keeps up to 40 states.
    Loading JSON and `新しいキャンバス` (new canvas) are also recorded in history. The selection frame is not included in exported images.
 7. Download PNG or SVG. Use `JSON保存` (save JSON) for re-editing; it contains original images, values and layers.

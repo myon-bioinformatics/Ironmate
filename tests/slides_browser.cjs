@@ -44,13 +44,39 @@ const url =
     assert.equal(await page.locator(".slide-grid > div").count(), 4);
     await page.getByRole("button", {name: "3 枚目を編集"}).click();
     await page.waitForFunction(() => IronmateSlideEditor.active === 2);
-    await page.click("#slide-arrow");
+    // The tools place everything: 図形(→) is the arrow, T 文字列 a text box (wide enough to keep its words on one line).
+    const press = async (fx, fy) => {
+      const box = await page.locator("#board svg").boundingBox();
+      await page.mouse.click(box.x + box.width * fx, box.y + box.height * fy);
+    };
+    const arrow = async () => {
+      await page.click('[data-tool="shape"]');
+      await page.locator("#candidates button", { hasText: "→" }).click();
+      assert.equal(await page.textContent('[data-tool="shape"]'), "図形(→)");
+      await press(0.4, 0.7);
+      await page.click('[data-tool="select"]');
+    };
+    const words = async (text, fy) => {
+      const before = await page.evaluate(() => IronmateStudio.scene.layers.length);
+      await page.click('[data-tool="text"]');
+      await page.fill("#text", text);
+      await press(0.45, fy);
+      await page.waitForFunction((n) => IronmateStudio.scene.layers.length === n + 1, before);
+      await page.click('[data-tool="select"]');
+      for (const [id, value] of [["w", "1200"], ["font-size", "32"]]) {
+        await page.fill("#" + id, value);
+        await page.locator("#" + id).blur();
+      }
+    };
+    assert.equal(await page.locator("#slide-template, #slide-arrow, #slide-bold, #slide-title, #slide-body, #font-sample").count(), 0);
+    await arrow();
     await page.waitForFunction(() => IronmateStudio.scene.layers.length === 1);
     await page.click("#slide-up");
     await page.waitForFunction(() => IronmateSlideEditor.active === 1);
     await page.click("#slide-duplicate");
     await page.waitForFunction(() => IronmateSlideEditor.active === 2);
-    await page.click("#slide-template");
+    await words("スライドのタイトル", 0.2);
+    await words("ここに本文を入力します。", 0.5);
     await page.waitForFunction(() => IronmateStudio.scene.layers.length === 3);
     assert.deepEqual(await page.evaluate(() => IronmateSlideEditor.deck.slides.map(s => s.layers.length)), [0,1,3,0,0,0]);
     for (let count = 5; count >= 1; count--) {
@@ -59,33 +85,38 @@ const url =
     }
     await page.uncheck("#slide-grid-mode");
     assert.equal(await page.locator(".workspace > #board").count(), 1);
-    await page.click("#slide-template");
+    await words("スライドのタイトル", 0.2);
+    await words("ここに本文を入力します。", 0.5);
     await page.waitForFunction(() => IronmateStudio.scene.layers.length === 2);
+    assert.equal(await page.inputValue("#text"), "ここに本文を入力します。");
     const [titleId, bodyId] = await page.evaluate(() => IronmateStudio.scene.layers.map(layer => layer.id));
     await page.click(`[data-layer-id="${titleId}"]`);
-    await page.fill("#text", "編集したタイトル <>&");
+    assert.equal(await page.inputValue("#edit-text"), "スライドのタイトル");
+    await page.fill("#edit-text", "編集したタイトル <>&");
     await page.click("#apply-text");
+    assert.equal(await page.inputValue("#text"), "ここに本文を入力します。"); // ✏️ 編集 leaves the tool's own input alone
+    assert.equal(await page.locator(`[data-layer-id="${titleId}"]`).textContent(), "文字 / 編集したタイトル <>&");
     await page.fill("#font-size", "64");
     await page.locator("#font-size").blur();
-    await page.click("#slide-bold");
+    await page.check("#bold");
+    await page.check("#italic");
+    await page.fill("#edit-fill", "#123456");
+    assert.deepEqual(await page.evaluate(() => { const l = IronmateStudio.scene.layers[0]; return [l.bold, l.italic, l.fill]; }), [true, true, "#123456"]);
+    await page.uncheck("#bold");
     let first = await page.evaluate(() => IronmateStudio.scene);
     assert.equal(first.layers[0].text, "編集したタイトル <>&");
     assert.equal(first.layers[0].fontSize, 64);
     assert.equal(first.layers[0].bold, false);
-    await page.click("#slide-arrow");
+    await arrow();
     await page.waitForFunction(() =>
-      IronmateStudio.scene.layers.some((l) => l.kind === "arrow"),
+      IronmateStudio.scene.layers.some((l) => l.kind === "arrow" && l.headStyle === "triangle"),
     );
     await page.click("#slide-duplicate");
     await page.waitForFunction(() => IronmateSlideEditor.active === 1);
     await page.click("#slide-add");
     await page.waitForFunction(() => IronmateSlideEditor.active === 2);
-    await page.fill("#slide-title", "二枚目のタイトル");
-    await page.selectOption(
-      "#font-sample",
-      "日本語の文章と ABC abc 0123456789",
-    );
-    await page.click("#slide-template");
+    await words("二枚目のタイトル", 0.2);
+    await words("日本語の文章と ABC abc 0123456789", 0.5);
     await page.waitForFunction(() => IronmateStudio.scene.layers.length === 2);
     await page.click('[data-tool="clock"]');
     await page.locator("#board").click({ position: { x: 250, y: 300 } });
@@ -169,7 +200,7 @@ const url =
       [
         "-S",
         "-c",
-        `from pathlib import Path\nfrom zipfile import ZipFile\nfrom xml.etree import ElementTree as E\nfrom ironlib.pptx_ooxml import require_package,ordered_slide_members\np=Path('build/pages-evidence/slides.pptx')\nassert require_package(p)==2\nns={'p':'http://schemas.openxmlformats.org/presentationml/2006/main','a':'http://schemas.openxmlformats.org/drawingml/2006/main'}\nwith ZipFile(p) as z:\n assert z.testzip() is None\n slides=[E.fromstring(z.read(n)) for n in ordered_slide_members(z)]\n assert slides[0].find('.//a:t',ns).text=='編集したタイトル <>&'\n assert slides[0].find('.//p:grpSp',ns) is not None\n assert slides[1].find('.//a:t',ns).text=='二枚目のタイトル'\n assert len(slides[1].findall('.//p:pic',ns))==1\n assert [e.text for e in slides[1].findall('.//a:t',ns)][1]=='日本語の文章と ABC abc 0123456789'\n for name in z.namelist():\n  if name.endswith(('.xml','.rels')):E.fromstring(z.read(name))\nprint('Browser PPTX: two ordered slides, editable text, native grouped arrow, per-layer PNG, XML and ZIP CRC verified')`,
+        `from pathlib import Path\nfrom zipfile import ZipFile\nfrom xml.etree import ElementTree as E\nfrom ironlib.pptx_ooxml import require_package,ordered_slide_members\np=Path('build/pages-evidence/slides.pptx')\nassert require_package(p)==2\nns={'p':'http://schemas.openxmlformats.org/presentationml/2006/main','a':'http://schemas.openxmlformats.org/drawingml/2006/main'}\nwith ZipFile(p) as z:\n assert z.testzip() is None\n slides=[E.fromstring(z.read(n)) for n in ordered_slide_members(z)]\n assert slides[0].find('.//a:t',ns).text=='編集したタイトル <>&'\n assert slides[0].find('.//a:rPr',ns).get('i')=='1' and slides[1].find('.//a:rPr',ns).get('i') is None\n assert slides[0].find('.//p:grpSp',ns) is not None\n assert slides[1].find('.//a:t',ns).text=='二枚目のタイトル'\n assert len(slides[1].findall('.//p:pic',ns))==1\n assert [e.text for e in slides[1].findall('.//a:t',ns)][1]=='日本語の文章と ABC abc 0123456789'\n for name in z.namelist():\n  if name.endswith(('.xml','.rels')):E.fromstring(z.read(name))\nprint('Browser PPTX: two ordered slides, editable text, native grouped arrow, per-layer PNG, XML and ZIP CRC verified')`,
       ],
       { encoding: "utf8" },
     );
@@ -181,7 +212,7 @@ const url =
     await page.setViewportSize({ width: 1600, height: 1100 });
     await page.click(`[data-layer-id="${titleId}"]`);
     const japanese = "日本語の長い文章を貼り付け、ボックスの幅に合わせて折り返します。".repeat(3) + "\n\n明示改行の後です。\n";
-    await page.fill("#text", japanese);
+    await page.fill("#edit-text", japanese);
     await page.click("#apply-text");
     for (const [id, value] of [["w", "520"], ["h", "60"], ["font-size", "32"], ["rotation", "12"]]) {
       await page.fill("#" + id, value);
@@ -197,12 +228,12 @@ const url =
     await page.fill("#font-size", "24");
     await page.locator("#font-size").blur();
     const smallCount = await lineCount();
-    await page.click("#slide-bold");
+    await page.check("#bold");
     const boldCount = await lineCount();
     assert(boldCount >= smallCount);
     await page.click(`[data-layer-id="${bodyId}"]`);
     const english = "English words should stay together when they fit. ".repeat(5) + "\n\nhttps://example.test/" + "longurl".repeat(14) + " 👨‍👩‍👧‍👦 e\u0301 🇯🇵\n";
-    await page.fill("#text", english);
+    await page.fill("#edit-text", english);
     await page.click("#apply-text");
     await page.selectOption("#font-family", "mono");
     for (const [id, value] of [["w", "600"], ["font-size", "24"]]) {

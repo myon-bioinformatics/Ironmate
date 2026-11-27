@@ -92,8 +92,10 @@ const failures = [],
   await page.click("#back");
   const texts = () => page.evaluate(() => IronmateStudio.scene.layers.map(layer => layer.text));
   assert.deepEqual(await texts(), ["背面", "中央", "前面"]);
-  await page.fill("#text", "中央を編集");
+  assert.equal(await page.inputValue("#edit-text"), "中央"); // ✏️ 編集 shows the selected layer's words
+  await page.fill("#edit-text", "中央を編集");
   await page.click("#apply-text");
+  assert.equal(await page.inputValue("#text"), "中央"); // the tool's own input keeps what it had
   assert.deepEqual(await texts(), ["背面", "中央を編集", "前面"]);
   await page.click("#front");
   assert.deepEqual(await texts(), ["背面", "前面", "中央を編集"]);
@@ -108,7 +110,10 @@ const failures = [],
     await page.evaluate(() => window.IronmateStudio.scene.layers.length),
     0,
   );
-  await page.click('[data-tool="triangle"]');
+  await page.click('[data-tool="shape"]'); // 図形(▭ ◯ △ →): one tool, the shape is a candidate
+  assert.deepEqual(await page.locator("#candidates button").allTextContents(), ["▭", "◯", "△", "→"]);
+  await page.locator("#candidates button", {hasText: "△"}).click();
+  assert.equal(await page.textContent('[data-tool="shape"]'), "図形(△)");
   let box = await page.locator("#board").boundingBox();
   await page.mouse.click(box.x + box.width * 0.25, box.y + box.height * 0.2);
   await page.evaluate(() => window.IronmateStudio.ready);
@@ -166,7 +171,9 @@ const failures = [],
     await page.evaluate(() => window.IronmateStudio.scene.layers.length),
     2,
   );
-  await page.click("#emojis button:nth-child(3)");
+  await page.click('[data-tool="emoji"]'); // 絵文字 has its own input; ✦ スタンプ keeps its own
+  await page.click("#candidates button:nth-child(3)");
+  assert.deepEqual([await page.inputValue("#emoji-text"), await page.inputValue("#stamp-text"), await page.inputValue("#text")], ["🌱", "", "中央"]);
   await page.mouse.click(box.x + box.width * 0.8, box.y + box.height * 0.65);
   await page.evaluate(() => window.IronmateStudio.ready);
   assert.equal(

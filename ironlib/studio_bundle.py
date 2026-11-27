@@ -120,7 +120,7 @@ STUDIO_HTML = r"""<!doctype html>
           <summary>工房一覧</summary>
           <a href="slides/">スライド・PPTX作成 ↗</a>
           <a href="slides/phone/" title="スマホで作るスライド">📱 スマホ ↗</a>
-          <a href="https://myon-bioinformatics.github.io/PySaiyanWeBoo/examples/composition-studio.html">🎵 作曲 ↗</a>
+          <a href="tools/#composition">🎵 作曲 ↗</a>
           <a href="tools/">画像一覧・素材 ↗</a>
           <a href="https://myon-bioinformatics.github.io/#ironmate">🏠 ポートフォリオ ↗</a>
           <a href="https://github.com/myon-bioinformatics/Ironmate">🐙 GitHub リポジトリ ↗</a>

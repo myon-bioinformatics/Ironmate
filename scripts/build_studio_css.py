@@ -109,6 +109,10 @@ def with_parts(src: str) -> str:
     begin, end = "/* PSWB current-item.js */", "/* End PSWB current-item.js */"
     current_item = classic_script(pysaiyanweboo.js_source("current-item.js"))
     src = replace_region(src, begin, end, f"{begin}\n{current_item}{end}")
+    for name in ("async-task.js", "records.js"):
+        begin, end = f"/* PSWB {name} */", f"/* End PSWB {name} */"
+        module = pysaiyanweboo.js_source(name).rstrip("\n")
+        src = replace_region(src, begin, end, f"{begin}\n{module}\n{end}")
     parts = pswb_parts()
     lines = lambda html: "".join(f"\n        {part!r}" for part in re.split(r"(?<=>)(?=<)", html))
     block = (f"# ⬇️ pysaiyanweboo: {NOTE} writes PSWB_PHONE from the pinned commit (--check fails when it drifts)\n"

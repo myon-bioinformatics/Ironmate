@@ -3720,10 +3720,37 @@ function render() {
   box.hidden = !l;
   if (l)
     Object.assign(box.style, { left: pct(l.x, s.width), top: pct(l.y, s.height), width: pct(l.w, s.width), height: pct(l.h, s.height) });
-  const off = { edit: l?.kind !== "text", bold: l?.kind !== "text", color: !l || l.kind === "image", front: !l,
+  layerList(s);
+  const off = { edit: l?.kind !== "text", bold: l?.kind !== "text", color: !l || l.kind === "image",
+    front: !l || s.layers.at(-1) === l, back: !l || s.layers[0] === l,
     delete: !l, undo: !past.length, redo: !future.length,
     "slide-delete": deck.slides.length < 2, smaller: level === 0, bigger: level === scales.length - 1, reset: level === plain };
   for (const [act, disabled] of Object.entries(off)) document.querySelector(`[data-act="${act}"]`).disabled = disabled;
+}
+function layerList(s) {
+  // 📚 奥 → 手前。2 つ以上あるときだけ出し、重なって触れないものもここから選べる（文字は先頭 3 字、ほかは形の記号）
+  const row = $("phone-layers"),
+    faces = s.layers.map((l) => (l.kind === "text" && [...new Intl.Segmenter().segment(l.text.trim())].slice(0, 3).map((g) => g.segment).join(""))
+      || { text: "🔤", rect: "▭", ellipse: "◯", triangle: "△", arrow: "→", clock: "🕒", image: "🖼️" }[l.kind] || "▫️"),
+    key = JSON.stringify([faces, s.layers.map((l) => l.id), selected]);
+  if (row.dataset.key === key) return;
+  row.dataset.key = key;
+  row.hidden = s.layers.length < 2;
+  row.classList.toggle("phone-row", !row.hidden);
+  row.replaceChildren(...(row.hidden ? [] : s.layers).map((l, i) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = faces[i];
+    b.setAttribute("aria-label", `${i + 1} ${faces[i]}`);
+    if (l.id === selected) b.setAttribute("aria-current", "step");
+    b.addEventListener("pointerdown", (e) => e.preventDefault());
+    b.addEventListener("click", () => {
+      finishEdit();
+      selected = l.id;
+      render();
+    });
+    return b;
+  }));
 }
 function later() {
   if (!frame) frame = requestAnimationFrame(() => ((frame = 0), render()));
@@ -3941,6 +3968,11 @@ const acts = {
       l = picked();
     s.layers = [...s.layers.filter((x) => x !== l), l];
   }),
+  back: () => change(() => {
+    const s = slide(),
+      l = picked();
+    s.layers = [l, ...s.layers.filter((x) => x !== l)];
+  }),
   delete: () => change(() => {
     slide().layers = slide().layers.filter((l) => l.id !== selected);
     selected = null;
@@ -4119,7 +4151,8 @@ PHONE_TOOLS = (
     (("smaller", "🔽", "文字をすべて小さく"), ("reset", "🔄", "文字をすべて元の大きさに"), ("bigger", "🔼", "文字をすべて大きく"),
      ("undo", "↩️", "戻す"), ("redo", "↪️", "やり直す")),
     (("edit", "✏️", "選んだ文字を編集（選んだ文字をもう一度タップしても編集）"), ("bold", "🅱️", "選んだ文字の太字を切り替え"),
-     ("color", "🎨", "選んだものの色を次の色へ"), ("front", "⏫", "選んだものをいちばん手前へ"), ("delete", "🗑️", "選んだものを削除")),
+     ("color", "🎨", "選んだものの色を次の色へ"), ("front", "⏫", "選んだものをいちばん手前へ"), ("back", "⏬", "選んだものをいちばん奥へ"),
+     ("delete", "🗑️", "選んだものを削除")),
     (("slide-add", "➕📄", "白紙のページを追加"), ("slide-copy", "📑", "ページを複製"), ("slide-delete", "✖️📄", "ページを削除"),
      ("new", "🆕", "最初から（白紙 1 枚）"), ("pager", "🧭", "ページ移動の形を切り替え（矢印・十字キー・端まで・点・スライダー・ダイヤル）")),
     (("save", "💾", "全スライドJSONで保存（Slide Studio でも開ける）"), ("open", "📂", "全スライドJSONを開く"),
@@ -4172,7 +4205,9 @@ def _phone_html() -> str:
     import re
     candidates = dict(re.findall(r'data-tool="(shape|emoji|kaomoji)"[^>]*data-candidates="([^"]*)"', STUDIO_HTML))
     rows = ['<div class="phone-row">' + "".join(control(*tool) for tool in row) + "</div>" for row in PHONE_TOOLS]
-    rows = rows[0] + '<div id="phone-candidates" role="group" aria-label="候補" hidden></div>' + "".join(rows[1:])
+    # 📚 the page's layers, back to front, sit right above the row that acts on the selected one (PySaiyanWeBoo's current-item mark)
+    rows = (rows[0] + '<div id="phone-candidates" role="group" aria-label="候補" hidden></div>' + rows[1]
+            + '<div id="phone-layers" class="ui-current-items" role="group" aria-label="レイヤー（奥から手前）" hidden></div>' + "".join(rows[2:]))
     slide = ('<div id="phone-svg" class="phone-svg" data-ui-fill></div>'
              '<div id="phone-pick" class="phone-pick" hidden><span class="phone-grip" data-grip aria-hidden="true">↘</span></div>')
     head = STUDIO_HTML[:STUDIO_HTML.index("</head>")]

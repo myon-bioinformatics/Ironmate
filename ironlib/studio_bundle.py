@@ -120,7 +120,8 @@ STUDIO_HTML = r"""<!doctype html>
           <summary>工房一覧</summary>
           <a href="slides/">スライド・PPTX作成 ↗</a>
           <a href="slides/phone/" title="スマホで作るスライド">📱 スマホ ↗</a>
-          <a href="tools/">作曲・画像一覧・素材 ↗</a>
+          <a href="https://myon-bioinformatics.github.io/PySaiyanWeBoo/examples/composition-studio.html">🎵 作曲 ↗</a>
+          <a href="tools/">画像一覧・素材 ↗</a>
           <a href="https://myon-bioinformatics.github.io/#ironmate">🏠 ポートフォリオ ↗</a>
           <a href="https://github.com/myon-bioinformatics/Ironmate">🐙 GitHub リポジトリ ↗</a>
         </details>
@@ -3111,40 +3112,6 @@ if (typeof document !== "undefined" && (document.getElementById("pixel-editor") 
     return;
   }
   let images = [];
-  // Composition Studio: derive beat position from elapsed time so background tabs do not accumulate drift.
-  const start = $("tempo-start"), beat = $("tempo-beat"), bpm = $("tempo-bpm");
-  let origin = 0, animation = null, taps = [];
-  function stopTempo() {
-    cancelAnimationFrame(animation);
-    animation = null;
-    start.textContent = "開始";
-    beat.textContent = "—";
-  }
-  function tick(now) {
-    const beats = Number($("tempo-meter").value);
-    const index = Math.floor((now - origin) * Number(bpm.value) / 60000) % beats;
-    beat.textContent = Array.from({length: beats}, (_, n) => n === index ? "●" : "○").join(" ");
-    animation = requestAnimationFrame(tick);
-  }
-  start.onclick = () => {
-    if (animation !== null) return stopTempo();
-    if (!bpm.reportValidity()) return;
-    origin = performance.now();
-    tick(origin);
-    start.textContent = "停止";
-  };
-  bpm.oninput = stopTempo;
-  $("tempo-meter").onchange = stopTempo;
-  $("tempo-tap").onclick = () => {
-    const now = performance.now();
-    if (taps.length && now - taps.at(-1) > 2000) taps = [];
-    taps.push(now);
-    taps = taps.slice(-5);
-    if (taps.length > 1 && now > taps[0]) {
-      bpm.value = Math.max(30, Math.min(300, Math.round(60000 * (taps.length - 1) / (now - taps[0]))));
-      stopTempo();
-    }
-  };
   let imageGeneration = 0;
   $("images").addEventListener("change", async (e) => {
     const generation = ++imageGeneration,
@@ -4082,10 +4049,7 @@ TOOLS_HTML = r"""<!doctype html>
       </section>
       <section id="composition">
         <h2>🎵 Composition Studio</h2>
-        <label>BPM <input id="tempo-bpm" type="number" min="30" max="300" value="120" required></label>
-        <label>拍子 <select id="tempo-meter"><option value="3">3/4</option><option value="4" selected>4/4</option><option value="6">6/8</option></select></label>
-        <button id="tempo-start">開始</button><button id="tempo-tap">タップでBPMを測る</button>
-        <p id="tempo-beat" aria-label="現在の拍">—</p>
+        <a href="https://myon-bioinformatics.github.io/PySaiyanWeBoo/examples/composition-studio.html" target="_blank" rel="noopener">🎵 作曲スタジオを開く ↗</a>
         <label>歌詞<textarea rows="4"></textarea></label>
         <label>コード進行<textarea rows="2"></textarea></label>
       </section>

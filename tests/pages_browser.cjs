@@ -118,10 +118,7 @@ const out = path.resolve("build/pages-evidence");
     const digest = fs.readFileSync(path.join(out, "digest.html"), "utf8");
     assert(digest.includes("&lt;img onerror=alert(1)&gt;.png"));
     assert(!digest.includes("<img onerror="));
-    await page.click("#tempo-start");
-    assert.match(await page.textContent("#tempo-beat"), /●/);
-    await page.click("#tempo-start");
-    assert.equal(await page.textContent("#tempo-beat"), "—");
+    assert.equal(await page.locator("#composition a").getAttribute("href"), "https://myon-bioinformatics.github.io/PySaiyanWeBoo/examples/composition-studio.html");
     await page.setViewportSize({ width: 390, height: 844 });
     assert.equal(
       await page.evaluate(
@@ -152,7 +149,7 @@ const out = path.resolve("build/pages-evidence");
     assert.equal(check.status, 0, check.stderr);
     console.log(check.stdout.trim());
     console.log(
-      "Static Studio navigation, presets, PNG/SVG/JSON/Base64, resize/undo, invalid import, digest, filename escaping, tempo and mobile layout passed",
+      "Static Studio navigation, presets, PNG/SVG/JSON/Base64, resize/undo, invalid import, digest, filename escaping, composition link and mobile layout passed",
     );
   } finally {
     await browser.close();

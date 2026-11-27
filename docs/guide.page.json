@@ -53,7 +53,7 @@
                 {
                   "type": "card",
                   "title": "Browser Tools",
-                  "text": "画像一覧を作成。Composition Studioでは拍を確認し、歌詞・コード進行をメモできる。",
+                  "text": "画像一覧と歌詞・コード進行のメモ。作曲・拍の確認はPSWBのComposition Studioへ。",
                   "blocks": [
                     {
                       "type": "links",

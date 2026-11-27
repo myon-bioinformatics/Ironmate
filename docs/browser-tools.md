@@ -2,7 +2,8 @@
 
 - Slide Studio: https://myon-bioinformatics.github.io/tools/slide-studio/
 - Image Studio (including pixel art): https://myon-bioinformatics.github.io/tools/image-studio/
-- Image grid, Composition Studio: https://myon-bioinformatics.github.io/tools/browser-tools/
+- Composition Studio: https://myon-bioinformatics.github.io/PySaiyanWeBoo/examples/composition-studio.html
+- Image grid and songwriting notes: https://myon-bioinformatics.github.io/tools/browser-tools/
 - Portfolio: https://myon-bioinformatics.github.io/#ironmate
 
 No extra JavaScript packages or external CDNs are used. Only HTML/CSS/JavaScript and public presets generated from the Python version are served. Images and JSON are processed in the browser and not uploaded.
@@ -38,7 +39,7 @@ python -S image_studio.py --build-site build/studio-site
 | Pixel art | 5 shapes × 4 treatments × 5 sizes, 10 palette IDs, click-editing color indices, JSON import, nearest-neighbor scaling, palette change, one-step undo | Preset source sizes are 16/23/31/32/64. Output grid is 1–256 cells per side. Python's arbitrary-size procedural generation, photo color reduction, sparse scanning and probe downscaling are not ported |
 | Pixel art export | PNG/SVG/JSON/Base64 at 1/2/8/16x | PNG deflates RGBA directly, keeping hidden RGB of transparent pixels and the color table. Compressed bytes are not guaranteed to match the Python version. PNG needs a browser with CompressionStream |
 | Image grid | Up to 20 PNG/JPEG/WebP, column count, grid PNG, HTML with embedded images | 8 MiB per image, 32 MiB total, 4 MP per image. Pixel count is checked after decoding; thumbnails up to 512 px on the long side are kept. Keeping original bytes/metadata and pass/fail or MAE/RMSE computation are out of scope |
-| Composition Studio | Visual metronome, tap tempo, lyrics and chord notes | BPM 30–300; notes last for this page session |
+| Songwriting | Lyrics and chord notes, with a link to PSWB Composition Studio for metronome, chords and note sequences | Notes last for this page session |
 
 File-size calculation is available in [CaChereCyCle](https://myon-bioinformatics.github.io/CaChereCyCle/#capacity).
 | Slides / PPTX creation | Place text, shapes, arrows and images in [Slide Studio](slide-studio.md) and export multi-slide PPTX | Reading arbitrary PPTX, editing existing PPTX and PDF rendering are CLI-only |

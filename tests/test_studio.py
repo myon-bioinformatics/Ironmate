@@ -1367,6 +1367,14 @@ def test_studio_html_contains_unique_controls_used_by_initialization():
         pages = _Controls()
         pages.feed(html)
         required = set(re.findall(r'(?:\$|byId)\("([a-z][a-z0-9-]*)"\)', _page_ui(page)))  # studio/tools/phone use $(...), slides byId(...)
+        pixel_controls = {"pixel-editor", "pixel-status", "pixels"}
+        if page == "studio":
+            required.update(pixel_controls)
+        elif page == "tools":
+            # Tools shares the script with Studio but only exposes the digest and message fallback.
+            assert pixel_controls.isdisjoint(pages.ids)
+            required.difference_update(pixel_controls)
+            required.update({"digest", "message"})
         assert required, page
         assert all(len(pages.ids.get(name, [])) == 1 for name in required), (page, sorted(n for n in required if len(pages.ids.get(n, [])) != 1))
     parser = _Controls()

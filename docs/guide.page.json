@@ -53,7 +53,7 @@
                 {
                   "type": "card",
                   "title": "Browser Tools",
-                  "text": "画像一覧を作成し、Base64のサイズを見積もる。",
+                  "text": "画像一覧を作成。Composition Studioでは拍を確認し、歌詞・コード進行をメモできる。",
                   "blocks": [
                     {
                       "type": "links",

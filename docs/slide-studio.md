@@ -20,6 +20,7 @@ One editor for phones and PCs, phone-first. The slide stays pinned at the top wh
 | 📚 | With two or more things on the page, a row lists them from back to front (a text shows its first three characters, a shape its sign); tap one to select it, even when it is covered. The selected one is underlined |
 | ✏️ | Edit the selected text, or a clock's time (`14:30`; what is not a time leaves it as it was). Tapping a selected text or clock again does the same |
 | 🎨 | The selection's look, from the candidate row: 🎨 fill and 🖌 line to the next colour (black, teal, red, blue, yellow, white), 🌗 opacity 1 → ¾ → ½ → ¼, 🅱️ bold, 🔠 monospace ⇄ regular. A candidate that does not apply (bold on a shape) does nothing |
+| 🎛️ | Exact position and size of the selected layer. Shows italic for text, line width for shapes, center/edge arrowhead for arrows, and mosaic cell size and color levels for pictures |
 | ↻ | Turn the selection: ↻ 15° right, ↺ 15° left, ⏹ upright. The selection frame turns with it |
 | ⏫ ⏬ | Bring to the front, send to the back |
 | 👆 ↘ | Tap to select, drag to move, drag ↘ to resize. Tap a selected text box again (or ✏️) to edit it later; the editor sits under the slide at 16 px so phones do not zoom, and the slide updates as you type. A box left empty is removed |
@@ -27,7 +28,7 @@ One editor for phones and PCs, phone-first. The slide stays pinned at the top wh
 | ⬅️ ➡️ | Previous / next page, right under the slide; the middle shows page / pages. Keyboard ← / → (Home / End: first / last) do the same |
 | 🧭 | The shape of the page controls, one tap each, no reload (kept on this device): ⬅️ 1/N ➡️ → ● dots → 🎚️ slider → 🎛️ dial → ✚ cross-key (⬆️ first, ⬇️ last) → ⏮️ ⬅️ 1/N ➡️ ⏭️ |
 | ➕📄 📑 ✖️📄 | Add a blank page, duplicate, delete |
-| 🗂️ | Every page as a small picture with its number (the current one underlined); tap one to go there. A view: not in ↩️ |
+| 🗂️ ⊞ | All pages as thumbnails, or four at a time. In four-up, select any tile and edit it in place with the same tools. Views are not undoable |
 | 🆕 | Start over (one blank page) |
 | 🗑️ ↩️ ↪️ | Delete the selection, undo, redo (64 steps) |
 | 📥 📤 | Import and export; the format is picked after, in the candidate row. 📥: 📦 all-slide JSON (also those the PC studio saved), 🖼 a picture onto this page (photos become PNG, at most 4 MP and 1920 px on the long side). 📤: 📽️ PPTX (every slide, editable in PowerPoint), 📦 all-slide JSON, 🖼 PNG or 📐 SVG of this page as it looks |
@@ -48,7 +49,7 @@ pipe it to `python -S pptx_inspect.py -` and read the slide report as JSON.
 
 ## 🖥️ The PC studio, retired
 
-The PC studio that the editor above replaced is gone, so that phones and PCs are built once. Its old address, `/tools/slide-studio/pc/`, sends on to the editor, and its all-slide JSON opens there (📥 📦). Its line width, the centred arrowhead, italic, typed position and size, mosaic pictures and editing four slides in place were dropped; a file that has them keeps them, and they still show and export. Pictures, mosaics, heatmaps and the other image tools stay in Image Studio.
+The PC studio that the editor above replaced is gone, so that phones and PCs are built once. Its old address, `/tools/slide-studio/pc/`, sends on to the editor, and its all-slide JSON opens there (📥 📦). Precision controls and four-up editing are available in the same editor. The mosaic preview and slide exports use the same processed image; the deck JSON keeps the original picture and its editable settings. Heatmaps and the other image tools stay in Image Studio.
 
 ## What is editable in PowerPoint
 

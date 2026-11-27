@@ -1100,7 +1100,7 @@ def test_phone_page_is_emoji_only_and_every_control_is_bound():
     short = {i['data-act']: i.get('data-ui-word') for i in parser.items if 'data-act' in i}
     assert short == {act: word for _group, row in b.PHONE_TOOLS for act, _e, word, _w in row} and all(short.values()), short
     assert all(len(word) <= 12 for word in short.values()), short                                # short: it replaces a face
-    assert re.findall(r'class="phone-row" data-ui-group="(\w+)"', html) == ['create', 'adjust', 'update', 'pages', 'file']
+    assert re.findall(r'class="phone-row" data-ui-group="(\w+)"', html) == ['create', 'adjust', 'update', 'pages', 'file', 'detail']
     assert b.PSWB_PHONE['labels'] in html and html.index(b.PSWB_PHONE['labels']) > html.index('data-ui-group="file"')
     assert "PySaiyanWeBoo.bindLabels();" in b.STUDIO_JS
     words = re.compile(r'[\u3040-\u30ff\u4e00-\u9fffA-Za-z0-9]')

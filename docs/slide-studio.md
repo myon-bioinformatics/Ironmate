@@ -30,8 +30,8 @@ One editor for phones and PCs, phone-first. The slide stays pinned at the top wh
 | 🗂️ | Every page as a small picture with its number (the current one underlined); tap one to go there. A view: not in ↩️ |
 | 🆕 | Start over (one blank page) |
 | 🗑️ ↩️ ↪️ | Delete the selection, undo, redo (64 steps) |
-| 📥 📤 | Import and export; the format is picked after, in the candidate row. 📥: 📦 all-slide JSON (the same file the PC studio opens), 🖼 a picture onto this page (photos become PNG, at most 4 MP and 1920 px on the long side). 📤: 📽️ PPTX (every slide, editable in PowerPoint), 📦 all-slide JSON, 🖼 PNG or 📐 SVG of this page as it looks |
-| 🖥️ 🏠 | The PC studio this editor replaces (below) and Image Studio |
+| 📥 📤 | Import and export; the format is picked after, in the candidate row. 📥: 📦 all-slide JSON (also those the PC studio saved), 🖼 a picture onto this page (photos become PNG, at most 4 MP and 1920 px on the long side). 📤: 📽️ PPTX (every slide, editable in PowerPoint), 📦 all-slide JSON, 🖼 PNG or 📐 SVG of this page as it looks |
+| 🏠 | Image Studio |
 
 The GIF is the frames `tests/slides_browser.cjs` saves (`build/pages-evidence/phone-*.png`, 390×844; `phone-frames.json` lists them) at 1.4 s each, 0.9 s for the 🧭 shapes.
 
@@ -45,20 +45,9 @@ Python consumers can inspect the generated PPTX directly with
 `pptx_inspect.inspect(deck_bytes)`. A program that writes raw PPTX to stdout can
 pipe it to `python -S pptx_inspect.py -` and read the slide report as JSON.
 
-## 🖥️ The PC studio it replaces
+## 🖥️ The PC studio, retired
 
-https://myon-bioinformatics.github.io/tools/slide-studio/pc/
-
-The editor above is the entrance, so that phones and PCs are built once. The PC studio it replaces stays here, as it was, until its remaining tools (line width, the centred arrowhead, italic, typed position and size, mosaic pictures, editing four slides in place) are in the one editor or dropped; nothing new is added to it, and it opens the same all-slide JSON.
-
-1. The first slide is blank. Choose `T 文字列` (text), type into its field on the left and click the canvas; a title and a body are two such text boxes. `T 文字列`, `✦ スタンプ` (stamp), `絵文字` (emoji) and `顔文字` (kaomoji) each keep a field of their own, so one never overwrites another; an empty field places its example.
-2. To change something already placed, select it and use `✏️ 編集` (edit) on the right: the words, `太字` (bold), `斜体` (italic), fill and line colors, the shape, a clock's time. Each applies as it is set; `✏️ 編集を適用` (apply) commits the words. Position, size and font size are below it.
-3. `図形(▭)` (shape) is one tool whose candidates are `▭ ◯ △ →`; `→` places a straight line with a triangular arrowhead, which stays editable in PowerPoint. Moving, scaling, rotating and recoloring work as in Image Studio. The centered arrowhead is also available. `◷ 時計` (clock) starts at the current time.
-4. Build a deck with `白紙` (blank), `スライド複製` (duplicate slide), slide selection, reordering and deletion. All slides use the same canvas size. Switching slides keeps the current layout and restarts the edit history.
-   Enable `4枚表示` to edit a group of up to four slides in place. Choose a slide in the grid to use the same text, shape and arrow controls on it. The selector reaches other groups. Adding, duplicating, moving or deleting a slide keeps the edited slide in view.
-5. `PPTXを書き出す` (export PPTX) saves all slides. Also using `全スライドJSON保存` (save all slides as JSON) lets you reload the editable data, images included, later. The regular `JSON保存` (save JSON) and `作業履歴を保存` (save work history) save only the current slide.
-
-Unsaved changes are confirmed when leaving the page. There is no autosave or re-import of PPTX files.
+The PC studio that the editor above replaced is gone, so that phones and PCs are built once. Its old address, `/tools/slide-studio/pc/`, sends on to the editor, and its all-slide JSON opens there (📥 📦). Its line width, the centred arrowhead, italic, typed position and size, mosaic pictures and editing four slides in place were dropped; a file that has them keeps them, and they still show and export. Pictures, mosaics, heatmaps and the other image tools stay in Image Studio.
 
 ## What is editable in PowerPoint
 

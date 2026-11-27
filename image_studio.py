@@ -74,6 +74,7 @@ def public_assets():
     for name in ('style.css', 'studio.js', 'brand/icon.svg', 'brand/heatmap.svg', 'brand/favicon.ico',
                  'brand/manifest.webmanifest', 'brand/apple-touch-icon.png'):
         page = page.replace('"' + name + '"', '"../' + name + '"')
+    page = page.replace('href="tools/#composition"', 'href="../tools/#composition"')
     page = page.replace('href="tools/"', 'href="../tools/"').replace('href="slides/phone/"', 'href="phone/"')
     page = page.replace('<a href="slides/">スライド・PPTX作成 ↗</a>', '<a href="../">Image Studio ↗</a>')
     page = page.replace('<body class="ui-elements" data-ui-theme="green" data-page="studio">', '<body class="ui-elements" data-ui-theme="green" data-page="studio slides" data-mode="slides">').replace('<h1>画像を編集</h1>', '<h1>スライドを編集</h1>')

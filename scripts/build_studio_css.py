@@ -74,7 +74,7 @@ def pswb_parts() -> dict[str, str]:
     commit = pysaiyanweboo.source_commit() or "unknown"
     return {"stage": pysaiyanweboo.stage_html("{slide}", label="スライド", id="phone-stage"),
             "pager": pysaiyanweboo.pager_html(1, label="ページ移動", words=words, keys=True, id="phone-pager"),
-            "labels": pysaiyanweboo.labels_switch_html(),
+            "labels": pysaiyanweboo.labels_switch_html(id="labels-switch"),
             "js": (f"/* ⬇️ pysaiyanweboo {commit[:8]} ({', '.join(PSWB)}): written by {NOTE} from the pinned commit; --check fails when it drifts */\n"
                    f"(() => {{\n{classic}globalThis.PySaiyanWeBoo = {{ pagerSet, pagerIndex, bindLabels }};\n}})();\n/* ⬆️ pysaiyanweboo */\n")}
 

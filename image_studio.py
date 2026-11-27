@@ -54,12 +54,16 @@ def mosaic(artifact, cell=8, levels=256):
     return {'schema': 'ironmate-pixel-grid/1', 'width': width, 'height': height, 'colors': palette, 'pixels': pixels}
 
 
-def host_rows() -> str:
+def host_rows(page: str = 'studio') -> str:
     """🧰 What a host's header shows for a studio, as a JSON data block in the page (PySaiyanWeBoo chrome rows): one 💾 whose panel
-    lists every format, one 📂, the temporary shelf under ⋯. The page carries no header of its own: it
+    lists every format, one 📂, the temporary shelf under ⋯ (``page='slides'``: only ⋯ 💻 To textual ⇄ 📱 To iconic, PySaiyanWeBoo's ``labels`` key,
+    which stands in for the page's own switch; its 📥 📤 already ask the format). The page carries no header of its own: it
     answers each key (``ui-chrome-action`` in studio.js) by pressing its own control. ``replaces`` names the page's own menus, which
     a host that shows these rows hides; without a host (the local server) they stay."""
     rows = lambda pairs: [{'label': label, 'key': key} for label, key in pairs]
+    if page == 'slides':
+        spec = {'screen': rows([('💻 To textual ⇄ 📱 To iconic', 'labels')]), 'replaces': '#labels-switch'}
+        return '<script type="application/json" id="ui-chrome-rows">' + json.dumps(spec, ensure_ascii=False).replace('<', '\\u003c') + '</script>'
     save = [('🖼 PNG', 'png'), ('🖼 PNG ×2', 'png-2'), ('🖼 PNG ×4', 'png-4'), ('🖼 PNG ×8', 'png-8'), ('📐 SVG', 'svg'),
             ('📦 JSON（再編集用）', 'json'), ('🕘 作業履歴', 'workspace'), ('🔤 Base64 / 渡す', 'base64')]
     opened = [('📦 JSON', 'open-json'), ('🕘 作業履歴', 'open-workspace')]
@@ -89,7 +93,7 @@ def public_assets():
     assets['brand/index.html'] = BRAND_HTML.encode('utf-8')
     # 📽️ slides/ is the one slide editor (phone-first, the same page on a PC). slides/phone/ (its address before) and slides/pc/
     # (the PC studio it replaced) only send on to it, so old links and bookmarks keep working.
-    assets['slides/index.html'] = PHONE_HTML.encode('utf-8')
+    assets['slides/index.html'] = PHONE_HTML.replace('<main class="phone">', host_rows('slides') + '<main class="phone">', 1).encode('utf-8')
     for old in ('slides/phone/index.html', 'slides/pc/index.html'):
         assets[old] = ('<!doctype html>\n<html lang="ja"><head><meta charset="utf-8" /><meta http-equiv="refresh" content="0; url=../" />'
                        '<link rel="canonical" href="../" /><title>Ironmate — Slides</title></head>'

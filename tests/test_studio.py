@@ -1059,7 +1059,8 @@ def test_studios_declare_the_rows_a_hosts_header_shows_and_carry_no_header_of_th
             assert f'id="{actions[re.sub(r"-[0-9]+$", "", key)]}"' in html, key                          # the row presses a control that is there
         assert re.fullmatch(r'#[a-z-]+(,#[a-z-]+)*', spec['replaces']) and all(f'id="{i[1:]}"' in html for i in spec['replaces'].split(','))
     assert keys['index.html'] == ['png', 'png-2', 'png-4', 'png-8', 'svg', 'json', 'workspace', 'base64', 'open-json', 'open-workspace', 'shelf']
-    assert 'id="ui-chrome-rows"' not in assets['slides/index.html'].decode('utf-8')                     # the one editor: its own emoji, no rows yet
+    slides = json.loads(re.search(r'id="ui-chrome-rows">(.*?)</script>', assets['slides/index.html'].decode('utf-8'), re.S)[1])
+    assert slides == {'screen': [{'label': '💻 To textual ⇄ 📱 To iconic', 'key': 'labels'}], 'replaces': '#labels-switch'}   # the one editor: ⋯ only
     assert 'id="ui-chrome-rows"' not in b.STUDIO_HTML and '</script>' not in image_studio.host_rows()[:-9]
 
 
@@ -1071,7 +1072,8 @@ def test_phone_page_is_emoji_only_and_every_control_is_bound():
     from ironlib import studio_bundle as b
     assets = image_studio.public_assets()
     html = assets['slides/index.html'].decode('utf-8')
-    assert html == b.PHONE_HTML and 'data-page="phone"' in html and "connect-src 'none'" in html
+    assert html == b.PHONE_HTML.replace('<main class="phone">', image_studio.host_rows('slides') + '<main class="phone">', 1)
+    assert 'data-page="phone"' in html and "connect-src 'none'" in html
     assert '"../style.css"' in html and '"../studio.js"' in html and 'src="/' not in html and 'href="/' not in html
     # 🚪 one entrance: Image Studio links to it, and the old addresses (the phone page, the PC studio) only send on
     assert 'href="slides/"' in b.STUDIO_HTML and 'phone/' not in b.STUDIO_HTML
@@ -1096,12 +1098,13 @@ def test_phone_page_is_emoji_only_and_every_control_is_bound():
     parser = Controls(); parser.feed(html)
     acts = [i['data-act'] for i in parser.items if 'data-act' in i]
     assert acts == [act for _group, row in b.PHONE_TOOLS for act, *_ in row]
-    # 🖥️ ⇄ 📱 every control has a short word for the words view (PySaiyanWeBoo's bindLabels); rows are CRUD-like groups
+    # 💻 ⇄ 📱 every control has a short word for the words view (PySaiyanWeBoo's bindLabels); rows are CRUD-like groups
     short = {i['data-act']: i.get('data-ui-word') for i in parser.items if 'data-act' in i}
     assert short == {act: word for _group, row in b.PHONE_TOOLS for act, _e, word, _w in row} and all(short.values()), short
     assert all(len(word) <= 12 for word in short.values()), short                                # short: it replaces a face
-    assert re.findall(r'class="phone-row" data-ui-group="(\w+)"', html) == ['create', 'adjust', 'update', 'pages', 'file', 'detail']
-    assert b.PSWB_PHONE['labels'] in html and html.index(b.PSWB_PHONE['labels']) > html.index('data-ui-group="file"')
+    assert re.findall(r'class="phone-row" data-ui-group="(\w+)"', html) == ['create', 'adjust', 'update', 'pages', 'file', 'more', 'detail']
+    assert b.PSWB_PHONE['labels'] in html and html.index(b.PSWB_PHONE['labels']) > html.index('data-ui-group="more"')
+    assert 'id="labels-switch" data-ui-labels-switch' in b.PSWB_PHONE['labels']
     assert "PySaiyanWeBoo.bindLabels();" in b.STUDIO_JS
     words = re.compile(r'[\u3040-\u30ff\u4e00-\u9fffA-Za-z0-9]')
     for item in parser.items:
@@ -1121,8 +1124,12 @@ def test_phone_page_is_emoji_only_and_every_control_is_bound():
     assert 1 in b.PHONE_TEXT['scale'] and b.PHONE_TEXT['size'] % 8 == 0
     # 🔷 💾: a candidate that is an action names it in the markup, and the script has it; 😊 (^^) candidates are only stamped
     named = dict(re.findall(r'data-act="([a-z]+)" data-candidates="[^"]*" data-acts="([a-z ]+)"', html))
-    assert named == {'shape': 'rect ellipse triangle arrow', 'look': 'fill stroke fade bold font', 'turn': 'cw ccw upright',
-                     'import': 'open image', 'export': 'pptx json png svg'}, named
+    assert named == {'shape': 'rect ellipse triangle arrow', 'look': 'fill stroke fade bold font', 'turn': 'cw ccw upright'}, named
+    # 📥 どの形式から？ 📤 どの形式に？ one select beside each, and every value is an action in the script
+    formats = dict(re.findall(r'<select data-format="(\w+)" aria-label="([^"]+)"', html))
+    assert formats == {'import': 'どの形式から？', 'export': 'どの形式に？'}, formats
+    for act in re.findall(r'<option value="(\w+)">', ''.join(re.findall(r'<select data-format=.*?</select>', html))):
+        assert re.search(rf'(^|[\s{{,])("{act}"|{act})(\(|:)', script, re.M), act
     for act in ' '.join(named.values()).split():
         assert re.search(rf'(^|[\s{{,])("{act}"|{act})(\(|:)', script, re.M), act
     assert not re.search(r'data-act="(pptx|save|open|image|bold|color)"', html)                   # 📥 📤 🎨 then the choice: no button each

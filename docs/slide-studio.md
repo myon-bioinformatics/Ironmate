@@ -38,7 +38,8 @@ A phone-first page for the same deck. The slide stays pinned at the top while yo
 | 🔤 🖼️ | Add a text box (type right away) or a picture (photos become PNG, at most 4 MP and 1920 px on the long side) |
 | 🔷 😊 (^^) | One row of candidates opens under the tools; tap one and it is placed: ▭ ◯ △ → for shapes, emoji, kaomoji (the same candidates as Image Studio's tools). Tap the tool again to close the row |
 | 🕒 | A clock showing the time now |
-| ✏️ 🅱️ 🎨 ⏫ | For the selection: edit the text, bold on / off, the next colour (black, teal, red, blue, yellow, white), bring to the front |
+| 📚 | With two or more things on the page, a row lists them from back to front (a text shows its first three characters, a shape its sign); tap one to select it, even when it is covered. The selected one is underlined |
+| ✏️ 🅱️ 🎨 ⏫ ⏬ | For the selection: edit the text, bold on / off, the next colour (black, teal, red, blue, yellow, white), bring to the front, send to the back |
 | 👆 ↘ | Tap to select, drag to move, drag ↘ to resize. Tap a selected text box again (or ✏️) to edit it later; the editor sits under the slide at 16 px so phones do not zoom, and the slide updates as you type. A box left empty is removed |
 | 🔽 🔄 🔼 | Every text box on every slide together: 0.5, 0.75, 1, 1.25, 1.5, 2, 2.5 × (titles keep their ratio to body text). New boxes start at 32 px × the current step |
 | ⬅️ ➡️ | Previous / next page, right under the slide; the middle shows page / pages. Keyboard ← / → (Home / End: first / last) do the same |

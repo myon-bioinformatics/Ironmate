@@ -385,6 +385,7 @@ print('Long Japanese/English: visible SVG lines match native PPTX, explicit para
     await act("slide-add");
     assert.equal(await pageNo(), "2/2");
     assert.equal(await mobile.locator("#phone-candidates").isHidden(), true); // no candidates, and no gap, until a tool asks
+    assert.equal(await mobile.locator("#phone-layers").isHidden(), true);     // 📚 nor a layer row for a blank page
     await pick("shape", "▭");
     assert.deepEqual(await mobile.locator("#phone-candidates button").allTextContents(), ["▭", "◯", "△", "→"]);
     await pick("shape", "→");
@@ -401,11 +402,13 @@ print('Long Japanese/English: visible SVG lines match native PPTX, explicit para
     for (const name of ["edit", "bold"]) assert.equal(await mobile.isDisabled(`[data-act="${name}"]`), true); // the triangle is selected
     await act("color");
     assert.equal((await state()).deck.slides[2].layers[3].fill, "#D7263D");                    // 🎨 teal → the next colour
-    // ⏫ 🅱️ the kaomoji is under the clock and the triangle; its left end is the only thing under the finger there
+    // 📚 the page's layers, back to front: the kaomoji is under the clock and the triangle, and is picked from the row
+    const layerFaces = () => mobile.locator("#phone-layers button").allTextContents();
+    assert.deepEqual(await layerFaces(), ["🌱", "(・∀", "🕒", "△"]);
+    assert.equal(await mobile.getAttribute('#phone-layers [aria-current="step"]', "aria-label"), "4 △");
+    assert.equal(await mobile.isDisabled('[data-act="front"]'), true);                         // already the front one
     const kao = extra[1];
-    assert.ok(kao.x + 8 < Math.min(extra[2].x, extra[3].x), JSON.stringify(extra));
-    const seed = await stageAt((kao.x + 8) / 1280, (kao.y + kao.h / 2) / 720);
-    await mobile.touchscreen.tap(seed.x, seed.y);
+    await mobile.locator("#phone-layers button").nth(1).tap();
     assert.equal((await state()).selected, kao.id);
     assert.equal(await mobile.isDisabled('[data-act="bold"]'), false);
     await act("bold");
@@ -416,7 +419,10 @@ print('Long Japanese/English: visible SVG lines match native PPTX, explicit para
     await snap("candidates");
     const rows = await mobile.$$eval(".phone-row", (nodes) => nodes.map((n) => new Set([...n.children].map((c) => c.offsetTop)).size));
     assert.ok(rows.every((n) => n === 1), JSON.stringify(rows));                                // 📱 390 px: no row wraps
-    for (let i = 0; i < 3; i++) await act("undo");
+    await act("back");
+    assert.deepEqual(await layerFaces(), ["(・∀", "🌱", "🕒", "△"]);
+    assert.equal(await mobile.isDisabled('[data-act="back"]'), true);
+    for (let i = 0; i < 4; i++) await act("undo");
     extra = (await state()).deck.slides[2].layers;
     assert.ok(extra[1].id === kao.id && extra[1].bold === false && extra[3].fill === "#18A7A1", JSON.stringify(extra));
     await act("slide-delete");

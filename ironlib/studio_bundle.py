@@ -1,5 +1,91 @@
 """Bundled Studio HTML, CSS, and browser JS (pure stdlib, served in-memory or written at build time)."""
 
+PIXEL_EDITOR_HTML = r"""      <section id="pixels">
+        <div class="section-heading">
+          <h2>ドット絵</h2>
+        </div>
+        <div class="workspace">
+          <div class="controls">
+            <label>形<select id="mask"></select></label>
+            <div class="pair">
+              <label>元サイズ<select id="size"></select></label
+              ><label>加工<select id="effect"></select></label>
+            </div>
+            <label>配色ID<select id="palette"></select></label
+            ><button id="generate" class="primary">プリセットから生成</button>
+            <p class="hint">
+              形・サイズ・加工・配色を選んで生成します。
+            </p>
+            <label class="file"
+              >グリッドJSONを開く<input
+                id="grid-file"
+                type="file"
+                accept=".json,application/json"
+            /></label>
+            <div class="pair">
+              <label
+                >幅<input
+                  id="width"
+                  type="number"
+                  min="1"
+                  max="256"
+                  value="32" /></label
+              ><label
+                >高さ<input
+                  id="height"
+                  type="number"
+                  min="1"
+                  max="256"
+                  value="32"
+              /></label>
+            </div>
+            <button id="resize">最近傍でサイズ変更</button>
+            <p class="hint">
+              縮小では細部が失われます。配色変更は5役割のグリッドのみ。
+            </p>
+            <button id="recolor">選択した配色IDを適用</button>
+            <div class="pair">
+              <label>描く色番号<select id="ink"></select></label
+              ><label
+                >出力倍率<select id="scale">
+                  <option>1</option>
+                  <option>2</option>
+                  <option selected>8</option>
+                  <option>16</option>
+                </select></label
+              >
+            </div>
+            <button id="undo-grid">ひとつ戻す</button>
+          </div>
+          <div class="preview">
+            <canvas
+              id="grid"
+              width="32"
+              height="32"
+              aria-label="ドット絵。クリックすると選択した色番号で描画"
+              tabindex="0"
+            ></canvas>
+            <p id="grid-info"></p>
+            <div class="exports">
+              <button id="grid-json">JSON保存</button
+              ><button id="grid-svg">SVG</button
+              ><button id="grid-png">PNG</button
+              ><button id="grid-base64">Base64</button>
+            </div>
+            <label
+              >PNG data URI<textarea
+                id="base64-output"
+                rows="3"
+                readonly
+              ></textarea>
+            </label>
+            <p class="hint">
+              JSONは色番号を、PNGは色表と寸法を保持します。
+            </p>
+          </div>
+        </div>
+      </section>"""
+
 STUDIO_HTML = r"""<!doctype html>
 <html lang="ja">
   <head>
@@ -27,7 +113,7 @@ STUDIO_HTML = r"""<!doctype html>
           <summary>工房一覧</summary>
           <a href="slides/">スライド・PPTX作成 ↗</a>
           <a href="slides/phone/" title="スマホで作るスライド">📱 スマホ ↗</a>
-          <a href="tools/">ドット絵・画像一覧 ↗</a>
+          <a href="tools/">画像一覧・素材 ↗</a>
           <a href="https://myon-bioinformatics.github.io/#ironmate">🏠 ポートフォリオ ↗</a>
           <a href="https://github.com/myon-bioinformatics/Ironmate">🐙 GitHub リポジトリ ↗</a>
         </details>
@@ -73,7 +159,17 @@ STUDIO_HTML = r"""<!doctype html>
           ><button data-tool="kaomoji" data-label="顔文字" data-candidates="(・∀・) (｡•̀ᴗ-)✧ ٩(๑❛ᴗ❛๑)۶">顔文字(^^)</button
           ><button data-tool="clock">◷ 時計</button>
         </div>
+        <details id="pixel-editor">
+          <summary>▦ ドット絵</summary>
+""" + PIXEL_EDITOR_HTML + r"""
+          <button id="place-grid">画像にレイヤーとして追加</button>
+          <p id="pixel-status" role="status"></p>
+        </details>
         <div id="candidates" class="emojis" role="group" aria-label="候補"></div>
+        <div id="keyboard-input" hidden>
+          <button id="keyboard-focus">⌨ ほかの文字を入力</button>
+          <p class="hint">Windows は Win + .、Mac は Control + Command + Space。スマホはキーボードの絵文字キーから。顔文字の入力・貼り付けもできます。</p>
+        </div>
         <label
           >T 文字列<textarea id="text" rows="2" placeholder="文字列 😊 (・∀・)"></textarea
         ></label>
@@ -450,6 +546,8 @@ body:where([data-page~="tools"]){font-size:15px;line-height:1.65;margin:0}
 :where([data-page~="tools"]) .preview{display:flex;flex-direction:column;gap:16px;justify-content:center;align-items:stretch}
 :where([data-page~="tools"]) .preview canvas{display:block;width:min(100%,480px);height:auto;image-rendering:pixelated;margin:auto;border:1px solid var(--ui-border);background:repeating-conic-gradient(#e1e8e3 0% 25%,#fff 0% 50%) 0 0/20px 20px;cursor:crosshair;touch-action:manipulation}
 :where([data-page~="tools"]) textarea{width:100%;font-size:11px;overflow-wrap:anywhere}
+#pixel-editor .workspace{display:block;padding:0}
+#pixel-editor #grid{width:min(100%,320px);height:auto;image-rendering:pixelated;cursor:crosshair}
 :where([data-page~="tools"]) #grid-info{font-size:13px;color:var(--ui-muted)}
 :where([data-page~="tools"]) #message{border-left:3px solid var(--ui-accent);padding:8px 16px;min-height:42px;background:color-mix(in srgb,var(--ui-accent) 12%,var(--ui-panel))}
 :where([data-page~="tools"]) #message[data-error=true]{border-color:var(--ui-danger);color:var(--ui-danger)}
@@ -1852,6 +1950,7 @@ function candidates() {
   const button = document.querySelector(`[data-tool="${tool}"]`),
     list = button?.dataset.candidates;
   $("candidates").classList.toggle("kaomojis", tool === "kaomoji");
+  $("keyboard-input").hidden = !["emoji", "kaomoji"].includes(tool);
   $("candidates").replaceChildren(
     ...(list ? list.split(" ") : []).map((value) => {
       const b = document.createElement("button");
@@ -2022,6 +2121,7 @@ $("board").addEventListener("pointercancel", () => {
     render().catch(error);
   }
 });
+$("keyboard-focus").onclick = () => $(tool + "-text").focus();
 for (const button of document.querySelectorAll("[data-tool]"))
   button.onclick = () => setTool(button.dataset.tool);
 for (const [id, name] of [["text", "text"], ["stamp-text", "stamp"], ["emoji-text", "emoji"], ["kaomoji-text", "kaomoji"]])
@@ -2727,6 +2827,7 @@ window.IronmateStudio = {
     return render();
   },
   pngBlob,
+  importImageFile,
   get selectedId() { return selected; },
   async replaceScene(value) {
     const next = C.validate(value);
@@ -2746,9 +2847,9 @@ render().catch(error);
 })();
 
 /* Tools page UI (data-page~="tools"): browser only. */
-if (typeof document !== "undefined" && document.body && (document.body.dataset.page || "").split(" ").includes("tools")) (function () {
+if (typeof document !== "undefined" && document.getElementById("pixels")) (function () {
 "use strict";
-(() => {
+function initPixelEditor() {
   const $ = (id) => document.getElementById(id),
     C = IronmateTools,
     catalog = buildIronmateCatalog();
@@ -2756,8 +2857,9 @@ if (typeof document !== "undefined" && document.body && (document.body.dataset.p
     previous = null,
     images = [];
   const status = (text, error = false) => {
-    $("message").textContent = text;
-    $("message").dataset.error = error;
+    const output = $("pixel-status") || $("message");
+    output.textContent = text;
+    output.dataset.error = error;
   };
   const action = (id, fn) =>
     $(id).addEventListener("click", () =>
@@ -2982,6 +3084,18 @@ if (typeof document !== "undefined" && document.body && (document.body.dataset.p
       e.target.value = "";
     }
   });
+  generate();
+  window.IronmateWorkbench = {
+    get grid() { return C.canonical(grid); },
+    png,
+  };
+  if ($("place-grid")) {
+    action("place-grid", async () => {
+      await window.IronmateStudio.importImageFile(new File([await png()], "ドット絵.png", { type: "image/png" }));
+      $("pixel-editor").open = false;
+    });
+    return;
+  }
   $("capacity-file").addEventListener("change", (e) => {
     const f = e.target.files[0];
     if (f)
@@ -3070,14 +3184,15 @@ if (typeof document !== "undefined" && document.body && (document.body.dataset.p
       html = `<!doctype html><html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; base-uri 'none'"><title>Ironmate Image Digest</title><style>body{font:14px system-ui;background:#f2f6f3;color:#183d42;margin:24px}.grid{display:grid;grid-template-columns:repeat(${columns},minmax(0,1fr));gap:16px}figure{margin:0;padding:16px;background:white;overflow-wrap:anywhere}img{width:100%;height:210px;object-fit:contain}@media(max-width:600px){.grid{grid-template-columns:1fr}}</style><h1>Ironmate Image Digest</h1><div class="grid">${images.map((i) => `<figure><img src="${i.src}" alt="${C.esc(i.name)}"><figcaption>${C.esc(i.name)}</figcaption></figure>`).join("")}</div></html>`;
     save("ironmate-digest.html", html, "text/html");
   });
-  generate();
-  window.IronmateWorkbench = {
-    get grid() {
-      return C.canonical(grid);
-    },
-    png,
-  };
-})();
+}
+
+const editor = document.getElementById("pixel-editor");
+if (editor) editor.addEventListener("toggle", function start() {
+  if (!editor.open) return;
+  editor.removeEventListener("toggle", start);
+  initPixelEditor();
+});
+else initPixelEditor();
 })();
 
 /* Slide document UI (data-page~="slides"): browser only. */
@@ -3901,91 +4016,7 @@ TOOLS_HTML = r"""<!doctype html>
         ><a href="#capacity">Base64容量</a><a href="#features">CLI対応表</a>
       </div>
       <p id="message" role="status" aria-live="polite">準備しています…</p>
-      <section id="pixels">
-        <div class="section-heading">
-          <h2>ドット絵</h2>
-        </div>
-        <div class="workspace">
-          <div class="controls">
-            <label>形<select id="mask"></select></label>
-            <div class="pair">
-              <label>元サイズ<select id="size"></select></label
-              ><label>加工<select id="effect"></select></label>
-            </div>
-            <label>配色ID<select id="palette"></select></label
-            ><button id="generate" class="primary">プリセットから生成</button>
-            <p class="hint">
-              形・サイズ・加工・配色を選んで生成します。
-            </p>
-            <label class="file"
-              >グリッドJSONを開く<input
-                id="grid-file"
-                type="file"
-                accept=".json,application/json"
-            /></label>
-            <div class="pair">
-              <label
-                >幅<input
-                  id="width"
-                  type="number"
-                  min="1"
-                  max="256"
-                  value="32" /></label
-              ><label
-                >高さ<input
-                  id="height"
-                  type="number"
-                  min="1"
-                  max="256"
-                  value="32"
-              /></label>
-            </div>
-            <button id="resize">最近傍でサイズ変更</button>
-            <p class="hint">
-              縮小では細部が失われます。配色変更は5役割のグリッドのみ。
-            </p>
-            <button id="recolor">選択した配色IDを適用</button>
-            <div class="pair">
-              <label>描く色番号<select id="ink"></select></label
-              ><label
-                >出力倍率<select id="scale">
-                  <option>1</option>
-                  <option>2</option>
-                  <option selected>8</option>
-                  <option>16</option>
-                </select></label
-              >
-            </div>
-            <button id="undo-grid">ひとつ戻す</button>
-          </div>
-          <div class="preview">
-            <canvas
-              id="grid"
-              width="32"
-              height="32"
-              aria-label="ドット絵。クリックすると選択した色番号で描画"
-              tabindex="0"
-            ></canvas>
-            <p id="grid-info"></p>
-            <div class="exports">
-              <button id="grid-json">JSON保存</button
-              ><button id="grid-svg">SVG</button
-              ><button id="grid-png">PNG</button
-              ><button id="grid-base64">Base64</button>
-            </div>
-            <label
-              >PNG data URI<textarea
-                id="base64-output"
-                rows="3"
-                readonly
-              ></textarea>
-            </label>
-            <p class="hint">
-              JSONは色番号を、PNGは色表と寸法を保持します。
-            </p>
-          </div>
-        </div>
-      </section>
+""" + PIXEL_EDITOR_HTML + r"""
       <section id="digest">
         <div class="section-heading">
           <h2>画像一覧</h2>

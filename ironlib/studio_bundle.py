@@ -4112,7 +4112,7 @@ TOOLS_HTML = r"""<!doctype html>
       </section>
       <section id="composition">
         <h2>🎵 Composition Studio</h2>
-        <a href="https://myon-bioinformatics.github.io/PySaiyanWeBoo/examples/composition-studio.html" target="_blank" rel="noopener">🎵 作曲スタジオを開く ↗</a>
+
         <label>歌詞<textarea rows="4"></textarea></label>
         <label>パート別コード進行（パート名 = ローマ数字）<textarea id="song-parts" rows="3">Aメロ = I V vi IV
 サビ = IV V I I</textarea></label>

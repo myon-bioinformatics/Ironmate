@@ -1,8 +1,8 @@
 # Browser tools on GitHub Pages
 
 - Slide Studio: https://myon-bioinformatics.github.io/tools/slide-studio/
-- Image Studio: https://myon-bioinformatics.github.io/tools/image-studio/
-- Pixel art, image grid, Base64 size: https://myon-bioinformatics.github.io/tools/browser-tools/
+- Image Studio (including pixel art): https://myon-bioinformatics.github.io/tools/image-studio/
+- Image grid, Base64 size: https://myon-bioinformatics.github.io/tools/browser-tools/
 - Portfolio: https://myon-bioinformatics.github.io/#ironmate
 
 No extra JavaScript packages or external CDNs are used. Only HTML/CSS/JavaScript and public presets generated from the Python version are served. Images and JSON are processed in the browser and not uploaded.

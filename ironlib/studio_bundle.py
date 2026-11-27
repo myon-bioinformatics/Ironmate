@@ -3720,7 +3720,8 @@ function render() {
   box.hidden = !l;
   if (l)
     Object.assign(box.style, { left: pct(l.x, s.width), top: pct(l.y, s.height), width: pct(l.w, s.width), height: pct(l.h, s.height) });
-  const off = { edit: l?.kind !== "text", delete: !l, undo: !past.length, redo: !future.length,
+  const off = { edit: l?.kind !== "text", bold: l?.kind !== "text", color: !l || l.kind === "image", front: !l,
+    delete: !l, undo: !past.length, redo: !future.length,
     "slide-delete": deck.slides.length < 2, smaller: level === 0, bigger: level === scales.length - 1, reset: level === plain };
   for (const [act, disabled] of Object.entries(off)) document.querySelector(`[data-act="${act}"]`).disabled = disabled;
 }
@@ -3840,6 +3841,40 @@ function shape(kind) {
   return (s) => ({ id: uid(kind), kind, name: kind, x: s.width * 0.375, y: s.height * 0.375, w: s.width * 0.25, h: s.height * 0.25,
     rotation: 0, opacity: 1, fill: "#18A7A1", stroke: "#183C42", strokeWidth: 4 });
 }
+  /* 🔷 😊 (^^) 候補から置く（Image Studio と同じ候補）。🕒 はいまの時刻。選んだものは 🅱️ 太字・🎨 色・⏫ 手前へ */
+const CANDIDATE_SHAPES = { "▭": "rect", "◯": "ellipse", "△": "triangle", "→": "arrow" };
+function stamp(text) {
+  const size = textSize * textFactor * 2;
+  return place((s) => {
+    const l = { id: uid("text"), kind: "text", name: "text", x: 0, y: 0, w: Math.min(s.width * 0.9, ([...text].length + 1) * size),
+      h: Math.ceil(size * 1.3), rotation: 0, opacity: 1, text, fill: "#000000", fontSize: size, font: "sans", mono: false, bold: false,
+      wrap: true };
+    fit(l);
+    l.x = (s.width - l.w) / 2;
+    l.y = (s.height - l.h) / 2;
+    return l;
+  });
+}
+function offer(tool) {
+  // 候補の列は 1 つ。同じ道具をもう一度押すと閉じる（閉じた列は場所を取らない: .phone-row は開いている間だけ）
+  const row = $("phone-candidates"),
+    again = row.dataset.tool === tool && !row.hidden;
+  row.dataset.tool = again ? "" : tool;
+  row.hidden = again;
+  row.classList.toggle("phone-row", !again);
+  row.replaceChildren(...(again ? [] : document.querySelector(`[data-act="${tool}"]`).dataset.candidates.split(" ")).map((value) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = value;
+    b.setAttribute("aria-label", value);
+    b.addEventListener("pointerdown", (e) => e.preventDefault());
+    b.addEventListener("click", () => {
+      finishEdit();
+      run(() => (tool === "shape" ? acts[CANDIDATE_SHAPES[value]]() : record(stamp(value))));
+    });
+    return b;
+  }));
+}
 function scaleText(next) {
   // 🔽 🔄 🔼 すべてのページの文字を同じ倍率で（タイトルと本文の比は保つ）
   if (!scales[next] || next === level) return;
@@ -3879,7 +3914,33 @@ const acts = {
   arrow: () => record(place((s) => ({ id: uid("arrow"), kind: "arrow", name: "arrow", x: s.width * 0.25, y: s.height * 0.45,
     w: s.width * 0.5, h: s.height * 0.1, rotation: 0, opacity: 1, fill: "#000000", stroke: "#000000", strokeWidth: 4,
     headSize: 28, headPlacement: "tip", headStyle: "triangle" }))),
+  shape: () => offer("shape"),
+  emoji: () => offer("emoji"),
+  kaomoji: () => offer("kaomoji"),
+  clock() {
+    const now = new Date();
+    record(place((s) => ({ id: uid("clock"), kind: "clock", name: "clock", x: s.width * 0.5 - s.height * 0.15, y: s.height * 0.35,
+      w: s.height * 0.3, h: s.height * 0.3, rotation: 0, opacity: 1, hour: now.getHours(), minute: now.getMinutes(),
+      fill: "#FFFFFF", stroke: "#183C42", strokeWidth: 4 })));
+  },
   edit: () => startEdit(),
+  bold: () => change(() => {
+    const l = picked();
+    l.bold = !l.bold;
+    fit(l);
+  }),
+  color: () => change(() => {
+    // 🎨 次の色へ（黒・青緑・赤・青・黄・白）
+    const l = picked(),
+      colors = ["#000000", "#18A7A1", "#D7263D", "#1B6EF3", "#F5B700", "#FFFFFF"];
+    l.fill = colors[(colors.indexOf(String(l.fill).toUpperCase()) + 1) % colors.length];
+    if (l.kind === "arrow") l.stroke = l.fill;
+  }),
+  front: () => change(() => {
+    const s = slide(),
+      l = picked();
+    s.layers = [...s.layers.filter((x) => x !== l), l];
+  }),
   delete: () => change(() => {
     slide().layers = slide().layers.filter((l) => l.id !== selected);
     selected = null;
@@ -4052,11 +4113,13 @@ SLIDES_PANEL_HTML = r"""<section class="slide-controls" aria-label="スライド
 # 📱 Phone slides (slides/phone/): the slide stays pinned on top and every control is an emoji; the words live in
 # aria-label / title only. Each row is (data-act, emoji, words); the browser script binds data-act by name.
 PHONE_TOOLS = (
-    (("text", "🔤", "テキストボックスを追加"), ("rect", "🟦", "四角を追加"), ("ellipse", "⚪", "丸を追加"),
-     ("triangle", "🔺", "三角を追加"), ("arrow", "↗️", "矢印を追加"), ("image", "🖼️", "画像を追加")),
-    (("smaller", "🔽", "文字をすべて小さく"), ("reset", "🔄", "文字をすべて元の大きさに"), ("bigger", "🔼", "文字をすべて大きく")),
-    (("edit", "✏️", "選んだ文字を編集（選んだ文字をもう一度タップしても編集）"), ("delete", "🗑️", "選んだものを削除"),
+    (("text", "🔤", "テキストボックスを追加"), ("shape", "🔷", "図形（四角・丸・三角・矢印）を候補から追加"),
+     ("emoji", "😊", "絵文字を候補から追加"), ("kaomoji", "(^^)", "顔文字を候補から追加"), ("clock", "🕒", "いまの時刻の時計を追加"),
+     ("image", "🖼️", "画像を追加")),
+    (("smaller", "🔽", "文字をすべて小さく"), ("reset", "🔄", "文字をすべて元の大きさに"), ("bigger", "🔼", "文字をすべて大きく"),
      ("undo", "↩️", "戻す"), ("redo", "↪️", "やり直す")),
+    (("edit", "✏️", "選んだ文字を編集（選んだ文字をもう一度タップしても編集）"), ("bold", "🅱️", "選んだ文字の太字を切り替え"),
+     ("color", "🎨", "選んだものの色を次の色へ"), ("front", "⏫", "選んだものをいちばん手前へ"), ("delete", "🗑️", "選んだものを削除")),
     (("slide-add", "➕📄", "白紙のページを追加"), ("slide-copy", "📑", "ページを複製"), ("slide-delete", "✖️📄", "ページを削除"),
      ("new", "🆕", "最初から（白紙 1 枚）"), ("pager", "🧭", "ページ移動の形を切り替え（矢印・十字キー・端まで・点・スライダー・ダイヤル）")),
     (("save", "💾", "全スライドJSONで保存（Slide Studio でも開ける）"), ("open", "📂", "全スライドJSONを開く"),
@@ -4102,9 +4165,14 @@ def _phone_html() -> str:
             return f'<label class="button" data-act="{act}" {label}>{emoji}<input type="file" data-file="{act}" accept="{accept}" /></label>'
         if act in ("studio", "home"):
             return f'<a class="button" href="{"../" if act == "studio" else "../../"}" data-act="{act}" {label}>{emoji}</a>'
+        if act in candidates:                       # 🔷 😊 (^^): the same candidates as Image Studio's tools, read from its markup
+            return f'<button type="button" data-act="{act}" data-candidates="{escape(candidates[act])}" {label}>{emoji}</button>'
         return f'<button type="button" data-act="{act}" {label}>{emoji}</button>'
 
-    rows = "".join('<div class="phone-row">' + "".join(control(*tool) for tool in row) + "</div>" for row in PHONE_TOOLS)
+    import re
+    candidates = dict(re.findall(r'data-tool="(shape|emoji|kaomoji)"[^>]*data-candidates="([^"]*)"', STUDIO_HTML))
+    rows = ['<div class="phone-row">' + "".join(control(*tool) for tool in row) + "</div>" for row in PHONE_TOOLS]
+    rows = rows[0] + '<div id="phone-candidates" role="group" aria-label="候補" hidden></div>' + "".join(rows[1:])
     slide = ('<div id="phone-svg" class="phone-svg" data-ui-fill></div>'
              '<div id="phone-pick" class="phone-pick" hidden><span class="phone-grip" data-grip aria-hidden="true">↘</span></div>')
     head = STUDIO_HTML[:STUDIO_HTML.index("</head>")]

@@ -315,6 +315,11 @@ print('Long Japanese/English: visible SVG lines match native PPTX, explicit para
     };
     const state = () => mobile.evaluate(() => ({ deck: IronmatePhone.deck, active: IronmatePhone.active, level: IronmatePhone.level, selected: IronmatePhone.selected }));
     const act = (name) => mobile.tap(`[data-act="${name}"]`);
+    // 🔷 😊 (^^): open the tool's candidates (once) and tap one; it is placed at once
+    const pick = async (tool, value) => {
+      if ((await mobile.getAttribute("#phone-candidates", "data-tool")) !== tool) await act(tool);
+      await mobile.locator("#phone-candidates button", { hasText: value }).tap();
+    };
     const pageNo = () => mobile.textContent("#phone-pager output"); // 🧭 PySaiyanWeBoo's pager: n/N in every shape
     const stageAt = async (fx, fy) => {
       const box = await mobile.locator("#phone-stage").boundingBox();
@@ -379,8 +384,43 @@ print('Long Japanese/English: visible SVG lines match native PPTX, explicit para
     // ➕📄 pages and ⬅️ ➡️
     await act("slide-add");
     assert.equal(await pageNo(), "2/2");
-    await act("rect");
-    await act("arrow");
+    assert.equal(await mobile.locator("#phone-candidates").isHidden(), true); // no candidates, and no gap, until a tool asks
+    await pick("shape", "▭");
+    assert.deepEqual(await mobile.locator("#phone-candidates button").allTextContents(), ["▭", "◯", "△", "→"]);
+    await pick("shape", "→");
+    // 😊 (^^) 🕒 🅱️ 🎨 ⏫ on a page of their own, so the pages the rest of this test counts stay as they were
+    await act("slide-add");
+    await pick("emoji", "🌱");
+    await pick("kaomoji", "(・∀・)");
+    await act("clock");
+    await pick("shape", "△");
+    let extra = (await state()).deck.slides[2].layers;
+    assert.deepEqual(extra.map((l) => [l.kind, l.text ?? ""]), [["text", "🌱"], ["text", "(・∀・)"], ["clock", ""], ["triangle", ""]]);
+    assert.ok(extra[2].hour >= 0 && extra[2].hour < 24 && extra[2].w === extra[2].h);
+    assert.ok(extra[0].w <= 1280 * 0.9 && extra[0].x > 0 && extra[1].wrap === true);          // a stamp is a text box that fits its words
+    for (const name of ["edit", "bold"]) assert.equal(await mobile.isDisabled(`[data-act="${name}"]`), true); // the triangle is selected
+    await act("color");
+    assert.equal((await state()).deck.slides[2].layers[3].fill, "#D7263D");                    // 🎨 teal → the next colour
+    // ⏫ 🅱️ the kaomoji is under the clock and the triangle; its left end is the only thing under the finger there
+    const kao = extra[1];
+    assert.ok(kao.x + 8 < Math.min(extra[2].x, extra[3].x), JSON.stringify(extra));
+    const seed = await stageAt((kao.x + 8) / 1280, (kao.y + kao.h / 2) / 720);
+    await mobile.touchscreen.tap(seed.x, seed.y);
+    assert.equal((await state()).selected, kao.id);
+    assert.equal(await mobile.isDisabled('[data-act="bold"]'), false);
+    await act("bold");
+    await act("front");
+    extra = (await state()).deck.slides[2].layers;
+    assert.deepEqual(extra.map((l) => l.kind), ["text", "clock", "triangle", "text"]);
+    assert.ok(extra[3].id === kao.id && extra[3].bold === true);
+    await snap("candidates");
+    const rows = await mobile.$$eval(".phone-row", (nodes) => nodes.map((n) => new Set([...n.children].map((c) => c.offsetTop)).size));
+    assert.ok(rows.every((n) => n === 1), JSON.stringify(rows));                                // 📱 390 px: no row wraps
+    for (let i = 0; i < 3; i++) await act("undo");
+    extra = (await state()).deck.slides[2].layers;
+    assert.ok(extra[1].id === kao.id && extra[1].bold === false && extra[3].fill === "#18A7A1", JSON.stringify(extra));
+    await act("slide-delete");
+    assert.equal(await pageNo(), "2/2");
     await act("text");
     await mobile.keyboard.type("2 ページ目");
     await mobile.tap('[data-ui-pager-go="prev"]');
@@ -516,7 +556,7 @@ print('📱 phone: 2 slides, native text kept')
       window.restoreStorage = Storage.prototype.setItem;
       Storage.prototype.setItem = () => { throw new DOMException("full", "QuotaExceededError"); };
     });
-    await act("rect");
+    await pick("shape", "▭");
     await mobile.waitForFunction(() => document.querySelector("#phone-status").textContent.includes("⚠️ 💾"));
     assert.equal(await mobile.evaluate((key) => localStorage.getItem(key), storageKey), stored);
     await mobile.evaluate(() => { Storage.prototype.setItem = window.restoreStorage; });

@@ -27,6 +27,7 @@ const url =
     page.on("request", (r) => requests.push(r.url()));
     page.on("dialog", (d) => d.accept());
     await page.goto(url);
+    await page.locator("#studio-export summary").click();
     await page.waitForFunction(() => !!window.IronmateSlideEditor);
     assert.equal(
       (await page.evaluate(() => IronmateSlideEditor.deck)).slides.length,

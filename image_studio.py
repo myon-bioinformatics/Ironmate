@@ -54,6 +54,23 @@ def mosaic(artifact, cell=8, levels=256):
     return {'schema': 'ironmate-pixel-grid/1', 'width': width, 'height': height, 'colors': palette, 'pixels': pixels}
 
 
+def host_rows(slides: bool = False) -> str:
+    """🧰 What a host's header shows for a studio, as a JSON data block in the page (PySaiyanWeBoo chrome rows): one 💾 whose panel
+    lists every format, one 📂, the 📱 layout under ⚙️, the temporary shelf under ⋯. The page carries no header of its own: it
+    answers each key (``ui-chrome-action`` in studio.js) by pressing its own control. ``replaces`` names the page's own menus, which
+    a host that shows these rows hides; without a host (the local server) they stay."""
+    rows = lambda pairs: [{'label': label, 'key': key} for label, key in pairs]
+    save = [('🖼 PNG', 'png'), ('🖼 PNG ×2', 'png-2'), ('🖼 PNG ×4', 'png-4'), ('🖼 PNG ×8', 'png-8'), ('📐 SVG', 'svg'),
+            ('📦 JSON（再編集用）', 'json'), ('🕘 作業履歴', 'workspace'), ('🔤 Base64 / 渡す', 'base64')]
+    opened = [('📦 JSON', 'open-json'), ('🕘 作業履歴', 'open-workspace')]
+    if slides:
+        save, opened = [('📽️ PPTX', 'pptx'), ('📦 全スライド JSON', 'deck-json'), *save], [('📦 全スライド JSON', 'open-deck'), *opened]
+    spec = {'tools': {'💾': {'label': '保存', 'label_en': 'Save', 'links': rows(save)}, '📂': {'label': '開く', 'label_en': 'Open', 'links': rows(opened)}},
+            'settings': rows([('📱 スマホ版', 'phone')]), 'screen': rows([('📋 クリップボード・シェルフ', 'shelf')]),
+            'replaces': '#studios,#studio-import,#studio-export'}
+    return '<script type="application/json" id="ui-chrome-rows">' + json.dumps(spec, ensure_ascii=False).replace('<', '\\u003c') + '</script>'
+
+
 def public_assets():
     """Explicit publication allowlist; no user scenes, globbing, or local images."""
     from ironlib.studio_bundle import BRAND_HTML, BROWSER_TASK_JS, PHONE_HTML, RECORDS_JS, SLIDES_PANEL_HTML, STUDIO_PIXEL_PANEL, STUDIO_HTML, STUDIO_JS, STYLE_CSS, TOOLS_HTML
@@ -64,7 +81,7 @@ def public_assets():
              'brand/icon.svg', 'brand/heatmap.svg', 'brand/hero.svg', 'brand/favicon.ico', 'brand/favicon-16.png',
              'brand/favicon-32.png', 'brand/favicon-48.png', 'brand/icon-192.png')
     assets = {name: (ROOT / 'studio' / name).read_bytes() for name in names}
-    assets['index.html'] = STUDIO_HTML.encode('utf-8')
+    assets['index.html'] = STUDIO_HTML.replace('<header>', host_rows() + '<header>', 1).encode('utf-8')
     assets['style.css'] = STYLE_CSS.encode('utf-8')
     from scripts.pages_catalog import catalog_script
     assets['studio.js'] = STUDIO_JS.encode('utf-8') + b'\n' + catalog_script()
@@ -83,7 +100,7 @@ def public_assets():
     page = page.replace('<span>画像編集</span>', '<span>スライド編集</span>').replace('Ironmate — Image Studio', 'Ironmate — Slide Studio')
     page = page.replace('<!-- deck-import -->', '<label class="button">全スライドを開く<input id="deck-open" type="file" accept=".json,application/json" /></label>')
     page = page.replace('<!-- deck-export -->', '<button id="deck-save">全スライドJSON保存</button><button id="deck-pptx" class="primary">PPTXを書き出す</button>')
-    page = page.replace('</header>', '</header>' + SLIDES_PANEL_HTML)
+    page = page.replace('<header>', host_rows(slides=True) + '<header>', 1).replace('</header>', '</header>' + SLIDES_PANEL_HTML)
     assets['slides/index.html'] = page.encode('utf-8')
     assets['slides/phone/index.html'] = PHONE_HTML.encode('utf-8')  # 📱 the same deck JSON / PPTX on a phone
     return assets

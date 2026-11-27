@@ -54,26 +54,24 @@ def mosaic(artifact, cell=8, levels=256):
     return {'schema': 'ironmate-pixel-grid/1', 'width': width, 'height': height, 'colors': palette, 'pixels': pixels}
 
 
-def host_rows(slides: bool = False) -> str:
+def host_rows() -> str:
     """🧰 What a host's header shows for a studio, as a JSON data block in the page (PySaiyanWeBoo chrome rows): one 💾 whose panel
-    lists every format, one 📂, the 📱 layout under ⚙️, the temporary shelf under ⋯. The page carries no header of its own: it
+    lists every format, one 📂, the temporary shelf under ⋯. The page carries no header of its own: it
     answers each key (``ui-chrome-action`` in studio.js) by pressing its own control. ``replaces`` names the page's own menus, which
     a host that shows these rows hides; without a host (the local server) they stay."""
     rows = lambda pairs: [{'label': label, 'key': key} for label, key in pairs]
     save = [('🖼 PNG', 'png'), ('🖼 PNG ×2', 'png-2'), ('🖼 PNG ×4', 'png-4'), ('🖼 PNG ×8', 'png-8'), ('📐 SVG', 'svg'),
             ('📦 JSON（再編集用）', 'json'), ('🕘 作業履歴', 'workspace'), ('🔤 Base64 / 渡す', 'base64')]
     opened = [('📦 JSON', 'open-json'), ('🕘 作業履歴', 'open-workspace')]
-    if slides:
-        save, opened = [('📽️ PPTX', 'pptx'), ('📦 全スライド JSON', 'deck-json'), *save], [('📦 全スライド JSON', 'open-deck'), *opened]
     spec = {'tools': {'💾': {'label': '保存', 'label_en': 'Save', 'links': rows(save)}, '📂': {'label': '開く', 'label_en': 'Open', 'links': rows(opened)}},
-            'settings': rows([('📱 スマホ版', 'phone')]), 'screen': rows([('📋 クリップボード・シェルフ', 'shelf')]),
+            'screen': rows([('📋 クリップボード・シェルフ', 'shelf')]),
             'replaces': '#studios,#studio-import,#studio-export'}
     return '<script type="application/json" id="ui-chrome-rows">' + json.dumps(spec, ensure_ascii=False).replace('<', '\\u003c') + '</script>'
 
 
 def public_assets():
     """Explicit publication allowlist; no user scenes, globbing, or local images."""
-    from ironlib.studio_bundle import BRAND_HTML, BROWSER_TASK_JS, PHONE_HTML, RECORDS_JS, SLIDES_PANEL_HTML, STUDIO_PIXEL_PANEL, STUDIO_HTML, STUDIO_JS, STYLE_CSS, TOOLS_HTML
+    from ironlib.studio_bundle import BRAND_HTML, BROWSER_TASK_JS, PHONE_HTML, RECORDS_JS, STUDIO_HTML, STUDIO_JS, STYLE_CSS, TOOLS_HTML
     names = ('brand/mono.svg', 'brand/dark-green.svg',
              'brand/famicom.svg', 'brand/gameboy.svg', 'brand/pixel-3d.svg',
              'brand/manifest.webmanifest', 'brand/apple-touch-icon.png', 'brand/app-192.png',
@@ -89,20 +87,13 @@ def public_assets():
     assets['tools/async-task.js'] = BROWSER_TASK_JS.encode('utf-8')
     assets['tools/records.js'] = RECORDS_JS.encode('utf-8')
     assets['brand/index.html'] = BRAND_HTML.encode('utf-8')
-    page = STUDIO_HTML.replace(STUDIO_PIXEL_PANEL, '')
-    for name in ('style.css', 'studio.js', 'brand/icon.svg', 'brand/heatmap.svg', 'brand/favicon.ico',
-                 'brand/manifest.webmanifest', 'brand/apple-touch-icon.png'):
-        page = page.replace('"' + name + '"', '"../' + name + '"')
-    page = page.replace('href="tools/#composition"', 'href="../tools/#composition"')
-    page = page.replace('href="tools/"', 'href="../tools/"').replace('href="slides/phone/"', 'href="phone/"')
-    page = page.replace('<a href="slides/">スライド・PPTX作成 ↗</a>', '<a href="../">Image Studio ↗</a>')
-    page = page.replace('<body class="ui-elements" data-ui-theme="green" data-page="studio">', '<body class="ui-elements" data-ui-theme="green" data-page="studio slides" data-mode="slides">').replace('<h1>画像を編集</h1>', '<h1>スライドを編集</h1>')
-    page = page.replace('<span>画像編集</span>', '<span>スライド編集</span>').replace('Ironmate — Image Studio', 'Ironmate — Slide Studio')
-    page = page.replace('<!-- deck-import -->', '<label class="button">全スライドを開く<input id="deck-open" type="file" accept=".json,application/json" /></label>')
-    page = page.replace('<!-- deck-export -->', '<button id="deck-save">全スライドJSON保存</button><button id="deck-pptx" class="primary">PPTXを書き出す</button>')
-    page = page.replace('<header>', host_rows(slides=True) + '<header>', 1).replace('</header>', '</header>' + SLIDES_PANEL_HTML)
-    assets['slides/index.html'] = page.encode('utf-8')
-    assets['slides/phone/index.html'] = PHONE_HTML.encode('utf-8')  # 📱 the same deck JSON / PPTX on a phone
+    # 📽️ slides/ is the one slide editor (phone-first, the same page on a PC). slides/phone/ (its address before) and slides/pc/
+    # (the PC studio it replaced) only send on to it, so old links and bookmarks keep working.
+    assets['slides/index.html'] = PHONE_HTML.encode('utf-8')
+    for old in ('slides/phone/index.html', 'slides/pc/index.html'):
+        assets[old] = ('<!doctype html>\n<html lang="ja"><head><meta charset="utf-8" /><meta http-equiv="refresh" content="0; url=../" />'
+                       '<link rel="canonical" href="../" /><title>Ironmate — Slides</title></head>'
+                       '<body><a href="../">📽️</a></body></html>\n').encode('utf-8')
     return assets
 
 
@@ -235,7 +226,7 @@ class StudioHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         assets = cached_public_assets()
         route = self.path.split('?', 1)[0]
-        filename = {'/': 'index.html', '/tools/': 'tools/index.html', '/slides/': 'slides/index.html', '/slides/phone/': 'slides/phone/index.html', '/brand/': 'brand/index.html'}.get(route, route.lstrip('/'))
+        filename = {'/': 'index.html', '/tools/': 'tools/index.html', '/slides/': 'slides/index.html', '/slides/pc/': 'slides/pc/index.html', '/slides/phone/': 'slides/phone/index.html', '/brand/': 'brand/index.html'}.get(route, route.lstrip('/'))
         if filename not in assets:
             self.send_error(404)
             return

@@ -3137,6 +3137,43 @@ if (typeof document !== "undefined" && (document.getElementById("pixel-editor") 
       $("song-status").textContent = err.message;
     }
   };
+  function songNotes(progression, key, bpm) {
+    const tonic = {C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11}[key];
+    const scale = [0, 2, 4, 5, 7, 9, 11];
+    const degrees = ["I", "II", "III", "IV", "V", "VI", "VII"];
+    const duration = 30 / bpm;
+    const notes = [];
+    for (const chord of progression.split(" ")) {
+      const match = /^([IViv]+)(dim|°)?(7)?$/.exec(chord);
+      const roman = match?.[1];
+      const degree = degrees.indexOf(roman?.toUpperCase());
+      if (degree < 0 || (roman !== roman.toUpperCase() && roman !== roman.toLowerCase()))
+        throw Error("未対応のコード: " + chord);
+      const intervals = [0, match[2] || roman === roman.toLowerCase() ? 3 : 4, match[2] ? 6 : 7];
+      if (match[3]) intervals.push(10);
+      for (const interval of intervals) {
+        const midi = 60 + tonic + scale[degree] + interval;
+        notes.push({hz: 440 * 2 ** ((midi - 69) / 12), start: notes.length * duration, duration: duration * 0.85});
+      }
+    }
+    return notes;
+  }
+  $("song-stop").onclick = () => {
+    document.dispatchEvent(new Event("studio-audio-stop"));
+    $("song-status").textContent = "停止しました。";
+  };
+  $("song-play").onclick = () => {
+    $("song-stop").click();
+    $("song-arrange").click();
+    const progression = $("song-progression").value;
+    if (!progression || !$("song-bpm").reportValidity()) return;
+    try {
+      const notes = songNotes(progression, $("song-key").value, Number($("song-bpm").value));
+      document.dispatchEvent(new CustomEvent("studio-audio-play", { detail: {
+        notes, report: text => { $("song-status").textContent = text; },
+      } }));
+    } catch (err) { $("song-status").textContent = err.message; }
+  };
   let images = [];
   let imageGeneration = 0;
   $("images").addEventListener("change", async (e) => {

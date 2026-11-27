@@ -78,6 +78,8 @@ def public_assets():
     page = page.replace('<a href="slides/">スライド・PPTX作成 ↗</a>', '<a href="../">Image Studio ↗</a>')
     page = page.replace('<body class="ui-elements" data-ui-theme="green" data-page="studio">', '<body class="ui-elements" data-ui-theme="green" data-page="studio slides" data-mode="slides">').replace('<h1>画像を編集</h1>', '<h1>スライドを編集</h1>')
     page = page.replace('<span>画像編集</span>', '<span>スライド編集</span>').replace('Ironmate — Image Studio', 'Ironmate — Slide Studio')
+    page = page.replace('<!-- deck-import -->', '<label class="button">全スライドを開く<input id="deck-open" type="file" accept=".json,application/json" /></label>')
+    page = page.replace('<!-- deck-export -->', '<button id="deck-save">全スライドJSON保存</button><button id="deck-pptx" class="primary">PPTXを書き出す</button>')
     page = page.replace('</header>', '</header>' + SLIDES_PANEL_HTML)
     assets['slides/index.html'] = page.encode('utf-8')
     assets['slides/phone/index.html'] = PHONE_HTML.encode('utf-8')  # 📱 the same deck JSON / PPTX on a phone

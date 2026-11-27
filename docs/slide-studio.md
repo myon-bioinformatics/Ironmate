@@ -28,14 +28,17 @@ Unsaved changes are confirmed when leaving the page. There is no autosave or re-
 
 https://myon-bioinformatics.github.io/tools/slide-studio/phone/
 
-<img src="assets/phone-slides.gif" width="240" alt="Phone slides in a 390×844 browser: blank slide, text box, editing later, bigger text, page 2, ⬅️ back to page 1, then 🧭 through the six pager shapes">
+<img src="assets/phone-slides.gif" width="240" alt="Phone slides in a 390×844 browser: blank slide, text box, editing later, bigger text, 🔷 😊 (^^) 🕒 placed from candidates, page 2, ⬅️ back to page 1, then 🧭 through the six pager shapes">
 
 A phone-first page for the same deck. The slide stays pinned at the top while you work, and every control is an emoji (its words are only in the tooltip / screen-reader label). Landscape puts the controls beside the slide. The pinned slide and the page controls are PySaiyanWeBoo's `stage` and `pager` components (`scripts/build_studio_css.py` writes them from the pinned commit).
 
 | | |
 | --- | --- |
 | ⬜ | Starts blank (one 1280×720 slide) |
-| 🔤 🟦 ⚪ 🔺 ↗️ 🖼️ | Add a text box (type right away), a rectangle, circle, triangle, arrow or picture (photos become PNG, at most 4 MP and 1920 px on the long side) |
+| 🔤 🖼️ | Add a text box (type right away) or a picture (photos become PNG, at most 4 MP and 1920 px on the long side) |
+| 🔷 😊 (^^) | One row of candidates opens under the tools; tap one and it is placed: ▭ ◯ △ → for shapes, emoji, kaomoji (the same candidates as Image Studio's tools). Tap the tool again to close the row |
+| 🕒 | A clock showing the time now |
+| ✏️ 🅱️ 🎨 ⏫ | For the selection: edit the text, bold on / off, the next colour (black, teal, red, blue, yellow, white), bring to the front |
 | 👆 ↘ | Tap to select, drag to move, drag ↘ to resize. Tap a selected text box again (or ✏️) to edit it later; the editor sits under the slide at 16 px so phones do not zoom, and the slide updates as you type. A box left empty is removed |
 | 🔽 🔄 🔼 | Every text box on every slide together: 0.5, 0.75, 1, 1.25, 1.5, 2, 2.5 × (titles keep their ratio to body text). New boxes start at 32 px × the current step |
 | ⬅️ ➡️ | Previous / next page, right under the slide; the middle shows page / pages. Keyboard ← / → (Home / End: first / last) do the same |

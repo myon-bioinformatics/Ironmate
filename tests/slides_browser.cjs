@@ -17,291 +17,13 @@ const url =
     args: ["--no-sandbox", "--disable-dev-shm-usage"],
   });
   try {
-    const page = await browser.newPage({
-        viewport: { width: 1600, height: 1100 },
-        acceptDownloads: true,
-      }),
-      errors = [],
+    const errors = [],
       requests = [];
-    page.on("pageerror", (e) => errors.push(e.message));
-    page.on("request", (r) => requests.push(r.url()));
-    page.on("dialog", (d) => d.accept());
-    await page.goto(url + "pc/"); // 🖥️ the PC studio the one editor replaces, kept until its remaining tools are there
-    await page.locator("#studio-export summary").click();
-    await page.waitForFunction(() => !!window.IronmateSlideEditor);
-    assert.equal(
-      (await page.evaluate(() => IronmateSlideEditor.deck)).slides.length,
-      1,
-    );
-    assert.deepEqual((await page.evaluate(() => IronmateStudio.scene)).layers, []);
-    await page.check("#slide-grid-mode");
-    for (let i = 1; i < 5; i++) {
-      await page.click("#slide-add");
-      await page.waitForFunction(n => IronmateSlideEditor.active === n, i);
-    }
-    assert.equal(await page.locator(".slide-grid > div").count(), 1);
-    await page.selectOption("#slide-select", "0");
-    await page.waitForFunction(() => IronmateSlideEditor.active === 0);
-    assert.equal(await page.locator(".slide-grid > div").count(), 4);
-    await page.getByRole("button", {name: "3 枚目を編集"}).click();
-    await page.waitForFunction(() => IronmateSlideEditor.active === 2);
-    // The tools place everything: 図形(→) is the arrow, T 文字列 a text box (wide enough to keep its words on one line).
-    const press = async (fx, fy) => {
-      const box = await page.locator("#board svg").boundingBox();
-      await page.mouse.click(box.x + box.width * fx, box.y + box.height * fy);
-    };
-    const arrow = async () => {
-      await page.click('[data-tool="shape"]');
-      await page.locator("#candidates button", { hasText: "→" }).click();
-      assert.equal(await page.textContent('[data-tool="shape"]'), "図形(→)");
-      await press(0.4, 0.7);
-      await page.click('[data-tool="select"]');
-    };
-    const words = async (text, fy) => {
-      const before = await page.evaluate(() => IronmateStudio.scene.layers.length);
-      await page.click('[data-tool="text"]');
-      await page.fill("#text", text);
-      await press(0.45, fy);
-      await page.waitForFunction((n) => IronmateStudio.scene.layers.length === n + 1, before);
-      await page.click('[data-tool="select"]');
-      for (const [id, value] of [["w", "1200"], ["font-size", "32"]]) {
-        await page.fill("#" + id, value);
-        await page.locator("#" + id).blur();
-      }
-    };
-    assert.equal(await page.locator("#slide-template, #slide-arrow, #slide-bold, #slide-title, #slide-body, #font-sample").count(), 0);
-    await arrow();
-    await page.waitForFunction(() => IronmateStudio.scene.layers.length === 1);
-    await page.click("#slide-up");
-    await page.waitForFunction(() => IronmateSlideEditor.active === 1);
-    await page.click("#slide-duplicate");
-    await page.waitForFunction(() => IronmateSlideEditor.active === 2);
-    await words("スライドのタイトル", 0.2);
-    await words("ここに本文を入力します。", 0.5);
-    await page.waitForFunction(() => IronmateStudio.scene.layers.length === 3);
-    assert.deepEqual(await page.evaluate(() => IronmateSlideEditor.deck.slides.map(s => s.layers.length)), [0,1,3,0,0,0]);
-    for (let count = 5; count >= 1; count--) {
-      await page.click("#slide-delete");
-      await page.waitForFunction(n => IronmateSlideEditor.deck.slides.length === n, count);
-    }
-    await page.uncheck("#slide-grid-mode");
-    assert.equal(await page.locator(".workspace > #board").count(), 1);
-    await words("スライドのタイトル", 0.2);
-    await words("ここに本文を入力します。", 0.5);
-    await page.waitForFunction(() => IronmateStudio.scene.layers.length === 2);
-    assert.equal(await page.inputValue("#text"), "ここに本文を入力します。");
-    const [titleId, bodyId] = await page.evaluate(() => IronmateStudio.scene.layers.map(layer => layer.id));
-    await page.click(`[data-layer-id="${titleId}"]`);
-    assert.equal(await page.inputValue("#edit-text"), "スライドのタイトル");
-    await page.fill("#edit-text", "編集したタイトル <>&");
-    await page.click("#apply-text");
-    assert.equal(await page.inputValue("#text"), "ここに本文を入力します。"); // ✏️ 編集 leaves the tool's own input alone
-    assert.equal(await page.locator(`[data-layer-id="${titleId}"]`).textContent(), "文字 / 編集したタイトル <>&");
-    await page.fill("#font-size", "64");
-    await page.locator("#font-size").blur();
-    await page.check("#bold");
-    await page.check("#italic");
-    await page.fill("#edit-fill", "#123456");
-    assert.deepEqual(await page.evaluate(() => { const l = IronmateStudio.scene.layers[0]; return [l.bold, l.italic, l.fill]; }), [true, true, "#123456"]);
-    await page.uncheck("#bold");
-    let first = await page.evaluate(() => IronmateStudio.scene);
-    assert.equal(first.layers[0].text, "編集したタイトル <>&");
-    assert.equal(first.layers[0].fontSize, 64);
-    assert.equal(first.layers[0].bold, false);
-    await arrow();
-    await page.waitForFunction(() =>
-      IronmateStudio.scene.layers.some((l) => l.kind === "arrow" && l.headStyle === "triangle"),
-    );
-    await page.click("#slide-duplicate");
-    await page.waitForFunction(() => IronmateSlideEditor.active === 1);
-    await page.click("#slide-add");
-    await page.waitForFunction(() => IronmateSlideEditor.active === 2);
-    await words("二枚目のタイトル", 0.2);
-    await words("日本語の文章と ABC abc 0123456789", 0.5);
-    await page.waitForFunction(() => IronmateStudio.scene.layers.length === 2);
-    await page.click('[data-tool="clock"]');
-    await page.locator("#board").click({ position: { x: 250, y: 300 } });
-    await page.waitForFunction(() =>
-      IronmateStudio.scene.layers.some((l) => l.kind === "clock"),
-    );
-    await page.click("#slide-up");
-    await page.waitForFunction(() => IronmateSlideEditor.active === 1);
-    await page.selectOption("#slide-select", "2");
-    await page.waitForFunction(() => IronmateSlideEditor.active === 2);
-    await page.click("#slide-delete");
-    await page.waitForFunction(
-      () => IronmateSlideEditor.deck.slides.length === 2,
-    );
-    await page.selectOption("#slide-select", "0");
-    await page.waitForFunction(() => IronmateSlideEditor.active === 0);
-    const restored = await page.evaluate(() => IronmateStudio.scene);
-    assert.equal(restored.layers[0].text, "編集したタイトル <>&");
-    assert.equal(restored.layers[0].fontSize, 64);
-    const download = async (id, name) => {
-      const pending = page.waitForEvent("download");
-      await page.click("#" + id);
-      await (await pending).saveAs(path.join(out, name));
-    };
-    await download("deck-save", "slides.json");
-    // 🧰 the page declares its rows for a host's header and answers a row's key with its own control: the PPTX from the key alone
-    assert.ok(JSON.parse(await page.locator("#ui-chrome-rows").textContent()).tools["💾"].links.some((row) => row.key === "pptx"));
-    assert.equal(await page.locator("[data-ui-chrome]").count(), 0); // no header of its own
-    const hosted = page.waitForEvent("download");
-    await page.evaluate(() => document.dispatchEvent(new CustomEvent("ui-chrome-action", { detail: { key: "pptx" } })));
-    assert.match((await hosted).suggestedFilename(), /\.pptx$/);
-    const saved = await page.evaluate(() => IronmateSlideEditor.deck);
-    await page.setInputFiles("#deck-open", {
-      name: "invalid.json",
-      mimeType: "application/json",
-      buffer: Buffer.from('{"schema":"wrong"}'),
-    });
-    await page.waitForFunction(
-      () => document.getElementById("deck-status").dataset.error === "true",
-    );
-    assert.deepEqual(
-      await page.evaluate(() => IronmateSlideEditor.deck),
-      saved,
-    );
-    await page.click("#slide-add");
-    await page.waitForFunction(
-      () => IronmateSlideEditor.deck.slides.length === 3,
-    );
-    await page.setInputFiles("#deck-open", path.join(out, "slides.json"));
-    await page.waitForFunction(
-      () =>
-        IronmateSlideEditor.deck.slides.length === 2 &&
-        IronmateSlideEditor.active === 0,
-    );
-    assert.deepEqual(
-      await page.evaluate(() => IronmateSlideEditor.deck),
-      saved,
-    );
-    await download("deck-pptx", "slides.pptx");
-    await page.waitForFunction(() =>
-      document.getElementById("deck-status").textContent.includes("2枚のPPTX"),
-    );
-    await page.screenshot({
-      path: path.join(out, "slides-desktop.png"),
-      fullPage: true,
-    });
-    await page.setViewportSize({ width: 390, height: 844 });
-    assert.equal(
-      await page.evaluate(
-        () => document.documentElement.scrollWidth <= innerWidth,
-      ),
-      true,
-    );
-    await page.screenshot({
-      path: path.join(out, "slides-mobile.png"),
-      fullPage: true,
-    });
-    assert.deepEqual(errors, []);
-    assert(
-      requests.every(
-        (r) =>
-          r.startsWith(new URL(url).origin + "/") || /^(blob|data):/.test(r),
-      ),
-    );
-    const result = spawnSync(
-      process.env.PYTHON || "python",
-      [
-        "-S",
-        "-c",
-        `from pathlib import Path\nfrom zipfile import ZipFile\nfrom xml.etree import ElementTree as E\nfrom ironlib.pptx_ooxml import require_package,ordered_slide_members\np=Path('build/pages-evidence/slides.pptx')\nassert require_package(p)==2\nns={'p':'http://schemas.openxmlformats.org/presentationml/2006/main','a':'http://schemas.openxmlformats.org/drawingml/2006/main'}\nwith ZipFile(p) as z:\n assert z.testzip() is None\n slides=[E.fromstring(z.read(n)) for n in ordered_slide_members(z)]\n assert slides[0].find('.//a:t',ns).text=='編集したタイトル <>&'\n assert slides[0].find('.//a:rPr',ns).get('i')=='1' and slides[1].find('.//a:rPr',ns).get('i') is None\n assert slides[0].find('.//p:grpSp',ns) is not None\n assert slides[1].find('.//a:t',ns).text=='二枚目のタイトル'\n assert len(slides[1].findall('.//p:pic',ns))==1\n assert [e.text for e in slides[1].findall('.//a:t',ns)][1]=='日本語の文章と ABC abc 0123456789'\n for name in z.namelist():\n  if name.endswith(('.xml','.rels')):E.fromstring(z.read(name))\nprint('Browser PPTX: two ordered slides, editable text, native grouped arrow, per-layer PNG, XML and ZIP CRC verified')`,
-      ],
-      { encoding: "utf8" },
-    );
-    assert.equal(result.status, 0, result.stderr);
-    console.log(result.stdout.trim());
-
-    // Paste long text through the real inspector, then compare the visible
-    // SVG line strings with the editable DrawingML exported by this browser.
-    await page.setViewportSize({ width: 1600, height: 1100 });
-    await page.click(`[data-layer-id="${titleId}"]`);
-    const japanese = "日本語の長い文章を貼り付け、ボックスの幅に合わせて折り返します。".repeat(3) + "\n\n明示改行の後です。\n";
-    await page.fill("#edit-text", japanese);
-    await page.click("#apply-text");
-    for (const [id, value] of [["w", "520"], ["h", "60"], ["font-size", "32"], ["rotation", "12"]]) {
-      await page.fill("#" + id, value);
-      await page.locator("#" + id).blur();
-    }
-    const titleLines = `#board g[data-layer="${titleId}"] tspan`;
-    const lineCount = () => page.locator(titleLines).count();
-    const wideCount = await lineCount();
-    assert(wideCount > 3);
-    await page.fill("#w", "300");
-    await page.locator("#w").blur();
-    assert((await lineCount()) > wideCount);
-    await page.fill("#font-size", "24");
-    await page.locator("#font-size").blur();
-    const smallCount = await lineCount();
-    await page.check("#bold");
-    const boldCount = await lineCount();
-    assert(boldCount >= smallCount);
-    await page.click(`[data-layer-id="${bodyId}"]`);
-    const english = "English words should stay together when they fit. ".repeat(5) + "\n\nhttps://example.test/" + "longurl".repeat(14) + " 👨‍👩‍👧‍👦 e\u0301 🇯🇵\n";
-    await page.fill("#edit-text", english);
-    await page.click("#apply-text");
-    await page.selectOption("#font-family", "mono");
-    for (const [id, value] of [["w", "600"], ["font-size", "24"]]) {
-      await page.fill("#" + id, value);
-      await page.locator("#" + id).blur();
-    }
-    const longDeck = await page.evaluate(() => IronmateSlideEditor.deck);
-    assert.equal(longDeck.slides[0].layers[0].text, japanese);
-    assert.equal(longDeck.slides[0].layers[1].text, english);
-    await download("deck-save", "slides-wrapped.json");
-    // Old deck JSON and the existing single-scene/workspace import routes
-    // must all receive the same wrap default without rewriting source text.
-    const legacy = JSON.parse(JSON.stringify(longDeck));
-    for (const scene of legacy.slides) for (const l of scene.layers) delete l.wrap;
-    await page.setInputFiles("#deck-open", { name: "legacy.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(legacy)) });
-    await page.waitForFunction(() => IronmateSlideEditor.ready);
-    assert.deepEqual(await page.evaluate(() => IronmateSlideEditor.deck), longDeck);
-    await page.setInputFiles("#open", { name: "legacy-scene.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(legacy.slides[0])) });
-    await page.locator(titleLines).first().waitFor();
-    assert.equal(await page.evaluate(() => IronmateStudio.scene.layers[0].wrap), true);
-    const workspace = await page.evaluate((scene) => StudioCore.workspaceText(new StudioCore.History(scene)), legacy.slides[0]);
-    await page.setInputFiles("#open-workspace", { name: "legacy-workspace.json", mimeType: "application/json", buffer: Buffer.from(workspace) });
-    await page.waitForFunction(() => document.getElementById("status").textContent.includes("作業履歴を復元"));
-    const manifest = await page.evaluate(() => IronmateStudio.scene.layers.filter(l => l.kind === "text" && !l.mono).map(l => {
-      const spans = [...document.querySelectorAll(`#board g[data-layer="${l.id}"] tspan`)];
-      const layout = StudioCore.textLayout(l);
-      return { id: l.id, layer: l, layout, visible: spans.map(s => s.textContent), widths: spans.map(s => s.getComputedTextLength()) };
-    }));
-    for (const item of manifest) {
-      assert.deepEqual(item.visible, item.layout.flat());
-      assert(item.widths.every(w => w <= item.layer.w + 1), JSON.stringify(item));
-    }
-    fs.writeFileSync(path.join(out, "slides-wrapped-layout.json"), JSON.stringify(manifest, null, 2));
-    await download("deck-pptx", "slides-wrapped.pptx");
-    await page.screenshot({ path: path.join(out, "slides-wrapped-desktop.png"), fullPage: true });
-    await page.setViewportSize({ width: 390, height: 844 });
-    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
-    await page.screenshot({ path: path.join(out, "slides-wrapped-mobile.png"), fullPage: true });
-    const wrapped = spawnSync(process.env.PYTHON || "python", ["-S", "-c", `
-import json
-from pathlib import Path
-from zipfile import ZipFile
-from xml.etree import ElementTree as E
-from ironlib.pptx_ooxml import require_package, ordered_slide_members
-p=Path('build/pages-evidence/slides-wrapped.pptx')
-assert require_package(p)==2
-ns={'p':'http://schemas.openxmlformats.org/presentationml/2006/main','a':'http://schemas.openxmlformats.org/drawingml/2006/main'}
-with ZipFile(p) as z:
- assert z.testzip() is None
- root=E.fromstring(z.read(ordered_slide_members(z)[0]))
- for item in json.loads(Path('build/pages-evidence/slides-wrapped-layout.json').read_text()):
-  shape=next(s for s in root.findall('.//p:sp',ns) if s.find('p:nvSpPr/p:cNvPr',ns).get('name')==item['layer'].get('name',item['id']))
-  layout=[[t.text or '' for t in para.findall('a:r/a:t',ns)] for para in shape.findall('p:txBody/a:p',ns)]
-  assert layout==item['layout'], (item['id'],layout,item['layout'])
-  assert shape.find('p:txBody/a:bodyPr',ns).get('wrap')=='square'
-  assert shape.find('p:txBody/a:bodyPr/a:noAutofit',ns) is not None
-  assert shape.find('p:spPr/a:xfrm',ns).get('rot')==str(round(item['layer']['rotation']*60000))
-print('Long Japanese/English: visible SVG lines match native PPTX, explicit paragraphs, blank lines and rotation')
-`], { encoding: "utf8" });
-    assert.equal(wrapped.status, 0, wrapped.stderr);
-    console.log(wrapped.stdout.trim());
+    // 🖥️ slides/pc/ (the PC studio the one editor replaced) only sends on, like slides/phone/.
+    const old = await browser.newPage();
+    await old.goto(url + "pc/");
+    await old.waitForURL(url);
+    await old.close();
     // 📽️ The one slide editor (slides/, phone-first): the slide stays pinned on top, emoji controls, 🧭 PySaiyanWeBoo's pager in every shape, text editable later.
     const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, acceptDownloads: true }),
       mobile = await phone.newPage(),
@@ -400,9 +122,29 @@ print('Long Japanese/English: visible SVG lines match native PPTX, explicit para
     assert.deepEqual(extra.map((l) => [l.kind, l.text ?? ""]), [["text", "🌱"], ["text", "(・∀・)"], ["clock", ""], ["triangle", ""]]);
     assert.ok(extra[2].hour >= 0 && extra[2].hour < 24 && extra[2].w === extra[2].h);
     assert.ok(extra[0].w <= 1280 * 0.9 && extra[0].x > 0 && extra[1].wrap === true);          // a stamp is a text box that fits its words
-    for (const name of ["edit", "bold"]) assert.equal(await mobile.isDisabled(`[data-act="${name}"]`), true); // the triangle is selected
-    await act("color");
+    assert.equal(await mobile.isDisabled('[data-act="edit"]'), true);                          // the triangle is selected
+    await pick("look", "🎨");
     assert.equal((await state()).deck.slides[2].layers[3].fill, "#D7263D");                    // 🎨 teal → the next colour
+    // 🎨 🖌 🌗 and ↻ ↺ ⏹ on the triangle, then ↩️ back to just the 🎨 step
+    const triangle = () => mobile.evaluate(() => IronmatePhone.deck.slides[2].layers[3]);
+    assert.deepEqual(await mobile.locator("#phone-candidates button").allTextContents(), ["🎨", "🖌", "🌗", "🅱️", "🔠"]);
+    await pick("look", "🖌");
+    await pick("look", "🌗");
+    await pick("look", "🅱️");                                                                    // not a text: nothing happens
+    let t = await triangle();
+    assert.ok(t.stroke === "#000000" && t.opacity === 0.75 && !("bold" in t), JSON.stringify(t));
+    await pick("turn", "↻");
+    await pick("turn", "↻");
+    await pick("turn", "↺");
+    assert.equal((await triangle()).rotation, 15);
+    assert.match(await mobile.evaluate(() => document.querySelector("#phone-pick").style.transform), /rotate\(15deg\)/); // the frame turns too
+    await pick("turn", "⏹");
+    assert.equal((await triangle()).rotation, 0);
+    for (let i = 0; i < 6; i++) await act("undo");
+    t = await triangle();
+    assert.ok(t.fill === "#D7263D" && t.stroke === "#183C42" && t.opacity === 1 && t.rotation === 0, JSON.stringify(t));
+    assert.equal((await state()).selected, null);                                              // ↩️ leaves nothing selected
+    await mobile.locator("#phone-layers button").nth(3).tap();                                 // 📚 pick the triangle again
     // 📚 the page's layers, back to front: the kaomoji is under the clock and the triangle, and is picked from the row
     const layerFaces = () => mobile.locator("#phone-layers button").allTextContents();
     assert.deepEqual(await layerFaces(), ["🌱", "(・∀", "🕒", "△"]);
@@ -411,8 +153,7 @@ print('Long Japanese/English: visible SVG lines match native PPTX, explicit para
     const kao = extra[1];
     await mobile.locator("#phone-layers button").nth(1).tap();
     assert.equal((await state()).selected, kao.id);
-    assert.equal(await mobile.isDisabled('[data-act="bold"]'), false);
-    await act("bold");
+    await pick("look", "🅱️");
     await act("front");
     extra = (await state()).deck.slides[2].layers;
     assert.deepEqual(extra.map((l) => l.kind), ["text", "clock", "triangle", "text"]);
@@ -426,6 +167,33 @@ print('Long Japanese/English: visible SVG lines match native PPTX, explicit para
     for (let i = 0; i < 4; i++) await act("undo");
     extra = (await state()).deck.slides[2].layers;
     assert.ok(extra[1].id === kao.id && extra[1].bold === false && extra[3].fill === "#18A7A1", JSON.stringify(extra));
+    // ✏️ a clock's time is edited like words: 14:30, and what is not a time leaves it as it was
+    await mobile.locator("#phone-layers button").nth(2).tap();
+    await act("edit");
+    assert.match(await mobile.inputValue("#phone-edit"), /^\d\d:\d\d$/);
+    await mobile.fill("#phone-edit", "14:30");
+    await mobile.evaluate(() => document.activeElement.blur());
+    let clock = (await state()).deck.slides[2].layers[2];
+    assert.deepEqual([clock.kind, clock.hour, clock.minute], ["clock", 14, 30]);
+    await act("edit");
+    await mobile.fill("#phone-edit", "25:00");
+    await mobile.evaluate(() => document.activeElement.blur());
+    clock = (await state()).deck.slides[2].layers[2];
+    assert.deepEqual([clock.hour, clock.minute], [14, 30]);
+    // 🗂️ every page as a picture; a tap goes there, and it is a view (not in ↩️)
+    assert.equal(await mobile.locator("#phone-pages").isHidden(), true);
+    await act("pages");
+    assert.equal(await mobile.locator("#phone-pages button").count(), 3);
+    assert.equal(await mobile.getAttribute('#phone-pages [aria-current="step"]', "aria-label"), "3/3");
+    assert.equal(await mobile.locator("#phone-pages button svg").first().getAttribute("width"), "80");
+    assert.deepEqual(await mobile.$$eval("#phone-pages button", (b) => b.map((x) => x.lastChild.textContent)), ["1", "2", "3"]); // under the picture
+    await snap("pages");
+    await mobile.locator("#phone-pages button").first().tap();
+    assert.equal(await pageNo(), "1/3");
+    await mobile.locator("#phone-pages button").nth(2).tap();
+    assert.equal(await pageNo(), "3/3");
+    await act("pages");
+    assert.equal(await mobile.locator("#phone-pages").isHidden(), true);
     await act("slide-delete");
     assert.equal(await pageNo(), "2/2");
     await act("text");
@@ -493,7 +261,9 @@ print('Long Japanese/English: visible SVG lines match native PPTX, explicit para
       c.getContext("2d").fillRect(0, 0, 8, 8);
       return c.toDataURL("image/png").split(",")[1];
     });
-    await mobile.setInputFiles('[data-file="image"]', { name: "photo.png", mimeType: "image/png", buffer: Buffer.from(photo, "base64") });
+    const [chooser] = await Promise.all([mobile.waitForEvent("filechooser"), pick("import", "🖼")]); // 📥 then the format
+    assert.equal(await chooser.element().getAttribute("accept"), "image/png,image/jpeg,image/webp");
+    await chooser.setFiles({ name: "photo.png", mimeType: "image/png", buffer: Buffer.from(photo, "base64") });
     await mobile.waitForFunction(() => IronmatePhone.deck.slides[1].layers.length === 4);
     assert.deepEqual(await mobile.evaluate(async () => {
       const img = new Image();
@@ -510,11 +280,23 @@ print('Long Japanese/English: visible SVG lines match native PPTX, explicit para
     assert.equal(s.deck.slides.length, 2);
     assert.equal(s.deck.slides[0].layers[0].text, "あとから編集した文字\n2 行目");
     assert.equal(await mobile.evaluate(() => IronmatePhone.pager), "dots"); // 🧭 the shape survives the reload too
-    // 📤 PPTX and 💾 JSON (the same all-slide JSON Slide Studio opens)
-    const [pptx] = await Promise.all([mobile.waitForEvent("download"), act("pptx")]);
+    // 📤 export, the format picked after it: 📽️ PPTX, 📦 JSON (the same all-slide JSON the PC studio opens), 🖼 PNG, 📐 SVG
+    assert.equal(await mobile.getAttribute('[data-act="export"]', "data-candidates"), "📽️ 📦 🖼 📐");
+    assert.equal(await mobile.getAttribute('[data-act="import"]', "data-candidates"), "📦 🖼");
+    const [pptx] = await Promise.all([mobile.waitForEvent("download"), pick("export", "📽️")]);
     await pptx.saveAs(path.join(out, "phone.pptx"));
-    const [json] = await Promise.all([mobile.waitForEvent("download"), act("save")]);
+    assert.equal(await mobile.evaluate(() => document.querySelector("#phone-candidates").previousElementSibling
+      .contains(document.querySelector('[data-act="export"]'))), true);                         // the formats open right under 📥 📤
+    assert.equal(await mobile.getAttribute('#phone-candidates button >> nth=0', "aria-label"), "PPTX（全スライド、PowerPoint で編集できる）");
+    const [json] = await Promise.all([mobile.waitForEvent("download"), pick("export", "📦")]);
     await json.saveAs(path.join(out, "phone.json"));
+    const [png] = await Promise.all([mobile.waitForEvent("download"), pick("export", "🖼")]);
+    assert.equal(png.suggestedFilename(), `ironmate-slide-${(await state()).active + 1}.png`);
+    const pngBytes = fs.readFileSync(await png.path());
+    assert.deepEqual([...pngBytes.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
+    assert.deepEqual([pngBytes.readUInt32BE(16), pngBytes.readUInt32BE(20)], [1280, 720]);  // the slide's own size
+    const [svg] = await Promise.all([mobile.waitForEvent("download"), pick("export", "📐")]);
+    assert.match(fs.readFileSync(await svg.path(), "utf8"), /^<svg [^>]*width="1280" height="720"/);
     await snap("saved");
     const phoneCheck = spawnSync(process.env.PYTHON || "python", ["-S", "-c", `
 from pathlib import Path
@@ -531,9 +313,9 @@ print('📱 phone: 2 slides, native text kept')
 `], { encoding: "utf8" });
     assert.equal(phoneCheck.status, 0, phoneCheck.stderr);
     console.log(phoneCheck.stdout.trim());
-    await page.setInputFiles("#deck-open", path.join(out, "phone.json"));
-    await page.waitForFunction(() => IronmateSlideEditor.deck.slides.length === 2);
-    assert.equal((await page.evaluate(() => IronmateSlideEditor.deck)).slides[0].layers[0].text, "あとから編集した文字\n2 行目");
+    const roundTrip = JSON.parse(fs.readFileSync(path.join(out, "phone.json"), "utf8"));                // 📦 opens again (openPhone below)
+    assert.equal(roundTrip.schema, "ironmate-slide-deck/1");
+    assert.equal(roundTrip.slides[0].layers[0].text, "あとから編集した文字\n2 行目");
     fs.writeFileSync(path.join(out, "phone-frames.json"), JSON.stringify(shots.map((f) => path.basename(f)), null, 2));
     // The same multiplier is bounded by the largest font, then reversed across a reload.
     const openPhone = async (deck) => {
@@ -582,14 +364,15 @@ print('📱 phone: 2 slides, native text kept')
     assert.equal(await pageNo(), "1/1");
     assert.equal(await mobile.evaluate(() => IronmatePhone.active), 0);
     assert.ok(await mobile.locator('[data-act="redo"]').isDisabled());
-    const [stillExportable] = await Promise.all([mobile.waitForEvent("download"), act("save")]);
+    const [stillExportable] = await Promise.all([mobile.waitForEvent("download"), pick("export", "📦")]);
     assert.equal(await stillExportable.failure(), null);
     await act("undo");
     await mobile.waitForFunction(() => IronmatePhone.deck.title === "font bounds");
     await phone.close();
     // 🖥️ The same page in a PC window: the controls sit beside the slide, every row on one line, nothing to scroll.
-    const wide = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+    const wide = await browser.newPage({ viewport: { width: 1280, height: 800 }, acceptDownloads: true });
     wide.on("pageerror", (e) => errors.push(e.message));
+    wide.on("request", (r) => requests.push(r.url()));
     await wide.goto(url);
     await wide.waitForFunction(() => !!window.IronmatePhone);
     await wide.click('[data-act="shape"]');
@@ -603,9 +386,56 @@ print('📱 phone: 2 slides, native text kept')
     const wideRows = await wide.$$eval(".phone-row", (nodes) => nodes.filter((n) => n.id !== "phone-candidates")
       .map((n) => new Set([...n.children].map((c) => c.offsetTop)).size));
     assert.ok(wideRows.every((n) => n === 1), JSON.stringify(wideRows));
-    assert.equal(await wide.getAttribute('[data-act="studio"]', "href"), "pc/");
     await wide.screenshot({ path: path.join(out, "slides-wide.png") });
+    // 📏 Long Japanese / English: the visible SVG lines are the editable DrawingML lines of the PPTX, and an old deck without
+    // "wrap" opens wrapping, its words untouched (explicit paragraphs, blank lines, grapheme clusters, a long URL, rotation).
+    const japanese = "日本語の長い文章を貼り付け、ボックスの幅に合わせて折り返します。".repeat(3) + "\n\n明示改行の後です。\n",
+      english = "English words should stay together when they fit. ".repeat(5) + "\n\nhttps://example.test/" + "longurl".repeat(14) + " 👨‍👩‍👧‍👦 e\u0301 🇯🇵\n",
+      words = (id, text, more) => ({ id, kind: "text", name: id, x: 40, y: 40, w: 300, h: 60, rotation: 0, opacity: 1, text, fill: "#000000",
+        fontSize: 24, font: "sans", mono: false, bold: false, ...more }),
+      legacy = { schema: "ironmate-slide-deck/1", title: "long", slides: [{ schema: "ironmate-image-studio/1", width: 1280, height: 720,
+        background: "#FFFFFF", layers: [words("title", japanese, { bold: true, rotation: 12 }), words("body", english, { x: 400, w: 600, font: "mono" })] }] };
+    await wide.setInputFiles('input[data-file="open"]', { name: "legacy.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(legacy)) });
+    await wide.waitForFunction(() => IronmatePhone.deck.title === "long");
+    assert.deepEqual((await wide.evaluate(() => IronmatePhone.deck.slides[0].layers)).map((l) => [l.text, l.wrap]), [[japanese, true], [english, true]]);
+    const manifest = await wide.evaluate(() => IronmatePhone.deck.slides[0].layers.map((l) => {
+      const spans = [...document.querySelectorAll(`#phone-svg g[data-layer="${l.id}"] tspan`)];
+      return { id: l.id, layer: l, layout: StudioCore.textLayout(l), visible: spans.map((t) => t.textContent), widths: spans.map((t) => t.getComputedTextLength()) };
+    }));
+    for (const item of manifest) {
+      assert.ok(item.visible.length > 3, JSON.stringify(item.visible));
+      assert.deepEqual(item.visible, item.layout.flat());
+      assert.ok(item.widths.every((w) => w <= item.layer.w + 1), JSON.stringify(item));
+    }
+    fs.writeFileSync(path.join(out, "slides-wrapped-layout.json"), JSON.stringify(manifest, null, 2));
+    await wide.click('[data-act="export"]');
+    const [wrappedPptx] = await Promise.all([wide.waitForEvent("download"), wide.click('#phone-candidates button[title^="PPTX"]')]);
+    await wrappedPptx.saveAs(path.join(out, "slides-wrapped.pptx"));
+    await wide.screenshot({ path: path.join(out, "slides-wrapped-desktop.png") });
     await wide.close();
+    const wrapped = spawnSync(process.env.PYTHON || "python", ["-S", "-c", `
+import json
+from pathlib import Path
+from zipfile import ZipFile
+from xml.etree import ElementTree as E
+from ironlib.pptx_ooxml import require_package, ordered_slide_members
+p=Path('build/pages-evidence/slides-wrapped.pptx')
+assert require_package(p)==1
+ns={'p':'http://schemas.openxmlformats.org/presentationml/2006/main','a':'http://schemas.openxmlformats.org/drawingml/2006/main'}
+with ZipFile(p) as z:
+ assert z.testzip() is None
+ root=E.fromstring(z.read(ordered_slide_members(z)[0]))
+ for item in json.loads(Path('build/pages-evidence/slides-wrapped-layout.json').read_text()):
+  shape=next(s for s in root.findall('.//p:sp',ns) if s.find('p:nvSpPr/p:cNvPr',ns).get('name')==item['layer'].get('name',item['id']))
+  layout=[[t.text or '' for t in para.findall('a:r/a:t',ns)] for para in shape.findall('p:txBody/a:p',ns)]
+  assert layout==item['layout'], (item['id'],layout,item['layout'])
+  assert shape.find('p:txBody/a:bodyPr',ns).get('wrap')=='square'
+  assert shape.find('p:txBody/a:bodyPr/a:noAutofit',ns) is not None
+  assert shape.find('p:spPr/a:xfrm',ns).get('rot')==str(round(item['layer']['rotation']*60000))
+print('Long Japanese/English: visible SVG lines match native PPTX, explicit paragraphs, blank lines and rotation')
+`], { encoding: "utf8" });
+    assert.equal(wrapped.status, 0, wrapped.stderr);
+    console.log(wrapped.stdout.trim());
     assert(requests.every((r) => r.startsWith(new URL(url).origin + "/") || /^(blob|data):/.test(r)));
     assert.deepEqual(errors, []);
   } finally {

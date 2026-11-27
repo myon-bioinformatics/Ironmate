@@ -76,7 +76,7 @@ def test_home_screen_manifest_stays_within_pages_subpath():
         'https://example.test/Ironmate/tools/'}
     assert b'content="0;url=../tools/#brand"' in assets['brand/index.html']
     assert b'id="brand"' in assets['tools/index.html']
-    for path, prefix in (('index.html', 'brand/'), ('slides/index.html', '../brand/'), ('slides/pc/index.html', '../../brand/'),
+    for path, prefix in (('index.html', 'brand/'), ('slides/index.html', '../brand/'),
                          ('tools/index.html', '../brand/')):
         page = assets[path].decode()
         assert f'href="{prefix}manifest.webmanifest"' in page

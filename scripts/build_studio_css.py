@@ -43,11 +43,11 @@ def bundles() -> dict[Path, dict]:
     return {STUDIO / "style.css": {"theme": THEME, "extra_css": "\n".join(map(pysaiyanweboo.css_source, sheets))}}
 
 
-PSWB = ("stage", "pager")  # 🧩 the PySaiyanWeBoo components the 📱 page uses
+PSWB = ("stage", "pager", "labels-switch")  # 🧩 the PySaiyanWeBoo components the 📱 page uses
 
 
 def classic_script(modules: str) -> str:
-    script = re.sub(r"^export (?=function |const )", "", modules, flags=re.M)
+    script = re.sub(r"^export (?=(?:async )?function |const )", "", modules, flags=re.M)
     assert not re.search(r"^\s*(import|export)\b", script, flags=re.M), "a module PySaiyanWeBoo ships now imports or exports otherwise"
     return script
 
@@ -63,8 +63,9 @@ def pswb_parts() -> dict[str, str]:
     commit = pysaiyanweboo.source_commit() or "unknown"
     return {"stage": pysaiyanweboo.stage_html("{slide}", label="スライド", id="phone-stage"),
             "pager": pysaiyanweboo.pager_html(1, label="ページ移動", words=words, keys=True, id="phone-pager"),
+            "labels": pysaiyanweboo.labels_switch_html(),
             "js": (f"/* ⬇️ pysaiyanweboo {commit[:8]} ({', '.join(PSWB)}): written by {NOTE} from the pinned commit; --check fails when it drifts */\n"
-                   f"(() => {{\n{classic}globalThis.PySaiyanWeBoo = {{ pagerSet, pagerIndex }};\n}})();\n/* ⬆️ pysaiyanweboo */\n")}
+                   f"(() => {{\n{classic}globalThis.PySaiyanWeBoo = {{ pagerSet, pagerIndex, bindLabels }};\n}})();\n/* ⬆️ pysaiyanweboo */\n")}
 
 
 def replace_region(src: str, begin: str, end: str, body: str) -> str:
@@ -92,7 +93,8 @@ def with_parts(src: str) -> str:
     parts = pswb_parts()
     lines = lambda html: "".join(f"\n        {part!r}" for part in re.split(r"(?<=>)(?=<)", html))
     block = (f"# ⬇️ pysaiyanweboo: {NOTE} writes PSWB_PHONE from the pinned commit (--check fails when it drifts)\n"
-             f"PSWB_PHONE = {{\n    \"stage\": ({lines(parts['stage'])}),\n    \"pager\": ({lines(parts['pager'])}),\n}}\n# ⬆️ pysaiyanweboo\n")
+             f"PSWB_PHONE = {{\n    \"stage\": ({lines(parts['stage'])}),\n    \"pager\": ({lines(parts['pager'])}),\n"
+             f"    \"labels\": ({lines(parts['labels'])}),\n}}\n# ⬆️ pysaiyanweboo\n")
     src = replace_region(src, "# ⬇️ pysaiyanweboo", "# ⬆️ pysaiyanweboo\n", block)
     src = replace_region(src, "/* ⬇️ pysaiyanweboo", "/* ⬆️ pysaiyanweboo */\n", parts["js"])
     begin, end = "  /* PSWB heatmap-color.js", "  /* End PSWB heatmap-color.js */\n"

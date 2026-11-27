@@ -387,6 +387,31 @@ print('📱 phone: 2 slides, native text kept')
       .map((n) => new Set([...n.children].map((c) => c.offsetTop)).size));
     assert.ok(wideRows.every((n) => n === 1), JSON.stringify(wideRows));
     await wide.screenshot({ path: path.join(out, "slides-wide.png") });
+    // 🖥️ ⇄ 📱 the same page shows emoji faces (the default) or short words, as on a PC, with no reload; the choice is remembered.
+    // Rows are CRUD-like groups with a light dashed line between them.
+    const look = (sel, pseudo) => wide.evaluate(([q, p]) => { const st = getComputedStyle(document.querySelector(q), p);
+      return { content: st.content, size: st.fontSize, line: st.borderTopStyle }; }, [sel, pseudo]);
+    assert.equal(await wide.evaluate(() => document.body.dataset.uiLabels), "emoji");
+    assert.equal((await look('[data-ui-group="create"]', null)).line, "none");
+    for (const g of ["adjust", "update", "pages", "file"]) assert.equal((await look(`[data-ui-group="${g}"]`, null)).line, "dashed", g);
+    assert.equal((await look('[data-act="export"]', "::after")).content, "none");
+    await wide.click("[data-ui-labels-switch]");
+    assert.equal(await wide.evaluate(() => document.body.dataset.uiLabels), "words");
+    assert.equal(await wide.getAttribute("[data-ui-labels-switch]", "aria-pressed"), "true");
+    const exportWord = await look('[data-act="export"]', "::after");
+    assert.ok(exportWord.content === '"エクスポート"' && (await look('[data-act="export"]', null)).size === "0px", JSON.stringify(exportWord));
+    assert.equal((await look("[data-ui-labels-switch]", "::after")).content, '"📱 絵文字"');   // the way back
+    assert.equal((await look('[data-act="home"]', null)).size, "0px");                          // a link button too: only its word
+    await wide.click('[data-act="export"]');
+    assert.equal((await look('#phone-candidates button[title^="PPTX"]', "::after")).content, '"PPTX"');
+    await wide.screenshot({ path: path.join(out, "slides-words.png") });
+    await wide.reload();
+    await wide.waitForFunction(() => !!window.IronmatePhone);
+    assert.equal(await wide.evaluate(() => document.body.dataset.uiLabels), "words");             // remembered
+    await wide.click("[data-ui-labels-switch]");
+    await wide.reload();
+    await wide.waitForFunction(() => !!window.IronmatePhone);
+    assert.equal(await wide.evaluate(() => document.body.dataset.uiLabels), "emoji");
     // 📏 Long Japanese / English: the visible SVG lines are the editable DrawingML lines of the PPTX, and an old deck without
     // "wrap" opens wrapping, its words untouched (explicit paragraphs, blank lines, grapheme clusters, a long URL, rotation).
     const japanese = "日本語の長い文章を貼り付け、ボックスの幅に合わせて折り返します。".repeat(3) + "\n\n明示改行の後です。\n",

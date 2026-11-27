@@ -982,7 +982,7 @@ def test_studio_stylesheets_match_the_generator():
     text = STYLE_CSS
     assert '/* css/components.css */' in text and 'body[data-ui-theme="green"]{' in text  # PySaiyanWeBoo's theme
     assert '.ui-elements button,' in text and 'cdn.' not in text
-    for page in ('studio', 'tools', 'slides', 'phone'):
+    for page in ('studio', 'tools', 'phone'):          # 🖥️ the PC slide studio's 'slides' rules are retired in PySaiyanWeBoo too
         assert f':where([data-page~="{page}"])' in text, page  # page layout is scoped, with zero added specificity
     for page, html in (('studio', STUDIO_HTML), ('tools', TOOLS_HTML)):
         assert f'data-page="{page}"' in html, page
@@ -1095,7 +1095,14 @@ def test_phone_page_is_emoji_only_and_every_control_is_bound():
                 self.open['face'] += data.strip()
     parser = Controls(); parser.feed(html)
     acts = [i['data-act'] for i in parser.items if 'data-act' in i]
-    assert acts == [act for row in b.PHONE_TOOLS for act, _e, _w in row]
+    assert acts == [act for _group, row in b.PHONE_TOOLS for act, *_ in row]
+    # 🖥️ ⇄ 📱 every control has a short word for the words view (PySaiyanWeBoo's bindLabels); rows are CRUD-like groups
+    short = {i['data-act']: i.get('data-ui-word') for i in parser.items if 'data-act' in i}
+    assert short == {act: word for _group, row in b.PHONE_TOOLS for act, _e, word, _w in row} and all(short.values()), short
+    assert all(len(word) <= 12 for word in short.values()), short                                # short: it replaces a face
+    assert re.findall(r'class="phone-row" data-ui-group="(\w+)"', html) == ['create', 'adjust', 'update', 'pages', 'file']
+    assert b.PSWB_PHONE['labels'] in html and html.index(b.PSWB_PHONE['labels']) > html.index('data-ui-group="file"')
+    assert "PySaiyanWeBoo.bindLabels();" in b.STUDIO_JS
     words = re.compile(r'[\u3040-\u30ff\u4e00-\u9fffA-Za-z0-9]')
     for item in parser.items:
         assert item['face'] and not words.search(item['face']), item  # 🙅 no words on the face
@@ -1105,7 +1112,7 @@ def test_phone_page_is_emoji_only_and_every_control_is_bound():
     assert b.PSWB_PHONE['pager'] in html and 'data-ui-pager="arrows"' in html and 'data-ui-pager-keys' in html   # ⬅️ 1/N ➡️ first, ← → too
     assert b.PSWB_PHONE['stage'].split('{slide}')[0] + '<div id="phone-svg" class="phone-svg" data-ui-fill>' in html
     assert ' style="' not in html                                                                 # the CSP allows no inline style
-    assert "globalThis.PySaiyanWeBoo = { pagerSet, pagerIndex }" in b.STUDIO_JS and not re.search(r"^\s*(import|export) ", b.STUDIO_JS, re.M)  # a classic script
+    assert "globalThis.PySaiyanWeBoo = { pagerSet, pagerIndex, bindLabels }" in b.STUDIO_JS and not re.search(r"^\s*(import|export) ", b.STUDIO_JS, re.M)  # a classic script
     script = b.STUDIO_JS[b.STUDIO_JS.index('/* Phone slides UI'):]
     for act in acts:
         if act in ('studio', 'home'):

@@ -118,6 +118,27 @@ const out = path.resolve("build/pages-evidence");
     const digest = fs.readFileSync(path.join(out, "digest.html"), "utf8");
     assert(digest.includes("&lt;img onerror=alert(1)&gt;.png"));
     assert(!digest.includes("<img onerror="));
+    const previousImages = await page.locator("#image-list figcaption").allTextContents();
+    await page.evaluate(() => {
+      const decode = HTMLImageElement.prototype.decode;
+      HTMLImageElement.prototype.decode = function () {
+        if (this.src.startsWith("blob:")) {
+          HTMLImageElement.prototype.decode = decode;
+          return new Promise((resolve, reject) => {
+            window.releaseImageDecode = () => decode.call(this).then(resolve, reject);
+          });
+        }
+        return decode.call(this);
+      };
+    });
+    await page.setInputFiles("#images", { name: "cancel.png", mimeType: "image/png", buffer: image });
+    await page.waitForFunction(() => !!window.releaseImageDecode);
+    await page.click("#images-cancel");
+    assert.match(await page.textContent("#message"), /中止/);
+    await page.evaluate(() => window.releaseImageDecode());
+    assert.deepEqual(await page.locator("#image-list figcaption").allTextContents(), previousImages);
+    assert.equal(await page.locator("#digest-html").isEnabled(), true);
+    await page.fill("#song-lyrics", "Verse draft");
     await page.fill("#song-parts", "A = I V\nB = IV");
     await page.fill("#song-order", "B A B");
     await page.click("#song-arrange");
@@ -127,6 +148,13 @@ const out = path.resolve("build/pages-evidence");
     await page.click("#song-arrange");
     assert.equal(await page.inputValue("#song-progression"), "");
     assert.equal(await page.locator("#song-sections li").count(), 0);
+    await page.fill("#song-order", "B A B");
+    await page.reload();
+    assert.equal(await page.inputValue("#song-lyrics"), "Verse draft");
+    assert.equal(await page.inputValue("#song-parts"), "A = I V\nB = IV");
+    assert.equal(await page.inputValue("#song-order"), "B A B");
+    await page.click("#song-arrange");
+    assert.equal(await page.inputValue("#song-progression"), "IV I V IV");
     await page.setViewportSize({ width: 390, height: 844 });
     assert.equal(
       await page.evaluate(

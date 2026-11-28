@@ -1,44 +1,45 @@
-# Slide Studio: build multiple slides in the browser and save as PPTX
+# The editor: slides and pictures in the browser, saved as PPTX, PNG or JSON
 
 https://myon-bioinformatics.github.io/tools/slide-studio/
 
-Text, shapes, arrows, emoji, clocks and pictures on several slides, saved as a PowerPoint file that stays editable.
+Text, shapes, arrows, emoji, clocks, pictures, dot art and heatmaps on several pages, saved as a PowerPoint file that stays editable, or a page as PNG / SVG / Base64. It is Ironmate's one editor (ONE-EDITOR, #301): Image Studio has joined it, so a page is also a picture of any size up to 4096 per side.
 No installation, external CDN or server processing is needed. Input images and in-progress JSON are not sent anywhere.
 
 ## Usage
 
 <img src="assets/phone-slides.gif" width="240" alt="Phone slides in a 390×844 browser: blank slide, text box, editing later, bigger text, 🔷 😊 (^^) 🕒 placed from candidates, page 2, ⬅️ back to page 1, the slide saved">
 
-One editor for phones and PCs, phone-first. The slide stays pinned at the top while you work, and every control is an emoji (its words are only in the tooltip / screen-reader label). A phone held sideways and a PC window (960 px and wider) put the controls beside the slide, every row on one line. The pinned slide, the page controls and the toolbar are PySaiyanWeBoo's `stage`, `pager` and `toolbar` components (`scripts/build_studio_css.py` writes them from the pinned commit; the toolbar's rows, faces, words and candidates are data in `studio_toolbar("slides")`, the same table as Image Studio's, and `bindToolbar` opens a candidate row under the row of the button that asked; 📥's file choosers are the toolbar's own, and `IronmateSlideStudio.act(name, value)` runs what a press runs, a File included).
+One editor for phones and PCs, phone-first. The slide stays pinned at the top while you work, and every control is an emoji (its words are only in the tooltip / screen-reader label). A phone held sideways and a PC window (960 px and wider) put the controls beside the slide, every row on one line. The pinned slide, the page controls and the toolbar are PySaiyanWeBoo's `stage`, `pager` and `toolbar` components (`scripts/build_studio_css.py` writes them from the pinned commit; the toolbar's rows, faces, words and candidates are data in `studio_toolbar()`, and `bindToolbar` opens a candidate row under the row of the button that asked; 📥's file choosers are the toolbar's own, and `IronmateSlideStudio.act(name, value)` runs what a press runs, a File included).
 
 | | |
 | --- | --- |
 | ⬜ | Starts blank (one 1280×720 slide) |
 | 🔤 | Add a text box (type right away) |
-| 🔷 😊 (^^) | One row of candidates opens under the tools; tap one and it is placed: ▭ ◯ △ → for shapes, emoji, kaomoji (the same candidates as Image Studio's tools). Tap the tool again to close the row |
+| 🔷 😊 (^^) | One row of candidates opens under the tools; tap one and it is placed: ▭ ◯ △ → for shapes, emoji, kaomoji. Tap the tool again to close the row |
 | 🕒 | A clock showing the time now |
 | 📚 | With two or more things on the page, a row lists them from back to front (a text shows its first three characters, a shape its sign); tap one to select it, even when it is covered. The selected one is underlined |
 | ✏️ | Edit the selected text, or a clock's time (`14:30`; what is not a time leaves it as it was). Tapping a selected text or clock again does the same |
 | 🎨 | The selection's look, from the candidate row: 🎨 fill and 🖌 line to the next colour (black, teal, red, blue, yellow, white), 🌗 opacity 1 → ¾ → ½ → ¼, 🅱️ bold, 🔠 monospace ⇄ regular. A candidate that does not apply (bold on a shape) does nothing |
-| 🎛️ | Exact position and size of the selected layer. Shows italic for text, line width for shapes, center/edge arrowhead for arrows, and mosaic cell size and color levels for pictures |
+| 🎛️ | Exact position, size, angle and opacity of the selected layer. Shows text size, italic and 単色 (one colour, 🎨's fill) for text; line width for shapes; arrowhead place (edge / center) and shape (三角 / 初心者マーク) for arrows; 拡大 (くっきり / なめらか), 単色, mosaic cell size and color levels for pictures. A value out of range is not taken. With nothing selected it is the page's: 📄 幅 and 📄 高さ (64–4096, at most 4 MP, every page together, as the deck has one size; the pinned slide takes the shape, and PNG / PPTX follow), 📄 背景 and 透明 (this page; a checkerboard shows it is clear, and its PNG keeps the transparency) |
 | ↻ | Turn the selection: ↻ 15° right, ↺ 15° left, ⏹ upright. The selection frame turns with it |
-| ⏫ ⏬ | Bring to the front, send to the back |
+| ⧉ | Duplicate the selection, a little down and right (32 on a 1280-wide page), in front |
+| ⬆️ ⬇️ ⏫ ⏬ | One step forward / back, or all the way to the front / back (the 📚 row shows the order) |
 | 👆 ↘ | Tap to select, drag to move, drag ↘ to resize. Tap a selected text box again (or ✏️) to edit it later; the editor sits under the slide at 16 px so phones do not zoom, and the slide updates as you type. A box left empty is removed |
 | 🔽 🔄 🔼 | Every text box on every slide together: 0.5, 0.75, 1, 1.25, 1.5, 2, 2.5 × (titles keep their ratio to body text). New boxes start at 32 px × the current step |
 | ⬅️ ➡️ | Previous / next page, right under the slide; the middle shows page / pages. Keyboard ← / → (Home / End: first / last) do the same |
 | ➕📄 📑 ✖️📄 | Add a blank page, duplicate, delete |
 | 🗂️ ⊞ | All pages as thumbnails, or four at a time. In four-up, select any tile and edit it in place with the same tools. Views are not undoable |
 | 🆕 | Start over (one blank page) |
-| 🗑️ ↩️ ↪️ | Delete the selection, undo, redo (64 steps) |
-| 📥 📤 | Import and export. The formats open in the candidate row, in words, like 🔷's: 📥 どの形式から？ 画像 (a picture onto this page; カメラ takes a photo for it, on a phone; photos become PNG, at most 4 MP and 1920 px on the long side) or JSON (all slides, also those the PC studio saved); 📤 どの形式に？ PPTX (every slide, editable in PowerPoint), JSON, PNG or SVG (this page as it looks). A pick does it and the row hides again |
-| 🖼️ | Image Studio (its file row ends with 📽️, back here) |
-| 💻 ⇄ 📱 | 💻 To textual: short words in place of the emoji, as on a PC; 📱 To iconic: the emoji again (the default). The same page, no reload; remembered in this browser. On the site the switch is under ⋯ in the header. The rows are groups (make, adjust, change, pages, file) with a light dashed line between them |
+| 🗑️ | Delete the selection |
+| ⏪ ↩️ ↪️ ⏩ | Undo two steps, undo, redo, redo two steps (64 kept) |
+| 📥 📤 | Import and export. The formats open in the candidate row, in words, like 🔷's: 📥 どの形式から？ 画像 (a picture onto this page; カメラ takes a photo for it, on a phone; photos become PNG, at most 4 MP and 1920 px on the long side), クリップボード (a copied picture, or its Base64 / data URI text, onto this page; one reader, `StudioCore.clipboardImage`) or JSON (all slides; or one scene, Image Studio's or DRAgoWing's heatmap, as a one-page deck of its size); 📤 どの形式に？ PPTX (every slide, editable in PowerPoint), JSON, PNG or SVG (this page as it looks), or Base64 (this page's PNG as a data URI on the clipboard, for Flutter and the like; where the browser cannot copy, a `.base64.txt` file). A pick does it and the row hides again |
+| ▦ | The dot-art editor, folded under the tools: make or draw the art, and its ➕ puts it on this page as a crisp (pixelated) picture and folds the editor away. ↩️ takes it back |
+| 🖱️ | Drop a file on the slide: a picture comes in as 📥 画像, a `.json` as 📥 JSON (of several files, the first) |
+| 💻 ⇄ 📱 | 💻 To textual: short words in place of the emoji, as on a PC; 📱 To iconic: the emoji again (the default). The same page, no reload; remembered in this browser. On the site the switch is under ⋯ in the header. The rows are groups (make, ↩️, change, order, pages, file, detail), at most six buttons each so none wraps on a phone, with a light dashed line between them |
 
 The GIF is the frames `tests/slides_browser.cjs` saves (`build/pages-evidence/phone-*.png`, 390×844; `phone-frames.json` lists them) at 1.4 s each.
 
-From Image Studio, open the clipboard shelf and choose **編集中の画像をスライド工房へ**. On the portfolio, Slide Studio opens in the same tab and adds the canvas as one PNG layer to the active slide. Browser Back returns to the editable canvas. In the standalone build, Slide Studio opens in a new tab. Undo removes the imported layer.
-
-The deck is also kept in the browser's local storage, so a reload or a killed tab comes back where it was. Nothing is sent anywhere. If the local storage is full (large pictures), the status shows ⚠️ 💾; save with 💾.
+The deck is also kept in the browser's local storage, so a reload or a killed tab comes back where it was. Nothing is sent anywhere. If the local storage is full (large pictures), the status shows ⚠️ 💾; save with 📤 → JSON.
 
 When several layers render to identical PNG bytes, the PPTX stores one media
 part. Each placement retains its own size, position and opacity. This applies
@@ -50,7 +51,7 @@ pipe it to `python -S pptx_inspect.py -` and read the slide report as JSON.
 
 ## 🖥️ The PC studio, retired
 
-The PC studio that the editor above replaced is gone, so that phones and PCs are built once. Its old address is gone too; its all-slide JSON opens in the editor (📥 → JSON). Precision controls and four-up editing are available in the same editor. The mosaic preview and slide exports use the same processed image; the deck JSON keeps the original picture and its editable settings. Heatmaps and the other image tools stay in Image Studio.
+The PC studio that the editor above replaced is gone, so that phones and PCs are built once. Its old address is gone too; its all-slide JSON opens in the editor (📥 → JSON). Precision controls and four-up editing are available in the same editor. The mosaic preview and slide exports use the same processed image; the deck JSON keeps the original picture and its editable settings. Image Studio's page went the same way: its tools (dot art, page size and background, heatmaps, mosaics, the detail settings, the clipboard) are in this editor, and its clipboard shelf and work-history files are gone (the undo steps, the kept deck and 📤 JSON cover them).
 
 ## What is editable in PowerPoint
 
@@ -67,12 +68,12 @@ Fonts are Meiryo normally and MS Gothic for monospace. Font files are not embedd
 Text wraps automatically at the box width. Japanese and English words are segmented, and long words or URLs wider than the box are split by grapheme. Splits never land inside combining characters or emoji. Explicit line breaks, blank lines and trailing line breaks are kept, and wrapping is recomputed when font size, bold, font or width change. Rotation is applied to the whole box after line splitting.
 On-screen display and browser PPTX export use the same measured font metrics, line splitting and 1.3x line spacing. Explicit line breaks become PPTX paragraphs; automatic wraps become editable line breaks. Width-based wrapping on the PPTX side is also enabled. The exported line breaks remain, so widening the box in PowerPoint does not rejoin lines automatically. Narrowing it, font substitution or PowerPoint's typesetting may add extra wraps. Full Japanese line-breaking rules (kinsoku) are not applied.
 There is no auto-shrink or automatic box-height change. Text taller than the box continues downward both on screen and in the PPTX, so adjust height, position or font size for long text. Automatic wrap positions are not written into the original text in the JSON. Half-width spaces and tabs at wrap points are trimmed at line ends, but the original text is kept in the JSON.
-Old-format all-slide JSON, single-scene JSON and work history can also be loaded. Slide Studio's regular text wraps when `wrap` is omitted; with `wrap: false` only explicit line breaks apply. Image Studio's default when omitted is unchanged. Generating PPTX directly from Node uses a conservative character-width estimate instead of measured fonts, so line splitting may differ from browser output.
+Old-format all-slide JSON and single-scene JSON can also be loaded. Slide Studio's regular text wraps when `wrap` is omitted; with `wrap: false` only explicit line breaks apply. A scene's own default when omitted is unchanged. Generating PPTX directly from Node uses a conservative character-width estimate instead of measured fonts, so line splitting may differ from browser output.
 Even with multiple slides, a PPTX never converts a whole slide into a single image.
 
 ## Limits
 
-Up to 20 slides; all-slide JSON and PPTX are each at most 32 MiB. Image Studio's limits, such as 100 layers and 4 MP per slide, also apply.
+Up to 20 slides; all-slide JSON and PPTX are each at most 32 MiB. A scene's limits, such as 100 layers and 4 MP per page, also apply.
 Layers converted to images are rendered at up to 4 MP. PNG compression efficiency and rendering fonts depend on the browser.
 Edits involving images in the PPTX are kept in the re-editable JSON. Keeping photo EXIF, hidden RGB of fully transparent pixels or original image metadata in the PPTX is not guaranteed.
 Reading arbitrary existing PPTX and reproducing themes, PDF rendering, animation, notes, and native tables/charts are out of scope for now.

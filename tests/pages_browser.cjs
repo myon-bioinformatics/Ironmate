@@ -25,7 +25,7 @@ const out = path.resolve("build/pages-evidence");
     page.on("pageerror", (e) => errors.push(e.message));
     page.on("request", (r) => requests.push(r.url()));
     await page.goto(url);
-    await page.waitForFunction(() => !!window.IronmateStudio);
+    await page.waitForFunction(() => !!window.IronmateSlideStudio);
     await page.click("#pixel-editor summary");
     await page.waitForFunction(() => !!window.IronmateWorkbench);
     await page.screenshot({

@@ -1,6 +1,6 @@
 name: Pages
 
-# 🧭 The tools (Image Studio, browser tools, Slide Studio) are published by the portfolio under /tools/image-studio/,
+# 🧭 The tools (the editor, which Image Studio and Slide Studio became, and the browser tools) are published by the portfolio under /tools/image-studio/,
 # /tools/browser-tools/ and /tools/slide-studio/
 # (scripts/project_pages.py --record-tools runs image_studio.py --build-site). Here `build` keeps testing them in a
 # real browser, and `guide` publishes docs/guide.page.json with the parent's reusable workflow.

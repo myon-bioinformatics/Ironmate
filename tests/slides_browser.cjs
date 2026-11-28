@@ -6,9 +6,7 @@ const assert = require("node:assert/strict"),
 const { chromium } = require(
   process.env.IRONMATE_PLAYWRIGHT_MODULE || "playwright",
 );
-const url =
-    (process.env.IRONMATE_PAGES_URL || "http://127.0.0.1:8080/Ironmate/") +
-    "slides/",
+const url = process.env.IRONMATE_PAGES_URL || "http://127.0.0.1:8080/Ironmate/", // 📽️ the one editor is the site's root
   out = path.resolve("build/pages-evidence");
 (async () => {
   fs.mkdirSync(out, { recursive: true });
@@ -19,23 +17,9 @@ const url =
   try {
     const errors = [],
       requests = [];
-    // The shelf hands the canvas to the normal slide image importer and leaves the source open.
-    const source = await browser.newPage();
-    await source.goto(new URL("../", url).href);
-    await source.locator('#studio-toolbar [data-act="import"]').click();                       // 📥 どの形式から？ → シェルフ
-    await source.locator('#studio-candidates button:text-is("シェルフ")').click();
-    const popup = source.waitForEvent("popup");
-    await source.getByRole("link", {name: "編集中の画像をスライド工房へ"}).click();
-    const destination = await popup;
-    await destination.locator('[data-act="undo"]:enabled').waitFor();
-    assert.equal(await destination.evaluate(() => IronmateSlideStudio.deck.slides[0].layers[0].kind), "image");
-    await destination.locator('[data-act="undo"]').click();
-    await destination.reload();
-    assert.equal(await destination.evaluate(() => IronmateSlideStudio.deck.slides[0].layers.length), 0);
-    await destination.close();
-    await source.close();
-    // 📽️ The one slide editor (slides/, phone-first): the slide stays pinned on top, emoji controls, 🧭 PySaiyanWeBoo's pager in every shape, text editable later.
-    const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, acceptDownloads: true }),
+    // 📽️ The one editor (the site's root, phone-first): the slide stays pinned on top, emoji controls, 🧭 PySaiyanWeBoo's pager in every shape, text editable later.
+    const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, acceptDownloads: true,
+      permissions: ["clipboard-read", "clipboard-write"] }),
       mobile = await phone.newPage(),
       shots = [];
     mobile.on("pageerror", (e) => errors.push(e.message));
@@ -186,7 +170,22 @@ const url =
     await act("back");
     assert.deepEqual(await layerFaces(), ["(・∀", "🌱", "🕒", "△"]);
     assert.equal(await mobile.isDisabled('[data-act="back"]'), true);
-    for (let i = 0; i < 4; i++) await act("undo");
+    assert.equal(await mobile.isDisabled('[data-act="backward"]'), true);
+    // ⬆️ ⬇️ one step, ⧉ a copy in front (shifted 32 on 1280), ⏪ ⏩ two steps at once
+    await act("forward");
+    assert.deepEqual(await layerFaces(), ["🌱", "(・∀", "🕒", "△"]);
+    await act("backward");
+    await act("duplicate");
+    extra = (await state()).deck.slides[2].layers;
+    assert.deepEqual(await layerFaces(), ["(・∀", "🌱", "🕒", "△", "(・∀"]);
+    assert.ok(extra[4].id !== kao.id && extra[4].x === extra[0].x + 32 && extra[4].y === extra[0].y + 32 && extra[4].bold === true
+      && (await state()).selected === extra[4].id, JSON.stringify(extra));
+    await act("undo-2");                                                                        // ⧉ and ⬇️
+    assert.deepEqual(await layerFaces(), ["🌱", "(・∀", "🕒", "△"]);
+    await act("redo-2");
+    assert.equal((await state()).deck.slides[2].layers.length, 5);
+    await act("undo-2");
+    for (let i = 0; i < 5; i++) await act("undo");                                             // ⬆️ ⏬ ⏫ 🅱️ 🎨
     extra = (await state()).deck.slides[2].layers;
     assert.ok(extra[1].id === kao.id && extra[1].bold === false && extra[3].fill === "#18A7A1", JSON.stringify(extra));
     // ✏️ a clock's time is edited like words: 14:30, and what is not a time leaves it as it was
@@ -315,7 +314,7 @@ const url =
     // SVG; a pick does it and the row hides again.
     const saveAs = (format) => pick("export", format);
     await act("export");
-    assert.deepEqual(await mobile.locator("#slides-candidates button").allTextContents(), ["PPTX", "JSON", "PNG", "SVG"]);
+    assert.deepEqual(await mobile.locator("#slides-candidates button").allTextContents(), ["PPTX", "JSON", "PNG", "SVG", "Base64"]);
     assert.equal(await mobile.getAttribute('#slides-candidates button >> nth=2', "title"), "PNG（このページ）");
     const [pptx] = await Promise.all([mobile.waitForEvent("download"), mobile.locator("#slides-candidates button", { hasText: "PPTX" }).tap()]);
     assert.equal(await mobile.locator("#slides-candidates").isHidden(), true);                       // 選んだら候補は隠れる
@@ -329,6 +328,83 @@ const url =
     assert.deepEqual([pngBytes.readUInt32BE(16), pngBytes.readUInt32BE(20)], [1280, 720]);  // the slide's own size
     const [svg] = await Promise.all([mobile.waitForEvent("download"), saveAs("SVG")]);
     assert.match(fs.readFileSync(await svg.path(), "utf8"), /^<svg [^>]*width="1280" height="720"/);
+    // 📤 Base64: this page's PNG as a data URI on the clipboard; 📥 クリップボード puts it back on the page as a picture (then ↩️)
+    await saveAs("Base64");
+    await mobile.waitForFunction(() => document.querySelector("#slides-status").textContent === "📤 ✅ 📋");
+    assert.match(await mobile.evaluate(() => navigator.clipboard.readText()), /^data:image\/png;base64,iVBORw0KGgo/);
+    const onPage = async () => { const t = await state(); return t.deck.slides[t.active].layers; };
+    const held = (await onPage()).length;
+    await pick("import", "クリップボード");
+    await mobile.waitForFunction((n) => IronmateSlideStudio.deck.slides[IronmateSlideStudio.active].layers.length === n + 1, held);
+    assert.equal((await onPage()).at(-1).kind, "image");
+    await act("undo");
+    assert.equal((await onPage()).length, held);
+    // 🎛️ with nothing selected it is the page's: 幅・高さ for every page (the stage takes the shape), 透明 for this one
+    await act("inspect");
+    assert.deepEqual(await Promise.all(["width", "height", "transparent", "x"].map((k) => mobile.locator(`[data-property="${k}"]`).isVisible())),
+      [true, true, true, false]);
+    const field = async (key, value) => { const el = mobile.locator(`[data-property="${key}"]`); await el.fill(String(value)); await el.press("Tab"); };
+    await field("width", 720);
+    await field("height", 1280);
+    assert.ok((await state()).deck.slides.every((x) => x.width === 720 && x.height === 1280));
+    const tall = await mobile.locator("#slides-stage").boundingBox();
+    assert.ok(Math.abs(tall.width / tall.height - 720 / 1280) < 0.02, JSON.stringify(tall));
+    await mobile.locator('[data-property="transparent"]').check();
+    assert.equal((await state()).deck.slides[(await state()).active].background, "none");
+    await snap("page-tall-clear");
+    const [clear] = await Promise.all([mobile.waitForEvent("download"), saveAs("PNG")]);
+    const clearBytes = fs.readFileSync(await clear.path());
+    assert.deepEqual([clearBytes.readUInt32BE(16), clearBytes.readUInt32BE(20), clearBytes[25]], [720, 1280, 6]);   // RGBA
+    await field("width", 4096);                                                                  // 4096 × 1280 is over 4 MP
+    assert.equal(await mobile.getAttribute("#slides-status", "data-error"), "true");
+    assert.equal((await state()).deck.slides[0].width, 720);
+    assert.equal(await mobile.inputValue('[data-property="width"]'), "720");
+    for (let i = 0; i < 3; i++) await act("undo");
+    assert.ok((await state()).deck.slides.every((x) => x.width === 1280 && x.height === 720 && x.background === "#FFFFFF"));
+    await act("inspect");
+    // 📥 JSON: one scene (Image Studio's, DRAgoWing's heatmap) opens as a one-page deck of its size; a heatmap has 値を表示 and
+    // 色の段階 (0: continuous) in 🎛️; ↩️ brings the deck back. 🖱️ a file dropped on the slide goes the same way as 📥.
+    const deckBefore = (await state()).deck;
+    const heatScene = { schema: "ironmate-image-studio/1", width: 640, height: 480, background: "#FFFFFF", layers: [{ id: "heat", kind: "heatmap",
+      name: "heat", x: 40, y: 40, w: 560, h: 400, rotation: 0, opacity: 1, z: [[1, 2], [3, 4]], xlabels: ["a", "b"], ylabels: ["c", "d"],
+      low: 1, high: 4, levels: 0, labels: true }] };
+    const [sceneChooser] = await Promise.all([mobile.waitForEvent("filechooser"), pick("import", "JSON")]);
+    await sceneChooser.setFiles({ name: "heat.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(heatScene)) });
+    await mobile.waitForFunction(() => IronmateSlideStudio.deck.slides[0].width === 640);
+    let opened = (await state()).deck;
+    assert.ok(opened.slides.length === 1 && opened.slides[0].height === 480 && opened.slides[0].layers[0].kind === "heatmap", JSON.stringify(opened));
+    const heatBox = await stageAt(0.5, 0.5);
+    await mobile.touchscreen.tap(heatBox.x, heatBox.y);
+    await act("inspect");
+    assert.deepEqual(await Promise.all(['labels', 'levels'].map((k) => mobile.locator(`[data-property="${k}"]:visible`).count())), [1, 1]);
+    await mobile.locator('[data-property="labels"]').uncheck();
+    assert.equal((await state()).deck.slides[0].layers[0].labels, false);
+    await act("inspect");
+    await act("undo");
+    await act("undo");
+    assert.deepEqual((await state()).deck, deckBefore);
+    const dropped = await mobile.evaluateHandle((text) => {
+      const t = new DataTransfer();
+      t.items.add(new File([text], "dropped.json", { type: "application/json" }));
+      return t;
+    }, JSON.stringify(heatScene));
+    await mobile.dispatchEvent("#slides-stage", "drop", { dataTransfer: dropped });
+    await mobile.waitForFunction(() => IronmateSlideStudio.deck.slides[0].width === 640);
+    await act("undo");
+    assert.deepEqual((await state()).deck, deckBefore);
+    // ▦ the dot-art editor under the tools: ➕ puts the art on this page, crisp (pixelated), and folds the editor away; then ↩️
+    await mobile.locator("#pixel-editor summary").tap();
+    await mobile.waitForFunction(() => !!window.IronmateWorkbench?.grid);
+    await mobile.locator("#generate").tap();
+    const beforeArt = (await onPage()).length;
+    await mobile.locator("#place-grid").tap();
+    await mobile.waitForFunction((n) => IronmateSlideStudio.deck.slides[IronmateSlideStudio.active].layers.length === n + 1, beforeArt);
+    const art = (await onPage()).at(-1);
+    assert.ok(art.kind === "image" && art.sampling === "pixelated" && art.name === "image", JSON.stringify({ ...art, src: art.src.slice(0, 32) }));
+    assert.equal(await mobile.locator("#pixel-editor").getAttribute("open"), null);
+    await snap("pixel-art");
+    await act("undo");
+    assert.equal((await onPage()).length, beforeArt);
     await snap("saved");
     const phoneCheck = spawnSync(process.env.PYTHON || "python", ["-S", "-c", `
 from pathlib import Path
@@ -425,7 +501,7 @@ print('📱 phone: 2 slides, native text kept')
       return { content: st.content, size: st.fontSize, line: st.borderTopStyle }; }, [sel, pseudo]);
     assert.equal(await wide.evaluate(() => document.body.dataset.uiLabels), "emoji");
     assert.equal((await look('[data-ui-group="create"]', null)).line, "none");
-    for (const g of ["adjust", "update", "pages", "file"]) assert.equal((await look(`[data-ui-group="${g}"]`, null)).line, "dashed", g);
+    for (const g of ["adjust", "update", "order", "pages", "file", "detail"]) assert.equal((await look(`[data-ui-group="${g}"]`, null)).line, "dashed", g);
     assert.equal((await look('[data-act="export"]', "::after")).content, "none");
     await wide.click("[data-ui-labels-switch]");
     assert.equal(await wide.evaluate(() => document.body.dataset.uiLabels), "words");
@@ -433,7 +509,6 @@ print('📱 phone: 2 slides, native text kept')
     const exportWord = await look('[data-act="export"]', "::after");
     assert.ok(exportWord.content === '"エクスポート"' && (await look('[data-act="export"]', null)).size === "0px", JSON.stringify(exportWord));
     assert.equal((await look("[data-ui-labels-switch]", "::after")).content, '"📱 To iconic"');   // the way back
-    assert.equal((await look('[data-act="image-studio"]', null)).size, "0px");                          // a link button too: only its word
     await wide.click('[data-act="export"]');
     assert.equal((await look('#slides-candidates button[title^="PPTX"]', "::after")).content, '"PPTX"'); // the format's own word
     await wide.click('[data-act="export"]');                                                        // a second press hides them
@@ -542,6 +617,33 @@ with ZipFile('build/pages-evidence/slides-parity.pptx') as z:
             for n in z.namelist() if n.startswith('ppt/media/'))
 `], { encoding: "utf8" });
     assert.equal(packageCheck.status, 0, packageCheck.stderr);
+    // 🎛️ the rest of Image Studio's detail settings (ONE-EDITOR P5): 拡大・単色 on a picture, 角度・不透明度 on anything,
+    // 矢印の形 on an arrow, 文字の大きさ on a text (its box grows with it); each one ↩️ step
+    const settled = () => wide.evaluate(() => IronmateSlideStudio.deck);
+    await wide.locator('[data-property="sampling"]').selectOption("smooth");
+    assert.equal(await wide.locator("#slides-svg image").getAttribute("image-rendering"), "auto");
+    await wide.locator('[data-property="mono"]').check();
+    await number("rotation", 30);
+    await number("opacity", 0.5);
+    let pic = (await settled()).slides[2].layers[0];
+    assert.ok(pic.sampling === "smooth" && pic.mono === true && pic.fill === "#000000" && pic.rotation === 30 && pic.opacity === 0.5,
+      JSON.stringify({ ...pic, src: undefined }));
+    await number("opacity", 2);                                                                 // out of range: kept as it was
+    assert.equal((await settled()).slides[2].layers[0].opacity, 0.5);
+    for (let i = 0; i < 4; i++) await wide.click('[data-act="undo"]');
+    pic = (await settled()).slides[2].layers[0];
+    assert.ok(pic.sampling === undefined && !pic.mono && pic.rotation === 0 && pic.opacity === 1, JSON.stringify({ ...pic, src: undefined }));
+    await wide.getByRole("button", {name: "2 枚目を編集"}).click();
+    await selectLayer("arrow");
+    assert.equal(await wide.inputValue('[data-property="headStyle"]'), "triangle");            // a select shows what is drawn
+    await wide.locator('[data-property="headStyle"]').selectOption("beginner");
+    assert.equal((await settled()).slides[1].layers[0].headStyle, "beginner");
+    await wide.getByRole("button", {name: "1 枚目を編集"}).click();
+    await selectLayer("italic");
+    const textBox = (await settled()).slides[0].layers[0];
+    await number("fontSize", textBox.fontSize * 2);
+    const grown = (await settled()).slides[0].layers[0];
+    assert.ok(grown.fontSize === textBox.fontSize * 2 && grown.h > textBox.h, JSON.stringify([textBox.h, grown.h]));
     await wide.screenshot({ path: path.join(out, "slides-four-up.png") });
     await wide.click('[data-act="grid"]');
     assert.ok(await wide.locator("#slides-grid").isHidden());

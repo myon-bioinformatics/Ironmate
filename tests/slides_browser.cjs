@@ -379,6 +379,19 @@ const url =
     for (let i = 0; i < 3; i++) await act("undo");
     assert.ok((await state()).deck.slides.every((x) => x.width === 1280 && x.height === 720 && x.background === "#FFFFFF"));
     await act("inspect");
+    // ▦ the dot-art editor under the tools: ➕ puts the art on this page, crisp (pixelated), and folds the editor away; then ↩️
+    await mobile.locator("#pixel-editor summary").tap();
+    await mobile.waitForFunction(() => !!window.IronmateWorkbench?.grid);
+    await mobile.locator("#generate").tap();
+    const beforeArt = (await onPage()).length;
+    await mobile.locator("#place-grid").tap();
+    await mobile.waitForFunction((n) => IronmateSlideStudio.deck.slides[IronmateSlideStudio.active].layers.length === n + 1, beforeArt);
+    const art = (await onPage()).at(-1);
+    assert.ok(art.kind === "image" && art.sampling === "pixelated" && art.name === "image", JSON.stringify({ ...art, src: art.src.slice(0, 32) }));
+    assert.equal(await mobile.locator("#pixel-editor").getAttribute("open"), null);
+    await snap("pixel-art");
+    await act("undo");
+    assert.equal((await onPage()).length, beforeArt);
     await snap("saved");
     const phoneCheck = spawnSync(process.env.PYTHON || "python", ["-S", "-c", `
 from pathlib import Path
@@ -592,6 +605,33 @@ with ZipFile('build/pages-evidence/slides-parity.pptx') as z:
             for n in z.namelist() if n.startswith('ppt/media/'))
 `], { encoding: "utf8" });
     assert.equal(packageCheck.status, 0, packageCheck.stderr);
+    // 🎛️ the rest of Image Studio's detail settings (ONE-EDITOR P5): 拡大・単色 on a picture, 角度・不透明度 on anything,
+    // 矢印の形 on an arrow, 文字の大きさ on a text (its box grows with it); each one ↩️ step
+    const settled = () => wide.evaluate(() => IronmateSlideStudio.deck);
+    await wide.locator('[data-property="sampling"]').selectOption("smooth");
+    assert.equal(await wide.locator("#slides-svg image").getAttribute("image-rendering"), "auto");
+    await wide.locator('[data-property="mono"]').check();
+    await number("rotation", 30);
+    await number("opacity", 0.5);
+    let pic = (await settled()).slides[2].layers[0];
+    assert.ok(pic.sampling === "smooth" && pic.mono === true && pic.fill === "#000000" && pic.rotation === 30 && pic.opacity === 0.5,
+      JSON.stringify({ ...pic, src: undefined }));
+    await number("opacity", 2);                                                                 // out of range: kept as it was
+    assert.equal((await settled()).slides[2].layers[0].opacity, 0.5);
+    for (let i = 0; i < 4; i++) await wide.click('[data-act="undo"]');
+    pic = (await settled()).slides[2].layers[0];
+    assert.ok(pic.sampling === undefined && !pic.mono && pic.rotation === 0 && pic.opacity === 1, JSON.stringify({ ...pic, src: undefined }));
+    await wide.getByRole("button", {name: "2 枚目を編集"}).click();
+    await selectLayer("arrow");
+    assert.equal(await wide.inputValue('[data-property="headStyle"]'), "triangle");            // a select shows what is drawn
+    await wide.locator('[data-property="headStyle"]').selectOption("beginner");
+    assert.equal((await settled()).slides[1].layers[0].headStyle, "beginner");
+    await wide.getByRole("button", {name: "1 枚目を編集"}).click();
+    await selectLayer("italic");
+    const textBox = (await settled()).slides[0].layers[0];
+    await number("fontSize", textBox.fontSize * 2);
+    const grown = (await settled()).slides[0].layers[0];
+    assert.ok(grown.fontSize === textBox.fontSize * 2 && grown.h > textBox.h, JSON.stringify([textBox.h, grown.h]));
     await wide.screenshot({ path: path.join(out, "slides-four-up.png") });
     await wide.click('[data-act="grid"]');
     assert.ok(await wide.locator("#slides-grid").isHidden());

@@ -1224,6 +1224,11 @@ def test_slides_page_is_emoji_only_and_every_control_is_bound():
     # 🎛️ with nothing selected the inspector is the page's: 幅・高さ (every page, 64–4096), 背景・透明 (this page); ONE-EDITOR P3
     assert re.findall(r'data-property="(\w+)" data-kinds="page"', html) == ['width', 'height', 'background', 'transparent']
     assert 'data-property="width" data-kinds="page" min="64" max="4096" step="1"' in html and 'function setPage(' in script
+    # 🎛️ Image Studio's detail settings, as fields of the one inspector (ONE-EDITOR P5); a select's first option is the default
+    fields = dict(re.findall(r'data-property="(\w+)" data-kinds="([a-z ]*)"', html))
+    assert {k: fields[k] for k in ('rotation', 'opacity', 'fontSize', 'mono', 'headStyle', 'sampling')} == {
+        'rotation': '', 'opacity': '', 'fontSize': 'text', 'mono': 'text image', 'headStyle': 'arrow', 'sampling': 'image'}
+    assert '<select data-property="sampling" data-kinds="image"><option value="pixelated">' in html
 
 
 def test_base64_payload_is_standard_padded_png_and_existing_decoder_accepts_it():
@@ -1543,7 +1548,7 @@ def test_studio_html_contains_unique_controls_used_by_initialization():
         pages.feed(html)
         required = set(re.findall(r'(?:\$|byId)\("([a-z][a-z0-9-]*)"\)', _page_ui(page)))  # studio/tools/slides use $(...)
         pixel_controls = {"pixel-editor", "pixel-status", "pixels"}
-        if page == "studio":
+        if page in ("studio", "slides"):       # ▦ the dot-art editor is on both editors (ONE-EDITOR P4)
             required.update(pixel_controls)
         elif page == "tools":
             # Tools shares the script with Studio but only exposes the digest and message fallback.

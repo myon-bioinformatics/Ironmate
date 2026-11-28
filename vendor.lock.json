@@ -58,7 +58,7 @@
     {
       "repository": "myon-bioinformatics/myon-bioinformatics",
       "ref": "main",
-      "commit": "94fc0886738cf2d5db8b137c0faca4b277f6b29e",
+      "commit": "f2d7cb03cf5cd3f226f40fbe122a755542c85eea",
       "source": "LICENSE",
       "destination": "vendor/myon-bioinformatics-LICENSE",
       "blob_sha": "4ec4989b801bf1a3df6184d21f79e6e7ed5931f6",
@@ -67,7 +67,7 @@
     {
       "repository": "myon-bioinformatics/myon-bioinformatics",
       "ref": "main",
-      "commit": "94fc0886738cf2d5db8b137c0faca4b277f6b29e",
+      "commit": "f2d7cb03cf5cd3f226f40fbe122a755542c85eea",
       "source": "gh_ops.py",
       "destination": "vendor/gh_ops.py",
       "blob_sha": "510f83b5cc9ed0ca09267419df69e1e6cadfee2b",
@@ -258,7 +258,7 @@
       "source": "browser_evidence.py",
       "destination": "vendor/browser_evidence.py",
       "ref": "main",
-      "commit": "94fc0886738cf2d5db8b137c0faca4b277f6b29e",
+      "commit": "f2d7cb03cf5cd3f226f40fbe122a755542c85eea",
       "blob_sha": "023eed5cea9eccaceae25c223ff14b60b7b5435b",
       "sha256": "d9a118424f81dfb28915187a9bf7b91175ebf0a30ee4e51a1e71bbb574553c6f"
     },
@@ -267,7 +267,7 @@
       "source": "ci_status.py",
       "destination": "vendor/ci_status.py",
       "ref": "main",
-      "commit": "94fc0886738cf2d5db8b137c0faca4b277f6b29e",
+      "commit": "f2d7cb03cf5cd3f226f40fbe122a755542c85eea",
       "blob_sha": "b1f87c0135fd825cfbaad21ddaa4765a071a2bda",
       "sha256": "e997dec1562d8046a4c43f57299d1cf868f4eb911084bc3fdc404577ae15e85b"
     },
@@ -276,7 +276,7 @@
       "source": "gh_workflow.py",
       "destination": "vendor/gh_workflow.py",
       "ref": "main",
-      "commit": "94fc0886738cf2d5db8b137c0faca4b277f6b29e",
+      "commit": "f2d7cb03cf5cd3f226f40fbe122a755542c85eea",
       "blob_sha": "b32379e13ed4d6af0e877f5a87da4957abd84837",
       "sha256": "38a7a6b95ecc478f35090aa0c96448102cb58756bf9a06ed343297168193999a"
     },
@@ -285,7 +285,7 @@
       "source": "vendor_catalog.py",
       "destination": "vendor/vendor_catalog.py",
       "ref": "main",
-      "commit": "94fc0886738cf2d5db8b137c0faca4b277f6b29e",
+      "commit": "f2d7cb03cf5cd3f226f40fbe122a755542c85eea",
       "blob_sha": "05b6c8cd9dcb35d7a08b800eb88ddfa128ddb1b4",
       "sha256": "45143924cb03ba506ce5efd430d8d068e7cc6d49377cd156f8b395c3363e479a"
     },
@@ -294,7 +294,7 @@
       "source": "vendor_stage.py",
       "destination": "vendor/vendor_stage.py",
       "ref": "main",
-      "commit": "94fc0886738cf2d5db8b137c0faca4b277f6b29e",
+      "commit": "f2d7cb03cf5cd3f226f40fbe122a755542c85eea",
       "blob_sha": "a9f7b63a3c1f4807df0c74e113d88f49f34b314e",
       "sha256": "d9245b5eefc63345a9ac9574a2214718adc8f2ec8239ed17302e592cac1c11bb"
     },
@@ -474,7 +474,7 @@
       "source": "py_launch.cjs",
       "destination": "vendor/py_launch.cjs",
       "ref": "main",
-      "commit": "94fc0886738cf2d5db8b137c0faca4b277f6b29e",
+      "commit": "f2d7cb03cf5cd3f226f40fbe122a755542c85eea",
       "blob_sha": "caf5ef6d42bd572e9cfde84ee570e3036edc4726",
       "sha256": "fcdf3bcba98709d8138e75231af3fb468707d531df4e70a142441e0052e77e85"
     },
@@ -499,7 +499,7 @@
     {
       "repository": "myon-bioinformatics/myon-bioinformatics",
       "ref": "main",
-      "commit": "94fc0886738cf2d5db8b137c0faca4b277f6b29e",
+      "commit": "f2d7cb03cf5cd3f226f40fbe122a755542c85eea",
       "source": "tools/stdlib_min/pillow_min.py",
       "destination": "vendor/pillow_min.py",
       "blob_sha": "cd34c13aaba801ebad7eb73513e3de16c52714ff",
@@ -508,11 +508,11 @@
     {
       "repository": "myon-bioinformatics/myon-bioinformatics",
       "ref": "main",
-      "commit": "94fc0886738cf2d5db8b137c0faca4b277f6b29e",
+      "commit": "f2d7cb03cf5cd3f226f40fbe122a755542c85eea",
       "source": "fleet_check.py",
       "destination": "vendor/fleet_check.py",
-      "blob_sha": "6769fb45381561b1df4871ce53aa2fa4c8d0d968",
-      "sha256": "91344932241131c9d149d939c97d80e89d2b32ccf70db01056c5841e9e452dac"
+      "blob_sha": "2a7973ab7485c8a5cac36d3e43796ef6496ea9ff",
+      "sha256": "71c54df9de11c70312ff9580f0633cfd50252ad6738829d05ce92a46e3b18029"
     }
   ]
 }

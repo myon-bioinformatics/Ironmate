@@ -433,7 +433,7 @@ print('📱 phone: 2 slides, native text kept')
     const exportWord = await look('[data-act="export"]', "::after");
     assert.ok(exportWord.content === '"エクスポート"' && (await look('[data-act="export"]', null)).size === "0px", JSON.stringify(exportWord));
     assert.equal((await look("[data-ui-labels-switch]", "::after")).content, '"📱 To iconic"');   // the way back
-    assert.equal((await look('[data-act="home"]', null)).size, "0px");                          // a link button too: only its word
+    assert.equal((await look('[data-act="image-studio"]', null)).size, "0px");                          // a link button too: only its word
     await wide.click('[data-act="export"]');
     assert.equal((await look('#phone-candidates button[title^="PPTX"]', "::after")).content, '"PPTX"'); // the format's own word
     await wide.click('[data-act="export"]');                                                        // a second press hides them

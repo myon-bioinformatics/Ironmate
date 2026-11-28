@@ -113,19 +113,6 @@ STUDIO_HTML = r"""<!doctype html>
     <script defer src="studio.js"></script>
   </head>
   <body class="ui-elements" data-ui-theme="green" data-page="studio">
-    <header id="studio-head">
-      <div class="brand"><img src="brand/heatmap.svg" width="48" height="48" alt="I’m — 🔰がアポストロフィのIronmateロゴ" /><div>IRONMATE <span>画像編集</span></div></div>
-      <div class="top-actions">
-        <details id="studios">
-          <summary data-ui-word="工房一覧" title="工房一覧" aria-label="工房一覧">🏭</summary>
-          <a href="slides/">スライド・PPTX作成 ↗</a>
-          <a href="tools/#composition">🎵 作曲 ↗</a>
-          <a href="tools/">画像一覧・素材 ↗</a>
-          <a href="https://myon-bioinformatics.github.io/#ironmate">🏠 ポートフォリオ ↗</a>
-          <a href="https://github.com/myon-bioinformatics/Ironmate">🐙 GitHub リポジトリ ↗</a>
-        </details>
-      </div>
-    </header>
     <main>
       <aside class="tools">
         <h1>画像を編集</h1>
@@ -4042,7 +4029,7 @@ PSWB_PARTS = {
         '<button type="button" data-act="new" data-ui-word="新規" aria-label="最初から（白紙 1 枚）" title="最初から（白紙 1 枚）">🆕</button>'
         '<button type="button" data-close data-acts="image camera open" data-words="画像（PNG・JPEG・WebP をこのページに）|カメラ（撮った写真をこのページに）|JSON（全スライド）" data-candidates="画像 カメラ JSON" data-act="import" data-ui-word="インポート" aria-label="インポート（どの形式から？ 候補から選ぶ）" title="インポート（どの形式から？ 候補から選ぶ）">📥</button>'
         '<button type="button" data-close data-acts="pptx json png svg" data-words="PPTX（全スライド、PowerPoint で編集できる）|JSON（全スライド、また開ける）|PNG（このページ）|SVG（このページ）" data-candidates="PPTX JSON PNG SVG" data-act="export" data-ui-word="エクスポート" aria-label="エクスポート（どの形式に？ 候補から選ぶ）" title="エクスポート（どの形式に？ 候補から選ぶ）">📤</button>'
-        '<a class="ui-button" href="../" data-act="home" data-ui-word="Image Studio" aria-label="Image Studio" title="Image Studio">🏠</a>'
+        '<a class="ui-button" href="../" data-act="image-studio" data-ui-word="画像工房" aria-label="画像工房へ" title="画像工房へ">🖼️</a>'
         '<button type="button" class="ui-button" id="labels-switch" data-ui-labels-switch data-ui-word="📱 To iconic" aria-pressed="false" aria-label="💻 To textual ⇄ 📱 To iconic" title="💻 To textual ⇄ 📱 To iconic">💻</button>'
         '</div>'
         '<div class="ui-toolbar-row" data-ui-group="detail">'
@@ -4105,6 +4092,7 @@ PSWB_PARTS = {
         '<div class="ui-toolbar-row" data-ui-group="file">'
         '<button type="button" data-close data-acts="image camera clipboard open-json open-workspace shelf" data-words="画像（PNG・JPEG・WebP をキャンバスに）|カメラ（撮った写真をキャンバスに）|クリップボード（コピーした画像・Base64）|JSON（再編集用のシーン）|作業履歴（最大40状態）|シェルフ（クリップボード・シェルフ）" data-candidates="画像 カメラ クリップボード JSON 作業履歴 シェルフ" data-act="import" data-ui-word="インポート" aria-label="インポート（どの形式から？ 候補から選ぶ）" title="インポート（どの形式から？ 候補から選ぶ）">📥</button>'
         '<button type="button" data-close data-acts="png svg json workspace base64" data-words="PNG（出力倍率で）|SVG（出力倍率で）|JSON（再編集用）|作業履歴（最大40状態）|Base64（Flutter などへ渡す）" data-candidates="PNG SVG JSON 作業履歴 Base64" data-act="export" data-ui-word="エクスポート" aria-label="エクスポート（どの形式に？ 候補から選ぶ）" title="エクスポート（どの形式に？ 候補から選ぶ）">📤</button>'
+        '<a class="ui-button" href="slides/" data-act="slide-studio" data-ui-word="スライド工房" aria-label="スライド工房へ" title="スライド工房へ">📽️</a>'
         '<select id="export-scale" title="出力倍率" aria-label="出力倍率">'
         '<option value="1">1×</option>'
         '<option value="2">2×</option>'
@@ -4167,7 +4155,8 @@ def studio_toolbar(page: str) -> tuple[list, dict[str, str], dict[str, str]]:
         "new": ("🆕", "新規", "最初から（白紙 1 枚）"),
         "import": ("📥", "インポート", "インポート（どの形式から？ 候補から選ぶ）"),
         "export": ("📤", "エクスポート", "エクスポート（どの形式に？ 候補から選ぶ）"),
-        "home": ("🏠", "Image Studio", "Image Studio"),
+        "image-studio": ("🖼️", "画像工房", "画像工房へ"),
+        "slide-studio": ("📽️", "スライド工房", "スライド工房へ"),
         "inspect": ("🎛️", "詳細", "選んだものの詳細（位置・大きさ・種類別の設定）"),
         "grid": ("⊞", "4枚表示", "4枚表示（その場で編集）"),
     }
@@ -4187,15 +4176,17 @@ def studio_toolbar(page: str) -> tuple[list, dict[str, str], dict[str, str]]:
                 "slides": {**picture, "open": ".json,application/json"}}[page]
     rows = {"slides": (("create", "text shape emoji kaomoji clock"), ("adjust", "smaller reset bigger undo redo"),
                        ("update", "edit look turn front back delete"), ("pages", "slide-add slide-copy slide-delete pages"),
-                       ("file", "new import export home"), ("detail", "inspect grid")),
+                       ("file", "new import export image-studio"), ("detail", "inspect grid")),
             "image": (("create", "select text shape stamp emoji kaomoji clock"), ("adjust", "undo-2 undo redo redo-2"),
-                      ("update", "duplicate forward backward delete"), ("file", "import export"))}[page]
+                      ("update", "duplicate forward backward delete"), ("file", "import export slide-studio"))}[page]
+
+    links = {"image-studio": "../", "slide-studio": "slides/"}   # 🖼️ ⇄ 📽️ each studio links the other at the end of its file row
 
     def control(act: str) -> dict:
         face, word, tip, *offered = tools[act]
         faces, acts, said = (*formats.get(act, offered), "", "", "")[:3]
         named, picks = said.split("|") if said else [], acts.split()
-        return {"act": act, "face": face, "word": word, "words": tip, **({"href": "../"} if act == "home" else {}),
+        return {"act": act, "face": face, "word": word, "words": tip, **({"href": links[act]} if act in links else {}),
                 "candidates": [{"face": f, **({"act": picks[i]} if picks else {}), **({"words": named[i]} if named else {}),
                                 **(dict(zip(("accept", "capture"), choosers[picks[i]].split())) if picks and picks[i] in choosers else {})}
                                for i, f in enumerate(faces.split())], "close": act in formats}

@@ -31,7 +31,7 @@ One editor for phones and PCs, phone-first. The slide stays pinned at the top wh
 | 🆕 | Start over (one blank page) |
 | 🗑️ ↩️ ↪️ | Delete the selection, undo, redo (64 steps) |
 | 📥 📤 | Import and export. The formats open in the candidate row, in words, like 🔷's: 📥 どの形式から？ 画像 (a picture onto this page; カメラ takes a photo for it, on a phone; photos become PNG, at most 4 MP and 1920 px on the long side) or JSON (all slides, also those the PC studio saved); 📤 どの形式に？ PPTX (every slide, editable in PowerPoint), JSON, PNG or SVG (this page as it looks). A pick does it and the row hides again |
-| 🏠 | Image Studio |
+| 🖼️ | Image Studio (its file row ends with 📽️, back here) |
 | 💻 ⇄ 📱 | 💻 To textual: short words in place of the emoji, as on a PC; 📱 To iconic: the emoji again (the default). The same page, no reload; remembered in this browser. On the site the switch is under ⋯ in the header. The rows are groups (make, adjust, change, pages, file) with a light dashed line between them |
 
 The GIF is the frames `tests/slides_browser.cjs` saves (`build/pages-evidence/phone-*.png`, 390×844; `phone-frames.json` lists them) at 1.4 s each.

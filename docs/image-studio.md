@@ -71,13 +71,13 @@ in Flutter main `f8fe4e81d783258a4b8c730ea400acb7167372a2`:
 | Item | Ironmate | Flutter Photo Studio |
 | --- | --- | --- |
 | Input byte limit | 32 MiB (after Base64 decoding; same for binary) | 32 MiB |
-| Image pixel limit | 4,194,304 pixels (keeps the existing 4 MP limit) | 40,000,000 pixels |
-| Downscaling on import | None. Over-limit input is explicitly rejected | Default 2/3, downscaled to a document long side of 4096 or less |
-| Stored image | PNG-normalized after validation, import size kept | PNG-normalized and downscaled |
+| Image pixel limit | 4,194,304 pixels for what is stored (the 4 MP limit on mosaic and rendering) | 40,000,000 pixels |
+| Downscaling on import | To 4 MP, aspect kept (the slide editor's 📥 画像 does the same: one pipeline, `StudioCore.picture`) | Default 2/3, downscaled to a document long side of 4096 or less |
+| Stored image | PNG-normalized after validation, at most 4 MP | PNG-normalized and downscaled |
 
-Ironmate's 4 MP is an intentional limit on existing mosaic processing and rendering load.
-Reading 40 MP and downscaling it safely is not supported yet. Downscaling with Canvas after decoding does not reduce memory load during decoding,
-and it affects the spec of keeping original images, so a change to automatic downscaling / 40 MP support will be verified separately.
+Ironmate's 4 MP is an intentional limit on mosaic processing and rendering load, so it holds for what is stored: a larger
+image (a phone's photo through 📥 カメラ) is decoded once and shrunk to 4 MP, the same way on both studios. A file over 32 MiB,
+or whose bytes are not PNG / JPEG / WebP or disagree with its declared type, is refused before decoding.
 Embedded PNGs in existing scenes are also limited to 12,000,000 characters per image and 20,000,000 in total, so a 32 MiB input is not necessarily storable.
 
 Reproduction (test-only Playwright 1.58.2, no added runtime dependencies):

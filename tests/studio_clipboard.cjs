@@ -273,8 +273,13 @@ let browser;
       return [img.width, img.height];
     });
     assert.deepEqual(dimensions, [2048, 2048]);
-    await scenario("over-4MP-rejected-without-scene-change", { items: [binary(png(2049, 2048).toString("base64"))] }, "clipboard-invalid-image");
-    assert.match(await page.locator("#error-text").textContent(), /4MP/);
+    // 🖼️ over 4 MP it is shrunk, not refused (StudioCore's picture(), as on the slide editor: a phone's photo comes in)
+    await scenario("over-4MP-shrunk-to-4MP", { items: [binary(png(4096, 3072).toString("base64"))] }, null, null);
+    const shrunk = await page.evaluate(async () => {
+      const img = new Image(); img.src = IronmateStudio.scene.layers.at(-1).src; await img.decode();
+      return [img.width, img.height];
+    });
+    assert(shrunk[0] * shrunk[1] <= 4194304 && Math.abs(shrunk[0] / shrunk[1] - 4 / 3) < 0.01, "shrunk to 4MP, aspect kept: " + shrunk);
     // Genuine OS Clipboard API integration, Chromium only; other engines use
     // deterministic boundary doubles above, not claims of native OS success.
     let nativeClipboard = "not exercised";

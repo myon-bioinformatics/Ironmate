@@ -1078,9 +1078,22 @@ const StudioCore = (function (root) {
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 30000);
   }
-  // 🖼️ 画像ファイル → 長辺 longest までの PNG。4MP 超は断る（fit なら 4MP まで縮める: スマホの写真）
-  async function picture(file, longest = Infinity, fit = false, signal) {
+  // 🖼️ PNG / JPEG / WebP by their first bytes (what a file says it is does not decide)
+  function imageType(bytes) {
+    if ([137, 80, 78, 71, 13, 10, 26, 10].every((v, i) => bytes[i] === v)) return "image/png";
+    if (bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255) return "image/jpeg";
+    if (bytes.length >= 12 && [82, 73, 70, 70].every((v, i) => bytes[i] === v) && [87, 69, 66, 80].every((v, i) => bytes[i + 8] === v))
+      return "image/webp";
+    return null;
+  }
+  // 🖼️ The one way an image comes in, on every studio page (📥 画像 カメラ クリップボード, a drop, the shelf, the Tools page): a
+  // PNG / JPEG / WebP of at most 32 MiB whose bytes match its declared type, as a PNG shrunk to 4 MP and to `longest` px on its long
+  // side (a phone's photo fits; nothing is refused for its size in pixels).
+  async function picture(file, longest = Infinity, signal) {
     signal?.throwIfAborted();
+    if (!file.size || file.size > 33554432) fail("画像は32MiB以下にしてください");
+    const type = imageType(new Uint8Array(await file.slice(0, 12).arrayBuffer()));
+    if (!type || (file.type && file.type.toLowerCase() !== type)) fail("画像形式またはMIME宣言が実データと一致しません");
     const url = URL.createObjectURL(file),
       img = new Image();
     const abort = () => {
@@ -1098,13 +1111,12 @@ const StudioCore = (function (root) {
     }
     const w = img.naturalWidth,
       h = img.naturalHeight;
-    if (w * h > 4194304 && !fit) fail("1画像4MP以下です。");
     const k = Math.min(1, longest / Math.max(w, h), Math.sqrt(4194304 / (w * h))),
       canvas = document.createElement("canvas");
-    canvas.width = Math.max(1, Math.round(w * k));
-    canvas.height = Math.max(1, Math.round(h * k));
+    canvas.width = Math.max(1, Math.floor(w * k)); // floor: rounding never takes it past 4 MP
+    canvas.height = Math.max(1, Math.floor(h * k));
     canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
-    return { canvas, src: canvas.toDataURL("image/png"), w: canvas.width, h: canvas.height };
+    return { canvas, type, src: canvas.toDataURL("image/png"), w: canvas.width, h: canvas.height };
   }
   function mosaicSource(img, cell, levels) {
     const canvas = Object.assign(document.createElement("canvas"), { width: img.naturalWidth, height: img.naturalHeight });
@@ -1165,6 +1177,7 @@ const StudioCore = (function (root) {
     workspaceHistory,
     save,
     picture,
+    imageType,
   };
   return api;
 })(typeof globalThis !== "undefined" ? globalThis : this);
@@ -2400,38 +2413,16 @@ async function openScene(file) {
 }
 // Keep acquisition (picker, camera capture, clipboard) separate from normalization.
 async function importImageBytes(bytes, declaredMime, name = "取り込み画像") {
-  if (!(bytes instanceof Uint8Array) || !bytes.length || bytes.length > 32 * 1024 * 1024)
-    throw new Error("画像は32MiB以下にしてください");
-  const mime = sniffImageMime(bytes);
-  if (!mime || (declaredMime && declaredMime.toLowerCase() !== mime))
-    throw new Error("画像形式またはMIME宣言が実データと一致しません");
-  const blob = new Blob([bytes], { type: mime });
-  const url = URL.createObjectURL(blob);
-  try {
-    const img = await decoded(url);
-    const cv = document.createElement("canvas");
-    cv.width = img.naturalWidth;
-    cv.height = img.naturalHeight;
-    cv.getContext("2d").drawImage(img, 0, 0);
-    const w = Math.min(700, scene.width * 0.65);
-    add({
-      ...base("image", 80, 90, w, (w * img.naturalHeight) / img.naturalWidth),
-      name, src: cv.toDataURL("image/png"),
-      cell: 1, levels: 256, sampling: "pixelated", mono: false,
-    });
-    setTool("select");
-    message(mime + "を取り込みました");
-  } finally {
-    URL.revokeObjectURL(url);
-    images.delete(url);
-  }
-}
-function sniffImageMime(bytes) {
-  if ([137,80,78,71,13,10,26,10].every((v,i)=>bytes[i]===v)) return "image/png";
-  if (bytes[0]===255&&bytes[1]===216&&bytes[2]===255) return "image/jpeg";
-  if (bytes.length>=12&&[82,73,70,70].every((v,i)=>bytes[i]===v)
-      &&[87,69,66,80].every((v,i)=>bytes[i+8]===v)) return "image/webp";
-  return null;
+  // 🖼️ StudioCore's picture(): the same checks and the same 4 MP fit as the slide editor's 📥 画像
+  const p = await C.picture(new Blob([bytes], { type: declaredMime || "" }));
+  const w = Math.min(700, scene.width * 0.65);
+  add({
+    ...base("image", 80, 90, w, (w * p.h) / p.w),
+    name, src: p.src,
+    cell: 1, levels: 256, sampling: "pixelated", mono: false,
+  });
+  setTool("select");
+  message(p.type + "を取り込みました");
 }
 function imageBase64(text, maxBytes = 32 * 1024 * 1024) {
   let value = text.replace(/^\uFEFF/, "").trim();
@@ -2454,16 +2445,15 @@ function imageBase64(text, maxBytes = 32 * 1024 * 1024) {
   const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
   if (btoa(binary) !== compact)
     throw new Error("Base64のパディングまたは容量が不正です");
-  const actual = sniffImageMime(bytes);
+  const actual = C.imageType(bytes);
   if (!actual || (mime && mime !== actual))
     throw new Error("画像形式またはMIME宣言が実データと一致しません");
   return { bytes, mime: actual };
 }
 async function importImageFile(file) {
-  if (file.size > 32 * 1024 * 1024) throw new Error("画像は32MiB以下にしてください");
-  await importImageBytes(new Uint8Array(await file.arrayBuffer()), file.type || null, file.name);
+  await importImageBytes(new Uint8Array(await file.arrayBuffer()), file.type || null, file.name || "取り込み画像");
 }
-if (!document.body.dataset.page.split(" ").includes("slides")) {
+{
   const board = $("board");
   board.addEventListener("dragover", event => {
     if (event.dataTransfer?.types.includes("Files")) event.preventDefault();
@@ -2491,7 +2481,7 @@ function clipboardImageText(text) {
   const rawImage = hasRawImageSignature(value);
   try {
     const payload = imageBase64(value);
-    if (sniffImageMime(payload.bytes)) return payload;
+    if (C.imageType(payload.bytes)) return payload;
     if (explicit) throw new Error("PNG・JPEG・WebP画像ではありません");
   } catch (e) {
     if (explicit || rawImage)
@@ -2591,7 +2581,7 @@ function hasRawImageSignature(text) {
     if (prefix.length === 16) break;
   }
   if (prefix.startsWith("iVBORw0KGg") || prefix.startsWith("/9j/")) return true;
-  try { return !!sniffImageMime(Uint8Array.from(atob(prefix), c => c.charCodeAt(0))); }
+  try { return !!C.imageType(Uint8Array.from(atob(prefix), c => c.charCodeAt(0))); }
   catch { return false; }
 }
 function isImageText(text) {
@@ -2715,7 +2705,7 @@ function addShelfItem(bytes, mime, rawText, label = "シェルフ項目") {
   const size = bytes ? bytes.length : shelfTextSize(rawText || "");
   checkShelfCapacity(size);
   if (bytes) {
-    const actual = bytes instanceof Uint8Array && sniffImageMime(bytes);
+    const actual = bytes instanceof Uint8Array && C.imageType(bytes);
     if (!actual || (mime && mime.toLowerCase() !== actual))
       throw new Error("画像形式またはMIME宣言が実データと一致しません");
     mime = actual;
@@ -3175,9 +3165,7 @@ if (typeof document !== "undefined" && (document.getElementById("pixel-editor") 
         const thumbnails = [];
         for (const file of files) {
           signal.throwIfAborted();
-          if (!["image/png", "image/jpeg", "image/webp"].includes(file.type))
-            throw Error("PNG / JPEG / WebPを選んでください。");
-          const {src, canvas} = await picture(file, 512, false, signal);
+          const {src, canvas} = await picture(file, 512, signal); // checks the type from the bytes
           thumbnails.push({name: file.name, src, canvas});
         }
         return thumbnails;
@@ -3901,7 +3889,7 @@ const acts = {
 };
 const files = {
   async image(file, destination = slide()) {
-    const p = await C.picture(file, 1920, true); // 🖼️ 写真は 4MP・長辺 1920 まで縮めて PNG に
+    const p = await C.picture(file, 1920); // 🖼️ 写真は 4MP・長辺 1920 まで縮めて PNG に（画像工房と同じ取り込み）
     if (slide() !== destination) throw Error("スライドが切り替わりました。追加したいページで画像を選び直してください。");
     const before = place((s) => {
       const k = Math.min((s.width * 0.6) / p.w, (s.height * 0.6) / p.h);

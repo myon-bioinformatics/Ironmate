@@ -3923,8 +3923,8 @@ const files = {
     record(before);
   },
   async open(file) {
-    const before = state(),
-      next = D.parse(await file.text()); // Slide Studio の「全スライドJSON」もそのまま開ける
+    const next = D.parse(await file.text()); // Slide Studio の「全スライドJSON」もそのまま開ける
+    const before = state();
     deck = next;
     active = 0;
     level = plain;

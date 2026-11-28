@@ -277,6 +277,21 @@ const url =
     await mobile.tap('[data-ui-pager-go="next"]');
     assert.equal(await mobile.evaluate(() => IronmatePhone.act("redo").then(() => IronmatePhone.deck.slides[1].layers.at(-1).kind)), "image");
     await mobile.evaluate(() => IronmatePhone.act("undo"));
+    // Undo an imported document at the page the user was viewing when it replaced the deck.
+    const beforeOpen = await state();
+    assert.equal(beforeOpen.active, 1);
+    const openedTitle = await mobile.evaluate(async () => {
+      const next = { ...IronmatePhone.deck, title: "Import while turning pages" };
+      const pending = IronmatePhone.act("open", new Blob([JSON.stringify(next)], { type: "application/json" }));
+      document.querySelector('[data-ui-pager-go="prev"]').click();
+      await pending;
+      return IronmatePhone.deck.title;
+    });
+    assert.equal(openedTitle, "Import while turning pages");
+    await act("undo");
+    assert.deepEqual((await state()).deck, beforeOpen.deck);
+    assert.equal((await state()).active, 0);
+    await mobile.tap('[data-ui-pager-go="next"]');
     // 💾 autosave survives a reload
     await mobile.reload();
     await mobile.waitForFunction(() => !!window.IronmatePhone);

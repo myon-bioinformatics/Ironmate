@@ -19,11 +19,6 @@ const url =
   try {
     const errors = [],
       requests = [];
-    // 🖥️ slides/pc/ (the PC studio the one editor replaced) only sends on, like slides/phone/.
-    const old = await browser.newPage();
-    await old.goto(url + "pc/");
-    await old.waitForURL(url);
-    await old.close();
     // The shelf hands the canvas to the normal slide image importer and leaves the source open.
     const source = await browser.newPage();
     await source.goto(new URL("../", url).href);
@@ -62,8 +57,7 @@ const url =
       const box = await mobile.locator("#phone-stage").boundingBox();
       return { x: box.x + box.width * fx, y: box.y + box.height * fy };
     };
-    await mobile.goto(url + "phone/"); // 🚪 the editor's old address only sends on to the one entrance
-    await mobile.waitForURL(url);
+    await mobile.goto(url);
     await mobile.waitForFunction(() => !!window.IronmatePhone);
     const stageBox = await mobile.locator("#phone-stage").boundingBox();
     assert.equal(Math.round(stageBox.y), 0); // 📌 pinned at the top, full width, 16:9
@@ -311,7 +305,7 @@ print('📱 phone: 2 slides, native text kept')
     fs.writeFileSync(path.join(out, "phone-frames.json"), JSON.stringify(shots.map((f) => path.basename(f)), null, 2));
     // The same multiplier is bounded by the largest font, then reversed across a reload.
     const openPhone = async (deck) => {
-      await mobile.setInputFiles('input[data-file="open"]', {
+      await mobile.setInputFiles('#phone-toolbar [data-ui-file="open"]', {
         name: "test.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(deck)),
       });
       await mobile.waitForFunction((title) => IronmatePhone.deck.title === title, deck.title);
@@ -413,7 +407,7 @@ print('📱 phone: 2 slides, native text kept')
         fontSize: 24, font: "sans", mono: false, bold: false, ...more }),
       legacy = { schema: "ironmate-slide-deck/1", title: "long", slides: [{ schema: "ironmate-image-studio/1", width: 1280, height: 720,
         background: "#FFFFFF", layers: [words("title", japanese, { bold: true, rotation: 12 }), words("body", english, { x: 400, w: 600, font: "mono" })] }] };
-    await wide.setInputFiles('input[data-file="open"]', { name: "legacy.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(legacy)) });
+    await wide.setInputFiles('#phone-toolbar [data-ui-file="open"]', { name: "legacy.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(legacy)) });
     await wide.waitForFunction(() => IronmatePhone.deck.title === "long");
     assert.deepEqual((await wide.evaluate(() => IronmatePhone.deck.slides[0].layers)).map((l) => [l.text, l.wrap]), [[japanese, true], [english, true]]);
     const manifest = await wide.evaluate(() => IronmatePhone.deck.slides[0].layers.map((l) => {
@@ -450,7 +444,7 @@ print('📱 phone: 2 slides, native text kept')
       scene([{ ...geometry, id: "photo", kind: "image", src: parity, cell: 1, levels: 256 }]),
       scene([]),
     ] };
-    await wide.setInputFiles('input[data-file="open"]', { name: "parity.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(deck)) });
+    await wide.setInputFiles('#phone-toolbar [data-ui-file="open"]', { name: "parity.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(deck)) });
     await wide.waitForFunction(() => IronmatePhone.deck.title === "PC controls");
     await wide.click('[data-act="grid"]');
     assert.equal(await wide.locator("#phone-grid > div").count(), 4);

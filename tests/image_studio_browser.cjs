@@ -365,12 +365,13 @@ const failures = [],
     .click();
   await page.selectOption("#export-scale", "2");
   await download("PNG", "composition-2x.png");
-  // 🧰 a row of a host's header: its key presses this page's own control (a PNG's size is the row's own), with the menus shut
+  // 🧰 a row of a host's header: its key is the name of an act the toolbar runs (no key of its own to translate)
   const fromHost = (key) => page.evaluate((k) => document.dispatchEvent(new CustomEvent("ui-chrome-action", {detail: {key: k}})), key);
   const hosted = page.waitForEvent("download");
-  await fromHost("png-4");
+  await fromHost("png");
   assert.match((await hosted).suggestedFilename(), /\.png$/);
-  assert.equal(await page.inputValue("#export-scale"), "4");
+  await fromHost("png-4");                                                                     // gone: nothing happens
+  assert.equal(await page.inputValue("#export-scale"), "2");
   await fromHost("shelf");
   assert.equal(await page.evaluate(() => document.getElementById("shelf-dialog").open), true);
   await page.evaluate(() => document.getElementById("shelf-dialog").close());

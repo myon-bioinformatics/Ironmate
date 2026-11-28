@@ -1,6 +1,17 @@
 """Chromium HTML/PDF preview adapter; this does not render edited PPTX files."""
+import importlib.util
 import hashlib, importlib.metadata, math, sys
 from pathlib import Path
+
+
+def load_vendored(name, relpath):
+    """Load a vendored file by path under a repo-unique name (cli_args README: Loading a vendored copy)."""
+    if name not in sys.modules:
+        spec = importlib.util.spec_from_file_location(name, Path(__file__).resolve().parents[1] / relpath)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        spec.loader.exec_module(module)
+    return sys.modules[name]
 
 
 def render_preview_html(html, directory, *, expected_slides, sha, run_id, timeout=15000):
@@ -21,7 +32,7 @@ def render_preview_html(html, directory, *, expected_slides, sha, run_id, timeou
         raise ValueError('timeout must be 100..60000 milliseconds')
     from playwright.sync_api import sync_playwright
     from pypdf import PdfReader
-    from vendor.browser_evidence import record
+    record = load_vendored("ironmate_browser_evidence", "vendor/browser_evidence.py").record
     shots = directory / 'slides'
     shots.mkdir()  # No stale image reuse.
     entries = []

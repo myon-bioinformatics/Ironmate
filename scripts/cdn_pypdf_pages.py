@@ -11,6 +11,16 @@ from __future__ import annotations
 import argparse, hashlib, importlib.util, json, os, subprocess, sys, tempfile
 from pathlib import Path
 
+
+def load_vendored(name, relpath):
+    """Load a vendored file by path under a repo-unique name (cli_args README: Loading a vendored copy)."""
+    if name not in sys.modules:
+        spec = importlib.util.spec_from_file_location(name, Path(__file__).resolve().parents[1] / relpath)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        spec.loader.exec_module(module)
+    return sys.modules[name]
+
 PAGE_OUTPUT_FIELDS = ("pages", "mediabox", "version", "pdf_sha256")
 
 
@@ -84,7 +94,7 @@ def compare(cache: Path) -> dict:
     root = Path(__file__).resolve().parents[1]
     if str(root) not in sys.path:
         sys.path.insert(0, str(root))
-    from vendor import fetch_module
+    fetch_module = load_vendored("ironmate_fetch_module", "vendor/fetch_module.py")
 
     spec = fetch_module.resolve("pypdf")
     wheel = fetch_module.fetch(spec, cache)

@@ -44,7 +44,8 @@ module.exports = async ({page, out}) => {
     URL.revokeObjectURL = url => { released.push(url); return revoke.call(URL, url); };
     window.atob = text => { if (text.length > 16) largeDecodes.push(text.length); return originalAtob(text); };
     try {
-      $("shelf-button").click();
+      document.querySelector('#studio-toolbar [data-act="import"]').click();                     // 📥 → シェルフ（the toolbar's candidate）
+      [...document.querySelectorAll("#studio-candidates button")].find((c) => c.textContent === "シェルフ").click();
       clear();
       // Both explicit and recognizable raw image failures remain errors, even if
       // another valid binary format is simultaneously offered by the clipboard.

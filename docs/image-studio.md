@@ -21,7 +21,7 @@ On GitHub Pages it runs without Python. Only fixed HTML/JS/CSS is published; ima
    Drag-scaling text also changes the font size. Change what is already placed with `✏️ 編集` (edit) on the right: the words, `太字` (bold), `斜体` (italic), fill and line colors, the shape, a clock's time.
 6. Edit layers with `前へ／後ろへ` (forward / backward) for stacking order and `複製／削除` (duplicate / delete). Undo/redo keeps up to 40 states.
    Loading JSON and `新しいキャンバス` (new canvas) are also recorded in history. The selection frame is not included in exported images.
-7. Download PNG or SVG. Use `JSON保存` (save JSON) for re-editing; it contains original images, values and layers. When the studio is shown inside a site with a shared header (the portfolio), the page carries no header of its own: it declares its rows as data (`image_studio.host_rows`: one `💾` listing every format, one `📂`, the shelf and `💻 To textual ⇄ 📱 To iconic` under `⋯`). The buttons show emoji by default; `💻` (at the end of the top bar, or the `⋯` row) swaps them for short words on the same page, and `📱` swaps back; the choice is remembered. On the page itself, `📥` and `📤` list their formats in words (JSON, 作業履歴, SVG, Base64, PNG …), and a pick closes the list again and the host shows them in place of these menus.
+7. Download PNG or SVG from `📤` (どの形式に？ to which format?): it lists PNG, SVG, JSON, 作業履歴 (history) and Base64 in words, and a pick hides the list again; the `1×` beside it is the output scale. `📥` (どの形式から？ from which format?) lists JSON, 作業履歴 and the clipboard shelf. Use JSON for re-editing; it contains original images, values and layers. The tools are one toolbar on the left, the same PySaiyanWeBoo `toolbar` as the slide editor's: rows of make (`👆 🔤 ▭ ✦ 😊 (^^) 🕒`), adjust (`⏪ ↩️ ↪️ ⏩`), change (`📑 🗑️ ⏫ ⏬`) and file (`📥 📤`), with a dashed line between them; `▭ 😊 (^^)` open their candidates right under their row. The buttons show emoji by default; `💻` (at the end of the top bar, or the `⋯` row) swaps them for short words on the same page, and `📱` swaps back; the choice is remembered. When the studio is shown inside a site with a shared header (the portfolio), the page carries no header of its own: it declares its rows as data (`image_studio.host_rows`: the shelf and `💻 To textual ⇄ 📱 To iconic` under `⋯`), and a key from the header runs the same act as the toolbar.
    This JSON includes original images, so sharing it shares them too. Use PNG to share after applying a mosaic.
 
 PNG defaults to 1280×720, usable as a 16:9 image for documents. The background can be transparent.
@@ -109,7 +109,7 @@ Even when a color font has built-in colors, it does not rely on simply changing 
 Making a photo monochrome fills its whole opaque area. It is not outline extraction or subject cutout.
 Emoticons can be added freely through text input. `等幅` (monospace) can be chosen for ASCII art.
 The canvas starts empty. Choose the text tool and click to place each text box. Select a text layer to edit it or move it one step forward or backward.
-`⏪` / `⏩` in the header go back / forward two states at once (`↶` / `↷` one).
+`⏪` / `⏩` in the toolbar go back / forward two states at once (`↩️` / `↪️` one).
 
 ## Output scale and CLI
 

@@ -124,29 +124,6 @@ STUDIO_HTML = r"""<!doctype html>
           <a href="https://myon-bioinformatics.github.io/#ironmate">🏠 ポートフォリオ ↗</a>
           <a href="https://github.com/myon-bioinformatics/Ironmate">🐙 GitHub リポジトリ ↗</a>
         </details>
-        <button id="undo-2" data-steps="2" data-ui-word="2つ戻す" title="2つ戻す" aria-label="2つ戻す">⏪</button>
-        <button id="undo" data-ui-word="戻す" title="戻す" aria-label="戻す">↩️</button>
-        <button id="redo" data-ui-word="やり直す" title="やり直す" aria-label="やり直す">↪️</button>
-        <button id="redo-2" data-steps="2" data-ui-word="2つやり直す" title="2つやり直す" aria-label="2つやり直す">⏩</button>
-        <details id="studio-import">
-          <summary data-ui-word="インポート" title="インポート" aria-label="インポート">📥</summary>
-          <button id="shelf-button" title="クリップボード・シェルフ" aria-label="クリップボード・シェルフ">シェルフ</button>
-          <label class="button" title="作業履歴を開く" aria-label="作業履歴を開く">作業履歴<input id="open-workspace" type="file" accept=".json,application/json" /></label>
-          <label class="button" title="JSONを開く" aria-label="JSONを開く">JSON<input id="open" type="file" accept=".json" /></label>
-        </details>
-        <details id="studio-export">
-          <summary data-ui-word="エクスポート" title="エクスポート" aria-label="エクスポート">📤</summary>
-          <button id="save" title="JSON（再編集用）" aria-label="JSON（再編集用）">JSON</button>
-          <button id="save-workspace" title="作業履歴を保存" aria-label="作業履歴を保存">作業履歴</button>
-          <button id="svg" title="SVG" aria-label="SVG">SVG</button><button id="base64" title="Base64 / 渡す" aria-label="Base64 / 渡す">Base64</button>
-          <select id="export-scale" aria-label="出力倍率">
-            <option value="1">1×</option>
-            <option value="2">2×</option>
-            <option value="4">4×</option>
-            <option value="8">8×</option>
-          </select>
-          <button id="png" class="primary" title="PNG" aria-label="PNG">PNG</button>
-        </details>
       </div>
     </header>
     <main>
@@ -155,17 +132,8 @@ STUDIO_HTML = r"""<!doctype html>
         <p class="hint">
           ツールを選び、キャンバスを押して配置します。
         </p>
-        <div id="tools" class="tool-grid">
-          <button data-tool="select" class="active" data-ui-word="選択" title="選択" aria-label="選択">👆</button
-          ><button data-tool="text" data-ui-word="文字列" title="文字列" aria-label="文字列">🔤</button
-          ><button data-tool="shape" data-label="図形" data-candidates="▭ ◯ △ →" data-ui-word="図形(▭)" title="図形(▭)" aria-label="図形(▭)">▭</button
-          ><button data-tool="stamp" data-ui-word="スタンプ" title="スタンプ" aria-label="スタンプ">✦</button
-          ><button data-tool="emoji" data-label="絵文字" data-candidates="❤️ 😊 🌱 📊 ✨ 📌 🔰" data-ui-word="絵文字(😊)" title="絵文字(😊)" aria-label="絵文字(😊)">😊</button
-          ><button data-tool="kaomoji" data-label="顔文字" data-candidates="(・∀・) (｡•̀ᴗ-)✧ ٩(๑❛ᴗ❛๑)۶" data-ui-word="顔文字(^^)" title="顔文字(^^)" aria-label="顔文字(^^)">(^^)</button
-          ><button data-tool="clock" data-ui-word="時計" title="時計" aria-label="時計">🕒</button>
-        </div>
+        <!-- 🧰 toolbar: image_toolbar() -->
 """ + STUDIO_PIXEL_PANEL + r"""
-        <div id="candidates" class="emojis" role="group" aria-label="候補"></div>
         <div id="keyboard-input" hidden>
           <button id="keyboard-focus">⌨ ほかの文字を入力</button>
           <p class="hint">Windows は Win + .、Mac は Control + Command + Space。スマホはキーボードの絵文字キーから。顔文字の入力・貼り付けもできます。</p>
@@ -261,10 +229,6 @@ STUDIO_HTML = r"""<!doctype html>
       <aside class="inspector">
         <p class="eyebrow">レイヤー</p>
         <div id="layers" class="layers"></div>
-        <div class="two">
-          <button id="duplicate" data-ui-word="複製" title="複製" aria-label="複製">📑</button><button id="delete" data-ui-word="削除" title="削除" aria-label="削除">🗑️</button
-          ><button id="front" data-ui-word="前へ" title="前へ" aria-label="前へ">⏫</button><button id="back" data-ui-word="後ろへ" title="後ろへ" aria-label="後ろへ">⏬</button>
-        </div>
         <div class="section">
           <h2 id="selection">レイヤーを選択</h2>
           <label
@@ -414,7 +378,7 @@ STUDIO_HTML = r"""<!doctype html>
 </html>
 """
 
-STYLE_CSS = r"""/* web-ui-bundle/1 commit=e657dec944a698db694d02e82aa450711b0e1e9b sha256=8c38392326d047b7088578e59fbe03e1367f7bd92e0536ab61c6a78f1423dd1b scripts/build_studio_css.py*/
+STYLE_CSS = r"""/* web-ui-bundle/1 commit=2b581c23761a7725eecbca5c1fa1f7acdb7bbe21 sha256=1050864a3a1a27473139fe3db824ea5917975b3f4c803c5383fafb276aeea663 scripts/build_studio_css.py*/
 @layer base,components,theme;
 /* css/tokens.css */
 :root{--ui-bg:#0d1117;--ui-panel:#101820;--ui-fg:#d1f7c4;--ui-muted:#8b949e;--ui-border:#58a6ff;--ui-accent:#7ee787;--ui-danger:#cf222e;--ui-radius:0;--ui-text:16px;--ui-space:1rem;--ui-max:960px;--ui-font:Meiryo,メイリオ,sans-serif;--ui-font-mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
@@ -447,7 +411,7 @@ body:where([data-page~="studio"]){font-size:13px;line-height:1.5;margin:0}
 :where([data-page~="studio"]) .top-actions{display:flex;flex-wrap:wrap;gap:7px}
 :where([data-page~="studio"]) .top-actions summary{cursor:pointer;padding:7px}
 :where([data-page~="studio"]) .top-actions details a{color:var(--ui-accent);align-self:center;padding:7px 3px;text-underline-offset:3px}
-:where([data-page~="studio"]) button,:where([data-page~="studio"]) .button{display:inline-flex;align-items:center;justify-content:center;gap:5px;text-decoration:none;min-height:38px;padding:10px 12px}
+:where([data-page~="studio"]) button:where(:not(.ui-toolbar-row>*)),:where([data-page~="studio"]) .button{display:inline-flex;align-items:center;justify-content:center;gap:5px;text-decoration:none;min-height:38px;padding:10px 12px}
 :where([data-page~="studio"]) .button{font:inherit;cursor:pointer;background:var(--ui-panel);color:var(--ui-fg);border:1px solid var(--ui-border);border-radius:var(--ui-radius)}
 :where([data-page~="studio"]) button:hover,:where([data-page~="studio"]) .button:hover{border-color:var(--ui-accent);background:color-mix(in srgb,var(--ui-accent) 12%,var(--ui-panel))}
 :where([data-page~="studio"]) .primary{background:var(--ui-accent);border-color:var(--ui-accent);color:var(--ui-bg);font-weight:700}
@@ -463,8 +427,8 @@ body:where([data-page~="studio"]){font-size:13px;line-height:1.5;margin:0}
 :where([data-page~="studio"]) .eyebrow{font-size:10px;letter-spacing:2px;font-weight:800;color:var(--ui-muted);margin:0 0 12px}
 :where([data-page~="studio"]) .hint,:where([data-page~="studio"]) .note{font-size:11px;color:var(--ui-muted);line-height:1.85}
 :where([data-page~="studio"]) .note{margin-top:18px}
-:where([data-page~="studio"]) .tool-grid,:where([data-page~="studio"]) .two{display:grid;grid-template-columns:1fr 1fr;gap:7px}
-:where([data-page~="studio"]) .tool-grid{margin:24px 0 18px}
+:where([data-page~="studio"]) .two{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+:where([data-page~="studio"]) .tools>.ui-toolbar{margin:24px 0 16px}
 :where([data-page~="studio"]) .active{background:color-mix(in srgb,var(--ui-accent) 22%,var(--ui-panel))!important;border-color:var(--ui-accent)!important;color:var(--ui-fg)!important;font-weight:700}
 :where([data-page~="studio"]) label{display:block;font-size:11px;margin:12px 0 7px}
 :where([data-page~="studio"]) input,:where([data-page~="studio"]) textarea,:where([data-page~="studio"]) select{display:block;width:100%;font-size:13px;padding:9px;margin-top:5px}
@@ -474,9 +438,6 @@ body:where([data-page~="studio"]){font-size:13px;line-height:1.5;margin:0}
 :where([data-page~="studio"]) input[type=checkbox]{display:inline;width:auto;margin:0 7px 0 0}
 :where([data-page~="studio"]) .check{display:flex;align-items:center}
 :where([data-page~="studio"]) .wide{width:100%;margin:6px 0}
-:where([data-page~="studio"]) .emojis{display:flex;flex-wrap:wrap;gap:4px}
-:where([data-page~="studio"]) .emojis button{font-size:21px;padding:5px 7px;border:none;background:transparent}
-:where([data-page~="studio"]) .kaomojis button{font-size:13px;padding:7px 4px}
 :where([data-page~="studio"]) .section{border-top:1px solid var(--ui-border);padding-top:20px;margin-top:22px}
 :where([data-page~="studio"]) .workspace{padding:30px;min-width:0}
 :where([data-page~="studio"]) .canvas-heading{display:flex;justify-content:space-between;align-items:end;gap:12px;margin:5px 0 24px}
@@ -517,7 +478,7 @@ body:where([data-page~="studio"]){font-size:13px;line-height:1.5;margin:0}
 :where([data-page~="studio"]) #base64-dialog p{font-size:12px;line-height:1.8}
 @media(min-width:1600px){:where([data-page~="studio"]) .workspace{padding:44px}}
 @media(max-width:1150px){:where([data-page~="studio"]) main{grid-template-columns:210px minmax(0,1fr)}:where([data-page~="studio"]) .inspector{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px}:where([data-page~="studio"]) .inspector>.eyebrow{display:none}:where([data-page~="studio"]) .inspector>.section{margin:0;border:0;padding:0}:where([data-page~="studio"]) .workspace{padding:22px}}
-@media(max-width:680px){:where([data-page~="studio"]) header{padding:14px;display:block}:where([data-page~="studio"]) .top-actions{margin-top:15px}:where([data-page~="studio"]) .top-actions button,:where([data-page~="studio"]) .top-actions .button{padding:7px;font-size:11px}:where([data-page~="studio"]) main{display:flex;flex-direction:column}:where([data-page~="studio"]) .workspace{order:-1;padding:18px}:where([data-page~="studio"]) .canvas-heading h2{font-size:17px}:where([data-page~="studio"]) .canvas-heading{margin-bottom:16px}:where([data-page~="studio"]) .canvas-footer{display:block}:where([data-page~="studio"]) .canvas-footer span{display:block;margin:5px 0}:where([data-page~="studio"]) .tools{display:block}:where([data-page~="studio"]) .tools h1,:where([data-page~="studio"]) .tools>.hint{display:none}:where([data-page~="studio"]) .tool-grid{margin:8px 0;grid-template-columns:repeat(3,1fr)}:where([data-page~="studio"]) .inspector{display:block}:where([data-page~="studio"]) .inspector>.section{margin-top:20px}:where([data-page~="studio"]) .canvas-settings{margin-top:20px;padding-top:15px}:where([data-page~="studio"]) .board{width:100%}:where([data-page~="studio"]) aside{padding:18px}:where([data-page~="studio"]) .tools>.section{margin-top:15px}}
+@media(max-width:680px){:where([data-page~="studio"]) header{padding:14px;display:block}:where([data-page~="studio"]) .top-actions{margin-top:15px}:where([data-page~="studio"]) .top-actions button,:where([data-page~="studio"]) .top-actions .button{padding:7px;font-size:11px}:where([data-page~="studio"]) main{display:flex;flex-direction:column}:where([data-page~="studio"]) .workspace{order:-1;padding:18px}:where([data-page~="studio"]) .canvas-heading h2{font-size:17px}:where([data-page~="studio"]) .canvas-heading{margin-bottom:16px}:where([data-page~="studio"]) .canvas-footer{display:block}:where([data-page~="studio"]) .canvas-footer span{display:block;margin:5px 0}:where([data-page~="studio"]) .tools{display:block}:where([data-page~="studio"]) .tools h1,:where([data-page~="studio"]) .tools>.hint{display:none}:where([data-page~="studio"]) .tools>.ui-toolbar{margin:8px 0}:where([data-page~="studio"]) .inspector{display:block}:where([data-page~="studio"]) .inspector>.section{margin-top:20px}:where([data-page~="studio"]) .canvas-settings{margin-top:20px;padding-top:15px}:where([data-page~="studio"]) .board{width:100%}:where([data-page~="studio"]) aside{padding:18px}:where([data-page~="studio"]) .tools>.section{margin-top:15px}}
 
 /* tools page layout */
 body:where([data-page~="tools"]){font-size:15px;line-height:1.65;margin:0}
@@ -569,8 +530,8 @@ body:where([data-page~="tools"]){font-size:15px;line-height:1.65;margin:0}
 :where([data-page~="tools"]) footer{padding:30px;text-align:center;color:var(--ui-muted);font-size:12px;border-top:1px solid var(--ui-border)}
 @media(max-width:760px){:where([data-page~="tools"]) main{padding:30px 16px}:where([data-page~="tools"]) .workspace{grid-template-columns:1fr}:where([data-page~="tools"]) .controls,:where([data-page~="tools"]) .preview{padding:18px}:where([data-page~="tools"]) header{padding:18px}:where([data-page~="tools"]) h2{font-size:25px}:where([data-page~="tools"]) .exports{gap:8px}}
 
-/* 💻 ⇄ 📱 an emoji face (a control with data-ui-word) is read at 20 px, not at the studio's small text size */
-:where([data-page~="studio"]) button[data-ui-word],:where([data-page~="studio"]) summary[data-ui-word],:where([data-page~="studio"]) label[data-ui-word]{font-size:20px;line-height:1}
+/* 💻 ⇄ 📱 an emoji face (a control with data-ui-word) is read at 20 px, not at the studio's small text size; a toolbar's are its own (toolbar.css) */
+:where([data-page~="studio"]) button[data-ui-word]:where(:not(.ui-toolbar-row>*)),:where([data-page~="studio"]) summary[data-ui-word],:where([data-page~="studio"]) label[data-ui-word]{font-size:20px;line-height:1}
 
 /* 📱 phone slides: the slide is pinned on top (PySaiyanWeBoo's .ui-stage) and the emoji controls scroll under it (landscape: beside it) */
 body:where([data-page~="phone"]){margin:0;background:var(--ui-bg)}
@@ -628,7 +589,7 @@ const StudioCore = (function (root) {
   const fail = (message) => {
     throw new Error(message);
   };
-  /* PSWB heatmap-color.js @ e657dec944a698db694d02e82aa450711b0e1e9b. Generated by scripts/build_studio_css.py. */
+  /* PSWB heatmap-color.js @ 2b581c23761a7725eecbca5c1fa1f7acdb7bbe21. Generated by scripts/build_studio_css.py. */
   const heatmapDefaultPalette=["#440154", "#3B528B", "#21918C", "#5EC962", "#FDE725"];
   function heatmapColor(v,lo,hi,levels=0,palette=heatmapDefaultPalette){
    if(!Array.isArray(palette)||palette.length<2||palette.length>256||
@@ -1192,7 +1153,7 @@ const StudioCore = (function (root) {
 /* Browser/Node shared operations. Pixel coordinates follow grid_tools.py. */
 const IronmateTools = (function (root) {
   "use strict";
-  /* PSWB pixel-grid.js @ e657dec944a698db694d02e82aa450711b0e1e9b. Generated by scripts/build_studio_css.py. */
+  /* PSWB pixel-grid.js @ 2b581c23761a7725eecbca5c1fa1f7acdb7bbe21. Generated by scripts/build_studio_css.py. */
   /* web-ui pixel-grid: a dot-art grid checked, resized, drawn as SVG and described for a PNG; Base64 length; PNG chunks. pysaiyanweboo.py (pixel_grid_*, base64_length) is the reference; this must agree. */
   const PIXEL_GRID_SCHEMA="ironmate-pixel-grid/1";
   function pixelGridValidate(value){
@@ -1258,7 +1219,7 @@ const IronmateSlides = (function (root) {
   "use strict";
   const C = StudioCore;
   const shell = IronmateSlideShell;
-  /* PSWB slide-deck.js @ e657dec944a698db694d02e82aa450711b0e1e9b. Generated by scripts/build_studio_css.py. */
+  /* PSWB slide-deck.js @ 2b581c23761a7725eecbca5c1fa1f7acdb7bbe21. Generated by scripts/build_studio_css.py. */
   /* web-ui slide-deck: several scenes of the image studio as one deck (checked, kept as JSON, pages added, copied, deleted and moved) and written as a PPTX in the page: text, rectangles, ellipses, triangles and arrows stay editable, anything else is a picture. slideDeck(core, shell): core is js/imagestudio.js (or the same functions), shell the empty package the slides go into (part name to text). pysaiyanweboo.py (slide_deck_*) is the reference; this must agree. */
   function slideDeck(C, shell) {
     const SCHEMA = "ironmate-slide-deck/1",
@@ -1754,8 +1715,12 @@ if (typeof document !== "undefined" && document.body && (document.body.dataset.p
 "use strict";
 const C = window.StudioCore,
   $ = (id) => document.getElementById(id),
+  control = (act) => document.querySelector(`#studio-toolbar [data-act="${act}"]`),
+  // 🧰 what each toolbar act and each key of a host's header (image_studio.host_rows) does: the same function either way
+  STUDIO_ACTS = {},
   copy = (value) => C.clone(value);
 let serial = 0,
+  toolbar = null, // PySaiyanWeBoo's bindToolbar on #studio-toolbar: { offer, close }
   tool = "select",
   shape = "rect", // 図形(▭ ◯ △ →): the candidate the 図形 tool places
   edited = { id: null, text: "" }, // what ✏️ 編集 last showed, so a repaint never undoes typing
@@ -1923,10 +1888,10 @@ function updateInspector() {
   $("value-labels").disabled = l?.kind !== "heatmap";
   $("value-labels").checked = l?.labels ?? true;
   $("continuous").disabled = l?.kind !== "heatmap";
-  for (const id of ["delete", "duplicate", "front", "back", "custom"])
-    $(id).disabled = !l;
-  $("undo").disabled = $("undo-2").disabled = history.index === 0;
-  $("redo").disabled = $("redo-2").disabled = history.index === history.items.length - 1;
+  for (const name of ["delete", "duplicate", "front", "back"]) control(name).disabled = !l;
+  $("custom").disabled = !l;
+  for (const name of ["undo", "undo-2"]) control(name).disabled = history.index === 0;
+  for (const name of ["redo", "redo-2"]) control(name).disabled = history.index === history.items.length - 1;
   $("size-note").textContent = `${scene.width} × ${scene.height}`;
   $("canvas-width").value = scene.width;
   $("canvas-height").value = scene.height;
@@ -1975,44 +1940,32 @@ function add(layer) {
   message(`${layer.name || layer.kind}を追加しました`);
 }
 const SHAPES = { "▭": "rect", "◯": "ellipse", "△": "triangle", "→": "arrow" };
-function setTool(value) {
+function setTool(value, opened = false) {
+  // 🧰 a mode of the toolbar's make row; 🔷 😊 (^^) show their candidates (PySaiyanWeBoo's bindToolbar opened them already when pressed)
   tool = value;
-  document
-    .querySelectorAll("[data-tool]")
-    .forEach((b) => b.classList.toggle("active", b.dataset.tool === value));
-  candidates();
-}
-function candidates() {
-  // One row for whichever tool has candidates (図形・絵文字・顔文字): a tap picks what the next press on the canvas places.
-  const button = document.querySelector(`[data-tool="${tool}"]`),
-    list = button?.dataset.candidates;
-  $("candidates").classList.toggle("kaomojis", tool === "kaomoji");
+  for (const b of document.querySelectorAll('#studio-toolbar [data-ui-group="create"] [data-act]')) {
+    b.classList.toggle("active", b.dataset.act === value);
+    b.setAttribute("aria-pressed", b.dataset.act === value);
+  }
   $("keyboard-input").hidden = !["emoji", "kaomoji"].includes(tool);
-  $("candidates").replaceChildren(
-    ...(list ? list.split(" ") : []).map((value) => {
-      const b = document.createElement("button");
-      b.type = "button";
-      b.textContent = value;
-      b.setAttribute(
-        "aria-pressed",
-        tool === "shape" ? SHAPES[value] === shape : $(tool + "-text").value === value,
-      );
-      b.onclick = () => {
-        if (tool === "shape") {
-          shape = SHAPES[value];
-          button.textContent = value; // 💻 の表示では「図形(◯)」（data-ui-word）
-          button.dataset.uiWord = button.title = `${button.dataset.label}(${value})`;
-          button.setAttribute("aria-label", button.title);
-        } else {
-          $(tool + "-text").value = value;
-          if (value === "🔰") $("fill").value = "#000000";
-        }
-        candidates();
-        $("stamp-note").textContent = `${value}をキャンバスに押せます`;
-      };
-      return b;
-    }),
-  );
+  const button = control(value), row = $("studio-candidates");
+  if (!button?.dataset.candidates) toolbar?.close();
+  else if (!opened && (row.hidden || row.dataset.tool !== value)) toolbar?.offer(button);
+}
+function pick(value, face) {
+  // A candidate: 図形 sets the shape the next press places, 絵文字・顔文字 the text.
+  setTool(value, true);
+  if (value === "shape") {
+    const button = control("shape");
+    shape = SHAPES[face];
+    button.textContent = face; // 💻 の表示では「図形(◯)」（data-ui-word）
+    button.dataset.uiWord = button.title = `図形(${face})`;
+    button.setAttribute("aria-label", button.title);
+  } else {
+    $(value + "-text").value = face;
+    if (face === "🔰") $("fill").value = "#000000";
+  }
+  $("stamp-note").textContent = `${face}をキャンバスに押せます`;
 }
 function toolText() {
   // 文字列・スタンプ・絵文字・顔文字 each keep an input of their own; an empty one places its example.
@@ -2160,22 +2113,23 @@ $("board").addEventListener("pointercancel", () => {
   }
 });
 $("keyboard-focus").onclick = () => $(tool + "-text").focus();
-for (const button of document.querySelectorAll("[data-tool]"))
-  button.onclick = () => setTool(button.dataset.tool);
-// 🧰 A host's header (PySaiyanWeBoo chrome rows, declared in #ui-chrome-rows by image_studio.host_rows) sends a key;
-// each presses this page's own control, so a save from the header and one from the page are the same save.
-const HOST_ACTIONS = { png: "png", svg: "svg", json: "save", workspace: "save-workspace", base64: "base64", shelf: "shelf-button",
-  "open-json": "open", "open-workspace": "open-workspace" };
-queueMicrotask(() => globalThis.PySaiyanWeBoo.bindLabels()); // 💻 To textual ⇄ 📱 To iconic（ページ内と ⋯ の行）
-for (const menu of [$("studio-import"), $("studio-export")]) {
-  // 📥 📤 選んだら中の候補は隠れる（図形・顔文字の候補と同じ）。倍率の選択では閉じない
-  menu.addEventListener("click", (e) => e.target.closest("button") && (menu.open = false));
-  menu.addEventListener("change", (e) => e.target.type === "file" && (menu.open = false));
-}
+const MODES = ["select", "text", "shape", "stamp", "emoji", "kaomoji", "clock"];
+queueMicrotask(() => {
+  // PySaiyanWeBoo's script comes later in studio.js: 💻 To textual ⇄ 📱 To iconic（ページ内と ⋯ の行）and the toolbar
+  globalThis.PySaiyanWeBoo.bindLabels();
+  toolbar = globalThis.PySaiyanWeBoo.bindToolbar($("studio-toolbar"), (name, face) => {
+    if (MODES.includes(name)) return face === undefined ? setTool(name, true) : pick(name, face);
+    STUDIO_ACTS[name]?.(); // 📥 📤 the format picked (their rows hide after it), ↩️ ↪️, 📑 🗑️ ⏫ ⏬
+  });
+  setTool(tool);
+});
+STUDIO_ACTS["open-json"] = () => $("open").click();
+STUDIO_ACTS["open-workspace"] = () => $("open-workspace").click();
+// 🧰 A host's header (PySaiyanWeBoo chrome rows, declared in #ui-chrome-rows by image_studio.host_rows) sends a key: the same act.
 document.addEventListener("ui-chrome-action", (e) => {
   const [key, scale] = String(e.detail?.key).split(/-(?=\d+$)/);
   if (key === "png" || key === "svg") $("export-scale").value = (key === "png" && scale) || "1"; // a size is a PNG row's own
-  document.getElementById(HOST_ACTIONS[key])?.click();
+  STUDIO_ACTS[key]?.();
 });
 for (const [id, name] of [["text", "text"], ["stamp-text", "stamp"], ["emoji-text", "emoji"], ["kaomoji-text", "kaomoji"]])
   $(id).onfocus = () => setTool(name); // typing into an input means its tool
@@ -2192,31 +2146,31 @@ $("custom").onclick = () => {
   }
 };
 // ↶ ↷ move one state, ⏪ ⏩ two (data-steps); History clamps at both ends.
-for (const [id, move] of [["undo", "undo"], ["undo-2", "undo"], ["redo", "redo"], ["redo-2", "redo"]])
-  $(id).onclick = () => {
-    scene = history[move](Number($(id).dataset.steps || 1));
+for (const [act, move, steps] of [["undo", "undo", 1], ["undo-2", "undo", 2], ["redo", "redo", 1], ["redo-2", "redo", 2]])
+  STUDIO_ACTS[act] = () => {
+    scene = history[move](steps);
     dirty = true;
     selected = null;
     render().catch(error);
   };
-$("duplicate").onclick = guarded(() => {
+STUDIO_ACTS.duplicate = guarded(() => {
   const l = copy(selectedLayer());
   l.id = uid();
   l.x += 24;
   l.y += 24;
   add(l);
 });
-$("delete").onclick = () => {
+STUDIO_ACTS.delete = () => {
   if (selected)
     change((doc) => {
       doc.layers = doc.layers.filter((l) => l.id !== selected);
     });
 };
-for (const [id, delta] of [
+for (const [act, delta] of [
   ["front", 1],
   ["back", -1],
 ])
-  $(id).onclick = () =>
+  STUDIO_ACTS[act] = () =>
     change((doc) => {
       const i = doc.layers.findIndex((l) => l.id === selected),
         j = Math.max(0, Math.min(doc.layers.length - 1, i + delta));
@@ -2334,7 +2288,7 @@ function download(name, data, type) {
   C.save(name, data, type);
   message(`${name}を書き出しました`);
 }
-$("save-workspace").onclick = guarded(async () => {
+STUDIO_ACTS.workspace = guarded(async () => {
   const serialized = C.workspaceText(history);
   download("ironmate-workspace.json", serialized, "application/json");
   message("作業履歴を保存しました");
@@ -2365,7 +2319,7 @@ $("trim-history").onclick = guarded(async () => {
   await render();
   message("現在の画像・レイヤーを残して履歴を整理しました");
 });
-$("save").onclick = () => {
+STUDIO_ACTS.json = () => {
   download(
     "ironmate-scene.json",
     JSON.stringify(C.validate(scene), null, 2),
@@ -2373,7 +2327,7 @@ $("save").onclick = () => {
   );
   dirty = false;
 };
-$("svg").onclick = guarded(async () => {
+STUDIO_ACTS.svg = guarded(async () => {
   const doc = copy(scene),
     imageSource = await prepare(doc);
   download(
@@ -2409,7 +2363,7 @@ async function pngBlob(scale = Number($("export-scale").value)) {
     URL.revokeObjectURL(url);
   }
 }
-$("png").onclick = guarded(async () =>
+STUDIO_ACTS.png = guarded(async () =>
   download("ironmate-image.png", await pngBlob(), "image/png"),
 );
 let clipboardPayload = null;
@@ -2417,7 +2371,7 @@ function showBase64() {
   if (clipboardPayload)
     $("base64-text").value = clipboardPayload[$("base64-mode").value];
 }
-$("base64").onclick = guarded(async () => {
+STUDIO_ACTS.base64 = guarded(async () => {
   clipboardPayload = C.pngPayload(
     new Uint8Array(await (await pngBlob()).arrayBuffer()),
   );
@@ -2701,11 +2655,7 @@ async function shelfCopyText(item) {
 function releaseShelfItem(item) {
   if (item.dataUrl) URL.revokeObjectURL(item.dataUrl);
 }
-function updateShelfBadge() {
-  if ($("shelf-button")) $("shelf-button").textContent = `クリップボード・シェルフ (${shelfItems.length})`;
-}
 function renderShelf() {
-  updateShelfBadge();
   const container = $("shelf-items-container");
   if (!container) return;
   container.replaceChildren();
@@ -2805,12 +2755,10 @@ function addShelfItem(bytes, mime, rawText, label = "シェルフ項目") {
   });
   renderShelf();
 }
-if ($("shelf-button")) {
-  $("shelf-button").onclick = () => {
-    renderShelf();
-    $("shelf-dialog").showModal();
-  };
-}
+STUDIO_ACTS.shelf = () => {
+  renderShelf();
+  $("shelf-dialog").showModal();
+};
 if ($("shelf-clear")) {
   $("shelf-clear").onclick = () => {
     shelfGeneration++;
@@ -3322,7 +3270,7 @@ if (typeof document !== "undefined" && (document.getElementById("pixel-editor") 
   });
 })();
 
-/* ⬇️ pysaiyanweboo e657dec9 (stage, pager, labels-switch, toolbar): written by scripts/build_studio_css.py from the pinned commit; --check fails when it drifts */
+/* ⬇️ pysaiyanweboo 2b581c23 (stage, pager, labels-switch, toolbar): written by scripts/build_studio_css.py from the pinned commit; --check fails when it drifts */
 (() => {
 /* A rotary dial over a range input (dial_html): drag around its centre, turn the wheel, or use the range's own keys. Value and events stay the input's. */
 function dialAngle(value,min,max){const span=max-min;const t=span>0?(Number(value)-min)/span:0;return -135+270*Math.min(1,Math.max(0,t))}
@@ -3382,8 +3330,8 @@ function bindToggles(root=document){return[...root.querySelectorAll("[data-ui-to
 function bindTheme(root=document,{key="web-ui-theme"}={}){const body=document.body,controls=[...root.querySelectorAll("[data-ui-theme-switch],input[name=ui-theme]")];const known=name=>controls.some(c=>c.tagName==="SELECT"?[...c.options].some(o=>o.value===name):c.value===name);if(body.dataset.uiThemePage===undefined)body.dataset.uiThemePage=body.dataset.uiTheme||"";const sync=()=>{const chosen=body.dataset.uiThemeChosen;for(const c of controls){if(c.tagName==="SELECT")c.value=chosen===undefined&&[...c.options].some(o=>o.value==="")?"":body.dataset.uiTheme;else c.checked=c.value===body.dataset.uiTheme}};const choose=name=>{if(name){body.dataset.uiThemeChosen=name;body.dataset.uiTheme=name}else{delete body.dataset.uiThemeChosen;body.dataset.uiTheme=body.dataset.uiThemePage}};let saved=null;try{saved=localStorage.getItem(key)}catch{}if(saved&&known(saved))choose(saved);sync();for(const c of controls)c.addEventListener("change",()=>{if(!known(c.value))return;choose(c.value);sync();try{if(c.value)localStorage.setItem(key,c.value);else localStorage.removeItem(key)}catch{}});return body.dataset.uiTheme}
 /** Switch data-ui-labels on <body> with no reload: "emoji" (the default: icon faces) or "words" (as on a PC: every [data-ui-word] shows its short word instead of its face; CSS in components.css). Buttons with data-ui-labels-switch flip it (aria-pressed is true while words show), and so does a header row whose key is "labels" (the ui-chrome-action event). A flip is remembered (localStorage, best effort). Returns the labels in effect. */
 function bindLabels(root=document,{key="web-ui-labels"}={}){const body=document.body,buttons=[...root.querySelectorAll("[data-ui-labels-switch]")];const show=v=>{body.dataset.uiLabels=v==="words"?"words":"emoji";for(const b of buttons)b.setAttribute("aria-pressed",String(body.dataset.uiLabels==="words"));return body.dataset.uiLabels};let saved=null;try{saved=localStorage.getItem(key)}catch{}show(saved||body.dataset.uiLabels);const flip=()=>{const v=show(body.dataset.uiLabels==="words"?"emoji":"words");try{localStorage.setItem(key,v)}catch{}};for(const b of buttons)b.addEventListener("click",flip);document.addEventListener("ui-chrome-action",e=>{if(e.detail&&e.detail.key==="labels")flip()});return body.dataset.uiLabels}
-/** A toolbar from toolbar_html(): a click on a [data-act] control calls run(act). A button with data-candidates opens its candidates in the toolbar's one candidate row ([data-ui-candidates]), right under its own row; pressing it again closes them. A candidate calls run(its data-acts entry) or, when it names no action, run(the button's act, the candidate's face), and data-close hides the row after the pick. Each candidate's words (data-words, "|"-separated) are its title, aria-label and, up to "（", its data-ui-word. Pressing a control keeps the focus where it was, so a text being typed stays open. Returns {offer(button), close()}. */
-function bindToolbar(root,run){const row=root.querySelector("[data-ui-candidates]");const close=()=>{if(!row)return;row.hidden=true;row.dataset.tool="";row.replaceChildren()};const offer=b=>{if(!row)return;if(row.dataset.tool===b.dataset.act&&!row.hidden)return close();const faces=b.dataset.candidates.split(" "),acts=(b.dataset.acts||"").split(" "),words=(b.dataset.words||"").split("|");row.dataset.tool=b.dataset.act;b.closest(".ui-toolbar-row").after(row);row.hidden=false;row.replaceChildren(...faces.map((face,i)=>{const c=document.createElement("button");c.type="button";c.textContent=face;const said=words[i]||face;c.title=said;c.setAttribute("aria-label",said);if(words[i])c.dataset.uiWord=said.split("（")[0];c.addEventListener("click",()=>{if(acts[i])run(acts[i]);else run(b.dataset.act,face);if("close"in b.dataset)close()});return c}))};root.addEventListener("pointerdown",e=>{if(e.target.closest("button,a"))e.preventDefault()});root.addEventListener("click",e=>{const b=e.target.closest("[data-act]");if(!b||!root.contains(b)||b.disabled)return;if(b.dataset.candidates)offer(b);else run(b.dataset.act)});return{offer,close}}
+/** A toolbar from toolbar_html(): a click on a [data-act] control calls run(act), a button with candidates too (a mode such as 🔷 on a canvas becomes the tool as its row opens; a page with nothing to do for it ignores the name). A button with data-candidates opens its candidates in the toolbar's one candidate row ([data-ui-candidates]), right under its own row; pressing it again closes them. A candidate calls run(its data-acts entry) or, when it names no action, run(the button's act, the candidate's face), and data-close hides the row after the pick. Each candidate's words (data-words, "|"-separated) are its title, aria-label and, up to "（", its data-ui-word. Pressing a control keeps the focus where it was, so a text being typed stays open. Returns {offer(button), close()}. */
+function bindToolbar(root,run){const row=root.querySelector("[data-ui-candidates]");const close=()=>{if(!row)return;row.hidden=true;row.dataset.tool="";row.replaceChildren()};const offer=b=>{if(!row)return;if(row.dataset.tool===b.dataset.act&&!row.hidden)return close();const faces=b.dataset.candidates.split(" "),acts=(b.dataset.acts||"").split(" "),words=(b.dataset.words||"").split("|");row.dataset.tool=b.dataset.act;b.closest(".ui-toolbar-row").after(row);row.hidden=false;row.replaceChildren(...faces.map((face,i)=>{const c=document.createElement("button");c.type="button";c.textContent=face;const said=words[i]||face;c.title=said;c.setAttribute("aria-label",said);if(words[i])c.dataset.uiWord=said.split("（")[0];c.addEventListener("click",()=>{if(acts[i])run(acts[i]);else run(b.dataset.act,face);if("close"in b.dataset)close()});return c}))};root.addEventListener("pointerdown",e=>{if(e.target.closest("button,a"))e.preventDefault()});root.addEventListener("click",e=>{const b=e.target.closest("[data-act]");if(!b||!root.contains(b)||b.disabled)return;if(b.dataset.candidates)offer(b);run(b.dataset.act)});return{offer,close}}
 /** Tell bindTheme which theme is the page's own (a page whose own look changes, such as display modes): it shows unless the visitor chose one. Returns the theme in effect. */
 function pageTheme(name){const body=document.body;body.dataset.uiThemePage=name;if(body.dataset.uiThemeChosen===undefined)body.dataset.uiTheme=name;return body.dataset.uiTheme}
 /** Mark on-screen elements with data-lit (IntersectionObserver); CSS decides what lit looks like. Without IntersectionObserver every element counts as lit. Returns a stop function. */
@@ -4182,20 +4130,91 @@ PSWB_PHONE = {
         '<input type="file" data-file="open" accept=".json,application/json" aria-label="全スライドJSON" />'
         '<input type="file" data-file="image" accept="image/png,image/jpeg,image/webp" aria-label="画像" />'
         '</div>'),
+    "image": (
+        '        <div class="ui-toolbar" id="studio-toolbar" role="toolbar" aria-label="道具">'
+        '<div class="ui-toolbar-row" data-ui-group="create">'
+        '<button type="button" data-act="select" data-ui-word="選択" aria-label="選択" title="選択">👆</button>'
+        '<button type="button" data-act="text" data-ui-word="文字列" aria-label="文字列" title="文字列">🔤</button>'
+        '<button type="button" data-candidates="▭ ◯ △ →" data-act="shape" data-ui-word="図形(▭)" aria-label="図形(▭)" title="図形(▭)">▭</button>'
+        '<button type="button" data-act="stamp" data-ui-word="スタンプ" aria-label="スタンプ" title="スタンプ">✦</button>'
+        '<button type="button" data-candidates="❤️ 😊 🌱 📊 ✨ 📌 🔰" data-act="emoji" data-ui-word="絵文字(😊)" aria-label="絵文字(😊)" title="絵文字(😊)">😊</button>'
+        '<button type="button" data-candidates="(・∀・) (｡•̀ᴗ-)✧ ٩(๑❛ᴗ❛๑)۶" data-act="kaomoji" data-ui-word="顔文字(^^)" aria-label="顔文字(^^)" title="顔文字(^^)">(^^)</button>'
+        '<button type="button" data-act="clock" data-ui-word="時計" aria-label="時計" title="時計">🕒</button>'
+        '</div>'
+        '<div class="ui-toolbar-row" data-ui-candidates id="studio-candidates" role="group" aria-label="候補" hidden>'
+        '</div>'
+        '<div class="ui-toolbar-row" data-ui-group="adjust">'
+        '<button type="button" data-act="undo-2" data-ui-word="2つ戻す" aria-label="2つ戻す" title="2つ戻す">⏪</button>'
+        '<button type="button" data-act="undo" data-ui-word="戻す" aria-label="戻す" title="戻す">↩️</button>'
+        '<button type="button" data-act="redo" data-ui-word="やり直す" aria-label="やり直す" title="やり直す">↪️</button>'
+        '<button type="button" data-act="redo-2" data-ui-word="2つやり直す" aria-label="2つやり直す" title="2つやり直す">⏩</button>'
+        '</div>'
+        '<div class="ui-toolbar-row" data-ui-group="update">'
+        '<button type="button" data-act="duplicate" data-ui-word="複製" aria-label="複製" title="複製">📑</button>'
+        '<button type="button" data-act="delete" data-ui-word="削除" aria-label="削除" title="削除">🗑️</button>'
+        '<button type="button" data-act="front" data-ui-word="前へ" aria-label="前へ" title="前へ">⏫</button>'
+        '<button type="button" data-act="back" data-ui-word="後ろへ" aria-label="後ろへ" title="後ろへ">⏬</button>'
+        '</div>'
+        '<div class="ui-toolbar-row" data-ui-group="file">'
+        '<button type="button" data-close data-acts="open-json open-workspace shelf" data-words="JSON（再編集用のシーン）|作業履歴（最大40状態）|シェルフ（クリップボード・シェルフ）" data-candidates="JSON 作業履歴 シェルフ" data-act="import" data-ui-word="インポート" aria-label="インポート（どの形式から？）" title="インポート（どの形式から？）">📥</button>'
+        '<button type="button" data-close data-acts="png svg json workspace base64" data-words="PNG（出力倍率で）|SVG（出力倍率で）|JSON（再編集用）|作業履歴（最大40状態）|Base64（Flutter などへ渡す）" data-candidates="PNG SVG JSON 作業履歴 Base64" data-act="export" data-ui-word="エクスポート" aria-label="エクスポート（どの形式に？）" title="エクスポート（どの形式に？）">📤</button>'
+        '<select id="export-scale" title="出力倍率" aria-label="出力倍率">'
+        '<option value="1">1×</option>'
+        '<option value="2">2×</option>'
+        '<option value="4">4×</option>'
+        '<option value="8">8×</option>'
+        '</select>'
+        '</div>'
+        '<input id="open" type="file" accept=".json" aria-label="JSONを開く" hidden />'
+        '<input id="open-workspace" type="file" accept=".json,application/json" aria-label="作業履歴を開く" hidden />'
+        '</div>\n'),
 }
 # ⬆️ pysaiyanweboo
 
 
+def image_toolbar() -> tuple[list, dict[str, str], dict[str, str]]:
+    """🧰 Image Studio's toolbar as PySaiyanWeBoo's ``toolbar_html`` data: ``(groups, inside, after)``, the same rows as the slide
+    editor's (make / adjust / change / file). The make row are modes: a press makes that the tool, and 🔷 😊 (^^) open their candidates
+    (the slide editor reads these faces too). 📥 どの形式から？ 📤 どの形式に？ name the formats in words and hide after a pick; their
+    acts are the keys a host's header sends (``image_studio.host_rows``), so the page and the header call the same thing. The output
+    scale stays beside 📤, and 📥's file choosers wait after the row. scripts/build_studio_css.py writes the markup into
+    PSWB_PHONE["image"]; --check fails when this data and that markup drift."""
+    def tool(act, face, word, words=None, candidates="", said="", **more):
+        named = said.split("|") if said else []
+        acts = more.pop("acts", "").split()
+        return {"act": act, "face": face, "word": word, "words": words or word, **more,
+                "candidates": [{"face": f, **({"act": acts[i]} if acts else {}), **({"words": named[i]} if named else {})}
+                               for i, f in enumerate(candidates.split())]}
+    groups = [
+        ("create", [tool("select", "👆", "選択"), tool("text", "🔤", "文字列"),
+                    tool("shape", "▭", "図形(▭)", candidates="▭ ◯ △ →", said="四角|丸|三角|矢印"), tool("stamp", "✦", "スタンプ"),
+                    tool("emoji", "😊", "絵文字(😊)", candidates="❤️ 😊 🌱 📊 ✨ 📌 🔰"),
+                    tool("kaomoji", "(^^)", "顔文字(^^)", candidates="(・∀・) (｡•̀ᴗ-)✧ ٩(๑❛ᴗ❛๑)۶"), tool("clock", "🕒", "時計")]),
+        ("adjust", [tool("undo-2", "⏪", "2つ戻す"), tool("undo", "↩️", "戻す"), tool("redo", "↪️", "やり直す"), tool("redo-2", "⏩", "2つやり直す")]),
+        ("update", [tool("duplicate", "📑", "複製"), tool("delete", "🗑️", "削除"), tool("front", "⏫", "前へ"), tool("back", "⏬", "後ろへ")]),
+        ("file", [tool("import", "📥", "インポート", "インポート（どの形式から？）", "JSON 作業履歴 シェルフ",
+                       "JSON（再編集用のシーン）|作業履歴（最大40状態）|シェルフ（クリップボード・シェルフ）", acts="open-json open-workspace shelf", close=True),
+                  tool("export", "📤", "エクスポート", "エクスポート（どの形式に？）", "PNG SVG JSON 作業履歴 Base64",
+                       "PNG（出力倍率で）|SVG（出力倍率で）|JSON（再編集用）|作業履歴（最大40状態）|Base64（Flutter などへ渡す）",
+                       acts="png svg json workspace base64", close=True)]),
+    ]
+    scale = ('<select id="export-scale" title="出力倍率" aria-label="出力倍率">'
+             + "".join(f'<option value="{n}">{n}×</option>' for n in (1, 2, 4, 8)) + '</select>')
+    files = ('<input id="open" type="file" accept=".json" aria-label="JSONを開く" hidden />'
+             '<input id="open-workspace" type="file" accept=".json,application/json" aria-label="作業履歴を開く" hidden />')
+    return groups, {"file": scale}, {"file": files}
+
+
 def phone_toolbar() -> tuple[list, dict[str, str]]:
     """🧰 The slide editor's toolbar as PySaiyanWeBoo's ``toolbar_html`` data: ``(groups, after)``. Each control of PHONE_TOOLS gets
-    its candidates (🔷 😊 (^^) read from Image Studio's tools, so both pages offer the same; 🎨 ↻ 📥 📤 here, the last two in
+    its candidates (🔷 😊 (^^) from ``image_toolbar``, so both pages offer the same; 🎨 ↻ 📥 📤 here, the last two in
     words and hiding after a pick), and ``after`` places the page's own rows: 📚 layers above the row that acts on the selected one,
     🗂️ pages under the page row, and the inspector and 📥's file choosers at the end. scripts/build_studio_css.py writes the markup
     into PSWB_PHONE["tools"] from the pinned PySaiyanWeBoo; --check fails when this data and that markup drift."""
-    import re
     from html import escape
 
-    faces = dict(re.findall(r'data-tool="(shape|emoji|kaomoji)"[^>]*data-candidates="([^"]*)"', STUDIO_HTML)) | {
+    faces = {c["act"]: " ".join(k["face"] for k in c["candidates"]) for _g, row in image_toolbar()[0] for c in row
+             if c["act"] in ("shape", "emoji", "kaomoji")} | {
         "look": "🎨 🖌 🌗 🅱️ 🔠", "turn": "↻ ↺ ⏹", "import": "JSON 画像", "export": "PPTX JSON PNG SVG"}
     named = {"shape": ("rect ellipse triangle arrow", "四角|丸|三角|矢印"),
              "look": ("fill stroke fade bold font", "塗りを次の色へ|線を次の色へ|不透明度（1 → ¾ → ½ → ¼）|太字|等幅 ⇄ ふつう"),
@@ -4257,6 +4276,7 @@ def _phone_html() -> str:
 
 
 PHONE_HTML = _phone_html()
+STUDIO_HTML = STUDIO_HTML.replace('        <!-- 🧰 toolbar: image_toolbar() -->\n', PSWB_PHONE.get("image", ""), 1)   # 🧰 Image Studio's tools
 
 BROWSER_TASK_JS = r"""/* PSWB async-task.js */
 /**

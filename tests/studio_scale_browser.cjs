@@ -4,11 +4,11 @@ const fs = require("node:fs"),
   path = require("node:path"),
   assert = require("node:assert/strict"),
   { execFileSync } = require("node:child_process");
-module.exports = async function ({ page, out, root, download, reveal }) {
+module.exports = async function ({ page, out, root, download, act }) {
   const load = async (scene, name) => {
     const file = path.join(out, name + ".json");
     fs.writeFileSync(file, JSON.stringify(scene));
-    await page.setInputFiles("#open", file);
+    await page.setInputFiles(`#studio-toolbar [data-ui-file="open-json"]`, file);
     await page.waitForFunction(
       (s) => JSON.stringify(IronmateStudio.scene) === JSON.stringify(s),
       scene,
@@ -72,7 +72,7 @@ module.exports = async function ({ page, out, root, download, reveal }) {
     ),
     "triangle",
   );
-  await page.click("#undo");
+  await page.click(act("undo"));
   await page.evaluate(() => IronmateStudio.ready);
   assert.equal(
     await page.evaluate(
@@ -95,7 +95,7 @@ module.exports = async function ({ page, out, root, download, reveal }) {
     ),
     "tip",
   );
-  await page.click("#undo");
+  await page.click(act("undo"));
   await page.evaluate(() => IronmateStudio.ready);
   await page.locator("#layers button").filter({ hasText: "10:10" }).click();
   const nextClock = await page.inputValue("#clock-time");
@@ -110,23 +110,21 @@ module.exports = async function ({ page, out, root, download, reveal }) {
     ),
     3,
   );
-  await page.click("#undo");
+  await page.click(act("undo"));
   await page.evaluate(() => IronmateStudio.ready);
   await page.screenshot({
     path: path.join(out, "stamps-editor.png"),
     fullPage: true,
   });
-  await download("#save", "stamps-scene.json");
-  await download("#png", "stamps.png");
-  await reveal("#export-scale");
+  await download("JSON", "stamps-scene.json");
+  await download("PNG", "stamps.png");
   await page.selectOption("#export-scale", "4");
-  await download("#svg", "stamps-4x.svg");
-  await download("#png", "stamps-4x.png");
+  await download("SVG", "stamps-4x.svg");
+  await download("PNG", "stamps-4x.png");
   assert.equal(
     fs.readFileSync(path.join(out, "stamps-4x.png")).readUInt32BE(16),
     5120,
   );
-  await reveal("#export-scale");
   await page.selectOption("#export-scale", "1");
   const fixture =
     "data:image/png;base64," +
@@ -175,8 +173,8 @@ module.exports = async function ({ page, out, root, download, reveal }) {
     [1, 160, 96, 255, 1, 160, 96, 255],
     "colored source becomes one requested color through an alpha mask",
   );
-  await download("#save", "mono-scene.json");
-  await download("#png", "mono.png");
+  await download("JSON", "mono-scene.json");
+  await download("PNG", "mono.png");
   const runCLI = (format, name, extra = []) =>
     execFileSync(
       process.env.PYTHON || "python",

@@ -63,12 +63,18 @@ const failures = [],
     viewport: { width: 1600, height: 1100 },
     acceptDownloads: true,
   });
-  // 📥 📤 a pick closes its menu (like the candidates of 図形・顔文字), so a test opens it again before each item
-  const reveal = (id) => page.evaluate((q) => { const menu = document.querySelector(q)?.closest("details"); if (menu) menu.open = true; }, id);
-  const download = async (id, name) => {
+  // 🧰 PySaiyanWeBoo's toolbar: act(name) is a control; as(tool, face) opens 📥 / 📤 (or 🔷 😊 (^^)) unless its row is already open and
+  // gives the candidate. 📥 どの形式から？ 📤 どの形式に？ hide after a pick, so each use opens them again.
+  const act = (name) => `#studio-toolbar [data-act="${name}"]`;
+  const chooser = (name) => `#studio-toolbar [data-ui-file="${name}"]`; // 📥 the toolbar's own file chooser for a format
+  const as = async (tool, face) => {
+    if (!(await page.evaluate((t) => { const r = document.getElementById("studio-candidates"); return !r.hidden && r.dataset.tool === t; }, tool)))
+      await page.click(act(tool));
+    return `#studio-candidates button:text-is("${face}")`;
+  };
+  const download = async (format, name) => {
     const wait = page.waitForEvent("download");
-    await reveal(id);
-    await page.click(id);
+    await page.click(await as("export", format));
     await (await wait).saveAs(path.join(out, name));
   };
   page.on("pageerror", (e) => failures.push(e.message));
@@ -76,10 +82,11 @@ const failures = [],
   page.on("dialog", (dialog) =>
     dialog.type() === "confirm" && !acceptHistoryTrim ? dialog.dismiss() : dialog.accept());
   await page.goto(url);
-  assert.equal(await page.locator("#png").isVisible(), false);
-  await page.locator("#studio-export summary").click();
-  for (const id of ["save", "save-workspace", "trim-history", "open-workspace"])
+  assert.equal(await page.locator("#studio-candidates").isHidden(), true);                   // no candidates until a tool asks
+  for (const id of ["studio-toolbar", "export-scale", "trim-history"])
     assert.equal(await page.locator(`#${id}`).count(), 1, `required Studio control: ${id}`);
+  for (const name of ["image", "camera", "open-json", "open-workspace"])                       // 📥 the toolbar's own choosers
+    assert.equal(await page.locator(chooser(name)).count(), 1, `required Studio chooser: ${name}`);
   await page.waitForFunction(() => !!window.IronmateStudio, null, {timeout:10000});
   await page.evaluate(() => window.IronmateStudio.ready);
   await page.screenshot({
@@ -90,11 +97,11 @@ const failures = [],
   const face = (sel, pseudo) => page.evaluate(([q, p]) => { const st = getComputedStyle(document.querySelector(q), p);
     return { content: st.content, size: st.fontSize }; }, [sel, pseudo]);
   assert.equal(await page.evaluate(() => document.body.dataset.uiLabels), "emoji");
-  assert.deepEqual([await page.textContent("#undo"), (await face("#undo", null)).size], ["↩️", "20px"]);
+  assert.deepEqual([await page.textContent(act("undo")), (await face(act("undo"), null)).size], ["↩️", "24px"]);   // the toolbar's face, as on the slide editor
   await page.click("#labels-switch");
   assert.equal(await page.evaluate(() => document.body.dataset.uiLabels), "words");
-  assert.deepEqual([(await face("#undo", "::after")).content, (await face("#undo", null)).size], ['"戻す"', "0px"]);
-  assert.equal((await face('[data-tool="text"]', "::after")).content, '"文字列"');
+  assert.deepEqual([(await face(act("undo"), "::after")).content, (await face(act("undo"), null)).size], ['"戻す"', "0px"]);
+  assert.equal((await face(act("text"), "::after")).content, '"文字"');                 // the same word as the slide editor's
   await page.screenshot({ path: path.join(out, "desktop-words.png"), fullPage: true });
   await page.reload();
   await page.waitForFunction(() => !!window.IronmateStudio, null, {timeout:10000});
@@ -102,16 +109,15 @@ const failures = [],
   assert.equal(await page.evaluate(() => document.body.dataset.uiLabels), "words");
   await page.click("#labels-switch");
   assert.equal(await page.evaluate(() => document.body.dataset.uiLabels), "emoji");
-  await page.locator("#studio-export summary").click();                                     // the reload closed 📤
   const initial = await page.evaluate(() => window.IronmateStudio.scene);
   assert.deepEqual(initial.layers, []);
   assert.equal(await page.locator("#demo, #stamp-demo, #example-view").count(), 0);
-  await page.click('[data-tool="text"]');
+  await page.click(act("text"));
   for (const value of ["背面", "前面", "中央"]) {
     await page.fill("#text", value);
     await page.locator("#board svg").click({position: {x: 50, y: 40}});
   }
-  await page.click("#back");
+  await page.click(act("backward"));                                       // ⬇️ one step back
   const texts = () => page.evaluate(() => IronmateStudio.scene.layers.map(layer => layer.text));
   assert.deepEqual(await texts(), ["背面", "中央", "前面"]);
   assert.equal(await page.inputValue("#edit-text"), "中央"); // ✏️ 編集 shows the selected layer's words
@@ -119,10 +125,10 @@ const failures = [],
   await page.click("#apply-text");
   assert.equal(await page.inputValue("#text"), "中央"); // the tool's own input keeps what it had
   assert.deepEqual(await texts(), ["背面", "中央を編集", "前面"]);
-  await page.click("#front");
+  await page.click(act("forward"));                                      // ⬆️ one step forward
   assert.deepEqual(await texts(), ["背面", "前面", "中央を編集"]);
   // Older saved scenes remain editable on the empty canvas.
-  await page.setInputFiles("#open", path.join(root, "docs/evidence/image-studio/demo-scene.json"));
+  await page.setInputFiles(chooser("open-json"), path.join(root, "docs/evidence/image-studio/demo-scene.json"));
   const legacyText = page.locator("#layers button").filter({hasText: /^タイトル$/});
   await legacyText.click();
   assert.equal(await page.isChecked("#monochrome"), false);
@@ -132,15 +138,21 @@ const failures = [],
     await page.evaluate(() => window.IronmateStudio.scene.layers.length),
     0,
   );
-  await page.click('[data-tool="shape"]'); // 図形(▭ ◯ △ →): one tool, the shape is a candidate
-  assert.deepEqual(await page.locator("#candidates button").allTextContents(), ["▭", "◯", "△", "→"]);
-  await page.locator("#candidates button", {hasText: "△"}).click();
-  assert.equal(await page.textContent('[data-tool="shape"]'), "△");                          // 📱 the face is the sign
-  assert.equal(await page.getAttribute('[data-tool="shape"]', "data-ui-word"), "図形(△)");   // 💻 the word names it
+  // 🧰 IronmateStudio.act opens a File / Blob the way 📥's chooser does (a host or Node needs no file input); loading is undoable
+  const demo = fs.readFileSync(path.join(root, "docs/evidence/image-studio/demo-scene.json"), "utf8");
+  await page.evaluate((text) => IronmateStudio.act("open-json", new Blob([text], { type: "application/json" })), demo);
+  assert.ok((await page.evaluate(() => IronmateStudio.scene.layers.length)) > 0);
+  await page.evaluate(() => IronmateStudio.act("undo"));
+  assert.equal(await page.evaluate(() => IronmateStudio.scene.layers.length), 0);
+  await page.click(act("shape")); // 図形(▭ ◯ △ →): one tool, the shape is a candidate
+  assert.deepEqual(await page.locator("#studio-candidates button").allTextContents(), ["▭", "◯", "△", "→"]);
+  await page.locator("#studio-candidates button", {hasText: "△"}).click();
+  assert.equal(await page.textContent(act("shape")), "△");                          // 📱 the face is the sign
+  assert.equal(await page.getAttribute(act("shape"), "data-ui-word"), "図形(△)");   // 💻 the word names it
   let box = await page.locator("#board").boundingBox();
   await page.mouse.click(box.x + box.width * 0.25, box.y + box.height * 0.2);
   await page.evaluate(() => window.IronmateStudio.ready);
-  await page.click('[data-tool="select"]');
+  await page.click(act("select"));
   let model = await page.evaluate(() => window.IronmateStudio.scene);
   const first = model.layers[0];
   // Move using an interior point of the actual triangle, not its transparent corner.
@@ -175,27 +187,27 @@ const failures = [],
   );
   await page.click("#custom");
   // Explicitly choose stamp mode: editor state must not depend on previous tool.
-  await page.click('[data-tool="stamp"]');
+  await page.click(act("stamp"));
   await page.mouse.click(box.x + box.width * 0.7, box.y + box.height * 0.25);
   await page.evaluate(() => window.IronmateStudio.ready);
   assert.equal(
     await page.evaluate(() => window.IronmateStudio.scene.layers.length),
     2,
   );
-  await page.click("#undo");
+  await page.click(act("undo"));
   await page.evaluate(() => window.IronmateStudio.ready);
   assert.equal(
     await page.evaluate(() => window.IronmateStudio.scene.layers.length),
     1,
   );
-  await page.click("#redo");
+  await page.click(act("redo"));
   await page.evaluate(() => window.IronmateStudio.ready);
   assert.equal(
     await page.evaluate(() => window.IronmateStudio.scene.layers.length),
     2,
   );
-  await page.click('[data-tool="emoji"]'); // 絵文字 has its own input; ✦ スタンプ keeps its own
-  await page.click("#candidates button:nth-child(3)");
+  await page.click(act("emoji")); // 絵文字 has its own input; ✦ スタンプ keeps its own
+  await page.click("#studio-candidates button:nth-child(3)");
   assert.deepEqual([await page.inputValue("#emoji-text"), await page.inputValue("#stamp-text"), await page.inputValue("#text")], ["🌱", "", "中央"]);
   await page.mouse.click(box.x + box.width * 0.8, box.y + box.height * 0.65);
   await page.evaluate(() => window.IronmateStudio.ready);
@@ -208,7 +220,7 @@ const failures = [],
   heatScene.layers.push({id:"heat", kind:"heatmap", name:"Heatmap", x:80, y:90, w:500, h:300,
     rotation:0, opacity:1, z:[[-1.123456789,null],[4,9]], xlabels:[2025,2026], ylabels:["A","B"],
     low:-1.123456789, high:9, levels:0, labels:true, palette:heatPalette});
-  await page.setInputFiles("#open", {name:"heatmap.json", mimeType:"application/json", buffer:Buffer.from(JSON.stringify(heatScene))});
+  await page.setInputFiles(chooser("open-json"), {name:"heatmap.json", mimeType:"application/json", buffer:Buffer.from(JSON.stringify(heatScene))});
   await page.waitForFunction(() => window.IronmateStudio.scene.layers.at(-1)?.id === "heat");
   await page.click('[data-layer-id="heat"]');
   const exact = await page.evaluate(
@@ -224,7 +236,7 @@ const failures = [],
     }),
     { z: exact, levels: 4, palette: heatPalette },
   );
-  await download("#png", "heatmap-palette.png");
+  await download("PNG", "heatmap-palette.png");
   const pngColor = await page.evaluate(async (bytes) => {
     const bitmap = await createImageBitmap(new Blob([new Uint8Array(bytes)], { type: "image/png" }));
     const canvas = document.createElement("canvas");
@@ -249,7 +261,10 @@ const failures = [],
   });
   const fixturePath = path.join(out, "fixture.png");
   fs.writeFileSync(fixturePath, Buffer.from(fixture.split(",")[1], "base64"));
-  await page.setInputFiles("#image", fixturePath);
+  const [picker] = await Promise.all([page.waitForEvent("filechooser"), page.click(await as("import", "画像"))]); // 📥 どの形式から？ 画像
+  assert.equal(await picker.element().getAttribute("accept"), "image/png,image/jpeg,image/webp");
+  assert.equal(await page.locator("#studio-candidates").isHidden(), true);                     // the row hides; the chooser is open
+  await picker.setFiles(fixturePath);
   await page.waitForFunction(
     () => window.IronmateStudio.scene.layers.at(-1)?.kind === "image",
   );
@@ -271,10 +286,10 @@ const failures = [],
     await page.locator("[data-layer] image").getAttribute("href"),
     original,
   );
-  await download("#save", "scene.json");
-  assert.equal(await page.evaluate(() => document.querySelector("#studio-export").open), false); // 📤 選んだら中は隠れる
-  await download("#svg", "composition.svg");
-  await download("#png", "composition.png");
+  await download("JSON", "scene.json");
+  assert.equal(await page.locator("#studio-candidates").isHidden(), true);                     // 📤 選んだら候補は隠れる
+  await download("SVG", "composition.svg");
+  await download("PNG", "composition.png");
   const saved = JSON.parse(
     fs.readFileSync(path.join(out, "scene.json"), "utf8"),
   );
@@ -291,7 +306,7 @@ const failures = [],
     ),
   );
   await page.click("#blank");
-  await page.setInputFiles("#open", path.join(out, "scene.json"));
+  await page.setInputFiles(chooser("open-json"), path.join(out, "scene.json"));
   await page.waitForFunction(
     (n) => window.IronmateStudio.scene.layers.length === n,
     saved.layers.length,
@@ -310,8 +325,7 @@ const failures = [],
     saved,
   );
   // Editing and exports continue after network is disabled.
-  await reveal("#base64");
-  await page.click("#base64");
+  await page.click(await as("export", "Base64"));
   await page.waitForFunction(() =>
     document
       .getElementById("base64-text")
@@ -349,9 +363,8 @@ const failures = [],
     .locator("#base64-dialog button")
     .filter({ hasText: "閉じる" })
     .click();
-  await reveal("#export-scale");
   await page.selectOption("#export-scale", "2");
-  await download("#png", "composition-2x.png");
+  await download("PNG", "composition-2x.png");
   // 🧰 a row of a host's header: its key presses this page's own control (a PNG's size is the row's own), with the menus shut
   const fromHost = (key) => page.evaluate((k) => document.dispatchEvent(new CustomEvent("ui-chrome-action", {detail: {key: k}})), key);
   const hosted = page.waitForEvent("download");
@@ -364,10 +377,9 @@ const failures = [],
   const enlarged = fs.readFileSync(path.join(out, "composition-2x.png"));
   assert.equal(enlarged.readUInt32BE(16), saved.width * 2);
   assert.equal(enlarged.readUInt32BE(20), saved.height * 2);
-  await reveal("#export-scale");
   await page.selectOption("#export-scale", "1");
   await page.context().setOffline(true);
-  await download("#png", "offline.png");
+  await download("PNG", "offline.png");
   assert.deepEqual(
     fs.readFileSync(path.join(out, "offline.png")),
     fs.readFileSync(path.join(out, "composition.png")),
@@ -385,7 +397,7 @@ const failures = [],
   };
   const cachePath = path.join(out, "cache-scene.json");
   fs.writeFileSync(cachePath, JSON.stringify(cacheDoc));
-  await page.setInputFiles("#open", cachePath);
+  await page.setInputFiles(chooser("open-json"), cachePath);
   await page.waitForFunction(
     () => window.IronmateStudio.scene.layers.length === 20,
   );
@@ -432,8 +444,7 @@ const failures = [],
   await page.context().setOffline(false);
   // Workspace history roundtrip: retain undo/redo states and selected index.
   const workspaceDownload = page.waitForEvent("download");
-  await reveal("#save-workspace");
-  await page.click("#save-workspace");
+  await page.click(await as("export", "作業履歴"));
   const workspace = await workspaceDownload;
   const workspacePath = path.join(out, "workspace-history.json");
   await workspace.saveAs(workspacePath);
@@ -442,13 +453,12 @@ const failures = [],
   assert(historyData.items.length >= 1 && historyData.items.length <= 40);
   const historyCurrent = historyData.items[historyData.index];
   await page.click("#blank");
-  await page.setInputFiles("#open-workspace", workspacePath);
+  await page.setInputFiles(chooser("open-workspace"), workspacePath);
   await page.waitForFunction(() => document.querySelector("#status").textContent === "作業履歴を復元しました");
   assert.deepEqual(await page.evaluate(() => IronmateStudio.scene), historyCurrent);
   assert.equal(await page.locator("#history-list li").count(), historyData.items.length);
   const restoredDownload = page.waitForEvent("download");
-  await reveal("#save-workspace");
-  await page.click("#save-workspace");
+  await page.click(await as("export", "作業履歴"));
   const restoredPath = path.join(out, "workspace-restored.json");
   await (await restoredDownload).saveAs(restoredPath);
   assert.deepEqual(JSON.parse(fs.readFileSync(restoredPath, "utf8")), historyData);
@@ -460,14 +470,14 @@ const failures = [],
   await page.click("#trim-history");
   await page.waitForFunction(() => document.querySelectorAll("#history-list li").length === 1);
   assert.deepEqual(await page.evaluate(() => IronmateStudio.scene), historyCurrent);
-  assert(await page.locator("#undo").isDisabled());
-  assert(await page.locator("#redo").isDisabled());
+  assert(await page.locator(act("undo")).isDisabled());
+  assert(await page.locator(act("redo")).isDisabled());
   // Invalid embedded PNG must leave the complete current workspace intact.
   const brokenWorkspace = structuredClone(historyData);
   const brokenImage = brokenWorkspace.items.flatMap(s => s.layers).find(l => l.kind === "image");
   assert(brokenImage, "workspace fixture includes an embedded image");
   brokenImage.src = "data:image/png;base64,AAAA";
-  await page.setInputFiles("#open-workspace", {name:"broken.json",mimeType:"application/json",
+  await page.setInputFiles(chooser("open-workspace"), {name:"broken.json",mimeType:"application/json",
     buffer:Buffer.from(JSON.stringify(brokenWorkspace))});
   await page.locator("#error").waitFor({state:"visible"});
   assert.deepEqual(await page.evaluate(() => IronmateStudio.scene), historyCurrent);
@@ -481,12 +491,10 @@ const failures = [],
   await page.locator("#place-grid").click();
   await page.waitForFunction(() => IronmateStudio.scene.layers.some(layer => layer.name === "ドット絵.png"));
   for (const tool of ["emoji", "kaomoji"]) {
-    await page.locator('[data-tool="' + tool + '"]').click();
+    await page.locator(act(tool)).click();
     await page.locator("#keyboard-focus").click();
     assert.equal(await page.evaluate(() => document.activeElement.id), tool + "-text");
   }
-  assert.equal(await page.locator("#png").isVisible(), false);
-  await page.locator("#studio-export summary").click();
   await page.evaluate(() => window.IronmateStudio.ready);
   // Same real browser: feed exported PNG back via Base64 and clipboard.
   const pngIn = await page.evaluate(async () => Array.from(
@@ -499,7 +507,7 @@ const failures = [],
   assert.equal(await page.evaluate(() => IronmateStudio.scene.layers.at(-1).kind), "image");
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
   await page.evaluate(text => navigator.clipboard.writeText(text), inputText);
-  await page.click("#paste-image");
+  await page.click(await as("import", "クリップボード"));                                 // 📥 どの形式から？ → クリップボード
   await page.waitForFunction(() => IronmateStudio.scene.layers.filter(l => l.kind === "image").length === 2 || document.querySelector("#error")?.open);
   assert.equal(await page.evaluate(() => IronmateStudio.scene.layers.filter(l => l.kind === "image").length), 2);
   await page.fill("#import-base64", inputText.replace("image/png", "image/jpeg"));
@@ -518,7 +526,7 @@ const failures = [],
     "no horizontal page overflow on mobile",
   );
   await require("./studio_shelf_browser.cjs")({ page, out });
-  await require("./studio_scale_browser.cjs")({ page, out, root, download, reveal });
+  await require("./studio_scale_browser.cjs")({ page, out, root, download, act });
   await require("./studio_tradeoff_browser.cjs")({ page, out, root });
   assert.equal(failures.length, 0, failures.join("\n"));
   assert(

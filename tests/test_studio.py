@@ -28,7 +28,6 @@ ROOT = Path(__file__).resolve().parents[1]
 import browser_matrix as bm
 import flow_export as f
 import flow_workspace as w
-from vendor.cli_args import Command, run_cli, run_command
 import grid_tools
 import grid_tools as g
 import image_compare as c
@@ -48,7 +47,26 @@ from ironlib.studio_image_quality import (invert_translation, translate_rgba, co
 from photo_grid import decode_png
 from research import quality_selection_experiment as study
 from studio_ingress import MAX_BYTES, decode, parse_shelf
-from vendor.ascii_artist import FLOW_MAX_INPUT as MAX_INPUT, flow_html, flow_mermaid
+
+
+def load_vendored(name, relpath):
+    """Load a vendored file by path under a repo-unique name (cli_args README: Loading a vendored copy)."""
+    if name not in sys.modules:
+        spec = importlib.util.spec_from_file_location(name, Path(__file__).resolve().parents[1] / relpath)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        spec.loader.exec_module(module)
+    return sys.modules[name]
+
+
+_cli_args = load_vendored("ironmate_cli_args", "vendor/cli_args.py")
+Command = _cli_args.Command
+run_cli = _cli_args.run_cli
+run_command = _cli_args.run_command
+_ascii_artist = load_vendored("ironmate_ascii_artist", "vendor/ascii_artist.py")
+MAX_INPUT = _ascii_artist.FLOW_MAX_INPUT
+flow_html = _ascii_artist.flow_html
+flow_mermaid = _ascii_artist.flow_mermaid
 
 
 # ═══ · image studio ══════════════════════════════════════════════════════════════════════════════════════

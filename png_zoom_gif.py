@@ -1,10 +1,23 @@
 """PNG to a zoom-in / reverse zoom-out GIF (optional Pillow codec)."""
 from __future__ import annotations
 
+import importlib.util
+import sys
 import argparse, io, math
 from pathlib import Path
 
-from vendor.pillow_min import decode_png_rgba
+
+def load_vendored(name, relpath):
+    """Load a vendored file by path under a repo-unique name (cli_args README: Loading a vendored copy)."""
+    if name not in sys.modules:
+        spec = importlib.util.spec_from_file_location(name, Path(__file__).resolve().parents[0] / relpath)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        spec.loader.exec_module(module)
+    return sys.modules[name]
+
+
+decode_png_rgba = load_vendored("ironmate_pillow_min", "vendor/pillow_min.py").decode_png_rgba
 
 
 ANCHORS = {

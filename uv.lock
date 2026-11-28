@@ -148,7 +148,7 @@ dev = [
     { name = "pillow", specifier = ">=10" },
     { name = "playwright", specifier = ">=1.63.0" },
     { name = "pypdf", specifier = ">=6" },
-    { name = "pysaiyanweboo", git = "https://github.com/myon-bioinformatics/PySaiyanWeBoo?rev=9388155b664aae4829037cb145395e1ef9e082ed" },
+    { name = "pysaiyanweboo", git = "https://github.com/myon-bioinformatics/PySaiyanWeBoo?rev=e657dec944a698db694d02e82aa450711b0e1e9b" },
     { name = "pytest", specifier = ">=8" },
     { name = "pyyaml", specifier = ">=6" },
 ]
@@ -161,7 +161,7 @@ stdlib-test = [
     { name = "pyyaml", specifier = ">=6" },
 ]
 test = [
-    { name = "pysaiyanweboo", git = "https://github.com/myon-bioinformatics/PySaiyanWeBoo?rev=9388155b664aae4829037cb145395e1ef9e082ed" },
+    { name = "pysaiyanweboo", git = "https://github.com/myon-bioinformatics/PySaiyanWeBoo?rev=e657dec944a698db694d02e82aa450711b0e1e9b" },
     { name = "pytest", specifier = ">=8" },
     { name = "pyyaml", specifier = ">=6" },
 ]
@@ -503,7 +503,7 @@ wheels = [
 [[package]]
 name = "pysaiyanweboo"
 version = "0.1.0"
-source = { git = "https://github.com/myon-bioinformatics/PySaiyanWeBoo?rev=9388155b664aae4829037cb145395e1ef9e082ed#9388155b664aae4829037cb145395e1ef9e082ed" }
+source = { git = "https://github.com/myon-bioinformatics/PySaiyanWeBoo?rev=e657dec944a698db694d02e82aa450711b0e1e9b#e657dec944a698db694d02e82aa450711b0e1e9b" }
 
 [[package]]
 name = "pytest"

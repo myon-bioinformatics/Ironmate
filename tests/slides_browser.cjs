@@ -159,7 +159,7 @@ const url =
     assert.deepEqual(extra.map((l) => l.kind), ["text", "clock", "triangle", "text"]);
     assert.ok(extra[3].id === kao.id && extra[3].bold === true);
     await snap("candidates");
-    const rows = await mobile.$$eval(".phone-row", (nodes) => nodes.map((n) => new Set([...n.children].map((c) => c.offsetTop)).size));
+    const rows = await mobile.$$eval(".ui-toolbar-row:not([hidden])", (nodes) => nodes.map((n) => new Set([...n.children].map((c) => c.offsetTop)).size));
     assert.ok(rows.every((n) => n === 1), JSON.stringify(rows));                                // 📱 390 px: no row wraps
     await act("back");
     assert.deepEqual(await layerFaces(), ["(・∀", "🌱", "🕒", "△"]);
@@ -351,7 +351,7 @@ print('📱 phone: 2 slides, native text kept')
       tools = await wide.locator(".phone-tools").boundingBox();
     assert.ok(tools.x >= stage.x + stage.width && stage.width >= 896, JSON.stringify({ stage, tools }));
     assert.ok(tools.y + tools.height <= 800 && (await wide.evaluate(() => document.documentElement.scrollHeight)) === 800);
-    const wideRows = await wide.$$eval(".phone-row", (nodes) => nodes.filter((n) => n.id !== "phone-candidates")
+    const wideRows = await wide.$$eval(".ui-toolbar-row:not([hidden])", (nodes) => nodes.filter((n) => n.id !== "phone-candidates")
       .map((n) => new Set([...n.children].map((c) => c.offsetTop)).size));
     assert.ok(wideRows.every((n) => n === 1), JSON.stringify(wideRows));
     await wide.screenshot({ path: path.join(out, "slides-wide.png") });

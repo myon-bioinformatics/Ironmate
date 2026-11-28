@@ -414,7 +414,7 @@ STUDIO_HTML = r"""<!doctype html>
 </html>
 """
 
-STYLE_CSS = r"""/* web-ui-bundle/1 commit=9388155b664aae4829037cb145395e1ef9e082ed sha256=03b8e081e65608ef5c04d143b42d2905c23b65c8ffe621bffa825bded0bcc245 scripts/build_studio_css.py*/
+STYLE_CSS = r"""/* web-ui-bundle/1 commit=e657dec944a698db694d02e82aa450711b0e1e9b sha256=8c38392326d047b7088578e59fbe03e1367f7bd92e0536ab61c6a78f1423dd1b scripts/build_studio_css.py*/
 @layer base,components,theme;
 /* css/tokens.css */
 :root{--ui-bg:#0d1117;--ui-panel:#101820;--ui-fg:#d1f7c4;--ui-muted:#8b949e;--ui-border:#58a6ff;--ui-accent:#7ee787;--ui-danger:#cf222e;--ui-radius:0;--ui-text:16px;--ui-space:1rem;--ui-max:960px;--ui-font:Meiryo,メイリオ,sans-serif;--ui-font-mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
@@ -434,6 +434,8 @@ body[data-ui-labels=words] [data-ui-word]{font-size:0}[data-ui-labels=words] [da
 @layer components{.ui-stage{--ui-stage-w:16;--ui-stage-h:9;--ui-stage-room:64dvh;position:relative;flex:none;align-self:center;box-sizing:border-box;margin:0 auto;width:min(100%,calc(var(--ui-stage-room) * var(--ui-stage-w) / var(--ui-stage-h)));aspect-ratio:var(--ui-stage-w)/var(--ui-stage-h);overflow:hidden;background:var(--ui-panel);border:1px solid var(--ui-border)}.ui-stage[data-ui-stage=pinned]{position:sticky;top:0;z-index:1}.ui-stage>:is(svg,img,canvas,video,[data-ui-fill]){position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:contain}@media(orientation:landscape) and (max-height:560px){.ui-stage{--ui-stage-room:100dvh}}}
 @layer components{.ui-pager{display:inline-flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;max-width:100%}.ui-pager button{box-sizing:border-box;min-width:48px;min-height:48px;padding:0 8px;font-size:24px;line-height:1;color:var(--ui-fg);background:var(--ui-panel);border:1px solid var(--ui-border);border-radius:var(--ui-radius);cursor:pointer;touch-action:manipulation}.ui-pager button:disabled{opacity:.32;cursor:default}.ui-pager button:focus-visible{outline:2px solid var(--ui-accent);outline-offset:2px}.ui-pager output{min-width:48px;text-align:center;font-weight:700;font-variant-numeric:tabular-nums}.ui-pager>[data-ui-pager-part=dots]{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;max-width:100%}.ui-pager>[data-ui-pager-part=dots] button{min-width:32px;min-height:32px;padding:0;font-size:16px;color:var(--ui-accent)}.ui-pager>input[type=range]{width:160px;max-width:100%;min-height:48px;margin:0;accent-color:var(--ui-accent)}.ui-pager[data-ui-pager=dpad]{display:inline-grid;grid-template-columns:repeat(3,48px);grid-template-rows:repeat(3,48px)}[data-ui-pager=dpad]>[data-ui-pager-part=up]{grid-area:1/2}[data-ui-pager=dpad]>[data-ui-pager-part=prev]{grid-area:2/1}[data-ui-pager=dpad]>[data-ui-pager-part=page]{grid-area:2/2;place-self:center}[data-ui-pager=dpad]>[data-ui-pager-part=next]{grid-area:2/3}[data-ui-pager=dpad]>[data-ui-pager-part=down]{grid-area:3/2}.ui-pager[data-ui-pager=dpad]>:not([data-ui-pager-in~=dpad]),.ui-pager[data-ui-pager=ends]>:not([data-ui-pager-in~=ends]),.ui-pager[data-ui-pager=arrows]>:not([data-ui-pager-in~=arrows]),.ui-pager[data-ui-pager=dots]>:not([data-ui-pager-in~=dots]),.ui-pager[data-ui-pager=slider]>:not([data-ui-pager-in~=slider]),.ui-pager[data-ui-pager=dial]>:not([data-ui-pager-in~=dial]){display:none}}
 @layer components{.ui-dial{position:relative;display:inline-block;width:48px;height:48px;border-radius:50%;border:2px solid var(--ui-border);background:var(--ui-panel);box-sizing:border-box;touch-action:none;cursor:grab;vertical-align:middle}.ui-dial[data-ui-dial-drag]{cursor:grabbing}.ui-dial::after{content:"";position:absolute;left:50%;top:4px;width:4px;height:16px;border-radius:2px;background:var(--ui-accent);transform-origin:50% 18px;transform:translateX(-50%) rotate(var(--ui-dial-angle,-135deg))}.ui-dial>input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;pointer-events:none}.ui-dial:focus-within{outline:2px solid var(--ui-accent);outline-offset:2px}}
+@layer components{.ui-toolbar{display:flex;flex-direction:column;gap:8px}.ui-toolbar-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.ui-toolbar-row[hidden]{display:none}.ui-toolbar-row>button,.ui-toolbar-row>a{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;min-width:48px;min-height:48px;padding:0 8px;font-size:24px;line-height:1;text-decoration:none;touch-action:manipulation}.ui-toolbar-row>button:disabled{opacity:.32}}
+
 @layer components{.ui-current-items > [aria-current=step]{font-weight:700;text-decoration:underline;text-decoration-color:var(--ui-accent);text-decoration-thickness:.16em;text-underline-offset:.18em}}
 
 /* studio layout */
@@ -582,11 +584,7 @@ body:where([data-page~="phone"]){margin:0;background:var(--ui-bg)}
 :where([data-page~="phone"]) .phone-grip{position:absolute;right:-16px;bottom:-16px;width:32px;height:32px;display:grid;place-items:center;border-radius:50%;background:var(--ui-accent);color:var(--ui-bg);font-size:16px;pointer-events:auto;touch-action:none}
 :where([data-page~="phone"]) .phone-edit{flex:1 1 100%;box-sizing:border-box;margin:0;min-height:88px;padding:8px;font-size:16px;line-height:1.5;border:2px solid var(--ui-accent);resize:vertical}
 :where([data-page~="phone"]) .phone-deck{flex:1;min-height:0;overflow:auto;display:flex;flex-wrap:wrap;align-items:flex-start;align-content:flex-start;gap:16px;padding:16px}
-:where([data-page~="phone"]) .phone-tools{flex:1 1 328px;min-width:0;display:flex;flex-direction:column;gap:8px}
-:where([data-page~="phone"]) .phone-row{display:flex;flex-wrap:wrap;gap:8px}
-:where([data-page~="phone"]) .phone-tools button,:where([data-page~="phone"]) .phone-tools .button{min-width:48px;min-height:48px;padding:0 8px;font-size:24px;line-height:1;touch-action:manipulation}
-:where([data-page~="phone"]) .phone-tools select{min-height:48px;font-size:16px}
-:where([data-page~="phone"]) .phone-tools button:disabled{opacity:.32}
+:where([data-page~="phone"]) .phone-tools{flex:1 1 328px;min-width:0}
 :where([data-page~="phone"]) .phone-status{flex:1 1 128px;margin:0;align-self:center;min-height:24px;font-size:16px;overflow-wrap:anywhere}
 :where([data-page~="phone"]) .phone-status[data-error=true]{color:var(--ui-danger)}
 @media(orientation:landscape) and (max-height:560px),(min-width:960px){:where([data-page~="phone"]) .phone{flex-direction:row;max-width:none}:where([data-page~="phone"]) .ui-stage{max-width:72vw;--ui-stage-room:100dvh}:where([data-page~="phone"]) .phone-deck{flex-direction:column;flex-wrap:nowrap}:where([data-page~="phone"]) .phone-tools,:where([data-page~="phone"]) .phone-status{flex:none}}
@@ -630,7 +628,7 @@ const StudioCore = (function (root) {
   const fail = (message) => {
     throw new Error(message);
   };
-  /* PSWB heatmap-color.js @ 9388155b664aae4829037cb145395e1ef9e082ed. Generated by scripts/build_studio_css.py. */
+  /* PSWB heatmap-color.js @ e657dec944a698db694d02e82aa450711b0e1e9b. Generated by scripts/build_studio_css.py. */
   const heatmapDefaultPalette=["#440154", "#3B528B", "#21918C", "#5EC962", "#FDE725"];
   function heatmapColor(v,lo,hi,levels=0,palette=heatmapDefaultPalette){
    if(!Array.isArray(palette)||palette.length<2||palette.length>256||
@@ -1194,7 +1192,7 @@ const StudioCore = (function (root) {
 /* Browser/Node shared operations. Pixel coordinates follow grid_tools.py. */
 const IronmateTools = (function (root) {
   "use strict";
-  /* PSWB pixel-grid.js @ 9388155b664aae4829037cb145395e1ef9e082ed. Generated by scripts/build_studio_css.py. */
+  /* PSWB pixel-grid.js @ e657dec944a698db694d02e82aa450711b0e1e9b. Generated by scripts/build_studio_css.py. */
   /* web-ui pixel-grid: a dot-art grid checked, resized, drawn as SVG and described for a PNG; Base64 length; PNG chunks. pysaiyanweboo.py (pixel_grid_*, base64_length) is the reference; this must agree. */
   const PIXEL_GRID_SCHEMA="ironmate-pixel-grid/1";
   function pixelGridValidate(value){
@@ -1260,7 +1258,7 @@ const IronmateSlides = (function (root) {
   "use strict";
   const C = StudioCore;
   const shell = IronmateSlideShell;
-  /* PSWB slide-deck.js @ 9388155b664aae4829037cb145395e1ef9e082ed. Generated by scripts/build_studio_css.py. */
+  /* PSWB slide-deck.js @ e657dec944a698db694d02e82aa450711b0e1e9b. Generated by scripts/build_studio_css.py. */
   /* web-ui slide-deck: several scenes of the image studio as one deck (checked, kept as JSON, pages added, copied, deleted and moved) and written as a PPTX in the page: text, rectangles, ellipses, triangles and arrows stay editable, anything else is a picture. slideDeck(core, shell): core is js/imagestudio.js (or the same functions), shell the empty package the slides go into (part name to text). pysaiyanweboo.py (slide_deck_*) is the reference; this must agree. */
   function slideDeck(C, shell) {
     const SCHEMA = "ironmate-slide-deck/1",
@@ -3324,7 +3322,7 @@ if (typeof document !== "undefined" && (document.getElementById("pixel-editor") 
   });
 })();
 
-/* ⬇️ pysaiyanweboo 9388155b (stage, pager, labels-switch): written by scripts/build_studio_css.py from the pinned commit; --check fails when it drifts */
+/* ⬇️ pysaiyanweboo e657dec9 (stage, pager, labels-switch, toolbar): written by scripts/build_studio_css.py from the pinned commit; --check fails when it drifts */
 (() => {
 /* A rotary dial over a range input (dial_html): drag around its centre, turn the wheel, or use the range's own keys. Value and events stay the input's. */
 function dialAngle(value,min,max){const span=max-min;const t=span>0?(Number(value)-min)/span:0;return -135+270*Math.min(1,Math.max(0,t))}
@@ -3384,13 +3382,37 @@ function bindToggles(root=document){return[...root.querySelectorAll("[data-ui-to
 function bindTheme(root=document,{key="web-ui-theme"}={}){const body=document.body,controls=[...root.querySelectorAll("[data-ui-theme-switch],input[name=ui-theme]")];const known=name=>controls.some(c=>c.tagName==="SELECT"?[...c.options].some(o=>o.value===name):c.value===name);if(body.dataset.uiThemePage===undefined)body.dataset.uiThemePage=body.dataset.uiTheme||"";const sync=()=>{const chosen=body.dataset.uiThemeChosen;for(const c of controls){if(c.tagName==="SELECT")c.value=chosen===undefined&&[...c.options].some(o=>o.value==="")?"":body.dataset.uiTheme;else c.checked=c.value===body.dataset.uiTheme}};const choose=name=>{if(name){body.dataset.uiThemeChosen=name;body.dataset.uiTheme=name}else{delete body.dataset.uiThemeChosen;body.dataset.uiTheme=body.dataset.uiThemePage}};let saved=null;try{saved=localStorage.getItem(key)}catch{}if(saved&&known(saved))choose(saved);sync();for(const c of controls)c.addEventListener("change",()=>{if(!known(c.value))return;choose(c.value);sync();try{if(c.value)localStorage.setItem(key,c.value);else localStorage.removeItem(key)}catch{}});return body.dataset.uiTheme}
 /** Switch data-ui-labels on <body> with no reload: "emoji" (the default: icon faces) or "words" (as on a PC: every [data-ui-word] shows its short word instead of its face; CSS in components.css). Buttons with data-ui-labels-switch flip it (aria-pressed is true while words show), and so does a header row whose key is "labels" (the ui-chrome-action event). A flip is remembered (localStorage, best effort). Returns the labels in effect. */
 function bindLabels(root=document,{key="web-ui-labels"}={}){const body=document.body,buttons=[...root.querySelectorAll("[data-ui-labels-switch]")];const show=v=>{body.dataset.uiLabels=v==="words"?"words":"emoji";for(const b of buttons)b.setAttribute("aria-pressed",String(body.dataset.uiLabels==="words"));return body.dataset.uiLabels};let saved=null;try{saved=localStorage.getItem(key)}catch{}show(saved||body.dataset.uiLabels);const flip=()=>{const v=show(body.dataset.uiLabels==="words"?"emoji":"words");try{localStorage.setItem(key,v)}catch{}};for(const b of buttons)b.addEventListener("click",flip);document.addEventListener("ui-chrome-action",e=>{if(e.detail&&e.detail.key==="labels")flip()});return body.dataset.uiLabels}
+/** A toolbar from toolbar_html(): a click on a [data-act] control calls run(act). A button with data-candidates opens its candidates in the toolbar's one candidate row ([data-ui-candidates]), right under its own row; pressing it again closes them. A candidate calls run(its data-acts entry) or, when it names no action, run(the button's act, the candidate's face), and data-close hides the row after the pick. Each candidate's words (data-words, "|"-separated) are its title, aria-label and, up to "（", its data-ui-word. Pressing a control keeps the focus where it was, so a text being typed stays open. Returns {offer(button), close()}. */
+function bindToolbar(root,run){const row=root.querySelector("[data-ui-candidates]");const close=()=>{if(!row)return;row.hidden=true;row.dataset.tool="";row.replaceChildren()};const offer=b=>{if(!row)return;if(row.dataset.tool===b.dataset.act&&!row.hidden)return close();const faces=b.dataset.candidates.split(" "),acts=(b.dataset.acts||"").split(" "),words=(b.dataset.words||"").split("|");row.dataset.tool=b.dataset.act;b.closest(".ui-toolbar-row").after(row);row.hidden=false;row.replaceChildren(...faces.map((face,i)=>{const c=document.createElement("button");c.type="button";c.textContent=face;const said=words[i]||face;c.title=said;c.setAttribute("aria-label",said);if(words[i])c.dataset.uiWord=said.split("（")[0];c.addEventListener("click",()=>{if(acts[i])run(acts[i]);else run(b.dataset.act,face);if("close"in b.dataset)close()});return c}))};root.addEventListener("pointerdown",e=>{if(e.target.closest("button,a"))e.preventDefault()});root.addEventListener("click",e=>{const b=e.target.closest("[data-act]");if(!b||!root.contains(b)||b.disabled)return;if(b.dataset.candidates)offer(b);else run(b.dataset.act)});return{offer,close}}
 /** Tell bindTheme which theme is the page's own (a page whose own look changes, such as display modes): it shows unless the visitor chose one. Returns the theme in effect. */
 function pageTheme(name){const body=document.body;body.dataset.uiThemePage=name;if(body.dataset.uiThemeChosen===undefined)body.dataset.uiTheme=name;return body.dataset.uiTheme}
 /** Mark on-screen elements with data-lit (IntersectionObserver); CSS decides what lit looks like. Without IntersectionObserver every element counts as lit. Returns a stop function. */
 function observeLit(targets,{threshold=0.4,root=null}={}){const nodes=typeof targets==="string"?[...document.querySelectorAll(targets)]:[...targets];if(typeof IntersectionObserver==="undefined"){for(const n of nodes)n.dataset.lit="";return()=>{}}const io=new IntersectionObserver(entries=>{for(const e of entries){if(e.isIntersecting)e.target.dataset.lit="";else delete e.target.dataset.lit}},{threshold,root});for(const n of nodes)io.observe(n);return()=>io.disconnect()}
 /** Click-to-enlarge for <a href="full.png"><img alt="..."></a> items inside [data-ui-lightbox]: one <dialog>; Esc, the backdrop and the close button shut it, arrows, buttons and a 48px swipe step through. Returns {open, close, dialog}, or null without items or <dialog>. */
 function bindLightbox(root=document){const items=[...root.querySelectorAll("[data-ui-lightbox] a[href]")];if(!items.length||typeof HTMLDialogElement==="undefined")return null;const dialog=document.createElement("dialog");dialog.className="ui-lightbox";dialog.setAttribute("aria-label","Image viewer");dialog.innerHTML='<img alt=""><p class="ui-muted"></p><div class="ui-lightbox-bar"><button class="ui-button" type="button" data-step="-1" aria-label="Previous">\u2190</button><button class="ui-button" type="button" data-step="1" aria-label="Next">\u2192</button><button class="ui-button" type="button" data-step="0" aria-label="Close">\u00d7</button></div>';const img=dialog.querySelector("img"),note=dialog.querySelector("p");let at=0,x=null;const show=i=>{at=(i+items.length)%items.length;const a=items[at],t=a.querySelector("img");img.src=a.href;img.alt=note.textContent=t?t.alt:""};const open=i=>{show(i);if(!dialog.open)dialog.showModal()};items.forEach((a,i)=>a.addEventListener("click",e=>{e.preventDefault();open(i)}));dialog.addEventListener("click",e=>{const b=e.target.closest("[data-step]");if(b){const s=Number(b.dataset.step);if(s)show(at+s);else dialog.close()}else if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)dialog.close()}});dialog.addEventListener("keydown",e=>{if(e.key==="ArrowLeft")show(at-1);if(e.key==="ArrowRight")show(at+1)});dialog.addEventListener("pointerdown",e=>{x=e.clientX});dialog.addEventListener("pointerup",e=>{if(x!==null&&Math.abs(e.clientX-x)>=48)show(at+(e.clientX<x?1:-1));x=null});document.body.append(dialog);return{open,close:()=>dialog.close(),dialog}}
-globalThis.PySaiyanWeBoo = { pagerSet, pagerIndex, bindLabels };
+/** Set text-only content. User-controlled values are never interpreted as HTML. */
+function setText(target,value){const node=typeof target==="string"?document.querySelector(target):target;if(node)node.textContent=String(value)}
+/** Serialize a value for human-readable text output. */
+function prettyJson(value){return JSON.stringify(value,null,2)}
+/** Copy a value as text; falls back to a hidden textarea where the async clipboard is missing (plain http, old WebViews). */
+async function copyText(value){const text=String(value);try{await navigator.clipboard.writeText(text)}catch(error){const box=document.createElement("textarea");box.value=text;box.setAttribute("readonly","");box.style.cssText="position:fixed;opacity:0";try{document.body.append(box);box.select();if(typeof document.execCommand!=="function"||!document.execCommand("copy"))throw error}finally{box.remove()}}}
+/** [data-ui-copy] copies the <pre> of its .ui-code box with copyText; the button shows data-ui-copied (or data-ui-copy-failed) for a moment. Returns the buttons. */
+function bindCopy(root=document){const buttons=[...root.querySelectorAll("[data-ui-copy]")];for(const button of buttons){const box=button.closest(".ui-code"),pre=box&&box.querySelector("pre");if(!pre)continue;const label=button.textContent;button.addEventListener("click",async()=>{let ok=true;try{await copyText(pre.textContent)}catch{ok=false}button.textContent=(ok?button.dataset.uiCopied:button.dataset.uiCopyFailed)||label;setTimeout(()=>{button.textContent=label},1600)})}return buttons}
+/** Buttons with data-ui-toggle flip aria-pressed on click (memory only: nothing is saved); data-label-on / data-label-off, when present, rename the button. */
+function bindToggles(root=document){return[...root.querySelectorAll("[data-ui-toggle]")].map(b=>{const sync=()=>{const label=b.getAttribute("aria-pressed")==="true"?b.dataset.labelOn:b.dataset.labelOff;if(label){b.setAttribute("aria-label",label);b.title=label}};b.addEventListener("click",()=>{b.setAttribute("aria-pressed",String(b.getAttribute("aria-pressed")!=="true"));sync()});sync();return b})}
+/** Switch data-ui-theme on <body> with no reload: controls are <select data-ui-theme-switch> or radios named ui-theme. The choice is remembered (localStorage, best effort) and marked on <body> as data-ui-theme-chosen. An empty-valued option means "the page's own theme" (data-ui-theme-page, by default the theme at bind time; see pageTheme): choosing it forgets the choice. Returns the theme in effect. */
+function bindTheme(root=document,{key="web-ui-theme"}={}){const body=document.body,controls=[...root.querySelectorAll("[data-ui-theme-switch],input[name=ui-theme]")];const known=name=>controls.some(c=>c.tagName==="SELECT"?[...c.options].some(o=>o.value===name):c.value===name);if(body.dataset.uiThemePage===undefined)body.dataset.uiThemePage=body.dataset.uiTheme||"";const sync=()=>{const chosen=body.dataset.uiThemeChosen;for(const c of controls){if(c.tagName==="SELECT")c.value=chosen===undefined&&[...c.options].some(o=>o.value==="")?"":body.dataset.uiTheme;else c.checked=c.value===body.dataset.uiTheme}};const choose=name=>{if(name){body.dataset.uiThemeChosen=name;body.dataset.uiTheme=name}else{delete body.dataset.uiThemeChosen;body.dataset.uiTheme=body.dataset.uiThemePage}};let saved=null;try{saved=localStorage.getItem(key)}catch{}if(saved&&known(saved))choose(saved);sync();for(const c of controls)c.addEventListener("change",()=>{if(!known(c.value))return;choose(c.value);sync();try{if(c.value)localStorage.setItem(key,c.value);else localStorage.removeItem(key)}catch{}});return body.dataset.uiTheme}
+/** Switch data-ui-labels on <body> with no reload: "emoji" (the default: icon faces) or "words" (as on a PC: every [data-ui-word] shows its short word instead of its face; CSS in components.css). Buttons with data-ui-labels-switch flip it (aria-pressed is true while words show), and so does a header row whose key is "labels" (the ui-chrome-action event). A flip is remembered (localStorage, best effort). Returns the labels in effect. */
+function bindLabels(root=document,{key="web-ui-labels"}={}){const body=document.body,buttons=[...root.querySelectorAll("[data-ui-labels-switch]")];const show=v=>{body.dataset.uiLabels=v==="words"?"words":"emoji";for(const b of buttons)b.setAttribute("aria-pressed",String(body.dataset.uiLabels==="words"));return body.dataset.uiLabels};let saved=null;try{saved=localStorage.getItem(key)}catch{}show(saved||body.dataset.uiLabels);const flip=()=>{const v=show(body.dataset.uiLabels==="words"?"emoji":"words");try{localStorage.setItem(key,v)}catch{}};for(const b of buttons)b.addEventListener("click",flip);document.addEventListener("ui-chrome-action",e=>{if(e.detail&&e.detail.key==="labels")flip()});return body.dataset.uiLabels}
+/** A toolbar from toolbar_html(): a click on a [data-act] control calls run(act). A button with data-candidates opens its candidates in the toolbar's one candidate row ([data-ui-candidates]), right under its own row; pressing it again closes them. A candidate calls run(its data-acts entry) or, when it names no action, run(the button's act, the candidate's face), and data-close hides the row after the pick. Each candidate's words (data-words, "|"-separated) are its title, aria-label and, up to "（", its data-ui-word. Pressing a control keeps the focus where it was, so a text being typed stays open. Returns {offer(button), close()}. */
+function bindToolbar(root,run){const row=root.querySelector("[data-ui-candidates]");const close=()=>{if(!row)return;row.hidden=true;row.dataset.tool="";row.replaceChildren()};const offer=b=>{if(!row)return;if(row.dataset.tool===b.dataset.act&&!row.hidden)return close();const faces=b.dataset.candidates.split(" "),acts=(b.dataset.acts||"").split(" "),words=(b.dataset.words||"").split("|");row.dataset.tool=b.dataset.act;b.closest(".ui-toolbar-row").after(row);row.hidden=false;row.replaceChildren(...faces.map((face,i)=>{const c=document.createElement("button");c.type="button";c.textContent=face;const said=words[i]||face;c.title=said;c.setAttribute("aria-label",said);if(words[i])c.dataset.uiWord=said.split("（")[0];c.addEventListener("click",()=>{if(acts[i])run(acts[i]);else run(b.dataset.act,face);if("close"in b.dataset)close()});return c}))};root.addEventListener("pointerdown",e=>{if(e.target.closest("button,a"))e.preventDefault()});root.addEventListener("click",e=>{const b=e.target.closest("[data-act]");if(!b||!root.contains(b)||b.disabled)return;if(b.dataset.candidates)offer(b);else run(b.dataset.act)});return{offer,close}}
+/** Tell bindTheme which theme is the page's own (a page whose own look changes, such as display modes): it shows unless the visitor chose one. Returns the theme in effect. */
+function pageTheme(name){const body=document.body;body.dataset.uiThemePage=name;if(body.dataset.uiThemeChosen===undefined)body.dataset.uiTheme=name;return body.dataset.uiTheme}
+/** Mark on-screen elements with data-lit (IntersectionObserver); CSS decides what lit looks like. Without IntersectionObserver every element counts as lit. Returns a stop function. */
+function observeLit(targets,{threshold=0.4,root=null}={}){const nodes=typeof targets==="string"?[...document.querySelectorAll(targets)]:[...targets];if(typeof IntersectionObserver==="undefined"){for(const n of nodes)n.dataset.lit="";return()=>{}}const io=new IntersectionObserver(entries=>{for(const e of entries){if(e.isIntersecting)e.target.dataset.lit="";else delete e.target.dataset.lit}},{threshold,root});for(const n of nodes)io.observe(n);return()=>io.disconnect()}
+/** Click-to-enlarge for <a href="full.png"><img alt="..."></a> items inside [data-ui-lightbox]: one <dialog>; Esc, the backdrop and the close button shut it, arrows, buttons and a 48px swipe step through. Returns {open, close, dialog}, or null without items or <dialog>. */
+function bindLightbox(root=document){const items=[...root.querySelectorAll("[data-ui-lightbox] a[href]")];if(!items.length||typeof HTMLDialogElement==="undefined")return null;const dialog=document.createElement("dialog");dialog.className="ui-lightbox";dialog.setAttribute("aria-label","Image viewer");dialog.innerHTML='<img alt=""><p class="ui-muted"></p><div class="ui-lightbox-bar"><button class="ui-button" type="button" data-step="-1" aria-label="Previous">\u2190</button><button class="ui-button" type="button" data-step="1" aria-label="Next">\u2192</button><button class="ui-button" type="button" data-step="0" aria-label="Close">\u00d7</button></div>';const img=dialog.querySelector("img"),note=dialog.querySelector("p");let at=0,x=null;const show=i=>{at=(i+items.length)%items.length;const a=items[at],t=a.querySelector("img");img.src=a.href;img.alt=note.textContent=t?t.alt:""};const open=i=>{show(i);if(!dialog.open)dialog.showModal()};items.forEach((a,i)=>a.addEventListener("click",e=>{e.preventDefault();open(i)}));dialog.addEventListener("click",e=>{const b=e.target.closest("[data-step]");if(b){const s=Number(b.dataset.step);if(s)show(at+s);else dialog.close()}else if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)dialog.close()}});dialog.addEventListener("keydown",e=>{if(e.key==="ArrowLeft")show(at-1);if(e.key==="ArrowRight")show(at+1)});dialog.addEventListener("pointerdown",e=>{x=e.clientX});dialog.addEventListener("pointerup",e=>{if(x!==null&&Math.abs(e.clientX-x)>=48)show(at+(e.clientX<x?1:-1));x=null});document.body.append(dialog);return{open,close:()=>dialog.close(),dialog}}
+globalThis.PySaiyanWeBoo = { pagerSet, pagerIndex, bindLabels, bindToolbar };
 })();
 /* ⬆️ pysaiyanweboo */
 /* Phone slides UI (data-page~="phone"): browser only. The slide stays pinned on top (PySaiyanWeBoo's 🖼️ stage), every control is
@@ -3549,7 +3571,6 @@ function pageList() {
   if (row.dataset.key === String(key)) return;
   row.dataset.key = key;
   row.hidden = !pagesOpen;
-  row.classList.toggle("phone-row", pagesOpen);
   row.replaceChildren(...(pagesOpen ? deck.slides : []).map((s, i) => {
     const b = document.createElement("button");
     b.type = "button";
@@ -3659,7 +3680,6 @@ function layerList(s) {
   if (row.dataset.key === key) return;
   row.dataset.key = key;
   row.hidden = s.layers.length < 2;
-  row.classList.toggle("phone-row", !row.hidden);
   row.replaceChildren(...(row.hidden ? [] : s.layers).map((l, i) => {
     const b = document.createElement("button");
     b.type = "button";
@@ -3814,34 +3834,6 @@ function stamp(text) {
     return l;
   });
 }
-function offer(tool) {
-  // 候補の列は 1 つ。同じ道具をもう一度押すと閉じる（閉じた列は場所を取らない: .phone-row は開いている間だけ）
-  const row = $("phone-candidates"),
-    again = row.dataset.tool === tool && !row.hidden;
-  row.dataset.tool = again ? "" : tool;
-  row.hidden = again;
-  row.classList.toggle("phone-row", !again);
-  const button = document.querySelector(`[data-act="${tool}"]`),
-    { candidates, acts: named = "", words = "" } = button.dataset,
-    actions = named.split(" "),
-    said = words.split("|");
-  if (!again) button.closest(".phone-row").after(row); // 候補は押したボタンの列のすぐ下に開く
-  row.replaceChildren(...(again ? [] : candidates.split(" ")).map((value, i) => {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.textContent = value;
-    b.setAttribute("aria-label", said[i] || value);
-    b.title = said[i] || value;
-    if (said[i]) b.dataset.uiWord = said[i].split("（")[0]; // 💻 文字の表示では短い言葉（😊 (^^) は文字そのものなので顔のまま）
-    b.addEventListener("pointerdown", (e) => e.preventDefault());
-    b.addEventListener("click", () => {
-      finishEdit();
-      run(() => (actions[i] ? acts[actions[i]]() : record(stamp(value)))); // 🔷 💾 name an action (data-acts); 😊 (^^) stamp the text
-      if (button.dataset.close !== undefined) offer(tool); // 📥 📤 選んだら候補は隠れる
-    });
-    return b;
-  }));
-}
 const COLORS = ["#000000", "#18A7A1", "#D7263D", "#1B6EF3", "#F5B700", "#FFFFFF"], // 🎨 🖌 黒・青緑・赤・青・黄・白
   nextColor = (c) => COLORS[(COLORS.indexOf(String(c).toUpperCase()) + 1) % COLORS.length];
 function restyle(fn) {
@@ -3887,9 +3879,6 @@ const acts = {
   arrow: () => record(place((s) => ({ id: uid("arrow"), kind: "arrow", name: "arrow", x: s.width * 0.25, y: s.height * 0.45,
     w: s.width * 0.5, h: s.height * 0.1, rotation: 0, opacity: 1, fill: "#000000", stroke: "#000000", strokeWidth: 4,
     headSize: 28, headPlacement: "tip", headStyle: "triangle" }))),
-  shape: () => offer("shape"),
-  emoji: () => offer("emoji"),
-  kaomoji: () => offer("kaomoji"),
   clock() {
     const now = new Date();
     record(place((s) => ({ id: uid("clock"), kind: "clock", name: "clock", x: s.width * 0.5 - s.height * 0.15, y: s.height * 0.35,
@@ -3897,8 +3886,6 @@ const acts = {
       fill: "#FFFFFF", stroke: "#183C42", strokeWidth: 4 })));
   },
   edit: () => startEdit(),
-  look: () => offer("look"), // 🎨 ↻ 候補から（選んだものに効かない候補は何もしない）
-  turn: () => offer("turn"),
   fill: () => restyle((l) => {
     l.fill = nextColor(l.fill);
     if (l.kind === "arrow") l.stroke = l.fill;
@@ -3977,8 +3964,6 @@ const acts = {
     textFactor = 1;
     selected = null;
   }),
-  import: () => offer("import"), // 📥 どの形式から？ 📤 どの形式に？ 候補から選ぶと列は隠れる
-  export: () => offer("export"),
   open: () => document.querySelector('input[data-file="open"]').click(),
   image: () => document.querySelector('input[data-file="image"]').click(),
   json: () => C.save("ironmate-slides.json", D.deckText(deck), "application/json"),
@@ -4051,14 +4036,12 @@ async function run(fn) {
     render();
   }
 }
-for (const b of document.querySelectorAll("button[data-act]"))
-  b.addEventListener("pointerdown", (e) => e.preventDefault()); // 編集中に押しても入力欄が先に閉じない（閉じて並びがずれ、押し外さない）
-for (const b of document.querySelectorAll("button[data-act]"))
-  b.addEventListener("click", () => {
-    const act = acts[b.dataset.act];
-    if (b.dataset.act !== "edit") finishEdit();
-    run(act);
-  });
+PySaiyanWeBoo.bindToolbar($("phone-toolbar"), (name, face) => {
+  // 🧰 PySaiyanWeBoo's toolbar: every press comes here; 🔷 🎨 ↻ 📥 📤 open their candidates themselves, 😊 (^^) pass the face
+  if (name !== "edit") finishEdit();
+  if (face !== undefined) return run(() => record(stamp(face)));
+  if (acts[name]) run(acts[name]);
+});
 for (const input of document.querySelectorAll("input[data-file]"))
   input.addEventListener("change", () => {
     const file = input.files[0];
@@ -4147,36 +4130,113 @@ PSWB_PHONE = {
         '</div>'),
     "labels": (
         '<button type="button" class="ui-button" id="labels-switch" data-ui-labels-switch data-ui-word="📱 To iconic" aria-pressed="false" aria-label="💻 To textual ⇄ 📱 To iconic" title="💻 To textual ⇄ 📱 To iconic">💻</button>'),
+    "tools": (
+        '<div class="ui-toolbar" id="phone-toolbar" role="toolbar" aria-label="道具">'
+        '<div class="ui-toolbar-row" data-ui-group="create">'
+        '<button type="button" data-act="text" data-ui-word="文字" aria-label="テキストボックスを追加" title="テキストボックスを追加">🔤</button>'
+        '<button type="button" data-acts="rect ellipse triangle arrow" data-words="四角|丸|三角|矢印" data-candidates="▭ ◯ △ →" data-act="shape" data-ui-word="図形" aria-label="図形（四角・丸・三角・矢印）を候補から追加" title="図形（四角・丸・三角・矢印）を候補から追加">🔷</button>'
+        '<button type="button" data-candidates="❤️ 😊 🌱 📊 ✨ 📌 🔰" data-act="emoji" data-ui-word="絵文字" aria-label="絵文字を候補から追加" title="絵文字を候補から追加">😊</button>'
+        '<button type="button" data-candidates="(・∀・) (｡•̀ᴗ-)✧ ٩(๑❛ᴗ❛๑)۶" data-act="kaomoji" data-ui-word="顔文字" aria-label="顔文字を候補から追加" title="顔文字を候補から追加">(^^)</button>'
+        '<button type="button" data-act="clock" data-ui-word="時計" aria-label="いまの時刻の時計を追加" title="いまの時刻の時計を追加">🕒</button>'
+        '</div>'
+        '<div class="ui-toolbar-row" data-ui-candidates id="phone-candidates" role="group" aria-label="候補" hidden>'
+        '</div>'
+        '<div class="ui-toolbar-row" data-ui-group="adjust">'
+        '<button type="button" data-act="smaller" data-ui-word="小さく" aria-label="文字をすべて小さく" title="文字をすべて小さく">🔽</button>'
+        '<button type="button" data-act="reset" data-ui-word="元の大きさ" aria-label="文字をすべて元の大きさに" title="文字をすべて元の大きさに">🔄</button>'
+        '<button type="button" data-act="bigger" data-ui-word="大きく" aria-label="文字をすべて大きく" title="文字をすべて大きく">🔼</button>'
+        '<button type="button" data-act="undo" data-ui-word="戻す" aria-label="戻す" title="戻す">↩️</button>'
+        '<button type="button" data-act="redo" data-ui-word="やり直す" aria-label="やり直す" title="やり直す">↪️</button>'
+        '</div>'
+        '<div id="phone-layers" class="ui-toolbar-row ui-current-items" role="group" aria-label="レイヤー（奥から手前）" hidden>'
+        '</div>'
+        '<div class="ui-toolbar-row" data-ui-group="update">'
+        '<button type="button" data-act="edit" data-ui-word="編集" aria-label="選んだ文字・時計を編集（選んだものをもう一度タップしても編集。時計は 14:30 のように）" title="選んだ文字・時計を編集（選んだものをもう一度タップしても編集。時計は 14:30 のように）">✏️</button>'
+        '<button type="button" data-acts="fill stroke fade bold font" data-words="塗りを次の色へ|線を次の色へ|不透明度（1 → ¾ → ½ → ¼）|太字|等幅 ⇄ ふつう" data-candidates="🎨 🖌 🌗 🅱️ 🔠" data-act="look" data-ui-word="見た目" aria-label="選んだものの見た目（塗り・線の色・不透明度・太字・等幅）" title="選んだものの見た目（塗り・線の色・不透明度・太字・等幅）">🎨</button>'
+        '<button type="button" data-acts="cw ccw upright" data-words="右へ 15°|左へ 15°|まっすぐに戻す" data-candidates="↻ ↺ ⏹" data-act="turn" data-ui-word="回転" aria-label="選んだものを回す" title="選んだものを回す">↻</button>'
+        '<button type="button" data-act="front" data-ui-word="手前へ" aria-label="選んだものをいちばん手前へ" title="選んだものをいちばん手前へ">⏫</button>'
+        '<button type="button" data-act="back" data-ui-word="奥へ" aria-label="選んだものをいちばん奥へ" title="選んだものをいちばん奥へ">⏬</button>'
+        '<button type="button" data-act="delete" data-ui-word="削除" aria-label="選んだものを削除" title="選んだものを削除">🗑️</button>'
+        '</div>'
+        '<div class="ui-toolbar-row" data-ui-group="pages">'
+        '<button type="button" data-act="slide-add" data-ui-word="ページ追加" aria-label="白紙のページを追加" title="白紙のページを追加">➕📄</button>'
+        '<button type="button" data-act="slide-copy" data-ui-word="複製" aria-label="ページを複製" title="ページを複製">📑</button>'
+        '<button type="button" data-act="slide-delete" data-ui-word="ページ削除" aria-label="ページを削除" title="ページを削除">✖️📄</button>'
+        '<button type="button" data-act="pages" data-ui-word="一覧" aria-label="ページの一覧（タップでそのページへ）" title="ページの一覧（タップでそのページへ）">🗂️</button>'
+        '</div>'
+        '<div id="phone-pages" class="ui-toolbar-row ui-current-items" role="group" aria-label="ページの一覧" hidden>'
+        '</div>'
+        '<div class="ui-toolbar-row" data-ui-group="file">'
+        '<button type="button" data-act="new" data-ui-word="新規" aria-label="最初から（白紙 1 枚）" title="最初から（白紙 1 枚）">🆕</button>'
+        '<button type="button" data-close data-acts="open image" data-words="JSON（全スライド。PC 版で保存したものも）|画像（PNG・JPEG・WebP をこのページに）" data-candidates="JSON 画像" data-act="import" data-ui-word="インポート" aria-label="インポート（どの形式から？ 候補から選ぶ）" title="インポート（どの形式から？ 候補から選ぶ）">📥</button>'
+        '<button type="button" data-close data-acts="pptx json png svg" data-words="PPTX（全スライド、PowerPoint で編集できる）|JSON（全スライド、また開ける）|PNG（このページ）|SVG（このページ）" data-candidates="PPTX JSON PNG SVG" data-act="export" data-ui-word="エクスポート" aria-label="エクスポート（どの形式に？ 候補から選ぶ）" title="エクスポート（どの形式に？ 候補から選ぶ）">📤</button>'
+        '<a class="ui-button" href="../" data-act="home" data-ui-word="Image Studio" aria-label="Image Studio" title="Image Studio">🏠</a>'
+        '<button type="button" class="ui-button" id="labels-switch" data-ui-labels-switch data-ui-word="📱 To iconic" aria-pressed="false" aria-label="💻 To textual ⇄ 📱 To iconic" title="💻 To textual ⇄ 📱 To iconic">💻</button>'
+        '</div>'
+        '<div class="ui-toolbar-row" data-ui-group="detail">'
+        '<button type="button" data-act="inspect" data-ui-word="詳細" aria-label="選んだものの詳細（位置・大きさ・種類別の設定）" title="選んだものの詳細（位置・大きさ・種類別の設定）">🎛️</button>'
+        '<button type="button" data-act="grid" data-ui-word="4枚表示" aria-label="4枚表示（その場で編集）" title="4枚表示（その場で編集）">⊞</button>'
+        '</div>'
+        '<fieldset id="phone-inspector" hidden>'
+        '<legend>詳細設定</legend>'
+        '<label>横の位置<input type="number" data-property="x" data-kinds="" min="-8192" max="8192" step="any">'
+        '</label>'
+        '<label>縦の位置<input type="number" data-property="y" data-kinds="" min="-8192" max="8192" step="any">'
+        '</label>'
+        '<label>幅<input type="number" data-property="w" data-kinds="" min="1" max="8192" step="any">'
+        '</label>'
+        '<label>高さ<input type="number" data-property="h" data-kinds="" min="1" max="8192" step="any">'
+        '</label>'
+        '<label>線幅<input type="number" data-property="strokeWidth" data-kinds="rect ellipse triangle arrow clock" min="0" max="64" step="any">'
+        '</label>'
+        '<label>モザイクの幅<input type="number" data-property="cell" data-kinds="image" min="1" max="512" step="1">'
+        '</label>'
+        '<label>色の段階<input type="number" data-property="levels" data-kinds="image" min="2" max="256" step="1">'
+        '</label>'
+        '<label>'
+        '<input type="checkbox" data-property="italic" data-kinds="text">斜体</label>'
+        '<label>矢印の先端<select data-property="headPlacement" data-kinds="arrow">'
+        '<option value="tip">端</option>'
+        '<option value="middle">中央</option>'
+        '</select>'
+        '</label>'
+        '</fieldset>'
+        '<input type="file" data-file="open" accept=".json,application/json" aria-label="全スライドJSON" />'
+        '<input type="file" data-file="image" accept="image/png,image/jpeg,image/webp" aria-label="画像" />'
+        '</div>'),
 }
 # ⬆️ pysaiyanweboo
 
 
-def _phone_html() -> str:
+def phone_toolbar() -> tuple[list, dict[str, str]]:
+    """🧰 The slide editor's toolbar as PySaiyanWeBoo's ``toolbar_html`` data: ``(groups, after)``. Each control of PHONE_TOOLS gets
+    its candidates (🔷 😊 (^^) read from Image Studio's tools, so both pages offer the same; 🎨 ↻ 📥 📤 here, the last two in
+    words and hiding after a pick), and ``after`` places the page's own rows: 📚 layers above the row that acts on the selected one,
+    🗂️ pages under the page row, and the inspector and 📥's file choosers at the end. scripts/build_studio_css.py writes the markup
+    into PSWB_PHONE["tools"] from the pinned PySaiyanWeBoo; --check fails when this data and that markup drift."""
+    import re
     from html import escape
 
-    def control(act: str, emoji: str, word: str, words: str) -> str:
-        label = f'data-ui-word="{escape(word)}" aria-label="{escape(words)}" title="{escape(words)}"'
-        if act == "home":
-            return f'<a class="button" href="../" data-act="{act}" {label}>{emoji}</a>'
-        if act in candidates:                       # 🔷 😊 (^^): the same candidates as Image Studio's tools, read from its markup
-            acts, said = choices.get(act, ("", ""))   # 🔷 📥 📤: a candidate that is an action names it; 😊 (^^) ones are stamped as text
-            more = f' data-acts="{acts}" data-words="{escape(said)}"' if acts else ""
-            more += " data-close" if act in ("import", "export") else ""
-            return f'<button type="button" data-act="{act}" data-candidates="{escape(candidates[act])}"{more} {label}>{emoji}</button>'
-        return f'<button type="button" data-act="{act}" {label}>{emoji}</button>'
-
-    import re
-    candidates = dict(re.findall(r'data-tool="(shape|emoji|kaomoji)"[^>]*data-candidates="([^"]*)"', STUDIO_HTML)) | {
+    faces = dict(re.findall(r'data-tool="(shape|emoji|kaomoji)"[^>]*data-candidates="([^"]*)"', STUDIO_HTML)) | {
         "look": "🎨 🖌 🌗 🅱️ 🔠", "turn": "↻ ↺ ⏹", "import": "JSON 画像", "export": "PPTX JSON PNG SVG"}
-    choices = {"shape": ("rect ellipse triangle arrow", "四角|丸|三角|矢印"),
-               "look": ("fill stroke fade bold font", "塗りを次の色へ|線を次の色へ|不透明度（1 → ¾ → ½ → ¼）|太字|等幅 ⇄ ふつう"),
-               "turn": ("cw ccw upright", "右へ 15°|左へ 15°|まっすぐに戻す"),
-               # 📥 どの形式から？ 📤 どの形式に？ the formats in words; a pick hides the row (data-close)
-               "import": ("open image", "JSON（全スライド。PC 版で保存したものも）|画像（PNG・JPEG・WebP をこのページに）"),
-               "export": ("pptx json png svg", "PPTX（全スライド、PowerPoint で編集できる）|JSON（全スライド、また開ける）|PNG（このページ）|SVG（このページ）"),
-               }
-    files = ('<input type="file" data-file="open" accept=".json,application/json" aria-label="全スライドJSON" />'
-             '<input type="file" data-file="image" accept="image/png,image/jpeg,image/webp" aria-label="画像" />')
+    named = {"shape": ("rect ellipse triangle arrow", "四角|丸|三角|矢印"),
+             "look": ("fill stroke fade bold font", "塗りを次の色へ|線を次の色へ|不透明度（1 → ¾ → ½ → ¼）|太字|等幅 ⇄ ふつう"),
+             "turn": ("cw ccw upright", "右へ 15°|左へ 15°|まっすぐに戻す"),
+             # 📥 どの形式から？ 📤 どの形式に？ the formats in words; a pick hides the row
+             "import": ("open image", "JSON（全スライド。PC 版で保存したものも）|画像（PNG・JPEG・WebP をこのページに）"),
+             "export": ("pptx json png svg", "PPTX（全スライド、PowerPoint で編集できる）|JSON（全スライド、また開ける）|PNG（このページ）|SVG（このページ）")}
+
+    def control(act: str, face: str, word: str, words: str) -> dict:
+        c = {"act": act, "face": face, "word": word, "words": words}
+        if act == "home":
+            c["href"] = "../"
+        if act in faces:
+            acts, said = (named[act][0].split(), named[act][1].split("|")) if act in named else ((), ())
+            c["candidates"] = [{"face": f, **({"act": acts[i], "words": said[i]} if acts else {})} for i, f in enumerate(faces[act].split())]
+            c["close"] = act in ("import", "export")
+        return c
+
+    groups = [(group, [control(*tool) for tool in row]) for group, row in PHONE_TOOLS]
     numbers = (
         ("x", "横の位置", -8192, 8192, "any", ""), ("y", "縦の位置", -8192, 8192, "any", ""),
         ("w", "幅", 1, 8192, "any", ""), ("h", "高さ", 1, 8192, "any", ""),
@@ -4184,21 +4244,20 @@ def _phone_html() -> str:
         ("cell", "モザイクの幅", 1, 512, 1, "image"), ("levels", "色の段階", 2, 256, 1, "image"),
     )
     inspector = ('<fieldset id="phone-inspector" hidden><legend>詳細設定</legend>' + "".join(
-        f'<label>{label}<input type="number" data-property="{key}" data-kinds="{kinds}" min="{lo}" max="{hi}" step="{step}"></label>'
+        f'<label>{escape(label)}<input type="number" data-property="{key}" data-kinds="{kinds}" min="{lo}" max="{hi}" step="{step}"></label>'
         for key, label, lo, hi, step, kinds in numbers)
         + '<label><input type="checkbox" data-property="italic" data-kinds="text">斜体</label>'
         + '<label>矢印の先端<select data-property="headPlacement" data-kinds="arrow">'
           '<option value="tip">端</option><option value="middle">中央</option></select></label></fieldset>')
-    rows = [f'<div class="phone-row" data-ui-group="{group}">' + "".join(control(*tool) for tool in row) + "</div>"
-            for group, row in PHONE_TOOLS]
-    at = [group for group, _row in PHONE_TOOLS].index("file")
-    rows[at] = rows[at].replace("</div>", PSWB_PHONE["labels"] + "</div>")   # 💻 ⇄ 📱 PySaiyanWeBoo's switch, at the end of the more row
-    rows[-1] += inspector
-    rows[-1] += files                                            # 📥's file choosers: no face of their own, and no place in a row
-    # 📚 the page's layers, back to front, sit right above the row that acts on the selected one (PySaiyanWeBoo's current-item mark)
-    rows[3] += '<div id="phone-pages" class="ui-current-items" role="group" aria-label="ページの一覧" hidden></div>'   # 🗂️
-    rows = (rows[0] + '<div id="phone-candidates" role="group" aria-label="候補" hidden></div>' + rows[1]
-            + '<div id="phone-layers" class="ui-current-items" role="group" aria-label="レイヤー（奥から手前）" hidden></div>' + "".join(rows[2:]))
+    files = ('<input type="file" data-file="open" accept=".json,application/json" aria-label="全スライドJSON" />'
+             '<input type="file" data-file="image" accept="image/png,image/jpeg,image/webp" aria-label="画像" />')
+    after = {"adjust": '<div id="phone-layers" class="ui-toolbar-row ui-current-items" role="group" aria-label="レイヤー（奥から手前）" hidden></div>',
+             "pages": '<div id="phone-pages" class="ui-toolbar-row ui-current-items" role="group" aria-label="ページの一覧" hidden></div>',
+             groups[-1][0]: inspector + files}
+    return groups, after
+
+
+def _phone_html() -> str:
     slide = ('<div id="phone-svg" class="phone-svg" data-ui-fill></div>'
              '<div id="phone-pick" class="phone-pick" hidden><span class="phone-grip" data-grip aria-hidden="true">↘</span></div>')
     head = STUDIO_HTML[:STUDIO_HTML.index("</head>")]
@@ -4215,7 +4274,7 @@ def _phone_html() -> str:
             '      <div class="phone-deck"><textarea id="phone-edit" class="phone-edit" hidden aria-label="文字" rows="3" spellcheck="false"></textarea>'
             f'{PSWB_PHONE["pager"]}'
             '<p id="phone-status" class="phone-status" role="status"></p>'
-            f'<div class="phone-tools" role="toolbar" aria-label="道具">{rows}</div></div>\n'
+            f'<div class="phone-tools">{PSWB_PHONE.get("tools", "")}</div></div>\n'
             "    </main>\n  </body>\n</html>\n")
 
 

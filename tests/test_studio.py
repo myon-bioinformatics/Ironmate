@@ -1105,7 +1105,12 @@ def test_phone_page_is_emoji_only_and_every_control_is_bound():
     short = {i['data-act']: i.get('data-ui-word') for i in parser.items if 'data-act' in i}
     assert short == {act: word for _group, row in b.PHONE_TOOLS for act, _e, word, _w in row} and all(short.values()), short
     assert all(len(word) <= 12 for word in short.values()), short                                # short: it replaces a face
-    assert re.findall(r'class="phone-row" data-ui-group="(\w+)"', html) == ['create', 'adjust', 'update', 'pages', 'file', 'detail']
+    assert re.findall(r'class="ui-toolbar-row" data-ui-group="(\w+)"', html) == ['create', 'adjust', 'update', 'pages', 'file', 'detail']
+    # 🧰 the toolbar is PySaiyanWeBoo's (toolbar_html from phone_toolbar's data), and bindToolbar runs it
+    groups, after = b.phone_toolbar()
+    assert b.PSWB_PHONE['tools'] in html and 'id="phone-toolbar"' in b.PSWB_PHONE['tools'] and 'id="phone-candidates"' in b.PSWB_PHONE['tools']
+    assert [g for g, _ in groups] == [g for g, _ in b.PHONE_TOOLS] and set(after) == {'adjust', 'pages', 'detail'}
+    assert 'PySaiyanWeBoo.bindToolbar($("phone-toolbar")' in b.STUDIO_JS and 'function offer(' not in b.STUDIO_JS
     assert b.PSWB_PHONE['labels'] in html and html.index(b.PSWB_PHONE['labels']) > html.index('data-ui-group="file"')
     assert 'id="labels-switch" data-ui-labels-switch' in b.PSWB_PHONE['labels']
     assert "PySaiyanWeBoo.bindLabels();" in b.STUDIO_JS
@@ -1118,19 +1123,22 @@ def test_phone_page_is_emoji_only_and_every_control_is_bound():
     assert b.PSWB_PHONE['pager'] in html and 'data-ui-pager="arrows"' in html and 'data-ui-pager-keys' in html   # ⬅️ 1/N ➡️ first, ← → too
     assert b.PSWB_PHONE['stage'].split('{slide}')[0] + '<div id="phone-svg" class="phone-svg" data-ui-fill>' in html
     assert ' style="' not in html                                                                 # the CSP allows no inline style
-    assert "globalThis.PySaiyanWeBoo = { pagerSet, pagerIndex, bindLabels }" in b.STUDIO_JS and not re.search(r"^\s*(import|export) ", b.STUDIO_JS, re.M)  # a classic script
+    assert "globalThis.PySaiyanWeBoo = { pagerSet, pagerIndex, bindLabels, bindToolbar }" in b.STUDIO_JS and not re.search(r"^\s*(import|export) ", b.STUDIO_JS, re.M)  # a classic script
     script = b.STUDIO_JS[b.STUDIO_JS.index('/* Phone slides UI'):]
+    opens = set(re.findall(r'data-candidates="[^"]*" data-act="([a-z-]+)"', html))       # bindToolbar opens these itself
+    assert opens == {'shape', 'emoji', 'kaomoji', 'look', 'turn', 'import', 'export'}, opens
     for act in acts:
-        if act in ('studio', 'home'):
-            continue  # plain links
+        if act in ('studio', 'home') or act in opens:
+            continue  # plain links, and buttons whose candidates the toolbar opens
         assert re.search(rf'(^|[\s{{,])("{re.escape(act)}"|{re.escape(act)})(\(|:)', script, re.M), act  # acts.x / files.x
     assert 1 in b.PHONE_TEXT['scale'] and b.PHONE_TEXT['size'] % 8 == 0
     # 🔷 💾: a candidate that is an action names it in the markup, and the script has it; 😊 (^^) candidates are only stamped
-    named = dict(re.findall(r'data-act="([a-z]+)" data-candidates="[^"]*" data-acts="([a-z ]+)"', html))
+    named = dict((act, acts_) for acts_, act in re.findall(r'data-acts="([a-z ]+)" data-words="[^"]*" data-candidates="[^"]*" data-act="([a-z]+)"', html))
     assert named == {'shape': 'rect ellipse triangle arrow', 'look': 'fill stroke fade bold font', 'turn': 'cw ccw upright',
                      'import': 'open image', 'export': 'pptx json png svg'}, named
     # 📥 どの形式から？ 📤 どの形式に？ the formats are candidates in words, and a pick hides the row (data-close)
-    assert re.findall(r'data-act="(\w+)" data-candidates="([^"]*)"[^>]*? data-close', html) == [('import', 'JSON 画像'), ('export', 'PPTX JSON PNG SVG')]
+    assert [(a, c) for c, a in re.findall(r'data-close data-acts="[^"]*" data-words="[^"]*" data-candidates="([^"]*)" data-act="(\w+)"', html)] == [
+        ('import', 'JSON 画像'), ('export', 'PPTX JSON PNG SVG')]
     assert '<select data-format' not in html
     for act in ' '.join(named.values()).split():
         assert re.search(rf'(^|[\s{{,])("{act}"|{act})(\(|:)', script, re.M), act

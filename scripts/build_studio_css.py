@@ -54,13 +54,23 @@ def bundles() -> dict[Path, dict]:
     return {STUDIO / "style.css": {"theme": THEME, "extra_css": "\n".join([*map(pysaiyanweboo.css_source, sheets), SLIDE_EDITOR_CSS])}}
 
 
-PSWB = ("stage", "pager", "labels-switch")  # 🧩 the PySaiyanWeBoo components the 📱 page uses
+PSWB = ("stage", "pager", "labels-switch", "toolbar")  # 🧩 the PySaiyanWeBoo components the 📱 page uses
 
 
 def classic_script(modules: str) -> str:
     script = re.sub(r"^export (?=(?:async )?function |const )", "", modules, flags=re.M)
     assert not re.search(r"^\s*(import|export)\b", script, flags=re.M), "a module PySaiyanWeBoo ships now imports or exports otherwise"
     return script
+
+
+def toolbar(pysaiyanweboo) -> str:
+    """🧰 The 📱 page's toolbar: its data (``studio_bundle.phone_toolbar``) as PySaiyanWeBoo's ``toolbar_html``, with 💻 ⇄ 📱 at the end
+    of the file row."""
+    sys.path.insert(0, str(ROOT))
+    from ironlib import studio_bundle
+    groups, after = studio_bundle.phone_toolbar()
+    return pysaiyanweboo.toolbar_html(groups, label="道具", id="phone-toolbar", candidates_id="phone-candidates",
+                                      inside={"file": pysaiyanweboo.labels_switch_html(id="labels-switch")}, after=after)
 
 
 def pswb_parts() -> dict[str, str]:
@@ -75,8 +85,9 @@ def pswb_parts() -> dict[str, str]:
     return {"stage": pysaiyanweboo.stage_html("{slide}", label="スライド", id="phone-stage"),
             "pager": pysaiyanweboo.pager_html(1, label="ページ移動", words=words, keys=True, id="phone-pager"),
             "labels": pysaiyanweboo.labels_switch_html(id="labels-switch"),
+            "tools": toolbar(pysaiyanweboo),
             "js": (f"/* ⬇️ pysaiyanweboo {commit[:8]} ({', '.join(PSWB)}): written by {NOTE} from the pinned commit; --check fails when it drifts */\n"
-                   f"(() => {{\n{classic}globalThis.PySaiyanWeBoo = {{ pagerSet, pagerIndex, bindLabels }};\n}})();\n/* ⬆️ pysaiyanweboo */\n")}
+                   f"(() => {{\n{classic}globalThis.PySaiyanWeBoo = {{ pagerSet, pagerIndex, bindLabels, bindToolbar }};\n}})();\n/* ⬆️ pysaiyanweboo */\n")}
 
 
 def replace_region(src: str, begin: str, end: str, body: str) -> str:
@@ -105,7 +116,7 @@ def with_parts(src: str) -> str:
     lines = lambda html: "".join(f"\n        {part!r}" for part in re.split(r"(?<=>)(?=<)", html))
     block = (f"# ⬇️ pysaiyanweboo: {NOTE} writes PSWB_PHONE from the pinned commit (--check fails when it drifts)\n"
              f"PSWB_PHONE = {{\n    \"stage\": ({lines(parts['stage'])}),\n    \"pager\": ({lines(parts['pager'])}),\n"
-             f"    \"labels\": ({lines(parts['labels'])}),\n}}\n# ⬆️ pysaiyanweboo\n")
+             f"    \"labels\": ({lines(parts['labels'])}),\n    \"tools\": ({lines(parts['tools'])}),\n}}\n# ⬆️ pysaiyanweboo\n")
     src = replace_region(src, "# ⬇️ pysaiyanweboo", "# ⬆️ pysaiyanweboo\n", block)
     src = replace_region(src, "/* ⬇️ pysaiyanweboo", "/* ⬆️ pysaiyanweboo */\n", parts["js"])
     begin, end = "  /* PSWB heatmap-color.js", "  /* End PSWB heatmap-color.js */\n"

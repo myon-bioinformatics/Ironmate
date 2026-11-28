@@ -358,7 +358,7 @@ STUDIO_HTML = r"""<!doctype html>
 </html>
 """
 
-STYLE_CSS = r"""/* web-ui-bundle/1 commit=ed32bdf8174591fa7c79c5d76acb5fd1e4369743 sha256=1050864a3a1a27473139fe3db824ea5917975b3f4c803c5383fafb276aeea663 scripts/build_studio_css.py*/
+STYLE_CSS = r"""/* web-ui-bundle/1 commit=e4bb709a3573ad22f0c27a447ccb59b762e2a8da sha256=4a8c15c1e6ef8c2d787a68d450e409f1fbc0f25086f8426ff6075e8f79476ac4 scripts/build_studio_css.py*/
 @layer base,components,theme;
 /* css/tokens.css */
 :root{--ui-bg:#0d1117;--ui-panel:#101820;--ui-fg:#d1f7c4;--ui-muted:#8b949e;--ui-border:#58a6ff;--ui-accent:#7ee787;--ui-danger:#cf222e;--ui-radius:0;--ui-text:16px;--ui-space:1rem;--ui-max:960px;--ui-font:Meiryo,メイリオ,sans-serif;--ui-font-mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
@@ -384,21 +384,12 @@ body[data-ui-labels=words] [data-ui-word]{font-size:0}[data-ui-labels=words] [da
 
 /* studio layout */
 body:where([data-page~="studio"]){font-size:13px;line-height:1.5;margin:0}
-:where([data-page~="studio"]) header{min-height:76px;background:var(--ui-panel);color:var(--ui-fg);box-shadow:inset 0 -1px var(--ui-border);padding:18px 26px;display:flex;align-items:center;justify-content:space-between;gap:20px}
-:where([data-page~="studio"]) .brand{display:flex;align-items:center;gap:12px;font-weight:800;letter-spacing:2px;font-size:19px;white-space:nowrap}
-:where([data-page~="studio"]) .brand span{font-weight:400;font-size:10px;display:block;letter-spacing:3px;margin:5px 0 0;color:var(--ui-muted)}
-:where([data-page~="studio"]) .brand img{flex:none;image-rendering:pixelated}
-:where([data-page~="studio"]) .top-actions{display:flex;flex-wrap:wrap;gap:7px}
-:where([data-page~="studio"]) .top-actions summary{cursor:pointer;padding:7px}
-:where([data-page~="studio"]) .top-actions details a{color:var(--ui-accent);align-self:center;padding:7px 3px;text-underline-offset:3px}
 :where([data-page~="studio"]) button:where(:not(.ui-toolbar-row>*)),:where([data-page~="studio"]) .button{display:inline-flex;align-items:center;justify-content:center;gap:5px;text-decoration:none;min-height:38px;padding:10px 12px}
 :where([data-page~="studio"]) .button{font:inherit;cursor:pointer;background:var(--ui-panel);color:var(--ui-fg);border:1px solid var(--ui-border);border-radius:var(--ui-radius)}
 :where([data-page~="studio"]) button:hover,:where([data-page~="studio"]) .button:hover{border-color:var(--ui-accent);background:color-mix(in srgb,var(--ui-accent) 12%,var(--ui-panel))}
 :where([data-page~="studio"]) .primary{background:var(--ui-accent);border-color:var(--ui-accent);color:var(--ui-bg);font-weight:700}
-:where([data-page~="studio"]) header button,:where([data-page~="studio"]) header .button,:where([data-page~="studio"]) header select{border-color:var(--ui-border);background:var(--ui-bg);color:var(--ui-fg)}
-:where([data-page~="studio"]) header .primary{background:var(--ui-accent);color:var(--ui-bg);border-color:var(--ui-accent)}
 :where([data-page~="studio"]) input[type=file]{display:none}
-:where([data-page~="studio"]) main{display:grid;grid-template-columns:250px minmax(0,1fr) 238px;min-height:calc(100vh - 76px)}
+:where([data-page~="studio"]) main{display:grid;grid-template-columns:250px minmax(0,1fr) 238px;min-height:100vh}
 :where([data-page~="studio"]) aside{padding:24px 20px;background:var(--ui-panel)}
 :where([data-page~="studio"]) aside.tools{border-right:1px solid var(--ui-border)}
 :where([data-page~="studio"]) aside.inspector{border-left:1px solid var(--ui-border)}
@@ -458,7 +449,7 @@ body:where([data-page~="studio"]){font-size:13px;line-height:1.5;margin:0}
 :where([data-page~="studio"]) #base64-dialog p{font-size:12px;line-height:1.8}
 @media(min-width:1600px){:where([data-page~="studio"]) .workspace{padding:44px}}
 @media(max-width:1150px){:where([data-page~="studio"]) main{grid-template-columns:210px minmax(0,1fr)}:where([data-page~="studio"]) .inspector{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px}:where([data-page~="studio"]) .inspector>.eyebrow{display:none}:where([data-page~="studio"]) .inspector>.section{margin:0;border:0;padding:0}:where([data-page~="studio"]) .workspace{padding:22px}}
-@media(max-width:680px){:where([data-page~="studio"]) header{padding:14px;display:block}:where([data-page~="studio"]) .top-actions{margin-top:15px}:where([data-page~="studio"]) .top-actions button,:where([data-page~="studio"]) .top-actions .button{padding:7px;font-size:11px}:where([data-page~="studio"]) main{display:flex;flex-direction:column}:where([data-page~="studio"]) .workspace{order:-1;padding:18px}:where([data-page~="studio"]) .canvas-heading h2{font-size:17px}:where([data-page~="studio"]) .canvas-heading{margin-bottom:16px}:where([data-page~="studio"]) .canvas-footer{display:block}:where([data-page~="studio"]) .canvas-footer span{display:block;margin:5px 0}:where([data-page~="studio"]) .tools{display:block}:where([data-page~="studio"]) .tools h1,:where([data-page~="studio"]) .tools>.hint{display:none}:where([data-page~="studio"]) .tools>.ui-toolbar{margin:8px 0}:where([data-page~="studio"]) .inspector{display:block}:where([data-page~="studio"]) .inspector>.section{margin-top:20px}:where([data-page~="studio"]) .canvas-settings{margin-top:20px;padding-top:15px}:where([data-page~="studio"]) .board{width:100%}:where([data-page~="studio"]) aside{padding:18px}:where([data-page~="studio"]) .tools>.section{margin-top:15px}}
+@media(max-width:680px){:where([data-page~="studio"]) main{display:flex;flex-direction:column}:where([data-page~="studio"]) .workspace{order:-1;padding:18px}:where([data-page~="studio"]) .canvas-heading h2{font-size:17px}:where([data-page~="studio"]) .canvas-heading{margin-bottom:16px}:where([data-page~="studio"]) .canvas-footer{display:block}:where([data-page~="studio"]) .canvas-footer span{display:block;margin:5px 0}:where([data-page~="studio"]) .tools{display:block}:where([data-page~="studio"]) .tools h1,:where([data-page~="studio"]) .tools>.hint{display:none}:where([data-page~="studio"]) .tools>.ui-toolbar{margin:8px 0}:where([data-page~="studio"]) .inspector{display:block}:where([data-page~="studio"]) .inspector>.section{margin-top:20px}:where([data-page~="studio"]) .canvas-settings{margin-top:20px;padding-top:15px}:where([data-page~="studio"]) .board{width:100%}:where([data-page~="studio"]) aside{padding:18px}:where([data-page~="studio"]) .tools>.section{margin-top:15px}}
 
 /* tools page layout */
 body:where([data-page~="tools"]){font-size:15px;line-height:1.65;margin:0}
@@ -569,7 +560,7 @@ const StudioCore = (function (root) {
   const fail = (message) => {
     throw new Error(message);
   };
-  /* PSWB heatmap-color.js @ ed32bdf8174591fa7c79c5d76acb5fd1e4369743. Generated by scripts/build_studio_css.py. */
+  /* PSWB heatmap-color.js @ e4bb709a3573ad22f0c27a447ccb59b762e2a8da. Generated by scripts/build_studio_css.py. */
   const heatmapDefaultPalette=["#440154", "#3B528B", "#21918C", "#5EC962", "#FDE725"];
   function heatmapColor(v,lo,hi,levels=0,palette=heatmapDefaultPalette){
    if(!Array.isArray(palette)||palette.length<2||palette.length>256||
@@ -1168,7 +1159,7 @@ const StudioCore = (function (root) {
 /* Browser/Node shared operations. Pixel coordinates follow grid_tools.py. */
 const IronmateTools = (function (root) {
   "use strict";
-  /* PSWB pixel-grid.js @ ed32bdf8174591fa7c79c5d76acb5fd1e4369743. Generated by scripts/build_studio_css.py. */
+  /* PSWB pixel-grid.js @ e4bb709a3573ad22f0c27a447ccb59b762e2a8da. Generated by scripts/build_studio_css.py. */
   /* web-ui pixel-grid: a dot-art grid checked, resized, drawn as SVG and described for a PNG; Base64 length; PNG chunks. pysaiyanweboo.py (pixel_grid_*, base64_length) is the reference; this must agree. */
   const PIXEL_GRID_SCHEMA="ironmate-pixel-grid/1";
   function pixelGridValidate(value){
@@ -1234,7 +1225,7 @@ const IronmateSlides = (function (root) {
   "use strict";
   const C = StudioCore;
   const shell = IronmateSlideShell;
-  /* PSWB slide-deck.js @ ed32bdf8174591fa7c79c5d76acb5fd1e4369743. Generated by scripts/build_studio_css.py. */
+  /* PSWB slide-deck.js @ e4bb709a3573ad22f0c27a447ccb59b762e2a8da. Generated by scripts/build_studio_css.py. */
   /* web-ui slide-deck: several scenes of the image studio as one deck (checked, kept as JSON, pages added, copied, deleted and moved) and written as a PPTX in the page: text, rectangles, ellipses, triangles and arrows stay editable, anything else is a picture. slideDeck(core, shell): core is js/imagestudio.js (or the same functions), shell the empty package the slides go into (part name to text). pysaiyanweboo.py (slide_deck_*) is the reference; this must agree. */
   function slideDeck(C, shell) {
     const SCHEMA = "ironmate-slide-deck/1",
@@ -3223,7 +3214,7 @@ if (typeof document !== "undefined" && (document.getElementById("pixel-editor") 
   });
 })();
 
-/* ⬇️ pysaiyanweboo ed32bdf8 (stage, pager, labels-switch, toolbar): written by scripts/build_studio_css.py from the pinned commit; --check fails when it drifts */
+/* ⬇️ pysaiyanweboo e4bb709a (stage, pager, labels-switch, toolbar): written by scripts/build_studio_css.py from the pinned commit; --check fails when it drifts */
 (() => {
 /* A rotary dial over a range input (dial_html): drag around its centre, turn the wheel, or use the range's own keys. Value and events stay the input's. */
 function dialAngle(value,min,max){const span=max-min;const t=span>0?(Number(value)-min)/span:0;return -135+270*Math.min(1,Math.max(0,t))}

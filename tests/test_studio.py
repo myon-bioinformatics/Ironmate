@@ -1089,12 +1089,14 @@ def test_studios_carry_no_header_declare_their_rows_and_link_each_other():
 def test_one_studio_toolbar_table_gives_each_act_one_face_and_one_meaning():
     """🧰 studio_toolbar(page) is both studios' toolbars from one table: an act listed on both pages has the same face, word and tip
     there (and the same candidates, but for 📥 📤, whose formats are each page's), no face stands for two acts, every word is short
-    enough to replace its face, and the rows are make / adjust / change (/ pages) / file (/ detail)."""
+    enough to replace its face, and the rows are make / ↩️ / change (/ order / pages) / file (/ detail), at most 6 a row (a phone's 390 px).
+    The slide editor has every layer act Image Studio has (ONE-EDITOR, #301)."""
     from ironlib import studio_bundle as b
     seen, faces = {}, {}
-    for page, rows in (('slides', ['create', 'adjust', 'update', 'pages', 'file', 'detail']), ('image', ['create', 'adjust', 'update', 'file'])):
+    for page, rows in (('slides', ['create', 'adjust', 'update', 'order', 'pages', 'file', 'detail']), ('image', ['create', 'adjust', 'update', 'file'])):
         groups, _inside, _after = b.studio_toolbar(page)
         assert [g for g, _ in groups] == rows
+        assert page == 'image' or all(len(row) <= 6 for _g, row in groups), [(g, len(row)) for g, row in groups]
         for _g, row in groups:
             for c in row:
                 same = {k: c[k] for k in ('face', 'word', 'words')} | ({} if c['act'] in ('import', 'export') else {'candidates': c['candidates']})
@@ -1102,6 +1104,8 @@ def test_one_studio_toolbar_table_gives_each_act_one_face_and_one_meaning():
                 assert faces.setdefault(c['face'], c['act']) == c['act'], (c['face'], c['act'], faces[c['face']])
                 assert 0 < len(c['word']) <= 12 and c['close'] == (c['act'] in ('import', 'export')), c
     assert {'forward', 'backward', 'front', 'back', 'duplicate', 'slide-copy'} <= set(seen)          # ⬆️ ⬇️ one step, ⏫ ⏬ all the way; ⧉ 📑
+    on = lambda page: {c['act'] for _g, row in b.studio_toolbar(page)[0] for c in row}
+    assert {'undo-2', 'undo', 'redo', 'redo-2', 'duplicate', 'forward', 'backward', 'delete'} <= on('slides')   # ONE-EDITOR P1
     assert not hasattr(b, 'PHONE_TOOLS') and not hasattr(b, 'phone_toolbar') and not hasattr(b, 'image_toolbar')
     shared = lambda page: [k['face'] for _g, row in b.studio_toolbar(page)[0] for c in row if c['act'] == 'import' for k in c['candidates']]
     assert [f for f in shared('image') if f in shared('slides')] == shared('slides') == ['画像', 'カメラ', 'JSON']   # 📥 the same order on both
@@ -1175,10 +1179,10 @@ def test_slides_page_is_emoji_only_and_every_control_is_bound():
     short = {i['data-act']: i.get('data-ui-word') for i in parser.items if 'data-act' in i}
     assert short == {c['act']: c['word'] for _group, row in groups for c in row} and all(short.values()), short
     assert all(len(word) <= 12 for word in short.values()), short                                # short: it replaces a face
-    assert re.findall(r'class="ui-toolbar-row" data-ui-group="(\w+)"', html) == ['create', 'adjust', 'update', 'pages', 'file', 'detail']
+    assert re.findall(r'class="ui-toolbar-row" data-ui-group="(\w+)"', html) == ['create', 'adjust', 'update', 'order', 'pages', 'file', 'detail']
     # 🧰 the toolbar is PySaiyanWeBoo's (toolbar_html from studio_toolbar("slides")), and bindToolbar runs it
     parts = b.PSWB_PARTS['slides-toolbar']
-    assert parts in html and 'id="slides-toolbar"' in parts and 'id="slides-candidates"' in parts and set(after) == {'adjust', 'pages', 'detail'}
+    assert parts in html and 'id="slides-toolbar"' in parts and 'id="slides-candidates"' in parts and set(after) == {'order', 'pages', 'detail'}
     assert 'PySaiyanWeBoo.bindToolbar($("slides-toolbar"), press)' in b.STUDIO_JS and 'function offer(' not in b.STUDIO_JS
     assert 'act: (name, value) => press(name, value)' in b.STUDIO_JS and 'act: (name, value) => STUDIO_ACTS[name]?.(value)' in b.STUDIO_JS   # 🧰 both pages' hook
     assert html.count('id="labels-switch" data-ui-labels-switch') == 1 and html.index('id="labels-switch"') > html.index('data-ui-group="file"')

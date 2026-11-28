@@ -186,7 +186,22 @@ const url =
     await act("back");
     assert.deepEqual(await layerFaces(), ["(・∀", "🌱", "🕒", "△"]);
     assert.equal(await mobile.isDisabled('[data-act="back"]'), true);
-    for (let i = 0; i < 4; i++) await act("undo");
+    assert.equal(await mobile.isDisabled('[data-act="backward"]'), true);
+    // ⬆️ ⬇️ one step, ⧉ a copy in front (shifted 32 on 1280), ⏪ ⏩ two steps at once
+    await act("forward");
+    assert.deepEqual(await layerFaces(), ["🌱", "(・∀", "🕒", "△"]);
+    await act("backward");
+    await act("duplicate");
+    extra = (await state()).deck.slides[2].layers;
+    assert.deepEqual(await layerFaces(), ["(・∀", "🌱", "🕒", "△", "(・∀"]);
+    assert.ok(extra[4].id !== kao.id && extra[4].x === extra[0].x + 32 && extra[4].y === extra[0].y + 32 && extra[4].bold === true
+      && (await state()).selected === extra[4].id, JSON.stringify(extra));
+    await act("undo-2");                                                                        // ⧉ and ⬇️
+    assert.deepEqual(await layerFaces(), ["🌱", "(・∀", "🕒", "△"]);
+    await act("redo-2");
+    assert.equal((await state()).deck.slides[2].layers.length, 5);
+    await act("undo-2");
+    for (let i = 0; i < 5; i++) await act("undo");                                             // ⬆️ ⏬ ⏫ 🅱️ 🎨
     extra = (await state()).deck.slides[2].layers;
     assert.ok(extra[1].id === kao.id && extra[1].bold === false && extra[3].fill === "#18A7A1", JSON.stringify(extra));
     // ✏️ a clock's time is edited like words: 14:30, and what is not a time leaves it as it was
@@ -425,7 +440,7 @@ print('📱 phone: 2 slides, native text kept')
       return { content: st.content, size: st.fontSize, line: st.borderTopStyle }; }, [sel, pseudo]);
     assert.equal(await wide.evaluate(() => document.body.dataset.uiLabels), "emoji");
     assert.equal((await look('[data-ui-group="create"]', null)).line, "none");
-    for (const g of ["adjust", "update", "pages", "file"]) assert.equal((await look(`[data-ui-group="${g}"]`, null)).line, "dashed", g);
+    for (const g of ["adjust", "update", "order", "pages", "file", "detail"]) assert.equal((await look(`[data-ui-group="${g}"]`, null)).line, "dashed", g);
     assert.equal((await look('[data-act="export"]', "::after")).content, "none");
     await wide.click("[data-ui-labels-switch]");
     assert.equal(await wide.evaluate(() => document.body.dataset.uiLabels), "words");

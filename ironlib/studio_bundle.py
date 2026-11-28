@@ -3429,9 +3429,10 @@ function render() {
       transform: `rotate(${l.rotation}deg)` });
   layerList(s);
   pageList();
-  const off = { edit: !["text", "clock"].includes(l?.kind), look: !l, turn: !l, inspect: !l,
-    front: !l || s.layers.at(-1) === l, back: !l || s.layers[0] === l,
-    delete: !l, undo: !past.length, redo: !future.length,
+  const top = !l || s.layers.at(-1) === l, bottom = !l || s.layers[0] === l,
+    off = { edit: !["text", "clock"].includes(l?.kind), look: !l, turn: !l, inspect: !l, duplicate: !l || s.layers.length >= 100,
+    forward: top, front: top, backward: bottom, back: bottom,
+    delete: !l, undo: !past.length, "undo-2": !past.length, redo: !future.length, "redo-2": !future.length,
     "slide-delete": deck.slides.length < 2, smaller: level === 0, bigger: level === scales.length - 1, reset: level === plain };
   for (const [act, disabled] of Object.entries(off)) document.querySelector(`[data-act="${act}"]`).disabled = disabled;
 }
@@ -3714,6 +3715,25 @@ function restyle(fn) {
   const l = picked();
   if (l) change(() => fn(l));
 }
+function order(to) {
+  // ⬆️ ⬇️ ひとつ、⏫ ⏬ いちばん端まで: 選んだものを 📚 の to(今の位置, 手前の端) へ（奥が 0）
+  const l = picked();
+  if (l) change(() => {
+    const s = slide(), rest = s.layers.filter((x) => x !== l), i = s.layers.indexOf(l);
+    rest.splice(Math.max(0, Math.min(rest.length, to(i, rest.length))), 0, l);
+    s.layers = rest;
+  });
+}
+function travel(from, to, steps) {
+  // ↩️ ↪️ ひとつ、⏪ ⏩ ふたつ（端で止まる）
+  if (!from.length) return;
+  for (let n = 0; n < steps && from.length; n++) {
+    to.push(state());
+    restore(from.pop());
+  }
+  selected = null;
+  keep();
+}
 function scaleText(next) {
   // 🔽 🔄 🔼 すべてのページの文字を同じ倍率で（タイトルと本文の比は保つ）
   if (!scales[next] || next === level) return;
@@ -3783,34 +3803,22 @@ const acts = {
   pages() {
     pagesOpen = !pagesOpen; // 🗂️ 見るためのもの: ↩️ にも資料にも入らない
   },
-  front: () => change(() => {
-    const s = slide(),
-      l = picked();
-    s.layers = [...s.layers.filter((x) => x !== l), l];
-  }),
-  back: () => change(() => {
-    const s = slide(),
-      l = picked();
-    s.layers = [l, ...s.layers.filter((x) => x !== l)];
-  }),
+  duplicate: () => record(place((s) => {
+    const l = C.clone(picked()), step = s.width / 40; // ⧉ 少しずらして手前に（1280 なら 32）
+    return Object.assign(l, { id: uid(l.kind), x: l.x + step, y: l.y + step });
+  })),
+  forward: () => order((i) => i + 1),
+  backward: () => order((i) => i - 1),
+  front: () => order((i, last) => last),
+  back: () => order(() => 0),
   delete: () => change(() => {
     slide().layers = slide().layers.filter((l) => l.id !== selected);
     selected = null;
   }),
-  undo() {
-    if (!past.length) return;
-    future.push(state());
-    restore(past.pop());
-    selected = null;
-    keep();
-  },
-  redo() {
-    if (!future.length) return;
-    past.push(state());
-    restore(future.pop());
-    selected = null;
-    keep();
-  },
+  undo: () => travel(past, future, 1),
+  "undo-2": () => travel(past, future, 2),
+  redo: () => travel(future, past, 1),
+  "redo-2": () => travel(future, past, 2),
   smaller: () => scaleText(level - 1),
   reset: () => scaleText(plain),
   bigger: () => scaleText(level + 1),
@@ -3994,21 +4002,25 @@ PSWB_PARTS = {
         '<div class="ui-toolbar-row" data-ui-candidates id="slides-candidates" role="group" aria-label="候補" hidden>'
         '</div>'
         '<div class="ui-toolbar-row" data-ui-group="adjust">'
-        '<button type="button" data-act="smaller" data-ui-word="小さく" aria-label="文字をすべて小さく" title="文字をすべて小さく">🔽</button>'
-        '<button type="button" data-act="reset" data-ui-word="元の大きさ" aria-label="文字をすべて元の大きさに" title="文字をすべて元の大きさに">🔄</button>'
-        '<button type="button" data-act="bigger" data-ui-word="大きく" aria-label="文字をすべて大きく" title="文字をすべて大きく">🔼</button>'
+        '<button type="button" data-act="undo-2" data-ui-word="2つ戻す" aria-label="2つ戻す" title="2つ戻す">⏪</button>'
         '<button type="button" data-act="undo" data-ui-word="戻す" aria-label="戻す" title="戻す">↩️</button>'
         '<button type="button" data-act="redo" data-ui-word="やり直す" aria-label="やり直す" title="やり直す">↪️</button>'
-        '</div>'
-        '<div id="slides-layers" class="ui-toolbar-row ui-current-items" role="group" aria-label="レイヤー（奥から手前）" hidden>'
+        '<button type="button" data-act="redo-2" data-ui-word="2つやり直す" aria-label="2つやり直す" title="2つやり直す">⏩</button>'
         '</div>'
         '<div class="ui-toolbar-row" data-ui-group="update">'
         '<button type="button" data-act="edit" data-ui-word="編集" aria-label="選んだ文字・時計を編集（選んだものをもう一度タップしても編集。時計は 14:30 のように）" title="選んだ文字・時計を編集（選んだものをもう一度タップしても編集。時計は 14:30 のように）">✏️</button>'
         '<button type="button" data-acts="fill stroke fade bold font" data-words="塗りを次の色へ|線を次の色へ|不透明度（1 → ¾ → ½ → ¼）|太字|等幅 ⇄ ふつう" data-candidates="🎨 🖌 🌗 🅱️ 🔠" data-act="look" data-ui-word="見た目" aria-label="選んだものの見た目（塗り・線の色・不透明度・太字・等幅）" title="選んだものの見た目（塗り・線の色・不透明度・太字・等幅）">🎨</button>'
         '<button type="button" data-acts="cw ccw upright" data-words="右へ 15°|左へ 15°|まっすぐに戻す" data-candidates="↻ ↺ ⏹" data-act="turn" data-ui-word="回転" aria-label="選んだものを回す" title="選んだものを回す">↻</button>'
+        '<button type="button" data-act="duplicate" data-ui-word="複製" aria-label="選んだものを複製" title="選んだものを複製">⧉</button>'
+        '<button type="button" data-act="delete" data-ui-word="削除" aria-label="選んだものを削除" title="選んだものを削除">🗑️</button>'
+        '</div>'
+        '<div class="ui-toolbar-row" data-ui-group="order">'
+        '<button type="button" data-act="forward" data-ui-word="前へ" aria-label="選んだものをひとつ手前へ" title="選んだものをひとつ手前へ">⬆️</button>'
+        '<button type="button" data-act="backward" data-ui-word="後ろへ" aria-label="選んだものをひとつ奥へ" title="選んだものをひとつ奥へ">⬇️</button>'
         '<button type="button" data-act="front" data-ui-word="手前へ" aria-label="選んだものをいちばん手前へ" title="選んだものをいちばん手前へ">⏫</button>'
         '<button type="button" data-act="back" data-ui-word="奥へ" aria-label="選んだものをいちばん奥へ" title="選んだものをいちばん奥へ">⏬</button>'
-        '<button type="button" data-act="delete" data-ui-word="削除" aria-label="選んだものを削除" title="選んだものを削除">🗑️</button>'
+        '</div>'
+        '<div id="slides-layers" class="ui-toolbar-row ui-current-items" role="group" aria-label="レイヤー（奥から手前）" hidden>'
         '</div>'
         '<div class="ui-toolbar-row" data-ui-group="pages">'
         '<button type="button" data-act="slide-add" data-ui-word="ページ追加" aria-label="白紙のページを追加" title="白紙のページを追加">➕📄</button>'
@@ -4026,6 +4038,9 @@ PSWB_PARTS = {
         '<button type="button" class="ui-button" id="labels-switch" data-ui-labels-switch data-ui-word="📱 To iconic" aria-pressed="false" aria-label="💻 To textual ⇄ 📱 To iconic" title="💻 To textual ⇄ 📱 To iconic">💻</button>'
         '</div>'
         '<div class="ui-toolbar-row" data-ui-group="detail">'
+        '<button type="button" data-act="smaller" data-ui-word="小さく" aria-label="文字をすべて小さく" title="文字をすべて小さく">🔽</button>'
+        '<button type="button" data-act="reset" data-ui-word="元の大きさ" aria-label="文字をすべて元の大きさに" title="文字をすべて元の大きさに">🔄</button>'
+        '<button type="button" data-act="bigger" data-ui-word="大きく" aria-label="文字をすべて大きく" title="文字をすべて大きく">🔼</button>'
         '<button type="button" data-act="inspect" data-ui-word="詳細" aria-label="選んだものの詳細（位置・大きさ・種類別の設定）" title="選んだものの詳細（位置・大きさ・種類別の設定）">🎛️</button>'
         '<button type="button" data-act="grid" data-ui-word="4枚表示" aria-label="4枚表示（その場で編集）" title="4枚表示（その場で編集）">⊞</button>'
         '</div>'
@@ -4120,8 +4135,8 @@ def studio_toolbar(page: str) -> tuple[list, dict[str, str], dict[str, str]]:
     """🧰 Both studios' toolbars as PySaiyanWeBoo's ``toolbar_html`` data, ``(groups, inside, after)``, from one table: an act has one
     face, one word (💻 To textual) and one tip wherever it is listed, so a face never means two things (⬆️ ⬇️ one step, ⏫ ⏬ all the way;
     ⧉ a copy of the selected, 📑 of the page). ``page`` is "slides" (the one slide editor) or "image" (Image Studio) and picks the rows:
-    make / adjust / change (/ pages) / file (/ detail). 🔷 😊 (^^) 🎨 ↻ open candidates under their row; 📥 どの形式から？ 📤 どの形式に？
-    name each page's formats in words and hide after a pick (Image Studio's are the keys a host's header sends, ``image_studio.host_rows``).
+    make / ↩️ / change (/ order / pages) / file (/ detail). 🔷 😊 (^^) 🎨 ↻ open candidates under their row; 📥 どの形式から？ 📤 どの形式に？
+    name each page's formats in words and hide after a pick (a host's header rows are ``studio_rows``).
     A format read from a file (📥 画像 カメラ JSON, and Image Studio's 作業履歴) has ``accept``: the toolbar holds its chooser.
     ``inside`` and ``after`` place each page's own pieces: Image Studio's output scale beside 📤 (💻 ⇄ 📱 ends both pages' file rows,
     scripts/build_studio_css.py adds it); the slide editor's 📚 layers, 🗂️ pages and inspector. scripts/build_studio_css.py writes the markup into PSWB_PARTS ("slides-toolbar",
@@ -4180,9 +4195,11 @@ def studio_toolbar(page: str) -> tuple[list, dict[str, str], dict[str, str]]:
     picture = {"image": "image/png,image/jpeg,image/webp", "camera": "image/png,image/jpeg,image/webp environment"}
     choosers = {"image": {**picture, "open-json": ".json", "open-workspace": ".json,application/json"},
                 "slides": {**picture, "open": ".json,application/json"}}[page]
-    rows = {"slides": (("create", "text shape emoji kaomoji clock"), ("adjust", "smaller reset bigger undo redo"),
-                       ("update", "edit look turn front back delete"), ("pages", "slide-add slide-copy slide-delete pages"),
-                       ("file", "new import export image-studio"), ("detail", "inspect grid")),
+    # 📱 at most 6 a row (390 px: 6 × 48 + 5 × 8 = 328 of 358), so no row wraps on a phone
+    rows = {"slides": (("create", "text shape emoji kaomoji clock"), ("adjust", "undo-2 undo redo redo-2"),
+                       ("update", "edit look turn duplicate delete"), ("order", "forward backward front back"),
+                       ("pages", "slide-add slide-copy slide-delete pages"),
+                       ("file", "new import export image-studio"), ("detail", "smaller reset bigger inspect grid")),
             "image": (("create", "select text shape stamp emoji kaomoji clock"), ("adjust", "undo-2 undo redo redo-2"),
                       ("update", "duplicate forward backward delete"), ("file", "import export slide-studio"))}[page]
 
@@ -4214,7 +4231,7 @@ def studio_toolbar(page: str) -> tuple[list, dict[str, str], dict[str, str]]:
         + '<label><input type="checkbox" data-property="italic" data-kinds="text">斜体</label>'
         + '<label>矢印の先端<select data-property="headPlacement" data-kinds="arrow">'
           '<option value="tip">端</option><option value="middle">中央</option></select></label></fieldset>')
-    after = {"adjust": '<div id="slides-layers" class="ui-toolbar-row ui-current-items" role="group" aria-label="レイヤー（奥から手前）" hidden></div>',
+    after = {"order": '<div id="slides-layers" class="ui-toolbar-row ui-current-items" role="group" aria-label="レイヤー（奥から手前）" hidden></div>',
              "pages": '<div id="slides-pages" class="ui-toolbar-row ui-current-items" role="group" aria-label="ページの一覧" hidden></div>',
              "detail": inspector}
     return groups, {}, after

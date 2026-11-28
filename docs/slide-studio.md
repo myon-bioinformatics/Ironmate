@@ -22,17 +22,19 @@ One editor for phones and PCs, phone-first. The slide stays pinned at the top wh
 | 🎨 | The selection's look, from the candidate row: 🎨 fill and 🖌 line to the next colour (black, teal, red, blue, yellow, white), 🌗 opacity 1 → ¾ → ½ → ¼, 🅱️ bold, 🔠 monospace ⇄ regular. A candidate that does not apply (bold on a shape) does nothing |
 | 🎛️ | Exact position and size of the selected layer. Shows italic for text, line width for shapes, center/edge arrowhead for arrows, and mosaic cell size and color levels for pictures |
 | ↻ | Turn the selection: ↻ 15° right, ↺ 15° left, ⏹ upright. The selection frame turns with it |
-| ⏫ ⏬ | Bring to the front, send to the back |
+| ⧉ | Duplicate the selection, a little down and right (32 on a 1280-wide page), in front |
+| ⬆️ ⬇️ ⏫ ⏬ | One step forward / back, or all the way to the front / back (the 📚 row shows the order) |
 | 👆 ↘ | Tap to select, drag to move, drag ↘ to resize. Tap a selected text box again (or ✏️) to edit it later; the editor sits under the slide at 16 px so phones do not zoom, and the slide updates as you type. A box left empty is removed |
 | 🔽 🔄 🔼 | Every text box on every slide together: 0.5, 0.75, 1, 1.25, 1.5, 2, 2.5 × (titles keep their ratio to body text). New boxes start at 32 px × the current step |
 | ⬅️ ➡️ | Previous / next page, right under the slide; the middle shows page / pages. Keyboard ← / → (Home / End: first / last) do the same |
 | ➕📄 📑 ✖️📄 | Add a blank page, duplicate, delete |
 | 🗂️ ⊞ | All pages as thumbnails, or four at a time. In four-up, select any tile and edit it in place with the same tools. Views are not undoable |
 | 🆕 | Start over (one blank page) |
-| 🗑️ ↩️ ↪️ | Delete the selection, undo, redo (64 steps) |
+| 🗑️ | Delete the selection |
+| ⏪ ↩️ ↪️ ⏩ | Undo two steps, undo, redo, redo two steps (64 kept) |
 | 📥 📤 | Import and export. The formats open in the candidate row, in words, like 🔷's: 📥 どの形式から？ 画像 (a picture onto this page; カメラ takes a photo for it, on a phone; photos become PNG, at most 4 MP and 1920 px on the long side) or JSON (all slides, also those the PC studio saved); 📤 どの形式に？ PPTX (every slide, editable in PowerPoint), JSON, PNG or SVG (this page as it looks). A pick does it and the row hides again |
 | 🖼️ | Image Studio (its file row ends with 📽️, back here) |
-| 💻 ⇄ 📱 | 💻 To textual: short words in place of the emoji, as on a PC; 📱 To iconic: the emoji again (the default). The same page, no reload; remembered in this browser. On the site the switch is under ⋯ in the header. The rows are groups (make, adjust, change, pages, file) with a light dashed line between them |
+| 💻 ⇄ 📱 | 💻 To textual: short words in place of the emoji, as on a PC; 📱 To iconic: the emoji again (the default). The same page, no reload; remembered in this browser. On the site the switch is under ⋯ in the header. The rows are groups (make, ↩️, change, order, pages, file, detail), at most six buttons each so none wraps on a phone, with a light dashed line between them |
 
 The GIF is the frames `tests/slides_browser.cjs` saves (`build/pages-evidence/phone-*.png`, 390×844; `phone-frames.json` lists them) at 1.4 s each.
 

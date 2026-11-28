@@ -7,6 +7,7 @@ except ImportError:
     Image = None
 
 import png_zoom_gif
+from vendor.cli_args import run_cli
 
 
 @unittest.skipIf(Image is None, 'optional Pillow codec unavailable')
@@ -101,10 +102,9 @@ class ZoomGifTests(unittest.TestCase):
             for i, args in enumerate((['--focus', '↗️'],
                                       ['--sequence', '↙️', '↘', 'top-left', '↗︎'])):
                 target = Path(directory) / f'output{i}.gif'
-                result = subprocess.run([sys.executable, str(Path(png_zoom_gif.__file__)),
-                                         str(source), str(target), '--steps', '2', *args],
-                                        capture_output=True)
-                self.assertEqual(result.returncode, 0, result.stderr.decode())
+                result = run_cli(Path(png_zoom_gif.__file__),
+                                         str(source), str(target), '--steps', '2', *args)
+                self.assertEqual(result.returncode, 0, result.stderr)
                 with Image.open(target) as gif:
                     self.assertGreater(gif.n_frames, 1)
 

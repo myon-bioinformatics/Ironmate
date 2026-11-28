@@ -11,7 +11,7 @@ The file is committed (the studio is served as static files and image_studio.py 
 ``tests/test_studio.py`` (``pysaiyanweboo.check_bundle``) fails when it drifts.
 
 The 📱 page's 🖼️ stage and 🧭 pager are PySaiyanWeBoo components too (``pswb_parts()``): their stylesheets join the sheet, their
-markup is ``PSWB_PHONE`` and their modules ride in studio.js as one classic script, each written here from the pinned commit.
+markup is ``PSWB_PARTS`` and their modules ride in studio.js as one classic script, each written here from the pinned commit.
 The heatmap color module, the dot-art grid and the slide deck (check, JSON, template, page operations) also come from the same
 pin and are embedded in studio.js.
 """
@@ -33,6 +33,17 @@ THEME = "green"
 
 NOTE = "scripts/build_studio_css.py"
 
+# Ironmate-specific controls not provided by the shared layout.
+SLIDE_EDITOR_CSS = """#phone-inspector:not([hidden]){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;min-width:0}
+#phone-inspector label:not([hidden]){display:flex;align-items:center;gap:6px}
+#phone-inspector input:not([type=checkbox]),#phone-inspector select{min-width:0;width:100%;font-size:16px}
+#phone-grid:not([hidden]){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;gap:6px;flex:0 0 auto;width:100%}
+#phone-grid>div{min-width:0}
+#phone-grid .ui-stage,#phone-grid button{width:100%;max-width:100%;margin:0;position:relative;top:auto}
+#phone-grid .ui-stage{outline:2px solid var(--ui-accent)}
+#phone-grid button{padding:0;display:block}
+@media(min-width:960px){#phone-grid:not([hidden]){width:calc(100vw - 376px);max-height:100dvh;overflow:auto}}"""
+
 
 def bundles() -> dict[Path, dict]:
     """One stylesheet for every studio page: PySaiyanWeBoo's green theme on core_css, the components pswb_parts() uses, then
@@ -40,16 +51,29 @@ def bundles() -> dict[Path, dict]:
     ``data-page="studio slides"``)."""
     import pysaiyanweboo
     sheets = [*dict.fromkeys(sheet for name in PSWB for sheet in pysaiyanweboo.COMPONENTS[name]["css"]), "current-item.css", "studio-pages.css"]
-    return {STUDIO / "style.css": {"theme": THEME, "extra_css": "\n".join(map(pysaiyanweboo.css_source, sheets))}}
+    return {STUDIO / "style.css": {"theme": THEME, "extra_css": "\n".join([*map(pysaiyanweboo.css_source, sheets), SLIDE_EDITOR_CSS])}}
 
 
-PSWB = ("stage", "pager")  # 🧩 the PySaiyanWeBoo components the 📱 page uses
+PSWB = ("stage", "pager", "labels-switch", "toolbar")  # 🧩 the PySaiyanWeBoo components the studios use
 
 
 def classic_script(modules: str) -> str:
-    script = re.sub(r"^export (?=function |const )", "", modules, flags=re.M)
+    script = re.sub(r"^export (?=(?:async )?function |const )", "", modules, flags=re.M)
     assert not re.search(r"^\s*(import|export)\b", script, flags=re.M), "a module PySaiyanWeBoo ships now imports or exports otherwise"
     return script
+
+
+def toolbar(pysaiyanweboo, page: str) -> str:
+    """🧰 A studio's toolbar (``studio_bundle.studio_toolbar(page)``: "slides" or "image") as PySaiyanWeBoo's ``toolbar_html``; both
+    pages' file rows end with 💻 ⇄ 📱 (``labels_switch_html``, the one each page has; a host's ⋯ row stands in for it)."""
+    sys.path.insert(0, str(ROOT))
+    from ironlib import studio_bundle
+    groups, inside, after = studio_bundle.studio_toolbar(page)
+    inside = {**inside, "file": inside.get("file", "") + pysaiyanweboo.labels_switch_html(id="labels-switch")}
+    if page == "slides":
+        return pysaiyanweboo.toolbar_html(groups, label="道具", id="phone-toolbar", candidates_id="phone-candidates", inside=inside, after=after)
+    return "        " + pysaiyanweboo.toolbar_html(groups, label="道具", id="studio-toolbar", candidates_id="studio-candidates",
+                                                 inside=inside, after=after) + "\n"
 
 
 def pswb_parts() -> dict[str, str]:
@@ -58,13 +82,15 @@ def pswb_parts() -> dict[str, str]:
     files and no inline module: ``export`` dropped, wrapped, and ``pagerSet`` / ``pagerIndex`` left on ``globalThis.PySaiyanWeBoo``."""
     import pysaiyanweboo
     words = {"first": "最初のページ", "prev": "前のページ", "next": "次のページ", "last": "最後のページ", "page": "ページ"}
-    modules = "".join(pysaiyanweboo.js_source(m) for name in PSWB for m in pysaiyanweboo.COMPONENTS[name]["js"])
+    modules = "".join(map(pysaiyanweboo.js_source, dict.fromkeys(m for name in PSWB for m in pysaiyanweboo.COMPONENTS[name]["js"])))  # each file once
     classic = classic_script(modules)
     commit = pysaiyanweboo.source_commit() or "unknown"
     return {"stage": pysaiyanweboo.stage_html("{slide}", label="スライド", id="phone-stage"),
             "pager": pysaiyanweboo.pager_html(1, label="ページ移動", words=words, keys=True, id="phone-pager"),
+            "slides-toolbar": toolbar(pysaiyanweboo, "slides"),
+            "image-toolbar": toolbar(pysaiyanweboo, "image"),
             "js": (f"/* ⬇️ pysaiyanweboo {commit[:8]} ({', '.join(PSWB)}): written by {NOTE} from the pinned commit; --check fails when it drifts */\n"
-                   f"(() => {{\n{classic}globalThis.PySaiyanWeBoo = {{ pagerSet, pagerIndex }};\n}})();\n/* ⬆️ pysaiyanweboo */\n")}
+                   f"(() => {{\n{classic}globalThis.PySaiyanWeBoo = {{ pagerSet, pagerIndex, bindLabels, bindToolbar }};\n}})();\n/* ⬆️ pysaiyanweboo */\n")}
 
 
 def replace_region(src: str, begin: str, end: str, body: str) -> str:
@@ -91,8 +117,9 @@ def with_parts(src: str) -> str:
         src = replace_region(src, begin, end, f"{begin}\n{module}\n{end}")
     parts = pswb_parts()
     lines = lambda html: "".join(f"\n        {part!r}" for part in re.split(r"(?<=>)(?=<)", html))
-    block = (f"# ⬇️ pysaiyanweboo: {NOTE} writes PSWB_PHONE from the pinned commit (--check fails when it drifts)\n"
-             f"PSWB_PHONE = {{\n    \"stage\": ({lines(parts['stage'])}),\n    \"pager\": ({lines(parts['pager'])}),\n}}\n# ⬆️ pysaiyanweboo\n")
+    block = (f"# ⬇️ pysaiyanweboo: {NOTE} writes PSWB_PARTS from the pinned commit (--check fails when it drifts)\n"
+             f"PSWB_PARTS = {{\n    \"stage\": ({lines(parts['stage'])}),\n    \"pager\": ({lines(parts['pager'])}),\n"
+             f"    \"slides-toolbar\": ({lines(parts['slides-toolbar'])}),\n    \"image-toolbar\": ({lines(parts['image-toolbar'])}),\n}}\n# ⬆️ pysaiyanweboo\n")
     src = replace_region(src, "# ⬇️ pysaiyanweboo", "# ⬆️ pysaiyanweboo\n", block)
     src = replace_region(src, "/* ⬇️ pysaiyanweboo", "/* ⬆️ pysaiyanweboo */\n", parts["js"])
     begin, end = "  /* PSWB heatmap-color.js", "  /* End PSWB heatmap-color.js */\n"
@@ -132,7 +159,7 @@ def main(argv: list[str] | None = None) -> int:
                 fields = pysaiyanweboo.write_bundle(tmp_css, note=NOTE, **options)
                 new_css = tmp_css.read_text(encoding="utf-8")
                 bundle_py.write_text(with_parts(src[:start] + new_css + src[end:]), encoding="utf-8")
-                print(f"{bundle_py.relative_to(ROOT)} (STYLE_CSS, PSWB_PHONE, studio.js) pysaiyanweboo {fields['commit'][:8]}")
+                print(f"{bundle_py.relative_to(ROOT)} (STYLE_CSS, PSWB_PARTS, studio.js) pysaiyanweboo {fields['commit'][:8]}")
     for problem in problems:
         print(problem, file=sys.stderr)
     return 1 if problems else 0

@@ -7,6 +7,8 @@ from pathlib import Path
 
 import pytest
 
+from vendor.cli_args import run_cli
+
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -126,7 +128,7 @@ def test_workflow_keeps_suite_failure_and_exact_reports(tmp_path):
     collector = jobs['failure-identity']
     assert collector['needs'] == ['test', 'marp-integration', 'studio-clipboard']
     assert collector['if'] == 'always()'
-    assert collector['uses'].endswith('@43cfe1df924ea96ca44f47a6771c18102c38f7f3')
+    assert collector['uses'].endswith('@27c46411c0a07d9b4d0f1ad5751ed1bb9e869b5c')
     marp_steps = jobs['marp-integration']['steps']
     install = next(s for s in marp_steps if s.get('name') == 'Install pinned Node packages and the locked Marp CLI tools')
     assert '--ignore-scripts' in install['run']
@@ -177,11 +179,12 @@ def test_failed_setup_is_imported_as_an_error(tmp_path, xprobe):
     from xml.etree import ElementTree
 
     result = tmp_path / "setup.xml"
-    subprocess.run(
-        [sys.executable, "-S", str(ROOT / "scripts/ci_setup_junit.py"), "setup", str(result)],
+    completed = run_cli(
+        ROOT / "scripts/ci_setup_junit.py", "setup", str(result),
+        python_options=("-S",),
         env=dict(os.environ, SETUP_OUTCOMES="uv=success\nApt & fonts=failure\nbrowser=skipped\n"),
-        check=True,
     )
+    assert completed.returncode == 0, completed.stderr
     xml = result.read_text()
     suite = ElementTree.fromstring(xml)
     assert suite.attrib == dict(name="setup", tests="3", errors="1", failures="0", skipped="1")

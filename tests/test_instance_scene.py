@@ -72,9 +72,9 @@ class InstanceSceneTests(unittest.TestCase):
 
     def test_bridge(self):
         import json
-        import subprocess
         import sys
-        result = subprocess.run([sys.executable, '-S', '-m', 'research.instance_scene'],
-                                input='{"frames": [[], []]}', text=True,
-                                capture_output=True, check=True, timeout=10)
+        from vendor.cli_args import Command, run_command
+        result = run_command(Command([sys.executable, '-S', '-m', 'research.instance_scene']),
+                                stdin='{"frames": [[], []]}', timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(json.loads(result.stdout), {'track_ids': [[], []]})

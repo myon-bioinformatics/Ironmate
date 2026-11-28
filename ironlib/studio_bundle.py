@@ -377,12 +377,14 @@ STUDIO_HTML = r"""<!doctype html>
       <div class="shelf-actions">
         <button id="shelf-paste-clip" class="primary">クリップボードから追加 ＋</button>
         <button id="shelf-clear">シェルフをクリア</button>
+        <a class="button" href="slides/#from-image-studio" target="_blank" rel="opener">編集中の画像をスライド工房へ</a>
       </div>
       <label>Base64 / data URI / テキストを入力して追加
         <textarea id="shelf-input-text" rows="2" placeholder="data:image/png;base64,... または Raw Base64"></textarea>
       </label>
       <button id="shelf-add-text" class="wide">テキストを追加</button>
       <p id="shelf-status" role="status"></p>
+      <textarea id="shelf-copy-text" aria-label="手動コピー用テキスト" readonly hidden></textarea>
       <div id="shelf-items-container" class="shelf-list"></div>
       <form method="dialog"><button>閉じる</button></form>
     </dialog>
@@ -1163,7 +1165,33 @@ const StudioCore = (function (root) {
     ctx.putImageData(data, 0, 0);
     return canvas.toDataURL("image/png");
   }
+  async function scenePng(doc, imageSource, scale = 1) {
+    const size = outputSize(doc, scale);
+    const source = svg(doc, imageSource, scale),
+      url = URL.createObjectURL(new Blob([source], { type: "image/svg+xml" }));
+    try {
+      const img = new Image();
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = () => reject(new Error("SVGの画像化に失敗しました"));
+        img.src = url;
+      });
+      const canvas = document.createElement("canvas");
+      canvas.width = size.width;
+      canvas.height = size.height;
+      canvas.getContext("2d").drawImage(img, 0, 0);
+      return await new Promise((resolve, reject) =>
+        canvas.toBlob(
+          (b) => (b ? resolve(b) : reject(new Error("PNG出力に失敗しました"))),
+          "image/png",
+        ),
+      );
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
   const api = {
+    scenePng,
     mosaicSource,
     SCHEMA,
     WORKSPACE_SCHEMA,
@@ -2387,29 +2415,7 @@ $("svg").onclick = guarded(async () => {
 async function pngBlob(scale = Number($("export-scale").value)) {
   const doc = copy(scene),
     imageSource = await prepare(doc);
-  const size = C.outputSize(doc, scale);
-  const source = C.svg(doc, imageSource, scale),
-    url = URL.createObjectURL(new Blob([source], { type: "image/svg+xml" }));
-  try {
-    const img = new Image();
-    await new Promise((resolve, reject) => {
-      img.onload = resolve;
-      img.onerror = () => reject(new Error("SVGの画像化に失敗しました"));
-      img.src = url;
-    });
-    const canvas = document.createElement("canvas");
-    canvas.width = size.width;
-    canvas.height = size.height;
-    canvas.getContext("2d").drawImage(img, 0, 0);
-    return await new Promise((resolve, reject) =>
-      canvas.toBlob(
-        (b) => (b ? resolve(b) : reject(new Error("PNG出力に失敗しました"))),
-        "image/png",
-      ),
-    );
-  } finally {
-    URL.revokeObjectURL(url);
-  }
+  return C.scenePng(doc, imageSource, scale);
 }
 $("png").onclick = guarded(async () =>
   download("ironmate-image.png", await pngBlob(), "image/png"),
@@ -2429,18 +2435,23 @@ $("base64").onclick = guarded(async () => {
   $("base64-dialog").showModal();
 });
 $("base64-mode").onchange = showBase64;
-$("copy-base64").onclick = async () => {
+async function copyDialogText(text, field, status, success, failure) {
   try {
-    await navigator.clipboard.writeText($("base64-text").value);
-    $("base64-status").textContent =
-      "コピーしました。Flutterのクリップボード欄へ貼り付けられます。";
+    await navigator.clipboard.writeText(text);
+    status.textContent = success;
   } catch {
-    $("base64-text").focus();
-    $("base64-text").select();
-    $("base64-status").textContent =
-      "自動コピーが使えません。選択した文字をコピーするか、テキスト保存を使ってください。";
+    field.value = text;
+    field.hidden = false;
+    field.focus();
+    field.select();
+    status.textContent = failure;
   }
-};
+}
+$("copy-base64").onclick = () => copyDialogText(
+  $("base64-text").value, $("base64-text"), $("base64-status"),
+  "コピーしました。Flutterのクリップボード欄へ貼り付けられます。",
+  "自動コピーが使えません。選択した文字をコピーするか、テキスト保存を使ってください。",
+);
 $("download-base64").onclick = () =>
   download("ironmate-image.base64.txt", $("base64-text").value, "text/plain");
 $("open").onchange = guarded(async () => {
@@ -2671,7 +2682,7 @@ function addShelfText(text, label) {
   if (isImageText(value)) {
     const { bytes, mime } = imageBase64(value, shelfRemaining());
     addShelfItem(bytes, mime, null, label);
-  } else addShelfItem(null, null, value, label);
+  } else addShelfItem(null, null, text, label);
 }
 function checkShelfGeneration(generation) {
   if (generation !== shelfGeneration) throw new Error("シェルフはクリアされました");
@@ -2707,6 +2718,8 @@ function updateShelfBadge() {
   if ($("shelf-button")) $("shelf-button").textContent = `クリップボード・シェルフ (${shelfItems.length})`;
 }
 function renderShelf() {
+  $("shelf-copy-text").hidden = true;
+  $("shelf-copy-text").value = "";
   updateShelfBadge();
   const container = $("shelf-items-container");
   if (!container) return;
@@ -2756,10 +2769,14 @@ function renderShelf() {
     }
 
     const btnCopy = document.createElement("button");
-    btnCopy.textContent = "コピー";
+    btnCopy.textContent = item.bytes ? "データURLをコピー" : "コピー";
     btnCopy.onclick = guarded(async () => {
-      await navigator.clipboard.writeText(await shelfCopyText(item));
-      if ($("shelf-status")) $("shelf-status").textContent = `「${item.label}」をクリップボードにコピーしました`;
+      const field = $("shelf-copy-text");
+      field.hidden = true;
+      field.value = "";
+      await copyDialogText(await shelfCopyText(item), field, $("shelf-status"),
+        `「${item.label}」をクリップボードにコピーしました`,
+        "自動コピーが使えません。選択した文字をコピーしてください。");
     });
     actions.append(btnCopy);
 
@@ -2865,8 +2882,7 @@ if ($("shelf-paste-clip")) {
 }
 if ($("shelf-add-text")) {
   $("shelf-add-text").onclick = guarded(async () => {
-    const val = ($("shelf-input-text").value || "").trim();
-    if (!val) throw new Error("テキストを入力してください");
+    const val = $("shelf-input-text").value;
     addShelfText(val, "入力項目");
     if ($("shelf-status")) $("shelf-status").textContent = "項目を追加しました";
     $("shelf-input-text").value = "";
@@ -3987,22 +4003,9 @@ const acts = {
     C.save(`ironmate-slide-${active + 1}.svg`, C.svg(s, await slideSource(s)), "image/svg+xml");
   },
   async png() {
-    // 🖼 このページを見えているとおりに（SVG → canvas）。大きさはスライドの大きさ
-    const s = slide(),
-      size = C.outputSize(s),
-      url = URL.createObjectURL(new Blob([C.svg(s, await slideSource(s))], { type: "image/svg+xml" }));
-    try {
-      const img = new Image();
-      img.src = url;
-      await img.decode();
-      const canvas = Object.assign(document.createElement("canvas"), size);
-      canvas.getContext("2d").drawImage(img, 0, 0, size.width, size.height);
-      const blob = await new Promise((done) => canvas.toBlob(done, "image/png"));
-      if (!blob) throw Error("⚠️ PNG");
-      C.save(`ironmate-slide-${active + 1}.png`, blob, "image/png");
-    } finally {
-      URL.revokeObjectURL(url);
-    }
+    const s = slide();
+    const blob = await C.scenePng(s, await slideSource(s));
+    C.save(`ironmate-slide-${active + 1}.png`, blob, "image/png");
   },
   async pptx() {
     note("📤 …");
@@ -4076,6 +4079,17 @@ try {
   if (saved) restore(saved);
 } catch {
   deck = { schema: D.SCHEMA, title: "Ironmate", slides: [blank()] };
+}
+// The same-origin editor opens this tab from its shelf. Keep the original scene editable.
+if (location.hash === "#from-image-studio") {
+  const source = window.opener;
+  window.opener = null;
+  history.replaceState(history.state, "", location.pathname + location.search);
+  run(async () => {
+    if (!source || source.closed || source.location.origin !== location.origin || !source.IronmateStudio)
+      throw Error("画像工房のシェルフから開き直してください。");
+    await files.image(await source.IronmateStudio.pngBlob(1));
+  });
 }
 stage.style.setProperty("--k", stage.clientWidth / slide().width);
 PySaiyanWeBoo.bindLabels(); // 💻 To textual ⇄ 📱 To iconic: 絵文字（既定）と短い言葉を、同じページで切り替え（覚えておく）

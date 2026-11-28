@@ -28,7 +28,7 @@ import grid_tools as grid
 import ironmate_image as im
 import ironmate_image as image
 import photo_grid
-from vendor.cli_args import run_cli
+from vendor.cli_args import Command, run_cli, run_command
 import photo_grid as g_photo_grid
 import photo_grid as pg
 from vendor import pillow_min as pm
@@ -770,20 +770,20 @@ def test_scaled_round_trip_needs_matching_target():
 
 def test_cli_end_to_end(tmp_path):
     out = tmp_path / 'g.b64'
-    r = subprocess.run(PIXEL + ['--mask', 'rock', '--palette', 'C06', '--size', '8', '--format', 'base64',
-                                '--data-uri', '-o', str(out)], capture_output=True, text=True)
+    r = run_cli(ROOT / 'pixel_grid.py', '--mask', 'rock', '--palette', 'C06', '--size', '8', '--format', 'base64',
+                                '--data-uri', '-o', str(out), python_options=('-S',))
     assert r.returncode == 0 and r.stdout == '', r.stderr
     art = pixel_grid.render('rock', 'C06', 'normal', 8)
     assert out.read_text(encoding='ascii') == grid_output.to_base64(art, data_uri=True) + '\n'
-    j = subprocess.run(PHOTO + [str(out), '--size', '8', '--palette', 'C06'], capture_output=True, text=True)
+    j = run_cli(ROOT / 'photo_grid.py', str(out), '--size', '8', '--palette', 'C06', python_options=('-S',))
     assert _key(json.loads(j.stdout)) == _key(art)
-    again = subprocess.run(PHOTO + [str(out), '--size', '8', '--palette', 'C06', '--format', 'base64'],
-                           capture_output=True, text=True)
+    again = run_cli(ROOT / 'photo_grid.py', str(out), '--size', '8', '--palette', 'C06', '--format', 'base64',
+                           python_options=('-S',))
     assert again.stdout == grid_output.to_base64(art) + '\n'
-    piped = subprocess.run(PHOTO + ['-', '--size', '8', '--palette', 'C06'], input=again.stdout,
-                           capture_output=True, text=True)
+    piped = run_cli(ROOT / 'photo_grid.py', '-', '--size', '8', '--palette', 'C06',
+                           python_options=('-S',), stdin=again.stdout)
     assert _key(json.loads(piped.stdout)) == _key(art)
-    scaled = subprocess.run(PIXEL + ['--mask', 'circle', '--size', '8', '--format', 'base64', '--scale', '3'], capture_output=True, text=True)
+    scaled = run_cli(ROOT / 'pixel_grid.py', '--mask', 'circle', '--size', '8', '--format', 'base64', '--scale', '3', python_options=('-S',))
     assert photo_grid.decode_png(base64.b64decode(scaled.stdout))[:2] == (24, 24)
 
 
@@ -835,17 +835,16 @@ def test_cli_png_outputs(tmp_path):
     png.write_bytes(grid_output.to_png(art))
     b64 = tmp_path / 'in.b64'
     b64.write_text('data:image/png;base64,' + base64.b64encode(png.read_bytes()).decode(), encoding='ascii')
-    photo = [sys.executable, '-S', str(ROOT / 'photo_grid.py')]
     outs = []
     for src in (png, b64):
         out = tmp_path / f'{src.suffix[1:]}-out.png'
-        r = subprocess.run(photo + [str(src), '--size', '8', '--format', 'png', '--scale', '2', '-o', str(out)],
-                           capture_output=True, text=True)
+        r = run_cli(ROOT / 'photo_grid.py', str(src), '--size', '8', '--format', 'png', '--scale', '2', '-o', str(out),
+                           python_options=('-S',))
         assert r.returncode == 0 and r.stdout == '', r.stderr
         outs.append(out.read_bytes())
     assert outs[0] == outs[1]
     assert photo_grid.decode_png(outs[0])[:2] == (16, 16)
-    j = subprocess.run(photo + [str(png), '--size', '8'], capture_output=True, text=True)
+    j = run_cli(ROOT / 'photo_grid.py', str(png), '--size', '8', python_options=('-S',))
     assert _cells(json.loads(j.stdout)) == _cells(art)
     r = subprocess.run([sys.executable, '-S', str(ROOT / 'pixel_grid.py'), '--mask', 'rock', '--palette', 'C05',
                         '--size', '8', '--format', 'png'], capture_output=True)
@@ -883,8 +882,8 @@ def test_preview_is_small_and_decodes():
 
 def test_cli_refuses_overwrite(tmp_path):
     out = tmp_path / 'p.png'
-    run = lambda *a: subprocess.run([sys.executable, '-S', 'scripts/build_grid_preview.py', '-o', str(out), *a],
-                                    cwd=ROOT, capture_output=True)
+    run = lambda *a: run_cli('scripts/build_grid_preview.py', '-o', str(out), *a,
+                                    python_options=('-S',), cwd=ROOT)
     assert run().returncode == 0 and out.read_bytes() == SHEET.read_bytes()
     assert run().returncode == 2
     assert run('--force').returncode == 0
@@ -2433,14 +2432,14 @@ def test_errors(kwargs, match):
 
 
 def test_cli_one_liners(tmp_path):
-    out = subprocess.run([sys.executable, '-m', 'grid_tools', 'estimate', '--width', '800', '--height', '600',
-                          '--bytes', '500000', '--limit-chars', '100000'], cwd=ROOT, capture_output=True, timeout=60)
+    out = run_command(Command([sys.executable, '-m', 'grid_tools', 'estimate', '--width', '800', '--height', '600',
+                          '--bytes', '500000', '--limit-chars', '100000']), cwd=ROOT, timeout=60)
     assert out.returncode == 0, out.stderr
     assert json.loads(out.stdout)['recommended']['est_chars'] <= 100000
     png = tmp_path / 'a.png'
     png.write_bytes(g.encode(g.make('circle', 'C02', 'normal', 40), 'png', 4))
-    out = subprocess.run([sys.executable, '-m', 'grid_tools', 'estimate', str(png), '--limit-bytes', '400', '--verify'],
-                         cwd=ROOT, capture_output=True, timeout=60)
+    out = run_command(Command([sys.executable, '-m', 'grid_tools', 'estimate', str(png), '--limit-bytes', '400', '--verify']),
+                         cwd=ROOT, timeout=60)
     r = json.loads(out.stdout)
     assert r['confidence'] == 'verified' and r['input']['cell_scale'] == 4
     one = subprocess.run([sys.executable, '-c', "from ironlib import size_estimate as s;print(s.estimate(width=64,height=64,"

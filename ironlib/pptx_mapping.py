@@ -457,7 +457,7 @@ def _write_table(parent, obj, shape_id):
     _sub(nv, 'p', 'nvPr')
     _write_xfrm(frame, options, prefix='p')
     graphic = _sub(frame, 'a', 'graphic')
-    data = _sub(graphic, 'a', 'graphicData', {'uri': ANS + '/table'})
+    data = _sub(graphic, 'a', 'graphicData', {'uri': 'http://schemas.openxmlformats.org/drawingml/2006/table'})
     tbl = _sub(data, 'a', 'tbl')
     _sub(tbl, 'a', 'tblPr')
     grid = _sub(tbl, 'a', 'tblGrid')

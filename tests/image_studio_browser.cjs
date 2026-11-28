@@ -370,7 +370,8 @@ const failures = [],
   await page.evaluate(() => IronmateStudio.act("png"));
   assert.match((await viaAct).suggestedFilename(), /\.png$/);
   assert.equal(await page.inputValue("#export-scale"), "2");
-  await page.evaluate(() => IronmateStudio.act("shelf"));
+  // 📋 a row of a host's header (studio_rows) sends the key of an act: the shelf, as from the toolbar
+  await page.evaluate(() => document.dispatchEvent(new CustomEvent("ui-chrome-action", { detail: { key: "shelf" } })));
   assert.equal(await page.evaluate(() => document.getElementById("shelf-dialog").open), true);
   await page.evaluate(() => document.getElementById("shelf-dialog").close());
   const enlarged = fs.readFileSync(path.join(out, "composition-2x.png"));

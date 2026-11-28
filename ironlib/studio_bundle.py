@@ -358,7 +358,7 @@ STUDIO_HTML = r"""<!doctype html>
 </html>
 """
 
-STYLE_CSS = r"""/* web-ui-bundle/1 commit=e4bb709a3573ad22f0c27a447ccb59b762e2a8da sha256=4a8c15c1e6ef8c2d787a68d450e409f1fbc0f25086f8426ff6075e8f79476ac4 scripts/build_studio_css.py*/
+STYLE_CSS = r"""/* web-ui-bundle/1 commit=7825ec40f81d800349f2763da0cc1b27d9927d5a sha256=b06a0d1e551002b33d74f3783450e0163a44148726927ee03ac14cf064560548 scripts/build_studio_css.py*/
 @layer base,components,theme;
 /* css/tokens.css */
 :root{--ui-bg:#0d1117;--ui-panel:#101820;--ui-fg:#d1f7c4;--ui-muted:#8b949e;--ui-border:#58a6ff;--ui-accent:#7ee787;--ui-danger:#cf222e;--ui-radius:0;--ui-text:16px;--ui-space:1rem;--ui-max:960px;--ui-font:Meiryo,メイリオ,sans-serif;--ui-font-mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
@@ -504,33 +504,33 @@ body:where([data-page~="tools"]){font-size:15px;line-height:1.65;margin:0}
 /* 💻 ⇄ 📱 an emoji face (a control with data-ui-word) is read at 20 px, not at the studio's small text size; a toolbar's are its own (toolbar.css) */
 :where([data-page~="studio"]) button[data-ui-word]:where(:not(.ui-toolbar-row>*)),:where([data-page~="studio"]) summary[data-ui-word],:where([data-page~="studio"]) label[data-ui-word]{font-size:20px;line-height:1}
 
-/* 📱 phone slides: the slide is pinned on top (PySaiyanWeBoo's .ui-stage) and the emoji controls scroll under it (landscape: beside it) */
-body:where([data-page~="phone"]){margin:0;background:var(--ui-bg)}
-:where([data-page~="phone"]) input[type=file]{display:none}
-:where([data-page~="phone"]) .button{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;cursor:pointer;text-decoration:none;background:var(--ui-panel);color:var(--ui-fg);border:1px solid var(--ui-border);border-radius:var(--ui-radius)}
-:where([data-page~="phone"]) .phone{display:flex;flex-direction:column;height:100dvh;max-width:960px;margin:0 auto}
-:where([data-page~="phone"]) .ui-stage{background:#fff;border:0;box-shadow:0 8px 24px rgba(0,0,0,.16);touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
-:where([data-page~="phone"]) .phone-svg svg{position:absolute;inset:0;width:100%;height:100%;display:block}
-:where([data-page~="phone"]) .phone-pick{position:absolute;box-sizing:border-box;border:2px dashed var(--ui-accent);pointer-events:none}
-:where([data-page~="phone"]) .phone-pick[hidden],:where([data-page~="phone"]) .phone-edit[hidden]{display:none}
-:where([data-page~="phone"]) .phone-grip{position:absolute;right:-16px;bottom:-16px;width:32px;height:32px;display:grid;place-items:center;border-radius:50%;background:var(--ui-accent);color:var(--ui-bg);font-size:16px;pointer-events:auto;touch-action:none}
-:where([data-page~="phone"]) .phone-edit{flex:1 1 100%;box-sizing:border-box;margin:0;min-height:88px;padding:8px;font-size:16px;line-height:1.5;border:2px solid var(--ui-accent);resize:vertical}
-:where([data-page~="phone"]) .phone-deck{flex:1;min-height:0;overflow:auto;display:flex;flex-wrap:wrap;align-items:flex-start;align-content:flex-start;gap:16px;padding:16px}
-:where([data-page~="phone"]) .phone-tools{flex:1 1 328px;min-width:0}
-:where([data-page~="phone"]) .phone-status{flex:1 1 128px;margin:0;align-self:center;min-height:24px;font-size:16px;overflow-wrap:anywhere}
-:where([data-page~="phone"]) .phone-status[data-error=true]{color:var(--ui-danger)}
-@media(orientation:landscape) and (max-height:560px),(min-width:960px){:where([data-page~="phone"]) .phone{flex-direction:row;max-width:none}:where([data-page~="phone"]) .ui-stage{max-width:72vw;--ui-stage-room:100dvh}:where([data-page~="phone"]) .phone-deck{flex-direction:column;flex-wrap:nowrap}:where([data-page~="phone"]) .phone-tools,:where([data-page~="phone"]) .phone-status{flex:none}}
-@media(min-width:960px){:where([data-page~="phone"]) .ui-stage{max-width:calc(100vw - 376px)}}
+/* 📽️ the one slide editor (phone-first, the same page on a PC): the slide is pinned on top (PySaiyanWeBoo's .ui-stage) and the emoji controls scroll under it (landscape: beside it) */
+body:where([data-page~="slides"]){margin:0;background:var(--ui-bg)}
+:where([data-page~="slides"]) input[type=file]{display:none}
+:where([data-page~="slides"]) .button{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;cursor:pointer;text-decoration:none;background:var(--ui-panel);color:var(--ui-fg);border:1px solid var(--ui-border);border-radius:var(--ui-radius)}
+:where([data-page~="slides"]) .slides{display:flex;flex-direction:column;height:100dvh;max-width:960px;margin:0 auto}
+:where([data-page~="slides"]) .ui-stage{background:#fff;border:0;box-shadow:0 8px 24px rgba(0,0,0,.16);touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+:where([data-page~="slides"]) .slides-svg svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+:where([data-page~="slides"]) .slides-pick{position:absolute;box-sizing:border-box;border:2px dashed var(--ui-accent);pointer-events:none}
+:where([data-page~="slides"]) .slides-pick[hidden],:where([data-page~="slides"]) .slides-edit[hidden]{display:none}
+:where([data-page~="slides"]) .slides-grip{position:absolute;right:-16px;bottom:-16px;width:32px;height:32px;display:grid;place-items:center;border-radius:50%;background:var(--ui-accent);color:var(--ui-bg);font-size:16px;pointer-events:auto;touch-action:none}
+:where([data-page~="slides"]) .slides-edit{flex:1 1 100%;box-sizing:border-box;margin:0;min-height:88px;padding:8px;font-size:16px;line-height:1.5;border:2px solid var(--ui-accent);resize:vertical}
+:where([data-page~="slides"]) .slides-deck{flex:1;min-height:0;overflow:auto;display:flex;flex-wrap:wrap;align-items:flex-start;align-content:flex-start;gap:16px;padding:16px}
+:where([data-page~="slides"]) .slides-tools{flex:1 1 328px;min-width:0}
+:where([data-page~="slides"]) .slides-status{flex:1 1 128px;margin:0;align-self:center;min-height:24px;font-size:16px;overflow-wrap:anywhere}
+:where([data-page~="slides"]) .slides-status[data-error=true]{color:var(--ui-danger)}
+@media(orientation:landscape) and (max-height:560px),(min-width:960px){:where([data-page~="slides"]) .slides{flex-direction:row;max-width:none}:where([data-page~="slides"]) .ui-stage{max-width:72vw;--ui-stage-room:100dvh}:where([data-page~="slides"]) .slides-deck{flex-direction:column;flex-wrap:nowrap}:where([data-page~="slides"]) .slides-tools,:where([data-page~="slides"]) .slides-status{flex:none}}
+@media(min-width:960px){:where([data-page~="slides"]) .ui-stage{max-width:calc(100vw - 376px)}}
 
-#phone-inspector:not([hidden]){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;min-width:0}
-#phone-inspector label:not([hidden]){display:flex;align-items:center;gap:6px}
-#phone-inspector input:not([type=checkbox]),#phone-inspector select{min-width:0;width:100%;font-size:16px}
-#phone-grid:not([hidden]){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;gap:6px;flex:0 0 auto;width:100%}
-#phone-grid>div{min-width:0}
-#phone-grid .ui-stage,#phone-grid button{width:100%;max-width:100%;margin:0;position:relative;top:auto}
-#phone-grid .ui-stage{outline:2px solid var(--ui-accent)}
-#phone-grid button{padding:0;display:block}
-@media(min-width:960px){#phone-grid:not([hidden]){width:calc(100vw - 376px);max-height:100dvh;overflow:auto}}"""
+#slides-inspector:not([hidden]){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;min-width:0}
+#slides-inspector label:not([hidden]){display:flex;align-items:center;gap:6px}
+#slides-inspector input:not([type=checkbox]),#slides-inspector select{min-width:0;width:100%;font-size:16px}
+#slides-grid:not([hidden]){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;gap:6px;flex:0 0 auto;width:100%}
+#slides-grid>div{min-width:0}
+#slides-grid .ui-stage,#slides-grid button{width:100%;max-width:100%;margin:0;position:relative;top:auto}
+#slides-grid .ui-stage{outline:2px solid var(--ui-accent)}
+#slides-grid button{padding:0;display:block}
+@media(min-width:960px){#slides-grid:not([hidden]){width:calc(100vw - 376px);max-height:100dvh;overflow:auto}}"""
 
 STUDIO_JS = r"""/* Ironmate studio: the one browser script for every page (studio, tools, slides; brand needs none).
    Models first (composition, pixel-grid tools, slide shell, Open XML writer), then each page's UI. */
@@ -560,7 +560,7 @@ const StudioCore = (function (root) {
   const fail = (message) => {
     throw new Error(message);
   };
-  /* PSWB heatmap-color.js @ e4bb709a3573ad22f0c27a447ccb59b762e2a8da. Generated by scripts/build_studio_css.py. */
+  /* PSWB heatmap-color.js @ 7825ec40f81d800349f2763da0cc1b27d9927d5a. Generated by scripts/build_studio_css.py. */
   const heatmapDefaultPalette=["#440154", "#3B528B", "#21918C", "#5EC962", "#FDE725"];
   function heatmapColor(v,lo,hi,levels=0,palette=heatmapDefaultPalette){
    if(!Array.isArray(palette)||palette.length<2||palette.length>256||
@@ -1159,7 +1159,7 @@ const StudioCore = (function (root) {
 /* Browser/Node shared operations. Pixel coordinates follow grid_tools.py. */
 const IronmateTools = (function (root) {
   "use strict";
-  /* PSWB pixel-grid.js @ e4bb709a3573ad22f0c27a447ccb59b762e2a8da. Generated by scripts/build_studio_css.py. */
+  /* PSWB pixel-grid.js @ 7825ec40f81d800349f2763da0cc1b27d9927d5a. Generated by scripts/build_studio_css.py. */
   /* web-ui pixel-grid: a dot-art grid checked, resized, drawn as SVG and described for a PNG; Base64 length; PNG chunks. pysaiyanweboo.py (pixel_grid_*, base64_length) is the reference; this must agree. */
   const PIXEL_GRID_SCHEMA="ironmate-pixel-grid/1";
   function pixelGridValidate(value){
@@ -1225,7 +1225,7 @@ const IronmateSlides = (function (root) {
   "use strict";
   const C = StudioCore;
   const shell = IronmateSlideShell;
-  /* PSWB slide-deck.js @ e4bb709a3573ad22f0c27a447ccb59b762e2a8da. Generated by scripts/build_studio_css.py. */
+  /* PSWB slide-deck.js @ 7825ec40f81d800349f2763da0cc1b27d9927d5a. Generated by scripts/build_studio_css.py. */
   /* web-ui slide-deck: several scenes of the image studio as one deck (checked, kept as JSON, pages added, copied, deleted and moved) and written as a PPTX in the page: text, rectangles, ellipses, triangles and arrows stay editable, anything else is a picture. slideDeck(core, shell): core is js/imagestudio.js (or the same functions), shell the empty package the slides go into (part name to text). pysaiyanweboo.py (slide_deck_*) is the reference; this must agree. */
   function slideDeck(C, shell) {
     const SCHEMA = "ironmate-slide-deck/1",
@@ -2131,6 +2131,8 @@ queueMicrotask(() => {
   });
   setTool(tool);
 });
+// 🧰 a row of a host's header (studio_rows: 📋 the shelf) sends the key of an act: the same act the toolbar runs
+document.addEventListener("ui-chrome-action", (e) => STUDIO_ACTS[e.detail?.key]?.());
 for (const [id, name] of [["text", "text"], ["stamp-text", "stamp"], ["emoji-text", "emoji"], ["kaomoji-text", "kaomoji"]])
   $(id).onfocus = () => setTool(name); // typing into an input means its tool
 $("stamp-text").oninput = () => {
@@ -3214,7 +3216,7 @@ if (typeof document !== "undefined" && (document.getElementById("pixel-editor") 
   });
 })();
 
-/* ⬇️ pysaiyanweboo e4bb709a (stage, pager, labels-switch, toolbar): written by scripts/build_studio_css.py from the pinned commit; --check fails when it drifts */
+/* ⬇️ pysaiyanweboo 7825ec40 (stage, pager, labels-switch, toolbar): written by scripts/build_studio_css.py from the pinned commit; --check fails when it drifts */
 (() => {
 /* A rotary dial over a range input (dial_html): drag around its centre, turn the wheel, or use the range's own keys. Value and events stay the input's. */
 function dialAngle(value,min,max){const span=max-min;const t=span>0?(Number(value)-min)/span:0;return -135+270*Math.min(1,Math.max(0,t))}
@@ -3285,18 +3287,18 @@ function bindLightbox(root=document){const items=[...root.querySelectorAll("[dat
 globalThis.PySaiyanWeBoo = { pagerSet, pagerIndex, bindLabels, bindToolbar };
 })();
 /* ⬆️ pysaiyanweboo */
-/* Phone slides UI (data-page~="phone"): browser only. The slide stays pinned on top (PySaiyanWeBoo's 🖼️ stage), every control is
+/* Slides UI (data-page~="slides"): browser only. The slide stays pinned on top (PySaiyanWeBoo's 🖼️ stage), every control is
    an emoji (its words are in aria-label/title), PySaiyanWeBoo's pager (⬅️ 1/N ➡️) turns pages, and the deck is the same
    JSON / PPTX as Slide Studio. */
-if (typeof document !== "undefined" && document.body && (document.body.dataset.page || "").split(" ").includes("phone")) (function () {
+if (typeof document !== "undefined" && document.body && (document.body.dataset.page || "").split(" ").includes("slides")) (function () {
 "use strict";
 const C = window.StudioCore,
   D = window.IronmateSlides,
   $ = (id) => document.getElementById(id),
-  stage = $("phone-stage"),
-  edit = $("phone-edit"),
-  pages = $("phone-pager"), // PySaiyanWeBoo's pager, as ⬅️ 1/N ➡️ (🗂️ shows every page)
-  STORE = "ironmate-phone-deck",
+  stage = $("slides-stage"),
+  edit = $("slides-edit"),
+  pages = $("slides-pager"), // PySaiyanWeBoo's pager, as ⬅️ 1/N ➡️ (🗂️ shows every page)
+  STORE = "ironmate-slides-deck",
   textSize = Number(document.body.dataset.textSize),
   scales = document.body.dataset.textScale.split(" ").map(Number),
   plain = scales.indexOf(1);
@@ -3322,7 +3324,7 @@ let status = "", statusError = false, saveFailed = false;
 function note(text = status, error = statusError) {
   status = text;
   statusError = error;
-  const s = $("phone-status");
+  const s = $("slides-status");
   s.textContent = [text, saveFailed && "⚠️ 💾"].filter(Boolean).join(" ");
   s.dataset.error = error || saveFailed;
 }
@@ -3415,11 +3417,11 @@ function paint(node, s, format = () => {}) {
 }
 function render() {
   const s = slide();
-  paint($("phone-svg"), s); // 👀 打っている文字もそのままスライドに出る
+  paint($("slides-svg"), s); // 👀 打っている文字もそのままスライドに出る
   renderGrid();
   renderInspector();
   PySaiyanWeBoo.pagerSet(pages, active, deck.slides.length);
-  const box = $("phone-pick"),
+  const box = $("slides-pick"),
     l = picked();
   box.hidden = !l;
   if (l)
@@ -3436,7 +3438,7 @@ function render() {
 let pagesOpen = false,
   saves = 0; // 🗂️ 一覧の絵は保存のたびに描き直す（ドラッグ中は描かない）
 function pageList() {
-  const row = $("phone-pages"),
+  const row = $("slides-pages"),
     key = pagesOpen && `${saves} ${active} ${deck.slides.length}`;
   if (row.dataset.key === String(key)) return;
   row.dataset.key = key;
@@ -3466,7 +3468,7 @@ function pageList() {
   }));
 }
 let gridOpen = false, inspectorOpen = false;
-const grid = $("phone-grid"), inspector = $("phone-inspector");
+const grid = $("slides-grid"), inspector = $("slides-inspector");
 stage.tabIndex = -1;
 function renderGrid() {
   const first = active - active % 4, key = gridOpen ? `${saves} ${active} ${deck.slides.length}` : "";
@@ -3543,7 +3545,7 @@ inspector.addEventListener("change", (e) => {
 });
 function layerList(s) {
   // 📚 奥 → 手前。2 つ以上あるときだけ出し、重なって触れないものもここから選べる（文字は先頭 3 字、ほかは形の記号）
-  const row = $("phone-layers"),
+  const row = $("slides-layers"),
     faces = s.layers.map((l) => (l.kind === "text" && [...new Intl.Segmenter().segment(l.text.trim())].slice(0, 3).map((g) => g.segment).join(""))
       || { text: "🔤", rect: "▭", ellipse: "◯", triangle: "△", arrow: "→", clock: "🕒", image: "🖼️" }[l.kind] || "▫️"),
     key = JSON.stringify([faces, s.layers.map((l) => l.id), selected]);
@@ -3836,7 +3838,7 @@ const acts = {
     textFactor = 1;
     selected = null;
   }),
-  open: () => toolbar.choose("open"), // 📥 a host or IronmatePhone.act without a file: the toolbar's chooser
+  open: () => toolbar.choose("open"), // 📥 a host or IronmateSlideStudio.act without a file: the toolbar's chooser
   image: () => toolbar.choose("image"),
   camera: () => toolbar.choose("camera"),
   json: () => C.save("ironmate-slides.json", D.deckText(deck), "application/json"),
@@ -3901,13 +3903,13 @@ async function run(fn) {
 }
 function press(name, value) {
   // 🧰 the one way in: a toolbar press (PySaiyanWeBoo's bindToolbar; 🔷 🎨 ↻ 📥 📤 open their candidates themselves), a picked
-  // 😊 (^^) (its face), a file 📥's chooser (the toolbar's) chose (its File: 画像 カメラ JSON) and IronmatePhone.act — the same act
+  // 😊 (^^) (its face), a file 📥's chooser (the toolbar's) chose (its File: 画像 カメラ JSON) and IronmateSlideStudio.act — the same act
   if (name !== "edit") finishEdit();
   if (value instanceof Blob) return run(() => files[name === "camera" ? "image" : name](value)); // 📷 a photo is an image
   if (value !== undefined) return run(() => record(stamp(value)));
   if (acts[name]) return run(acts[name]);
 }
-const toolbar = PySaiyanWeBoo.bindToolbar($("phone-toolbar"), press);
+const toolbar = PySaiyanWeBoo.bindToolbar($("slides-toolbar"), press);
 document.addEventListener("keydown", (e) => {
   if (editing || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return; // ← → Home End: the pager's own keys
   if ((e.key === "Delete" || e.key === "Backspace") && selected) run(acts.delete);
@@ -3934,7 +3936,7 @@ if (location.hash === "#from-image-studio") {
 stage.style.setProperty("--k", stage.clientWidth / slide().width);
 PySaiyanWeBoo.bindLabels(); // 💻 To textual ⇄ 📱 To iconic: 絵文字（既定）と短い言葉を、同じページで切り替え（覚えておく）
 render();
-window.IronmatePhone = {
+window.IronmateSlideStudio = {
   get deck() {
     return C.clone(deck);
   },
@@ -3955,14 +3957,14 @@ window.IronmatePhone = {
 
 
 # 🔽 🔄 🔼 multiply every text box by the next / plain / previous step; new boxes are 32 px on the 1280×720 slide.
-PHONE_TEXT = {"size": 32, "scale": (0.5, 0.75, 1, 1.25, 1.5, 2, 2.5)}
+SLIDES_TEXT = {"size": 32, "scale": (0.5, 0.75, 1, 1.25, 1.5, 2, 2.5)}
 # 🖼️ the stage and 🧭 the pager (⬅️ 1/N ➡️ by default; ← → Home End too) are PySaiyanWeBoo's, written below from the pinned commit.
 # ⬇️ pysaiyanweboo: scripts/build_studio_css.py writes PSWB_PARTS from the pinned commit (--check fails when it drifts)
 PSWB_PARTS = {
     "stage": (
-        '<div class="ui-stage" role="region" aria-label="スライド" data-ui-stage="pinned" id="phone-stage">{slide}</div>'),
+        '<div class="ui-stage" role="region" aria-label="スライド" data-ui-stage="pinned" id="slides-stage">{slide}</div>'),
     "pager": (
-        '<div class="ui-pager" role="group" aria-label="ページ移動" data-ui-pager="arrows" data-ui-pager-index="0" data-ui-pager-count="1" data-ui-pager-keys id="phone-pager">'
+        '<div class="ui-pager" role="group" aria-label="ページ移動" data-ui-pager="arrows" data-ui-pager-index="0" data-ui-pager-count="1" data-ui-pager-keys id="slides-pager">'
         '<button type="button" data-ui-pager-part="up" data-ui-pager-in="dpad" data-ui-pager-go="first" aria-label="最初のページ" title="最初のページ" disabled>⬆️</button>'
         '<button type="button" data-ui-pager-part="first" data-ui-pager-in="ends" data-ui-pager-go="first" aria-label="最初のページ" title="最初のページ" disabled>⏮️</button>'
         '<button type="button" data-ui-pager-part="prev" data-ui-pager-in="arrows ends dpad" data-ui-pager-go="prev" aria-label="前のページ" title="前のページ" disabled>⬅️</button>'
@@ -3981,7 +3983,7 @@ PSWB_PARTS = {
         '<button type="button" data-ui-pager-part="down" data-ui-pager-in="dpad" data-ui-pager-go="last" aria-label="最後のページ" title="最後のページ" disabled>⬇️</button>'
         '</div>'),
     "slides-toolbar": (
-        '<div class="ui-toolbar" id="phone-toolbar" role="toolbar" aria-label="道具">'
+        '<div class="ui-toolbar" id="slides-toolbar" role="toolbar" aria-label="道具">'
         '<div class="ui-toolbar-row" data-ui-group="create">'
         '<button type="button" data-act="text" data-ui-word="文字" aria-label="文字を置く" title="文字を置く">🔤</button>'
         '<button type="button" data-acts="rect ellipse triangle arrow" data-words="四角|丸|三角|矢印" data-candidates="▭ ◯ △ →" data-act="shape" data-ui-word="図形" aria-label="図形（四角・丸・三角・矢印）" title="図形（四角・丸・三角・矢印）">🔷</button>'
@@ -3989,7 +3991,7 @@ PSWB_PARTS = {
         '<button type="button" data-candidates="(・∀・) (｡•̀ᴗ-)✧ ٩(๑❛ᴗ❛๑)۶" data-act="kaomoji" data-ui-word="顔文字" aria-label="顔文字" title="顔文字">(^^)</button>'
         '<button type="button" data-act="clock" data-ui-word="時計" aria-label="いまの時刻の時計" title="いまの時刻の時計">🕒</button>'
         '</div>'
-        '<div class="ui-toolbar-row" data-ui-candidates id="phone-candidates" role="group" aria-label="候補" hidden>'
+        '<div class="ui-toolbar-row" data-ui-candidates id="slides-candidates" role="group" aria-label="候補" hidden>'
         '</div>'
         '<div class="ui-toolbar-row" data-ui-group="adjust">'
         '<button type="button" data-act="smaller" data-ui-word="小さく" aria-label="文字をすべて小さく" title="文字をすべて小さく">🔽</button>'
@@ -3998,7 +4000,7 @@ PSWB_PARTS = {
         '<button type="button" data-act="undo" data-ui-word="戻す" aria-label="戻す" title="戻す">↩️</button>'
         '<button type="button" data-act="redo" data-ui-word="やり直す" aria-label="やり直す" title="やり直す">↪️</button>'
         '</div>'
-        '<div id="phone-layers" class="ui-toolbar-row ui-current-items" role="group" aria-label="レイヤー（奥から手前）" hidden>'
+        '<div id="slides-layers" class="ui-toolbar-row ui-current-items" role="group" aria-label="レイヤー（奥から手前）" hidden>'
         '</div>'
         '<div class="ui-toolbar-row" data-ui-group="update">'
         '<button type="button" data-act="edit" data-ui-word="編集" aria-label="選んだ文字・時計を編集（選んだものをもう一度タップしても編集。時計は 14:30 のように）" title="選んだ文字・時計を編集（選んだものをもう一度タップしても編集。時計は 14:30 のように）">✏️</button>'
@@ -4014,7 +4016,7 @@ PSWB_PARTS = {
         '<button type="button" data-act="slide-delete" data-ui-word="ページ削除" aria-label="ページを削除" title="ページを削除">✖️📄</button>'
         '<button type="button" data-act="pages" data-ui-word="一覧" aria-label="ページの一覧（タップでそのページへ）" title="ページの一覧（タップでそのページへ）">🗂️</button>'
         '</div>'
-        '<div id="phone-pages" class="ui-toolbar-row ui-current-items" role="group" aria-label="ページの一覧" hidden>'
+        '<div id="slides-pages" class="ui-toolbar-row ui-current-items" role="group" aria-label="ページの一覧" hidden>'
         '</div>'
         '<div class="ui-toolbar-row" data-ui-group="file">'
         '<button type="button" data-act="new" data-ui-word="新規" aria-label="最初から（白紙 1 枚）" title="最初から（白紙 1 枚）">🆕</button>'
@@ -4027,7 +4029,7 @@ PSWB_PARTS = {
         '<button type="button" data-act="inspect" data-ui-word="詳細" aria-label="選んだものの詳細（位置・大きさ・種類別の設定）" title="選んだものの詳細（位置・大きさ・種類別の設定）">🎛️</button>'
         '<button type="button" data-act="grid" data-ui-word="4枚表示" aria-label="4枚表示（その場で編集）" title="4枚表示（その場で編集）">⊞</button>'
         '</div>'
-        '<fieldset id="phone-inspector" hidden>'
+        '<fieldset id="slides-inspector" hidden>'
         '<legend>詳細設定</legend>'
         '<label>横の位置<input type="number" data-property="x" data-kinds="" min="-8192" max="8192" step="any">'
         '</label>'
@@ -4097,8 +4099,21 @@ PSWB_PARTS = {
         '<input type="file" hidden data-ui-file="open-json" accept=".json" aria-label="JSON（再編集用のシーン）" />'
         '<input type="file" hidden data-ui-file="open-workspace" accept=".json,application/json" aria-label="作業履歴（最大40状態）" />'
         '</div>\n'),
+    "slides-rows": (
+        '<script type="application/json" id="ui-chrome-rows">{"screen":[{"label":"💻 To textual ⇄ 📱 To iconic","key":"labels"}],"replaces":"#labels-switch"}</script>'),
+    "image-rows": (
+        '<script type="application/json" id="ui-chrome-rows">{"screen":[{"label":"📋 クリップボード・シェルフ","key":"shelf"},{"label":"💻 To textual ⇄ 📱 To iconic","key":"labels"}],"replaces":"#labels-switch"}</script>'),
 }
 # ⬆️ pysaiyanweboo
+
+
+def studio_rows(page: str) -> dict:
+    """🧰 What a studio declares for a host's header (PySaiyanWeBoo's ``chrome_rows_script``; the portfolio's screen places it while the
+    studio's panel is open): ⋯ 💻 To textual ⇄ 📱 To iconic on both (``labels``, answered by ``bindLabels``), and on Image Studio 📋 the
+    shelf (``shelf``, an act of its toolbar, answered by ``ui-chrome-action``). The host hides what they replace: the page's own 💻."""
+    labels = {"label": "💻 To textual ⇄ 📱 To iconic", "key": "labels"}
+    shelf = [{"label": "📋 クリップボード・シェルフ", "key": "shelf"}] if page == "image" else []
+    return {"screen": [*shelf, labels], "replaces": "#labels-switch"}
 
 
 def studio_toolbar(page: str) -> tuple[list, dict[str, str], dict[str, str]]:
@@ -4193,41 +4208,43 @@ def studio_toolbar(page: str) -> tuple[list, dict[str, str], dict[str, str]]:
         ("strokeWidth", "線幅", 0, 64, "any", "rect ellipse triangle arrow clock"),
         ("cell", "モザイクの幅", 1, 512, 1, "image"), ("levels", "色の段階", 2, 256, 1, "image"),
     )
-    inspector = ('<fieldset id="phone-inspector" hidden><legend>詳細設定</legend>' + "".join(
+    inspector = ('<fieldset id="slides-inspector" hidden><legend>詳細設定</legend>' + "".join(
         f'<label>{escape(label)}<input type="number" data-property="{key}" data-kinds="{kinds}" min="{lo}" max="{hi}" step="{step}"></label>'
         for key, label, lo, hi, step, kinds in numbers)
         + '<label><input type="checkbox" data-property="italic" data-kinds="text">斜体</label>'
         + '<label>矢印の先端<select data-property="headPlacement" data-kinds="arrow">'
           '<option value="tip">端</option><option value="middle">中央</option></select></label></fieldset>')
-    after = {"adjust": '<div id="phone-layers" class="ui-toolbar-row ui-current-items" role="group" aria-label="レイヤー（奥から手前）" hidden></div>',
-             "pages": '<div id="phone-pages" class="ui-toolbar-row ui-current-items" role="group" aria-label="ページの一覧" hidden></div>',
+    after = {"adjust": '<div id="slides-layers" class="ui-toolbar-row ui-current-items" role="group" aria-label="レイヤー（奥から手前）" hidden></div>',
+             "pages": '<div id="slides-pages" class="ui-toolbar-row ui-current-items" role="group" aria-label="ページの一覧" hidden></div>',
              "detail": inspector}
     return groups, {}, after
 
 
-def _phone_html() -> str:
-    slide = ('<div id="phone-svg" class="phone-svg" data-ui-fill></div>'
-             '<div id="phone-pick" class="phone-pick" hidden><span class="phone-grip" data-grip aria-hidden="true">↘</span></div>')
+def _slides_html() -> str:
+    slide = ('<div id="slides-svg" class="slides-svg" data-ui-fill></div>'
+             '<div id="slides-pick" class="slides-pick" hidden><span class="slides-grip" data-grip aria-hidden="true">↘</span></div>')
     head = STUDIO_HTML[:STUDIO_HTML.index("</head>")]
     for name in ("style.css", "studio.js", "brand/manifest.webmanifest", "brand/apple-touch-icon.png", "brand/favicon.ico",
                  "brand/icon.svg"):
         head = head.replace(f'"{name}"', f'"../{name}"')
     head = head.replace("Ironmate — Image Studio", "Ironmate — Slides")
-    scale = " ".join(f"{v:g}" for v in PHONE_TEXT["scale"])
+    scale = " ".join(f"{v:g}" for v in SLIDES_TEXT["scale"])
     return (head + "</head>\n"
-            f'  <body class="ui-elements" data-ui-theme="green" data-page="phone" data-text-size="{PHONE_TEXT["size"]}" data-text-scale="{scale}">\n'
-            '    <main class="phone">\n'
+            f'  <body class="ui-elements" data-ui-theme="green" data-page="slides" data-text-size="{SLIDES_TEXT["size"]}" data-text-scale="{scale}">\n'
+            f'    {PSWB_PARTS.get("slides-rows", "")}\n'                     # 🧰 its rows for a host's header (studio_rows)
+            '    <main class="slides">\n'
             f'      {PSWB_PARTS["stage"].replace("{slide}", slide)}\n'
-            '      <div id="phone-grid" role="group" aria-label="4枚表示" hidden></div>\n'
-            '      <div class="phone-deck"><textarea id="phone-edit" class="phone-edit" hidden aria-label="文字" rows="3" spellcheck="false"></textarea>'
+            '      <div id="slides-grid" role="group" aria-label="4枚表示" hidden></div>\n'
+            '      <div class="slides-deck"><textarea id="slides-edit" class="slides-edit" hidden aria-label="文字" rows="3" spellcheck="false"></textarea>'
             f'{PSWB_PARTS["pager"]}'
-            '<p id="phone-status" class="phone-status" role="status"></p>'
-            f'<div class="phone-tools">{PSWB_PARTS.get("slides-toolbar", "")}</div></div>\n'
+            '<p id="slides-status" class="slides-status" role="status"></p>'
+            f'<div class="slides-tools">{PSWB_PARTS.get("slides-toolbar", "")}</div></div>\n'
             "    </main>\n  </body>\n</html>\n")
 
 
-PHONE_HTML = _phone_html()
+SLIDES_HTML = _slides_html()
 STUDIO_HTML = STUDIO_HTML.replace('        <!-- 🧰 toolbar: studio_toolbar("image") -->\n', PSWB_PARTS.get("image-toolbar", ""), 1)   # 🧰 Image Studio's tools
+STUDIO_HTML = STUDIO_HTML.replace("    <main>", "    " + PSWB_PARTS.get("image-rows", "") + "\n    <main>", 1)                 # 🧰 its rows for a host's header
 
 BROWSER_TASK_JS = r"""/* PSWB async-task.js */
 /**
@@ -4374,7 +4391,7 @@ TOOLS_HTML = r"""<!doctype html>
       <a class="brand" href="../"><img src="../brand/heatmap.svg" width="48" height="48" alt="I’m — 🔰がアポストロフィのIronmateロゴ" /> IRONMATE</a>
       <nav aria-label="サイト">
         <a href="#brand">ロゴ素材</a><a href="../">Image Studio ↗</a
-        ><a href="https://myon-bioinformatics.github.io/#ironmate"
+        ><a href="https://myon-bioinformatics.github.io/#projects"
           >🏠 ポートフォリオ ↗</a
         ><a href="https://github.com/myon-bioinformatics/Ironmate">🐙 GitHub リポジトリ ↗</a>
       </nav>

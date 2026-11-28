@@ -9,7 +9,7 @@ No installation, external CDN or server processing is needed. Input images and i
 
 <img src="assets/phone-slides.gif" width="240" alt="Phone slides in a 390×844 browser: blank slide, text box, editing later, bigger text, 🔷 😊 (^^) 🕒 placed from candidates, page 2, ⬅️ back to page 1, the slide saved">
 
-One editor for phones and PCs, phone-first. The slide stays pinned at the top while you work, and every control is an emoji (its words are only in the tooltip / screen-reader label). A phone held sideways and a PC window (960 px and wider) put the controls beside the slide, every row on one line. The pinned slide, the page controls and the toolbar are PySaiyanWeBoo's `stage`, `pager` and `toolbar` components (`scripts/build_studio_css.py` writes them from the pinned commit; the toolbar's rows, faces, words and candidates are data in `studio_toolbar("slides")`, the same table as Image Studio's, and `bindToolbar` opens a candidate row under the row of the button that asked; 📥's file choosers are the toolbar's own, and `IronmatePhone.act(name, value)` runs what a press runs, a File included).
+One editor for phones and PCs, phone-first. The slide stays pinned at the top while you work, and every control is an emoji (its words are only in the tooltip / screen-reader label). A phone held sideways and a PC window (960 px and wider) put the controls beside the slide, every row on one line. The pinned slide, the page controls and the toolbar are PySaiyanWeBoo's `stage`, `pager` and `toolbar` components (`scripts/build_studio_css.py` writes them from the pinned commit; the toolbar's rows, faces, words and candidates are data in `studio_toolbar("slides")`, the same table as Image Studio's, and `bindToolbar` opens a candidate row under the row of the button that asked; 📥's file choosers are the toolbar's own, and `IronmateSlideStudio.act(name, value)` runs what a press runs, a File included).
 
 | | |
 | --- | --- |
@@ -36,7 +36,7 @@ One editor for phones and PCs, phone-first. The slide stays pinned at the top wh
 
 The GIF is the frames `tests/slides_browser.cjs` saves (`build/pages-evidence/phone-*.png`, 390×844; `phone-frames.json` lists them) at 1.4 s each.
 
-From Image Studio, open the clipboard shelf and choose **編集中の画像をスライド工房へ**. A new tab adds the current canvas as one PNG layer to the active slide. The source tab keeps the editable scene. Undo removes the imported layer.
+From Image Studio, open the clipboard shelf and choose **編集中の画像をスライド工房へ**. On the portfolio, Slide Studio opens in the same tab and adds the canvas as one PNG layer to the active slide. Browser Back returns to the editable canvas. In the standalone build, Slide Studio opens in a new tab. Undo removes the imported layer.
 
 The deck is also kept in the browser's local storage, so a reload or a killed tab comes back where it was. Nothing is sent anywhere. If the local storage is full (large pictures), the status shows ⚠️ 💾; save with 💾.
 

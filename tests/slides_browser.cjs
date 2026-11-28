@@ -256,6 +256,15 @@ const url =
     }), [1920, 1280]);
     await act("undo");
     assert.deepEqual((await state()).deck.slides[1].layers.map((l) => l.kind), ["rect", "arrow", "text"]);
+    // 🧰 IronmatePhone.act runs what the toolbar runs, awaitable (a host or Node needs no file input): a Blob is 📥's 画像 / カメラ
+    await mobile.evaluate(async (b64) => {
+      const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+      await IronmatePhone.act("camera", new Blob([bytes], { type: "image/png" }));
+      await IronmatePhone.act("undo");
+    }, photo);
+    assert.deepEqual((await state()).deck.slides[1].layers.map((l) => l.kind), ["rect", "arrow", "text"]);
+    assert.equal(await mobile.evaluate(() => IronmatePhone.act("redo").then(() => IronmatePhone.deck.slides[1].layers.at(-1).kind)), "image");
+    await mobile.evaluate(() => IronmatePhone.act("undo"));
     // 💾 autosave survives a reload
     await mobile.reload();
     await mobile.waitForFunction(() => !!window.IronmatePhone);

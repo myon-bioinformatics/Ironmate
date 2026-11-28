@@ -1163,7 +1163,8 @@ def test_phone_page_is_emoji_only_and_every_control_is_bound():
     # 🧰 the toolbar is PySaiyanWeBoo's (toolbar_html from studio_toolbar("slides")), and bindToolbar runs it
     parts = b.PSWB_PARTS['slides-toolbar']
     assert parts in html and 'id="phone-toolbar"' in parts and 'id="phone-candidates"' in parts and set(after) == {'adjust', 'pages', 'detail'}
-    assert 'PySaiyanWeBoo.bindToolbar($("phone-toolbar")' in b.STUDIO_JS and 'function offer(' not in b.STUDIO_JS
+    assert 'PySaiyanWeBoo.bindToolbar($("phone-toolbar"), press)' in b.STUDIO_JS and 'function offer(' not in b.STUDIO_JS
+    assert 'act: (name, value) => press(name, value)' in b.STUDIO_JS and 'act: (name) => STUDIO_ACTS[name]?.()' in b.STUDIO_JS   # 🧰 both pages' hook
     assert html.count('id="labels-switch" data-ui-labels-switch') == 1 and html.index('id="labels-switch"') > html.index('data-ui-group="file"')
     assert "PySaiyanWeBoo.bindLabels();" in b.STUDIO_JS
     words = re.compile(r'[\u3040-\u30ff\u4e00-\u9fffA-Za-z0-9]')

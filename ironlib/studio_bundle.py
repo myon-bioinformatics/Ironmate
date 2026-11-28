@@ -3965,18 +3965,20 @@ async function run(fn) {
     render();
   }
 }
-PySaiyanWeBoo.bindToolbar($("phone-toolbar"), (name, face) => {
-  // 🧰 PySaiyanWeBoo's toolbar: every press comes here; 🔷 🎨 ↻ 📥 📤 open their candidates themselves, 😊 (^^) pass the face
+function press(name, value) {
+  // 🧰 the one way in: a toolbar press (PySaiyanWeBoo's bindToolbar; 🔷 🎨 ↻ 📥 📤 open their candidates themselves), a picked
+  // 😊 (^^) (its face), a file 📥 chose (its File: 画像 カメラ JSON) and IronmatePhone.act — the same act every way
   if (name !== "edit") finishEdit();
-  if (face !== undefined) return run(() => record(stamp(face)));
-  if (acts[name]) run(acts[name]);
-});
+  if (value instanceof Blob) return run(() => files[name === "camera" ? "image" : name](value)); // 📷 a photo is an image
+  if (value !== undefined) return run(() => record(stamp(value)));
+  if (acts[name]) return run(acts[name]);
+}
+PySaiyanWeBoo.bindToolbar($("phone-toolbar"), press);
 for (const input of document.querySelectorAll("input[data-file]"))
   input.addEventListener("change", () => {
     const file = input.files[0];
     input.value = "";
-    finishEdit();
-    if (file) run(() => files[input.dataset.file === "camera" ? "image" : input.dataset.file](file)); // 📷 a photo is an image
+    if (file) press(input.dataset.file, file);
   });
 document.addEventListener("keydown", (e) => {
   if (editing || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return; // ← → Home End: the pager's own keys
@@ -4016,6 +4018,8 @@ window.IronmatePhone = {
   get level() {
     return level;
   },
+  // 🧰 what a toolbar press runs, awaitable from Node or a host: act("undo"), act("emoji", "🌱"), act("image", file) (a File or Blob)
+  act: (name, value) => press(name, value),
 };
 })();
 """

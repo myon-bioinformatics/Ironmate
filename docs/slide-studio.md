@@ -1,6 +1,6 @@
 # Slide Studio: build multiple slides in the browser and save as PPTX
 
-https://myon-bioinformatics.github.io/tools/slide-studio/
+https://myon-bioinformatics.github.io/tools/#slide-studio
 
 Text, shapes, arrows, emoji, clocks and pictures on several slides, saved as a PowerPoint file that stays editable.
 No installation, external CDN or server processing is needed. Input images and in-progress JSON are not sent anywhere.
@@ -9,7 +9,7 @@ No installation, external CDN or server processing is needed. Input images and i
 
 <img src="assets/phone-slides.gif" width="240" alt="Phone slides in a 390×844 browser: blank slide, text box, editing later, bigger text, 🔷 😊 (^^) 🕒 placed from candidates, page 2, ⬅️ back to page 1, then 🧭 through the six pager shapes">
 
-One editor for phones and PCs, phone-first. The slide stays pinned at the top while you work, and every control is an emoji (its words are only in the tooltip / screen-reader label). A phone held sideways and a PC window (960 px and wider) put the controls beside the slide, every row on one line. `/tools/slide-studio/phone/`, its address before it became the entrance, sends on to it. The pinned slide and the page controls are PySaiyanWeBoo's `stage` and `pager` components (`scripts/build_studio_css.py` writes them from the pinned commit).
+One editor for phones and PCs, phone-first. The slide stays pinned at the top while you work, and every control is an emoji (its words are only in the tooltip / screen-reader label). A phone held sideways and a PC window (960 px and wider) put the controls beside the slide, every row on one line. The pinned slide and the page controls are PySaiyanWeBoo's `stage` and `pager` components (`scripts/build_studio_css.py` writes them from the pinned commit).
 
 | | |
 | --- | --- |
@@ -37,7 +37,7 @@ One editor for phones and PCs, phone-first. The slide stays pinned at the top wh
 
 The GIF is the frames `tests/slides_browser.cjs` saves (`build/pages-evidence/phone-*.png`, 390×844; `phone-frames.json` lists them) at 1.4 s each, 0.9 s for the 🧭 shapes.
 
-From Image Studio, open the clipboard shelf and choose **編集中の画像をスライド工房へ**. A new tab adds the current canvas as one PNG layer to the active slide. The source tab keeps the editable scene. Undo removes the imported layer.
+From Image Studio, open the clipboard shelf and choose **編集中の画像をスライド工房へ**. On the portfolio, Slide Studio opens in the same tab and adds the canvas as one PNG layer to the active slide. Browser Back returns to the editable canvas. In the standalone build, Slide Studio opens in a new tab. Undo removes the imported layer.
 
 The deck is also kept in the browser's local storage, so a reload or a killed tab comes back where it was. Nothing is sent anywhere. If the local storage is full (large pictures), the status shows ⚠️ 💾; save with 💾.
 
@@ -51,7 +51,7 @@ pipe it to `python -S pptx_inspect.py -` and read the slide report as JSON.
 
 ## 🖥️ The PC studio, retired
 
-The PC studio that the editor above replaced is gone, so that phones and PCs are built once. Its old address, `/tools/slide-studio/pc/`, sends on to the editor, and its all-slide JSON opens there (📥 📦). Precision controls and four-up editing are available in the same editor. The mosaic preview and slide exports use the same processed image; the deck JSON keeps the original picture and its editable settings. Heatmaps and the other image tools stay in Image Studio.
+The PC studio that the editor above replaced is gone, so that phones and PCs are built once. Existing all-slide JSON opens in the editor (📥 📦). Precision controls and four-up editing are available in the same editor. The mosaic preview and slide exports use the same processed image; the deck JSON keeps the original picture and its editable settings. Heatmaps and the other image tools stay in Image Studio.
 
 ## What is editable in PowerPoint
 

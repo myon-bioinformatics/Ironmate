@@ -35,7 +35,7 @@
                       "items": [
                         {
                           "label": "開く",
-                          "href": "https://myon-bioinformatics.github.io/tools/image-studio/"
+                          "href": "https://myon-bioinformatics.github.io/tools/#image-studio"
                         }
                       ]
                     },
@@ -60,7 +60,7 @@
                       "items": [
                         {
                           "label": "開く",
-                          "href": "https://myon-bioinformatics.github.io/tools/browser-tools/"
+                          "href": "https://myon-bioinformatics.github.io/tools/#browser-tools"
                         }
                       ]
                     },
@@ -85,7 +85,7 @@
                       "items": [
                         {
                           "label": "開く",
-                          "href": "https://myon-bioinformatics.github.io/tools/slide-studio/"
+                          "href": "https://myon-bioinformatics.github.io/tools/#slide-studio"
                         }
                       ]
                     },
@@ -328,7 +328,7 @@
                       "items": [
                         {
                           "label": "Image Studio を開く",
-                          "href": "https://myon-bioinformatics.github.io/tools/image-studio/"
+                          "href": "https://myon-bioinformatics.github.io/tools/#image-studio"
                         }
                       ]
                     }
@@ -344,7 +344,7 @@
                       "items": [
                         {
                           "label": "Slide Studio を開く",
-                          "href": "https://myon-bioinformatics.github.io/tools/slide-studio/"
+                          "href": "https://myon-bioinformatics.github.io/tools/#slide-studio"
                         }
                       ]
                     }

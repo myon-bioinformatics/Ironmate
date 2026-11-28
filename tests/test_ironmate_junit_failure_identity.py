@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import hashlib, importlib.util, json, os, shutil, subprocess, sys
+import importlib.util, json, os, shutil, subprocess, sys
 from pathlib import Path
 
 import pytest
@@ -26,10 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 @pytest.fixture
 def xprobe():
-    path = ROOT / "build/shared/xprobe.py"
-    data = path.read_bytes()
-    blob = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
-    assert blob == "dbc5b7d55005d6288c072a7612584d6170c216f4"
+    path = ROOT / "build/shared/xprobe.py"  # 🔁 xprobe main, checked out by CI
     spec = importlib.util.spec_from_file_location("issue58_xprobe", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -139,7 +136,7 @@ def test_workflow_keeps_suite_failure_and_exact_reports(tmp_path):
     collector = jobs['failure-identity']
     assert collector['needs'] == ['test', 'marp-integration', 'studio-clipboard']
     assert collector['if'] == 'always()'
-    assert collector['uses'].endswith('@27c46411c0a07d9b4d0f1ad5751ed1bb9e869b5c')
+    assert collector['uses'].endswith('@main')  # 🔁 own reusable workflows follow main
     marp_steps = jobs['marp-integration']['steps']
     install = next(s for s in marp_steps if s.get('name') == 'Install pinned Node packages and the locked Marp CLI tools')
     assert '--ignore-scripts' in install['run']

@@ -10,25 +10,8 @@ on failure. Success output stays JSONL for every format.
 """
 from __future__ import annotations
 
-import argparse
-import configparser
-from datetime import datetime, timezone
-from decimal import ROUND_CEILING, ROUND_HALF_UP, Decimal
-import difflib
-from email.utils import parsedate_to_datetime
-from http.client import HTTPException, IncompleteRead
-import json
-import math
-import os
-from pathlib import Path
-import re
-import sys
-import tempfile
-import time
-from typing import Any, Iterable
-from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode
-from urllib.request import Request, urlopen
+import argparse, configparser, difflib, json, math, os, re, sys, tempfile, time
+from datetime import datetime, timezone; from decimal import Decimal, ROUND_CEILING, ROUND_HALF_UP; from email.utils import parsedate_to_datetime; from http.client import HTTPException, IncompleteRead; from pathlib import Path; from typing import Any, Iterable; from urllib.error import HTTPError, URLError; from urllib.parse import urlencode; from urllib.request import Request, urlopen
 
 NVD_CVE_API = "https://services.nvd.nist.gov/rest/json/cves/2.0"
 DEFAULT_RESULTS_PER_PAGE = 2000
@@ -516,23 +499,16 @@ def select_cpe_records(
     if missing:
         return {"status": "not_measured", "reason": "missing_query_completion",
                 "cpe_names": cpes, "missing_cpe_names": missing}
-    mismatched: list[str] = []
-    for cpe in cpes:
-        observed = len({
-            row["id"] for row in rows
-            if row.get("kind", "cve") == "cve"
-            and row.get("query", {}).get("cpe_name") == cpe
-        })
-        if completions[cpe] != observed:
-            mismatched.append(cpe)
+    ids_by_cpe = {cpe: set() for cpe in cpes}
+    for row in rows:
+        cpe = row.get("query", {}).get("cpe_name")
+        if row.get("kind", "cve") == "cve" and isinstance(cpe, str) and cpe in ids_by_cpe:
+            ids_by_cpe[cpe].add(row["id"])
+    mismatched = [cpe for cpe in cpes if completions[cpe] != len(ids_by_cpe[cpe])]
     if mismatched:
         return {"status": "not_measured", "reason": "completion_count_mismatch",
                 "cpe_names": cpes, "mismatched_cpe_names": sorted(mismatched)}
-    cve_ids = sorted({
-        row["id"] for row in rows
-        if row.get("kind", "cve") == "cve"
-        and row.get("query", {}).get("cpe_name") in cpes
-    })
+    cve_ids = sorted(set().union(*ids_by_cpe.values()))
     return {"status": "measured", "cpe_names": cpes,
             "cve_count": len(cve_ids), "cve_ids": cve_ids}
 
@@ -829,6 +805,7 @@ def _build_parser() -> _AgentArgumentParser:
             "Blank values are rejected. The value is trimmed and uppercased."
         ),
     )
+    parser.suggest_on_error = True  # 🤔 argparse 3.14+: "maybe you meant" for --format / --cvss-v3-severity; older Pythons ignore it
     return parser
 
 

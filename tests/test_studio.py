@@ -1023,7 +1023,7 @@ def test_studio_pages_opt_into_the_components_and_palette():
 
 def test_build_site_contains_only_public_client_assets_and_relative_paths(tmp_path):
     target=s.build_site(tmp_path/'Ironmate')
-    assert {p.name for p in target.iterdir()}=={'index.html','studio.js','style.css','.nojekyll','tools','brand'}
+    assert {p.name for p in target.iterdir()}=={'index.html','studio.js','style.css','.nojekyll','tools','slides','brand'}
     brand_files = {
         'mono.svg', 'dark-green.svg', 'famicom.svg',
         'gameboy.svg', 'pixel-3d.svg', 'manifest.webmanifest', 'apple-touch-icon.png',
@@ -1039,7 +1039,7 @@ def test_build_site_contains_only_public_client_assets_and_relative_paths(tmp_pa
     from ironlib.studio_bundle import BROWSER_TASK_JS, RECORDS_JS
     assert (target/'tools/async-task.js').read_text(encoding='utf-8') == BROWSER_TASK_JS
     assert (target/'tools/records.js').read_text(encoding='utf-8') == RECORDS_JS
-    for page in ('index.html', 'tools/index.html'):
+    for page in ('index.html', 'tools/index.html', 'slides/index.html'):
         html = (target/page).read_text()
         assert 'src="/' not in html and 'href="/' not in html
     text=(target/'index.html').read_text()
@@ -1104,8 +1104,11 @@ def test_slides_page_is_emoji_only_and_every_control_is_bound():
     assert html == b.SLIDES_HTML
     assert 'data-page="slides"' in html and "connect-src 'none'" in html
     assert '"style.css"' in html and '"studio.js"' in html and 'src="/' not in html and 'href="/' not in html
-    # 🚪 one entrance: the old addresses (Image Studio, slides/, the phone page, the PC studio) are gone
-    assert not {'slides/index.html', 'slides/phone/index.html', 'slides/pc/index.html'} & set(assets)
+    # 🚪 one entrance: the old addresses (Image Studio, the phone page, the PC studio) are gone; 🌉 slides/ is the same editor one
+    # folder down, only because the portfolio's build needs that page for its 📽️ card until it shows one panel (ONE-EDITOR P7b)
+    assert not {'slides/phone/index.html', 'slides/pc/index.html'} & set(assets)
+    bridge = assets['slides/index.html'].decode('utf-8')
+    assert bridge == html.replace('="style.css"', '="../style.css"').replace('="studio.js"', '="../studio.js"').replace('="brand/', '="../brand/')
     assert 'data-act="studio"' not in html and 'data-act="image-studio"' not in html
     assert 'data-mode="slides"' not in b.STUDIO_JS and 'studio slides' not in b.STUDIO_JS + b.SLIDES_HTML   # no PC slide code left
 
@@ -2104,7 +2107,7 @@ def test_vendor_runtime_is_one_merged_commit_and_license_is_exact():
     lock=json.loads((ROOT/'vendor.lock.json').read_text())
     assert not [x for x in lock['files'] if x['repository'].endswith('/PySaiyanWeBoo')]
     flow={x['destination']: x for x in lock['files'] if x['repository'].endswith('/ascii_artist')}
-    assert {flow[d]['commit'] for d in ('vendor/ascii_artist.py','examples/flow.json')} == {'001de63c23396e3ea6333867a169df2c60a50244'}
+    assert len({flow[d]['commit'] for d in ('vendor/ascii_artist.py','examples/flow.json')}) == 1  # 🔁 one main commit
     assert flow['examples/flow.json']['source'] == 'examples/pr-flow.json' and 'vendor/ascii_artist-LICENSE' in flow
     for entry in flow.values():
         data=(ROOT/entry['destination']).read_bytes()

@@ -65,6 +65,10 @@ def public_assets():
              'brand/favicon-32.png', 'brand/favicon-48.png', 'brand/icon-192.png')
     assets = {name: (ROOT / 'studio' / name).read_bytes() for name in names}
     assets['index.html'] = SLIDES_HTML.encode('utf-8')   # 📽️ the one editor (slides and pictures, phone-first; ONE-EDITOR #301)
+    # 🌉 slides/: the same editor, one folder down, because the portfolio's build places slides/ at its 📽️ card (it needs that page)
+    # until it shows one panel (ONE-EDITOR P7b, #301); then this line goes
+    assets['slides/index.html'] = SLIDES_HTML.replace('="style.css"', '="../style.css"').replace('="studio.js"', '="../studio.js"')\
+        .replace('="brand/', '="../brand/').encode('utf-8')
     assets['style.css'] = STYLE_CSS.encode('utf-8')
     from scripts.pages_catalog import catalog_script
     assets['studio.js'] = STUDIO_JS.encode('utf-8') + b'\n' + catalog_script()

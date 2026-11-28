@@ -2,7 +2,7 @@
 # metadata: __all__=128 | base_sha=99b6a174a883f60a9c3ed01164a81fd7bd26ff76 | updated_at=2026-09-27T09:40:47Z
 """Stdlib-only Markdown utility functions.
 
-This module is intentionally a single file with no CLI / ``main`` entry point.
+This module is a single standard-library file; its optional CLI delegates to the same helpers.
 It focuses on reusable helpers for Markdown I/O, structure extraction, and
 conservative HTML <-> Markdown conversions (links, images, common tags).
 
@@ -18,6 +18,7 @@ __all__ = [
     "run_markdown_doctest",
     "extract_sections",
     "split_sections",
+    "split_slides",
     "extract_links",
     "extract_images",
     "extract_code_blocks",
@@ -110,6 +111,7 @@ __all__ = [
     "toml_reader",
     "markdown_to_toml",
     "dotenv_to_markdown",
+    "pixiv_to_markdown",
     "markdown_to_dotenv",
     "markdown_to_directory_tree",
     "directory_tree_to_markdown",
@@ -145,34 +147,8 @@ __all__ = [
     "UNSUPPORTED",
 ]
 
-import argparse
-import ast
-import calendar as calendar_module
-import configparser
-import csv
-import doctest
-import email as email_module
-import email.message as email_message
-import email.policy as email_policy
-import email.utils as email_utils
-import graphlib
-import html as html_module
-import importlib.metadata as importlib_metadata
-import inspect
-import io
-import json
-import math
-import platform
-import re
-import statistics
-import sys
-import tokenize
-import unicodedata
-from dataclasses import dataclass
-from html.parser import HTMLParser
-from pathlib import Path
-from typing import Any, Literal
-from urllib.parse import urljoin, urlparse
+import argparse, ast, calendar as calendar_module, configparser, csv, doctest, email as email_module, email.message as email_message, email.policy as email_policy, email.utils as email_utils, graphlib, html as html_module, importlib.metadata as importlib_metadata, inspect, io, json, math, platform, re, statistics, sys, tokenize, unicodedata
+from dataclasses import dataclass; from html.parser import HTMLParser; from pathlib import Path; from typing import Any, Literal; from urllib.parse import urljoin, urlparse
 
 try:
     import tomllib
@@ -414,7 +390,7 @@ _HOST_PORT_REFERENCE_RE = re.compile(
 # Shared lexical helpers. New format converters should use these helpers
 # instead of re-implementing fence state or treating inline code as prose.
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class _ScannedLine:
     """One physical Markdown line with its code-context classification."""
 
@@ -708,6 +684,56 @@ def split_sections(content: str) -> list[dict[str, Any]]:
             body.append(line)
     flush()
     return parts
+
+
+def split_slides(content: str) -> list[dict[str, Any]]:
+    """Split content into pages at thematic breaks (``---``, ``***``, ``___``).
+
+    This is how slide Markdown (Marp, reveal.js, Deckset) separates slides.
+    Each item has ``content`` (the page without the break lines, outer blank
+    lines trimmed), ``title`` and ``level`` (the heading the page starts
+    with; ``""`` and 0 without one) and ``body`` (the page after that
+    heading), so a page maps onto a title box and a body box.
+
+    A break inside fenced code is text. A ``---`` line directly under a line
+    of text is that line's setext underline, not a break: leave a blank line
+    above a break. YAML front matter at the very top (``---`` to ``---`` or
+    ``...``, with at least one ``key:`` line) holds the deck's settings and
+    is skipped. A leading or trailing break adds no page; two breaks in a
+    row make an empty page.
+    """
+    lines = content.splitlines()
+    start = 0
+    if lines and lines[0].rstrip() == "---":
+        closing = next((i for i in range(1, len(lines)) if lines[i].rstrip() in ("---", "...")), None)
+        if closing is not None and any(re.match(r"[A-Za-z_][\w -]*:(\s|$)", line) for line in lines[1:closing]):
+            start = closing + 1
+    lines = lines[start:]
+    pages: list[list[str]] = [[]]
+    for index, item in enumerate(_scan_lines(lines)):
+        line = lines[index]
+        above = lines[index - 1] if index else ""
+        underline = line.strip().startswith("-") and above.strip() != "" and not _HR_RE.match(above) and not _FENCE_RE.match(above)
+        if _HR_RE.match(line) and not item.in_fenced_code and not item.is_fence_open and not item.is_fence_close and not underline:
+            pages.append([])
+        else:
+            pages[-1].append(line)
+    texts = ["\n".join(page).strip("\n") for page in pages]
+    while texts and not texts[0].strip():
+        texts.pop(0)
+    while texts and not texts[-1].strip():
+        texts.pop()
+    slides = []
+    for text in texts:
+        first, _, rest = text.partition("\n")
+        match = _HEADING_RE.match(first)
+        slides.append({
+            "level": len(match.group(1)) if match else 0,
+            "title": match.group(2).strip() if match else "",
+            "body": rest.strip("\n") if match else text,
+            "content": text,
+        })
+    return slides
 
 
 def _parse_attrs(attr_text: str) -> dict[str, str]:
@@ -1672,10 +1698,24 @@ def code_block(code: str, lang: str = "", *, fence_char: str = "`") -> str:
     fence, so existing callers see no change. Pass ``fence_char="~"`` for a
     tilde fence (e.g. when ``code`` itself contains backtick runs).
 
+    ``lang`` is a single-line info string and may include metadata or Unicode.
+    Backtick fences cannot have backticks in their info string (CommonMark
+    section 4.5). Tilde info may contain both markers, but a leading tilde
+    needs separating whitespace, e.g. ``lang=" ~tag"``, so it does not extend
+    only the opening fence. Existing whitespace is preserved in the output.
+
     :raises ValueError: if ``fence_char`` isn't ``"`"`` or ``"~"`` -- the
-        only two characters Markdown recognizes as a fence.
+        only two characters Markdown recognizes as a fence -- or ``lang``
+        contains a line separator, a backtick for a backtick fence, or an
+        unseparated leading tilde for a tilde fence.
     """
     fence = _adaptive_fence(code, fence_char)
+    if lang and lang.splitlines() != [lang]:
+        raise ValueError("lang must be a single line without line separators")
+    if fence_char == "`" and "`" in lang:
+        raise ValueError("lang cannot contain backticks with a backtick fence")
+    if fence_char == "~" and lang.startswith("~"):
+        raise ValueError("lang must separate a leading tilde from the fence with whitespace")
     return f"{fence}{lang}\n{code}\n{fence}\n"
 
 
@@ -2165,7 +2205,7 @@ def _display_width(value: Any) -> int:
     is stable across common Western and Japanese terminals. Emoji sequences
     count once: a skin-tone modifier or a ZWJ-joined part adds nothing, and
     VS16 (emoji presentation) widens a narrow base to two. Cross-checked
-    against the npm ``string-width`` package in ``tests/test_mirror_js.py``.
+    against the npm ``string-width`` package in ``tests/test_html.py``.
     """
     width = 0
     previous = 0
@@ -2840,6 +2880,99 @@ def _dotenv_dumps(value: Any) -> str:
     return "".join(line + "\n" for line in lines)
 
 
+def _pixiv_inline(text: str) -> str:
+    def link(match):
+        label = match[1].strip()
+        target = (match[2] or label).strip().replace('(', '%28').replace(')', '%29').replace(' ', '%20')
+        return f'[{label}]({target})'
+    def prose(part):
+        part = re.sub(r'NEXT▶︎(?=\[\[)', 'NEXT ▶︎ ', part)
+        part = re.sub(r'\[\[([^\[\]>]+)(?:>([^\[\]]+))?\]\]', link, part)
+        part = re.sub(r'!\[pixiv image (\d+)\]\(pixivimage:\1(?: "[A-Za-z0-9]+")?\)',
+                      r'[pixiv image \1](https://www.pixiv.net/artworks/\1)', part)
+        part = re.sub(r'\[pixivimage:(\d+)(?::[A-Za-z0-9]+)?\]',
+                      r'[pixiv image \1](https://www.pixiv.net/artworks/\1)', part)
+        return re.sub(r'\[youtube:([A-Za-z0-9_-]{11})\]', r'[YouTube](https://www.youtube.com/watch?v=\1)', part)
+    # Preserve matched backtick code spans, including runs longer than one tick.
+    parts = re.split(r'(`+)(.*?)\1', text)
+    if len(parts) == 1:
+        return prose(text)
+    out = prose(parts[0])
+    for index in range(1, len(parts), 3):
+        out += parts[index] + parts[index + 1] + parts[index] + prose(parts[index + 2])
+    return out
+
+
+def pixiv_to_markdown(source: str) -> str:
+    """Convert pixiv's source markup (encyclopedia / novel style) to Markdown.
+
+    ``*`` star headings become ATX headings, ``[[label>target]]`` wiki links and
+    ``-``/``--`` wiki lists become links and nested lists, ``^`` row-header tables
+    become GFM tables (row headers as bold cells under an empty column header),
+    and ``[pixivimage:N]`` / ``[youtube:ID]`` become plain links. Fenced and
+    backtick code is left alone, already-normalized Markdown is kept (so it is
+    idempotent) and unsupported syntax stays literal. Nothing is downloaded or
+    embedded. Use it only for text known to be pixiv source; over 200000
+    characters raises ``ValueError``.
+
+    >>> pixiv_to_markdown("*概要\\n[[作品>作品(詳細)]]")
+    '# 概要\\n\\n[作品](作品%28詳細%29)'
+    """
+    if len(source) > 200000:
+        raise ValueError('Pixiv source exceeds 200000 characters')
+    source = source.replace('\r\n', '\n').replace('\r', '\n').replace('\u2028', '\n').replace('\u2029', '\n').replace('\x00', '\ufffd')
+    lines = source.split('\n')
+    out: list[str] = []
+    fence = None
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        match = re.match(r'^ {0,3}(`{3,}|~{3,})(.*)$', line)
+        if fence:
+            out.append(line)
+            if match and match[1][0] == fence[0] and len(match[1]) >= len(fence) and not match[2].strip():
+                fence = None
+            i += 1
+            continue
+        if match and not (match[1][0] == '`' and '`' in match[2]):
+            fence = match[1]
+            out.append(line)
+            i += 1
+            continue
+        # Only contiguous pipe rows containing an explicit Pixiv ^ cell marker.
+        if line.startswith('|') and line.endswith('|'):
+            j = i
+            rows = []
+            while j < len(lines) and lines[j].startswith('|') and lines[j].endswith('|'):
+                rows.append(re.split(r'(?<!\\)\|', lines[j][1:-1]))
+                j += 1
+            if any(cell.lstrip().startswith('^') for row in rows for cell in row):
+                width = max(map(len, rows))
+                if out and out[-1].strip():
+                    out.append('')
+                out.extend(['|' + '|'.join([' '] * width) + '|', '|' + '|'.join([' --- '] * width) + '|'])
+                for row in rows:
+                    cells = []
+                    for cell in row:
+                        cell = cell.strip()
+                        cells.append('**' + _pixiv_inline(cell[1:]) + '**' if cell.startswith('^') else _pixiv_inline(cell))
+                    out.append('| ' + ' | '.join(cells + [''] * (width - len(cells))) + ' |')
+                out.append('')
+                i = j
+                continue
+        heading = re.match(r'^(\*{1,6})([^*\s].*?)\s*$', line)
+        if heading and heading[1] not in heading[2]:
+            if out and out[-1].strip():
+                out.append('')
+            out.extend(['#' * len(heading[1]) + ' ' + _pixiv_inline(heading[2]), ''])
+        else:
+            line = re.sub(r'^(-{1,6})(?=[^\s-])', lambda m: '  ' * (len(m[1]) - 1) + '- ', line)
+            out.append(_pixiv_inline(line))
+        i += 1
+    return '\n'.join(out)
+
+
+
 def dotenv_to_markdown(content: str, title: str = ".env") -> str:
     """Convert a narrow dotenv subset to canonical structured Markdown.
 
@@ -2924,21 +3057,21 @@ process.stdin.on('data', (c) => (text += c)).on('end', () => {
 });
 """
 _TOML_READER: list[str | None] = []
-_NODE_LAUNCH: Any = None
+_NJS_LAUNCH: Any = None
 
 
-def _node_launch_module() -> Any:
-    global _NODE_LAUNCH
-    if _NODE_LAUNCH is None:
+def _njs_launch_module() -> Any:
+    global _NJS_LAUNCH
+    if _NJS_LAUNCH is None:
         import importlib.util
         from pathlib import Path
 
-        path = Path(__file__).resolve().parent / "vendor" / "node_launch.py"
-        spec = importlib.util.spec_from_file_location("_vendored_node_launch", path)
+        path = Path(__file__).resolve().parent / "vendor" / "njs_launch.py"
+        spec = importlib.util.spec_from_file_location("_vendored_njs_launch", path)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        _NODE_LAUNCH = module
-    return _NODE_LAUNCH
+        _NJS_LAUNCH = module
+    return _NJS_LAUNCH
 
 
 def _decode_node_process_bytes(data: Any) -> str:
@@ -2955,20 +3088,20 @@ def _toml_node_run(
     timeout: float = 30,
     **kwargs: Any,
 ) -> Any:
-    """Run vendored ``node_launch`` for TOML helpers with ``subprocess``-compatible errors."""
+    """Run vendored ``njs_launch`` for TOML helpers with ``subprocess``-compatible errors."""
     import subprocess
 
-    node_launch = _node_launch_module()
+    njs_launch = _njs_launch_module()
     run_kwargs = dict(kwargs)
     node = run_kwargs.pop("node", None)
-    env_var = run_kwargs.pop("env_var", node_launch.DEFAULT_ENV_VAR)
+    env_var = run_kwargs.pop("env_var", njs_launch.DEFAULT_ENV_VAR)
     run_kwargs.pop("probe", None)
-    executable = node_launch.resolve_node(node=node, env_var=env_var)
-    command = node_launch.node_command(
+    executable = njs_launch.resolve_node(node=node, env_var=env_var)
+    command = njs_launch.node_command(
         target, *args, node=executable, probe=False, env_var=env_var
     )
     try:
-        return node_launch.run(
+        return njs_launch.run(
             target,
             *args,
             timeout=timeout,
@@ -2976,7 +3109,7 @@ def _toml_node_run(
             probe=False,
             **run_kwargs,
         )
-    except node_launch.LaunchError as exc:
+    except njs_launch.LaunchError as exc:
         if exc.code == "ELAUNCHSTDINCLOSED":
             status = exc.status if exc.status is not None else -1
             if status != 0:
@@ -3002,12 +3135,12 @@ def toml_reader() -> str | None:
     if tomllib is not None:
         return "tomllib"
     if not _TOML_READER:
-        node_launch = _node_launch_module()
+        njs_launch = _njs_launch_module()
         ok = False
         try:
             probe = _toml_node_run("-e", "require('smol-toml')", timeout=30, check=False)
             ok = probe.returncode == 0
-        except node_launch.NodeNotFoundError:
+        except njs_launch.NodeNotFoundError:
             ok = False
         _TOML_READER.append("node" if ok else None)
     return _TOML_READER[0]
@@ -4899,8 +5032,29 @@ def _consume_blockquote(
     return "\n".join(parts), i
 
 
-def markdown_to_html(content: str) -> str:
+def markdown_to_html(content: str, *, raw_html: bool = False, attr_list: bool = False) -> str:
     """Conservatively convert a Markdown *subset* to HTML.
+
+    Opt-in modes for trusted input (both off by default; the default output is
+    unchanged and escapes every ``<``):
+
+    - ``raw_html=True``: block-level HTML passes through as written (CommonMark
+      HTML blocks: ``<script>`` / ``<style>`` / ``<pre>`` / ``<textarea>`` up to
+      their closing tag, other block tags such as ``<div>`` / ``<p>`` /
+      ``<details>`` / ``<summary>`` up to the next blank line). An opening tag
+      alone on its line with ``markdown="1"`` keeps the tag (without that
+      attribute) and renders its contents, up to the matching closing tag at
+      the start of a line, as Markdown in the same mode (Python-Markdown's
+      ``md_in_html``). Entity references (``&lt;``, ``&#60;``, ``&#x3c;``) in
+      text are kept as entities, as CommonMark does; inside ``<code>`` and
+      ``<pre>`` they stay literal text.
+    - ``attr_list=True``: a Kramdown block IAL line (``{: #id .class
+      key="value"}``) right after a paragraph, heading, table or list adds
+      those attributes to its first tag, and an ATX heading may end with
+      ``{#id .class}`` or ``{: #id}`` (Python-Markdown's ``attr_list`` for
+      blocks and headings). Lines that do not parse stay text.
+
+    Footnotes are numbered per Markdown run between HTML blocks in these modes.
 
     Handles ATX headings, fenced code, paragraphs, inline code, bold/italic,
     strikethrough (``~~text~~`` → ``<del>``), links, images, angle-bracket
@@ -4964,6 +5118,8 @@ def markdown_to_html(content: str) -> str:
     unknown Obsidian types still parse as Obsidian callouts (matching
     Obsidian's custom-type support).
     """
+    if raw_html or attr_list:
+        return _markdown_to_html_blocks(content, raw_html=raw_html, attr_list=attr_list)
     # Sanitize before all parsing paths, including fenced code: html.escape
     # leaves NUL intact, and input must not forge internal NUL placeholders.
     content = content.replace("\x00", "\ufffd")
@@ -5230,6 +5386,140 @@ def markdown_to_html(content: str) -> str:
     if footnote_order:
         out.append(_footnotes_section_html(footnote_order, footnote_defs, render_inline))
     return "\n".join(out) + ("\n" if out else "")
+
+
+# CommonMark HTML block starts: type 1 (until the closing tag) and type 6 (until a blank line).
+_HTML_BLOCK_RAW = ("script", "style", "pre", "textarea")
+_HTML_BLOCK_TAGS = frozenset(
+    "address article aside blockquote body caption center col colgroup dd details dialog dir div dl dt "
+    "fieldset figcaption figure footer form h1 h2 h3 h4 h5 h6 header hr html legend li main menu nav ol "
+    "optgroup option p section summary table tbody td tfoot th thead title tr ul".split()
+)
+_HTML_BLOCK_START_RE = re.compile(r"^ {0,3}<(?P<close>/?)(?P<tag>[A-Za-z][A-Za-z0-9-]*)(?=[\s/>]|$)")
+_MARKDOWN_ATTR_RE = re.compile(r"""\s+markdown\s*=\s*(?:"1"|'1'|1)(?=[\s/>])""")
+_ENTITY_AMP_RE = re.compile(r"&amp;(?=(?:#[0-9]{1,7}|#[xX][0-9a-fA-F]{1,6}|[A-Za-z][A-Za-z0-9]{1,31});)")
+_CODE_SPAN_HTML_RE = re.compile(r"(<code\b[^>]*>.*?</code>|<pre\b[^>]*>.*?</pre>)", re.S)
+_ATX_ATTR_HEADING_RE = re.compile(r"^ {0,3}#{1,6}[ \t].*\}\s*$")
+_FIRST_TAG_RE = re.compile(r"^(?P<lead>\s*<(?P<tag>[A-Za-z][A-Za-z0-9-]*))(?P<attrs>[^>]*)>")
+
+
+def _html_block_kind(line: str) -> str | None:
+    """``raw`` (type 1), ``block`` (type 6) or ``None`` for a line that starts no HTML block."""
+    match = _HTML_BLOCK_START_RE.match(line)
+    if not match:
+        return None
+    tag = match.group("tag").lower()
+    if tag in _HTML_BLOCK_RAW and not match.group("close"):
+        return "raw"
+    return "block" if tag in _HTML_BLOCK_TAGS else None
+
+
+def _keep_entities(html: str) -> str:
+    """Undo the escape of ``&`` that starts an entity reference, outside code."""
+    parts = _CODE_SPAN_HTML_RE.split(html)
+    return "".join(part if index % 2 else _ENTITY_AMP_RE.sub("&", part) for index, part in enumerate(parts))
+
+
+def _with_block_attrs(html: str, parsed: dict[str, Any]) -> str:
+    """Add an IAL's id / classes / key="value" to the first tag of ``html``."""
+    match = _FIRST_TAG_RE.match(html)
+    if not match:
+        return html
+    attrs = match.group("attrs")
+    extra = ""
+    if parsed["id"] and not re.search(r"\sid\s*=", attrs):
+        extra += f' id="{html_module.escape(parsed["id"])}"'
+    if parsed["classes"]:
+        joined = " ".join(parsed["classes"])
+        found = re.search(r'\sclass="([^"]*)"', attrs)
+        if found:
+            attrs = attrs[: found.start(1)] + f"{found.group(1)} {html_module.escape(joined)}".strip() + attrs[found.end(1):]
+        else:
+            extra += f' class="{html_module.escape(joined)}"'
+    for key, value in parsed["attrs"].items():
+        extra += f' {html_module.escape(key)}="{html_module.escape(value)}"'
+    return f"{match.group('lead')}{attrs}{extra}>" + html[match.end():]
+
+
+def _markdown_to_html_blocks(content: str, *, raw_html: bool, attr_list: bool) -> str:
+    """``markdown_to_html`` with HTML blocks and/or block IALs (see its docstring)."""
+    lines = content.replace("\x00", "\ufffd").splitlines()
+    out: list[str] = []
+    buf: list[str] = []
+
+    def render(md_lines: list[str]) -> str:
+        html = markdown_to_html("\n".join(md_lines)).rstrip("\n")
+        return _keep_entities(html) if raw_html else html
+
+    def flush() -> None:
+        if any(line.strip() for line in buf):
+            out.append(render(buf))
+        buf.clear()
+
+    fence: str | None = None
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        kind = _html_block_kind(line) if raw_html and fence is None else None
+        if kind is not None:
+            flush()
+            tag = _HTML_BLOCK_START_RE.match(line).group("tag").lower()
+            opener = line.strip()
+            if kind == "block" and _MARKDOWN_ATTR_RE.search(opener) and re.fullmatch(r"<[^<>]*>", opener):
+                close = re.compile(rf"^ {{0,3}}</{re.escape(tag)}\s*>\s*$", re.I)
+                opens = re.compile(rf"^ {{0,3}}<{re.escape(tag)}(?=[\s/>]|$)", re.I)
+                depth, j = 1, i + 1
+                while j < len(lines):
+                    if opens.match(lines[j]):
+                        depth += 1
+                    elif close.match(lines[j]):
+                        depth -= 1
+                        if not depth:
+                            break
+                    j += 1
+                if j < len(lines):
+                    inner = _markdown_to_html_blocks("\n".join(lines[i + 1:j]), raw_html=raw_html, attr_list=attr_list)
+                    out.append("\n".join(part for part in (_MARKDOWN_ATTR_RE.sub("", opener), inner.rstrip("\n"), lines[j].strip()) if part))
+                    i = j + 1
+                    continue
+            j = i
+            if kind == "raw":
+                end = re.compile(rf"</{re.escape(tag)}\s*>", re.I)
+                while j < len(lines) and not end.search(lines[j]):
+                    j += 1
+            else:
+                while j + 1 < len(lines) and lines[j + 1].strip():
+                    j += 1
+            out.append("\n".join(lines[i:j + 1]))
+            i = j + 1
+            continue
+        heading = _ATX_ATTR_HEADING_RE.match(line) if attr_list and fence is None else None
+        if heading:
+            trailing = _TRAILING_KRAMDOWN_IAL_RE.match(line) or _TRAILING_PANDOC_ATTR_RE.match(line)
+            parsed = _parse_attr_list_inner(trailing.group("inner")) if trailing else None
+            if parsed is not None and (parsed["id"] or parsed["classes"] or parsed["attrs"]):
+                flush()
+                out.append(_with_block_attrs(render([trailing.group("body").rstrip()]), parsed))
+                i += 1
+                continue
+        standalone = _STANDALONE_IAL_RE.match(line) if attr_list and fence is None else None
+        parsed = _parse_attr_list_inner(standalone.group("inner")) if standalone else None
+        if parsed is not None and buf and buf[-1].strip():
+            start = len(buf)
+            while start and buf[start - 1].strip():
+                start -= 1
+            block = buf[start:]
+            del buf[start:]
+            flush()
+            out.append(_with_block_attrs(render(block), parsed))
+            i += 1
+            continue
+        fence, _, _ = _advance_fence(fence, line)
+        buf.append(line)
+        i += 1
+    flush()
+    return "\n".join(out) + ("\n" if out else "")
+
 
 _ALERT_STYLESHEET = """\
 .markdown-alert {
@@ -7126,3 +7416,28 @@ def extract_identifiers(text: str) -> dict[str, Any]:
     shas = _dedupe_in_order(sha_hits)
 
     return {"uuids": uuids, "urls": urls, "github_refs": github_refs, "shas": shas}
+
+
+def _main(argv=None) -> int:
+    """Small stdio entry point for uv tools; library functions remain reusable."""
+    parser = argparse.ArgumentParser(description="Stdlib-only Markdown helpers")
+    parser.add_argument("operation", nargs="?", default="inventory",
+                        choices=("inventory", "to-html", "to-markdown", "toc"),help="what to do with the input (default: %(default)s)")
+    parser.add_argument("path", nargs="?", default="-", help="UTF-8 input file, or - for stdin")
+    args = parser.parse_args(argv)
+    try:
+        content = sys.stdin.read() if args.path == "-" else Path(args.path).read_text(encoding="utf-8")
+        if args.operation == "inventory":
+            output = json.dumps(inventory(content), ensure_ascii=False, indent=2)
+        else:
+            transform = {"to-html": markdown_to_html, "to-markdown": html_to_markdown, "toc": table_of_contents}[args.operation]
+            output = transform(content)
+        print(output, end="" if output.endswith("\n") else "\n")
+    except (OSError, UnicodeError, ValueError) as error:
+        print(str(error), file=sys.stderr)
+        return 2
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(_main())

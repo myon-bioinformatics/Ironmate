@@ -8,6 +8,9 @@ on:
       - scripts/vendor_enrollment_audit.py
       - scripts/parent_vendor_tools_resolve.py
       - .github/workflows/vendor-catalog-audit.yml
+  schedule:
+    - cron: "17 21 * * *"  # 🔁 daily follow-main (06:17 JST)
+  workflow_dispatch:
 permissions:
   contents: read
 
@@ -15,7 +18,20 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
+  # 🔁 own sources follow main: schedule/dispatch push the result to main; a pull request only shows the diff
+  follow-main:
+    uses: myon-bioinformatics/myon-bioinformatics/.github/workflows/reusable-follow-main.yml@main
+    permissions:
+      contents: write
+    with:
+      node-version: "26"
+      after: uv run --locked python scripts/build_studio_css.py
+      check: |
+        npm ci
+        mkdir -p build/shared && cp vendor/xprobe.py build/shared/xprobe.py
+        uv run --locked python -m pytest -q -m "not heavy and not network"
   audit:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:

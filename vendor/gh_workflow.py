@@ -6,17 +6,8 @@ the final authority for inputs and workflow validity.
 """
 from __future__ import annotations
 
-import argparse
-import base64
-from datetime import datetime, timezone
-import json
-import math
-import os
-from pathlib import Path
-import re
-import subprocess
-import sys
-from urllib.parse import quote
+import argparse, base64, json, math, os, re, subprocess, sys
+from datetime import datetime, timezone; from pathlib import Path; from urllib.parse import quote
 
 __version__ = "0.1.0"
 __all__ = ["inspect_workflow", "execute_workflow", "WorkflowError"]
@@ -222,8 +213,11 @@ def execute_workflow(repo, workflow, ref=None, *, apply=False, inputs=None, time
         receipt["run_url"] = "https://github.com/" + repo + "/actions/runs/" + str(run_id)
         stage = "observe_run"
         run = _api(repo, "actions/runs/" + str(run_id), timeout=timeout)
-        if (not isinstance(run, dict) or not isinstance(run.get("head_sha"), str)
-                or not isinstance(run.get("status"), str) or "conclusion" not in run):
+        if (not isinstance(run, dict) or type(run.get("id")) is not int or run["id"] != run_id
+                or type(run.get("workflow_id")) is not int or run["workflow_id"] != receipt["workflow_id"]
+                or run.get("event") != "workflow_dispatch"
+                or not isinstance(run.get("head_sha"), str) or not re.fullmatch(r"[0-9a-f]{40}", run["head_sha"])
+                or not isinstance(run.get("status"), str) or not run["status"] or "conclusion" not in run):
             raise WorkflowError("invalid_run_response")
         receipt.update(executed_sha=run["head_sha"], run_status=run["status"], conclusion=run["conclusion"])
         receipt["sha_matches"] = run["head_sha"] == receipt["target_sha"]
@@ -238,12 +232,12 @@ def execute_workflow(repo, workflow, ref=None, *, apply=False, inputs=None, time
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("repo")
-    parser.add_argument("workflow")
-    parser.add_argument("--ref")
-    parser.add_argument("--apply", action="store_true")
+    parser.add_argument("repo",help="OWNER/REPO")
+    parser.add_argument("workflow",help="workflow file name or ID")
+    parser.add_argument("--ref",help="branch or tag to run on (default: the default branch)")
+    parser.add_argument("--apply", action="store_true",help="dispatch it; without --apply only the plan is printed")
     parser.add_argument("--inputs", help="JSON object, forwarded without recording values")
-    parser.add_argument("--timeout", type=float, default=30)
+    parser.add_argument("--timeout", type=float, default=30,help="seconds per gh call (default: %(default)s)")
     parser.add_argument("--receipt", type=Path, help="append a JSONL receipt")
     args = parser.parse_args(argv)
     try:

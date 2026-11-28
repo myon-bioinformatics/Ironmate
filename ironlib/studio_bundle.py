@@ -377,6 +377,7 @@ STUDIO_HTML = r"""<!doctype html>
       <div class="shelf-actions">
         <button id="shelf-paste-clip" class="primary">クリップボードから追加 ＋</button>
         <button id="shelf-clear">シェルフをクリア</button>
+        <a class="button" href="slides/#from-image-studio" target="_blank" rel="opener">編集中の画像をスライド工房へ</a>
       </div>
       <label>Base64 / data URI / テキストを入力して追加
         <textarea id="shelf-input-text" rows="2" placeholder="data:image/png;base64,... または Raw Base64"></textarea>
@@ -4089,6 +4090,17 @@ try {
   const shape = localStorage.getItem(STORE + ":pager"); // 🧭 the shape picked last time
   if (shapes.includes(shape)) pages.dataset.uiPager = shape;
 } catch {}
+// The same-origin editor opens this tab from its shelf. Keep the original scene editable.
+if (location.hash === "#from-image-studio") {
+  const source = window.opener;
+  window.opener = null;
+  history.replaceState(history.state, "", location.pathname + location.search);
+  run(async () => {
+    if (!source || source.closed || source.location.origin !== location.origin || !source.IronmateStudio)
+      throw Error("画像工房のシェルフから開き直してください。");
+    await files.image(await source.IronmateStudio.pngBlob(1));
+  });
+}
 stage.style.setProperty("--k", stage.clientWidth / slide().width);
 PySaiyanWeBoo.bindLabels(); // 💻 To textual ⇄ 📱 To iconic: 絵文字（既定）と短い言葉を、同じページで切り替え（覚えておく）
 render();

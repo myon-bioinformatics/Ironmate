@@ -34,15 +34,15 @@ THEME = "green"
 NOTE = "scripts/build_studio_css.py"
 
 # Ironmate-specific controls not provided by the shared layout.
-SLIDE_EDITOR_CSS = """#phone-inspector:not([hidden]){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;min-width:0}
-#phone-inspector label:not([hidden]){display:flex;align-items:center;gap:6px}
-#phone-inspector input:not([type=checkbox]),#phone-inspector select{min-width:0;width:100%;font-size:16px}
-#phone-grid:not([hidden]){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;gap:6px;flex:0 0 auto;width:100%}
-#phone-grid>div{min-width:0}
-#phone-grid .ui-stage,#phone-grid button{width:100%;max-width:100%;margin:0;position:relative;top:auto}
-#phone-grid .ui-stage{outline:2px solid var(--ui-accent)}
-#phone-grid button{padding:0;display:block}
-@media(min-width:960px){#phone-grid:not([hidden]){width:calc(100vw - 376px);max-height:100dvh;overflow:auto}}"""
+SLIDE_EDITOR_CSS = """#slides-inspector:not([hidden]){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;min-width:0}
+#slides-inspector label:not([hidden]){display:flex;align-items:center;gap:6px}
+#slides-inspector input:not([type=checkbox]),#slides-inspector select{min-width:0;width:100%;font-size:16px}
+#slides-grid:not([hidden]){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;gap:6px;flex:0 0 auto;width:100%}
+#slides-grid>div{min-width:0}
+#slides-grid .ui-stage,#slides-grid button{width:100%;max-width:100%;margin:0;position:relative;top:auto}
+#slides-grid .ui-stage{outline:2px solid var(--ui-accent)}
+#slides-grid button{padding:0;display:block}
+@media(min-width:960px){#slides-grid:not([hidden]){width:calc(100vw - 376px);max-height:100dvh;overflow:auto}}"""
 
 
 def bundles() -> dict[Path, dict]:
@@ -63,6 +63,13 @@ def classic_script(modules: str) -> str:
     return script
 
 
+def rows(pysaiyanweboo, page: str) -> str:
+    """🧰 A studio's rows for a host's header (``studio_bundle.studio_rows(page)``) as PySaiyanWeBoo's ``chrome_rows_script``."""
+    sys.path.insert(0, str(ROOT))
+    from ironlib import studio_bundle
+    return pysaiyanweboo.chrome_rows_script(studio_bundle.studio_rows(page))
+
+
 def toolbar(pysaiyanweboo, page: str) -> str:
     """🧰 A studio's toolbar (``studio_bundle.studio_toolbar(page)``: "slides" or "image") as PySaiyanWeBoo's ``toolbar_html``; both
     pages' file rows end with 💻 ⇄ 📱 (``labels_switch_html``, the one each page has; a host's ⋯ row stands in for it)."""
@@ -71,7 +78,7 @@ def toolbar(pysaiyanweboo, page: str) -> str:
     groups, inside, after = studio_bundle.studio_toolbar(page)
     inside = {**inside, "file": inside.get("file", "") + pysaiyanweboo.labels_switch_html(id="labels-switch")}
     if page == "slides":
-        return pysaiyanweboo.toolbar_html(groups, label="道具", id="phone-toolbar", candidates_id="phone-candidates", inside=inside, after=after)
+        return pysaiyanweboo.toolbar_html(groups, label="道具", id="slides-toolbar", candidates_id="slides-candidates", inside=inside, after=after)
     return "        " + pysaiyanweboo.toolbar_html(groups, label="道具", id="studio-toolbar", candidates_id="studio-candidates",
                                                  inside=inside, after=after) + "\n"
 
@@ -85,10 +92,12 @@ def pswb_parts() -> dict[str, str]:
     modules = "".join(map(pysaiyanweboo.js_source, dict.fromkeys(m for name in PSWB for m in pysaiyanweboo.COMPONENTS[name]["js"])))  # each file once
     classic = classic_script(modules)
     commit = pysaiyanweboo.source_commit() or "unknown"
-    return {"stage": pysaiyanweboo.stage_html("{slide}", label="スライド", id="phone-stage"),
-            "pager": pysaiyanweboo.pager_html(1, label="ページ移動", words=words, keys=True, id="phone-pager"),
+    return {"stage": pysaiyanweboo.stage_html("{slide}", label="スライド", id="slides-stage"),
+            "pager": pysaiyanweboo.pager_html(1, label="ページ移動", words=words, keys=True, id="slides-pager"),
             "slides-toolbar": toolbar(pysaiyanweboo, "slides"),
             "image-toolbar": toolbar(pysaiyanweboo, "image"),
+            "slides-rows": rows(pysaiyanweboo, "slides"),
+            "image-rows": rows(pysaiyanweboo, "image"),
             "js": (f"/* ⬇️ pysaiyanweboo {commit[:8]} ({', '.join(PSWB)}): written by {NOTE} from the pinned commit; --check fails when it drifts */\n"
                    f"(() => {{\n{classic}globalThis.PySaiyanWeBoo = {{ pagerSet, pagerIndex, bindLabels, bindToolbar }};\n}})();\n/* ⬆️ pysaiyanweboo */\n")}
 
@@ -119,7 +128,7 @@ def with_parts(src: str) -> str:
     lines = lambda html: "".join(f"\n        {part!r}" for part in re.split(r"(?<=>)(?=<)", html))
     block = (f"# ⬇️ pysaiyanweboo: {NOTE} writes PSWB_PARTS from the pinned commit (--check fails when it drifts)\n"
              f"PSWB_PARTS = {{\n    \"stage\": ({lines(parts['stage'])}),\n    \"pager\": ({lines(parts['pager'])}),\n"
-             f"    \"slides-toolbar\": ({lines(parts['slides-toolbar'])}),\n    \"image-toolbar\": ({lines(parts['image-toolbar'])}),\n}}\n# ⬆️ pysaiyanweboo\n")
+             f"    \"slides-toolbar\": ({lines(parts['slides-toolbar'])}),\n    \"image-toolbar\": ({lines(parts['image-toolbar'])}),\n    \"slides-rows\": ({lines(parts['slides-rows'])}),\n    \"image-rows\": ({lines(parts['image-rows'])}),\n}}\n# ⬆️ pysaiyanweboo\n")
     src = replace_region(src, "# ⬇️ pysaiyanweboo", "# ⬆️ pysaiyanweboo\n", block)
     src = replace_region(src, "/* ⬇️ pysaiyanweboo", "/* ⬆️ pysaiyanweboo */\n", parts["js"])
     begin, end = "  /* PSWB heatmap-color.js", "  /* End PSWB heatmap-color.js */\n"

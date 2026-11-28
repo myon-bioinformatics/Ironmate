@@ -55,6 +55,8 @@ def test_static_allowlist_excludes_private_scenes_and_generation_inputs(tmp_path
     assert not list(target.rglob('*.py')) and not list(target.rglob('*.json'))
     assert 'href="tools/"' in (target / 'index.html').read_text()
     assert 'connect-src \'none\'' in (target / 'tools/index.html').read_text()
+    for name in ('index.html', 'tools/index.html'):
+        assert 'href="https://myon-bioinformatics.github.io/#projects"' in (target / name).read_text()
     link = tmp_path / 'link'
     link.symlink_to(tmp_path / 'missing')
     with pytest.raises(FileExistsError):

@@ -4,7 +4,7 @@
 - Image Studio (including pixel art): https://myon-bioinformatics.github.io/tools/#image-studio
 - Composition Studio: https://myon-bioinformatics.github.io/tools/#composition
 - Image grid and songwriting notes: https://myon-bioinformatics.github.io/tools/#browser-tools
-- Portfolio: https://myon-bioinformatics.github.io/#ironmate
+- Portfolio: https://myon-bioinformatics.github.io/#projects
 
 No extra JavaScript packages or external CDNs are used. Only HTML/CSS/JavaScript and public presets generated from the Python version are served. Images and JSON are processed in the browser and not uploaded.
 

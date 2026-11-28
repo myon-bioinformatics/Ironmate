@@ -1,10 +1,22 @@
 """Offline checks for the pure-wheel fetch and marker gate."""
+import importlib.util
 import hashlib, io, json, sys, zipfile
 from pathlib import Path
 
 import pytest
 
-from vendor import fetch_module as fm  # noqa: E402
+
+def load_vendored(name, relpath):
+    """Load a vendored file by path under a repo-unique name (cli_args README: Loading a vendored copy)."""
+    if name not in sys.modules:
+        spec = importlib.util.spec_from_file_location(name, Path(__file__).resolve().parents[1] / relpath)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        spec.loader.exec_module(module)
+    return sys.modules[name]
+
+
+fm = load_vendored("ironmate_fetch_module", "vendor/fetch_module.py")
 
 
 def test_vendor_module_is_the_pinned_copy():

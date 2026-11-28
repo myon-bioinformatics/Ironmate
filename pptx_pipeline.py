@@ -2,15 +2,30 @@
 
 No promise of Mermaid rendering unless a configured Marp renderer supports it.
 """
+import importlib.util
 import csv, json, os, shutil, subprocess, sys, tempfile, tomllib
 from pathlib import Path; from zipfile import ZipFile
-from vendor.markdown import markdown_table_to_rows
 
-from vendor.cli_args import Argument, make_parser
 from ironlib.mermaid_svg import render_mermaid
 from pptx_inspect import inspect
 from ironlib.pptx_ooxml import append_objects, copy_with_replacements, ordered_slide_members, require_package, slide_size
 from ironlib.pptx_spec import pattern_objects
+
+
+def load_vendored(name, relpath):
+    """Load a vendored file by path under a repo-unique name (cli_args README: Loading a vendored copy)."""
+    if name not in sys.modules:
+        spec = importlib.util.spec_from_file_location(name, Path(__file__).resolve().parents[0] / relpath)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        spec.loader.exec_module(module)
+    return sys.modules[name]
+
+
+markdown_table_to_rows = load_vendored("ironmate_markdown", "vendor/markdown.py").markdown_table_to_rows
+_cli_args = load_vendored("ironmate_cli_args", "vendor/cli_args.py")
+Argument = _cli_args.Argument
+make_parser = _cli_args.make_parser
 
 
 def enrich(source, patterns, *, destination=None, dry_run=False):

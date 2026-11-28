@@ -8,10 +8,26 @@ JPEG/WebP (and other PNG variants) use Pillow if installed; Pillow is never requ
 SVG, GIF, BMP, TIFF, ICO and HEIC/AVIF input is rejected with a clear error.
 """
 from __future__ import annotations
+import importlib.util
+from pathlib import Path
 import argparse, base64, binascii, json, re, struct, sys, zlib
 
 from pixel_grid import PALETTES, SIZES
-from vendor.pillow_min import paeth as _paeth, unfilter_scanlines as _unfilter
+
+
+def load_vendored(name, relpath):
+    """Load a vendored file by path under a repo-unique name (cli_args README: Loading a vendored copy)."""
+    if name not in sys.modules:
+        spec = importlib.util.spec_from_file_location(name, Path(__file__).resolve().parents[0] / relpath)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        spec.loader.exec_module(module)
+    return sys.modules[name]
+
+
+_pillow_min = load_vendored("ironmate_pillow_min", "vendor/pillow_min.py")
+_paeth = _pillow_min.paeth
+_unfilter = _pillow_min.unfilter_scanlines
 
 __all__ = ['FITS', 'MAX_BYTES', 'MAX_PIXELS', 'max_base64_chars', 'ImageDecodeError', 'decode_base64',
            'decode_png', 'decode_pillow', 'decode_image', 'convert', 'main']

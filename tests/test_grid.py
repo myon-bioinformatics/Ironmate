@@ -1,5 +1,6 @@
 """🟩 Grids and images: pixel/photo grids, PNG/SVG/base64 round trips, properties and matrix, preview, formats, decode limits, pixel arcade, SVG raster, size estimates, privacy, review fixes and pillow_min."""
 
+import importlib.util
 import base64
 import io
 import json
@@ -28,10 +29,8 @@ import grid_tools as grid
 import ironmate_image as im
 import ironmate_image as image
 import photo_grid
-from vendor.cli_args import Command, run_cli, run_command
 import photo_grid as g_photo_grid
 import photo_grid as pg
-from vendor import pillow_min as pm
 import pixel_grid
 import pixel_grid as p
 import studio_ingress as ingress
@@ -40,6 +39,23 @@ from ironlib import grid_output
 from ironlib.grid_output import write_output
 from ironlib.pixel_arcade_engine import InvaderSparseScanner, PacmanGhostProbes, ReversiblePixelGrid
 from ironlib.svg_raster import SvgError, rasterize
+
+
+def load_vendored(name, relpath):
+    """Load a vendored file by path under a repo-unique name (cli_args README: Loading a vendored copy)."""
+    if name not in sys.modules:
+        spec = importlib.util.spec_from_file_location(name, Path(__file__).resolve().parents[1] / relpath)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        spec.loader.exec_module(module)
+    return sys.modules[name]
+
+
+_cli_args = load_vendored("ironmate_cli_args", "vendor/cli_args.py")
+Command = _cli_args.Command
+run_cli = _cli_args.run_cli
+run_command = _cli_args.run_command
+pm = load_vendored("ironmate_pillow_min", "vendor/pillow_min.py")
 
 
 # ═══ · grid properties ═══════════════════════════════════════════════════════════════════════════════════

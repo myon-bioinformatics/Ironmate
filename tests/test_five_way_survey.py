@@ -1,4 +1,6 @@
 """Independent pixel-graph oracles; no production topology/ring code in oracle."""
+import importlib.util
+import sys
 import ast, copy, json, random
 from collections import deque; from pathlib import Path
 
@@ -6,7 +8,19 @@ import pytest
 
 from research import littlebit_jev_5way_survey as s
 from research import littlebit_jev_3way_survey as legacy
-from vendor.cli_args import run_cli
+
+
+def load_vendored(name, relpath):
+    """Load a vendored file by path under a repo-unique name (cli_args README: Loading a vendored copy)."""
+    if name not in sys.modules:
+        spec = importlib.util.spec_from_file_location(name, Path(__file__).resolve().parents[1] / relpath)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        spec.loader.exec_module(module)
+    return sys.modules[name]
+
+
+run_cli = load_vendored("ironmate_cli_args", "vendor/cli_args.py").run_cli
 
 
 def oracle(board, w, h):

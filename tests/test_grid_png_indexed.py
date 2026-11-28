@@ -1,11 +1,24 @@
 """Stdlib contracts for optional reduced-bit PNG output."""
+import importlib.util
 import base64, json, struct, subprocess, sys, unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from vendor import pillow_min
 import pixel_grid
 from ironlib import grid_output
+
+
+def load_vendored(name, relpath):
+    """Load a vendored file by path under a repo-unique name (cli_args README: Loading a vendored copy)."""
+    if name not in sys.modules:
+        spec = importlib.util.spec_from_file_location(name, Path(__file__).resolve().parents[1] / relpath)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        spec.loader.exec_module(module)
+    return sys.modules[name]
+
+
+pillow_min = load_vendored("ironmate_pillow_min", "vendor/pillow_min.py")
 
 
 class IndexedPngTests(unittest.TestCase):

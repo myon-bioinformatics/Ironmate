@@ -238,15 +238,23 @@ let browser;
       await page.evaluate(sel => delete document.querySelector(sel).files, chooser);
     }
     await reset();
-    await page.fill("#import-base64", uri);
-    await page.evaluate(() => document.querySelector("#import-base64-button").onclick());
+    // 🗂️ image text typed by hand: シェルフ's text box, then 取り込み (the same strict pipeline)
+    await page.evaluate(() => IronmateStudio.act("shelf"));
+    await page.fill("#shelf-input-text", uri);
+    await page.click("#shelf-add-text");
+    await page.locator("#shelf-items-container .shelf-card").last().locator("button", { hasText: "取り込み" }).click();
+    await page.waitForFunction(() => IronmateStudio.scene.layers.length === 1);
     assert.deepEqual(await normalized(), { width: 3, height: 1, pixels });
     checks.push("explicit-Base64-input-preserved");
     const retained = await snapshot();
-    await page.fill("#import-base64", "data:image/png;base64,!!!");
-    await page.evaluate(() => document.querySelector("#import-base64-button").onclick());
+    await page.evaluate(() => IronmateStudio.act("shelf"));
+    const cards = await page.locator("#shelf-items-container .shelf-card").count();
+    await page.fill("#shelf-input-text", "data:image/png;base64,!!!");
+    await page.click("#shelf-add-text");
     assert.equal(await page.locator("#error").isVisible(), true);
+    assert.equal(await page.locator("#shelf-items-container .shelf-card").count(), cards, "an invalid image text is not shelved");
     assert.equal(await snapshot(), retained, "invalid explicit input preserves an existing image");
+    await page.evaluate(() => { document.getElementById("error").close(); document.getElementById("shelf-dialog").close(); });
     checks.push("invalid-Base64-input-retains-existing-scene");
     // Browser-owned JPEG/WebP encoders -> real decoders, compare dimensions only.
     for (const mime of ["image/jpeg", "image/webp"]) {

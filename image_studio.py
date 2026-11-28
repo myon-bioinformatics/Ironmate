@@ -56,16 +56,12 @@ def mosaic(artifact, cell=8, levels=256):
 
 def host_rows(page: str = 'studio') -> str:
     """🧰 What a host's header shows for a studio, as a JSON data block in the page (PySaiyanWeBoo chrome rows): under ⋯ only
-    💻 To textual ⇄ 📱 To iconic (PySaiyanWeBoo's ``labels`` key, which stands in for the page's own switch) and, for Image Studio, the
-    temporary shelf. Both studios' own 📥 📤 already ask the format (どの形式から？ どの形式に？), so the header lists none. The page
-    answers each key (``ui-chrome-action`` in studio.js) with the act of that name its toolbar runs. ``replaces`` names what a host
-    that shows these rows hides:
+    💻 To textual ⇄ 📱 To iconic (PySaiyanWeBoo's ``labels`` key, answered by ``bindLabels``), the same for both studios: each has its
+    own 📥 📤 (どの形式から？ どの形式に？, the shelf among 📥's) in its toolbar. ``replaces`` names what a host that shows the row hides:
     each studio's 💻 at the end of its file row, and Image Studio's own top bar (the logo and 🏭), so inside a host both studios are
     just their work under the host's one header; without a host (the local server) they stay."""
-    rows = lambda pairs: [{'label': label, 'key': key} for label, key in pairs]
-    labels = ('💻 To textual ⇄ 📱 To iconic', 'labels')
-    spec = ({'screen': rows([labels]), 'replaces': '#labels-switch'} if page == 'slides' else
-            {'screen': rows([('📋 クリップボード・シェルフ', 'shelf'), labels]), 'replaces': '#studio-head,#labels-switch'})
+    hides = '#labels-switch' if page == 'slides' else '#studio-head,#labels-switch'
+    spec = {'screen': [{'label': '💻 To textual ⇄ 📱 To iconic', 'key': 'labels'}], 'replaces': hides}
     return '<script type="application/json" id="ui-chrome-rows">' + json.dumps(spec, ensure_ascii=False).replace('<', '\\u003c') + '</script>'
 
 

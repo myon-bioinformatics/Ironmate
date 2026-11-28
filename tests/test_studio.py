@@ -1047,7 +1047,7 @@ def studio_acts(js):
 
 
 def test_studios_declare_the_rows_a_hosts_header_shows_and_carry_no_header_of_their_own():
-    """🧰 image_studio.host_rows: under ⋯ only the shelf and 💻 ⇄ 📱, as data; both studios' own 📥 📤 ask the format, so the header lists
+    """🧰 image_studio.host_rows: under ⋯ only 💻 ⇄ 📱, as data, the same for both studios; their own 📥 📤 ask the format, so the header lists
     none. Every key is an act the page runs (the same STUDIO_ACTS its toolbar runs, by name: no key of its own to translate), and
     ``replaces`` names what the page has: the host shows the rows and hides those."""
     import image_studio
@@ -1057,8 +1057,8 @@ def test_studios_declare_the_rows_a_hosts_header_shows_and_carry_no_header_of_th
     html = assets['index.html'].decode('utf-8')
     assert 'data-ui-chrome' not in html and html.count('id="ui-chrome-rows"') == 1                      # the header is the host's
     spec = json.loads(re.search(r'<script type="application/json" id="ui-chrome-rows">(.*?)</script>', html, re.S)[1])
-    assert spec == {'screen': [{'label': '📋 クリップボード・シェルフ', 'key': 'shelf'}, {'label': '💻 To textual ⇄ 📱 To iconic', 'key': 'labels'}],
-                    'replaces': '#studio-head,#labels-switch'}
+    assert spec == {'screen': [{'label': '💻 To textual ⇄ 📱 To iconic', 'key': 'labels'}], 'replaces': '#studio-head,#labels-switch'}
+    assert 'ui-chrome-action' not in b.STUDIO_JS[b.STUDIO_JS.index('/* Image Studio UI'):b.STUDIO_JS.index('/* Tools page UI')]   # nothing else to answer
     assert 'id="labels-switch" data-ui-labels-switch' in html and 'PySaiyanWeBoo.bindLabels()' in b.STUDIO_JS   # 💻 ⇄ 📱 bindLabels answers it
     head = re.search(r'<header id="studio-head">.*?</header>', html, re.S)[0]
     assert 'labels-switch' not in head and html.index('id="labels-switch"') > html.index('data-ui-group="file"')   # 💻 ends the file row, as on the slide editor

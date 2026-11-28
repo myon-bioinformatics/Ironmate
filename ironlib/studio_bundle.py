@@ -158,8 +158,6 @@ STUDIO_HTML = r"""<!doctype html>
         <label class="check"
           ><input id="outline" type="checkbox" />枠線だけにする</label
         >
-        <label>Base64 / PNG data URIを貼り付け<textarea id="import-base64" rows="3" aria-label="画像Base64入力"></textarea></label>
-        <button id="import-base64-button" class="wide">Base64画像を取り込む</button>
         <button id="custom" class="wide">選択したレイヤーをスタンプに</button>
         <p id="stamp-note" class="hint">
           選択したレイヤーを再利用できます。
@@ -2146,8 +2144,6 @@ queueMicrotask(() => {
   });
   setTool(tool);
 });
-// 🧰 A host's header (PySaiyanWeBoo chrome rows, declared in #ui-chrome-rows by image_studio.host_rows) sends a key: the same act.
-document.addEventListener("ui-chrome-action", (e) => STUDIO_ACTS[e.detail?.key]?.());
 for (const [id, name] of [["text", "text"], ["stamp-text", "stamp"], ["emoji-text", "emoji"], ["kaomoji-text", "kaomoji"]])
   $(id).onfocus = () => setTool(name); // typing into an input means its tool
 $("stamp-text").oninput = () => {
@@ -2481,13 +2477,9 @@ if (!document.body.dataset.page.split(" ").includes("slides")) {
   }));
 }
 // 📥 画像 カメラ JSON 作業履歴: PySaiyanWeBoo's toolbar holds the choosers and runs the act with the chosen File; a File / Blob
-// given to IronmateStudio.act is opened the same way, and the act alone (a host's key) opens the chooser.
+// given to IronmateStudio.act is opened the same way, and the act alone opens the chooser.
 for (const [act, open] of [["image", importImageFile], ["camera", importImageFile], ["open-json", openScene], ["open-workspace", openWorkspace]])
   STUDIO_ACTS[act] = guarded(async (file) => (file instanceof Blob ? open(file) : toolbar.choose(act)));
-$("import-base64-button").onclick = guarded(async () => {
-  const { bytes, mime } = imageBase64($("import-base64").value);
-  await importImageBytes(bytes, mime, "Base64画像");
-});
 function clipboardError(code, message, cause) {
   return Object.assign(new Error(message), { code, cause });
 }
@@ -2648,7 +2640,6 @@ function renderShelf() {
   $("shelf-copy-text").hidden = true;
   $("shelf-copy-text").value = "";
   const container = $("shelf-items-container");
-  if (!container) return;
   container.replaceChildren();
   if (!shelfItems.length) {
     const empty = document.createElement("p");
@@ -2754,64 +2745,59 @@ STUDIO_ACTS.shelf = () => {
   renderShelf();
   $("shelf-dialog").showModal();
 };
-if ($("shelf-clear")) {
-  $("shelf-clear").onclick = () => {
-    shelfGeneration++;
-    shelfItems.forEach(releaseShelfItem);
-    shelfItems.length = 0;
-    renderShelf();
-    if ($("shelf-status")) $("shelf-status").textContent = "シェルフをクリアしました";
-  };
-}
-if ($("shelf-paste-clip")) {
-  $("shelf-paste-clip").onclick = guarded(async () => {
-    if (!navigator.clipboard) throw new Error("Clipboard APIが使用できません");
-    const generation = shelfGeneration;
-    checkShelfCapacity(0);
-    let text = "";
-    if (navigator.clipboard.readText) {
-      // A denied text permission may still allow a binary clipboard image.
-      try { text = await navigator.clipboard.readText(); } catch { /* try binary API */ }
-      checkShelfGeneration(generation);
-      if (text.trim() && isImageText(text.trim())) {
-        addShelfText(text, "クリップボードBase64");
-        if ($("shelf-status")) $("shelf-status").textContent = "クリップボードのBase64画像を追加しました";
+$("shelf-clear").onclick = () => {
+  shelfGeneration++;
+  shelfItems.forEach(releaseShelfItem);
+  shelfItems.length = 0;
+  renderShelf();
+  $("shelf-status").textContent = "シェルフをクリアしました";
+};
+$("shelf-paste-clip").onclick = guarded(async () => {
+  if (!navigator.clipboard) throw new Error("Clipboard APIが使用できません");
+  const generation = shelfGeneration;
+  checkShelfCapacity(0);
+  let text = "";
+  if (navigator.clipboard.readText) {
+    // A denied text permission may still allow a binary clipboard image.
+    try { text = await navigator.clipboard.readText(); } catch { /* try binary API */ }
+    checkShelfGeneration(generation);
+    if (text.trim() && isImageText(text.trim())) {
+      addShelfText(text, "クリップボードBase64");
+      $("shelf-status").textContent = "クリップボードのBase64画像を追加しました";
+      return;
+    }
+  }
+  if (navigator.clipboard.read) {
+    let items = [];
+    try { items = await navigator.clipboard.read(); }
+    catch (e) { if (!text.trim()) throw e; }
+    checkShelfGeneration(generation);
+    for (const item of items) {
+      const type = item.types.find(t => ["image/png", "image/jpeg", "image/webp"].includes(t));
+      if (type) {
+        const blob = await item.getType(type);
+        await addShelfBlob(blob, type, generation);
+        $("shelf-status").textContent = "クリップボードの画像を追加しました";
         return;
       }
+      if (item.types.some(t => t.startsWith("image/")))
+        throw new Error("対応していない画像MIMEです");
     }
-    if (navigator.clipboard.read) {
-      let items = [];
-      try { items = await navigator.clipboard.read(); }
-      catch (e) { if (!text.trim()) throw e; }
-      checkShelfGeneration(generation);
-      for (const item of items) {
-        const type = item.types.find(t => ["image/png", "image/jpeg", "image/webp"].includes(t));
-        if (type) {
-          const blob = await item.getType(type);
-          await addShelfBlob(blob, type, generation);
-          if ($("shelf-status")) $("shelf-status").textContent = "クリップボードの画像を追加しました";
-          return;
-        }
-        if (item.types.some(t => t.startsWith("image/")))
-          throw new Error("対応していない画像MIMEです");
-      }
-    }
-    if (text.trim()) {
-      addShelfText(text, "クリップボードテキスト");
-      if ($("shelf-status")) $("shelf-status").textContent = "テキスト項目を追加しました";
-    } else {
-      throw new Error("クリップボードに画像またはテキストがありません");
-    }
-  });
-}
-if ($("shelf-add-text")) {
-  $("shelf-add-text").onclick = guarded(async () => {
-    const val = $("shelf-input-text").value;
-    addShelfText(val, "入力項目");
-    if ($("shelf-status")) $("shelf-status").textContent = "項目を追加しました";
-    $("shelf-input-text").value = "";
-  });
-}
+  }
+  if (text.trim()) {
+    addShelfText(text, "クリップボードテキスト");
+    $("shelf-status").textContent = "テキスト項目を追加しました";
+  } else {
+    throw new Error("クリップボードに画像またはテキストがありません");
+  }
+});
+
+$("shelf-add-text").onclick = guarded(async () => {
+  const val = $("shelf-input-text").value;
+  addShelfText(val, "入力項目");
+  $("shelf-status").textContent = "項目を追加しました";
+  $("shelf-input-text").value = "";
+});
 
 // Read-only snapshots and export entry point also make browser regression tests observable.
 window.IronmateStudio = {
@@ -2823,7 +2809,7 @@ window.IronmateStudio = {
   },
   pngBlob,
   importImageFile,
-  // 🧰 what a toolbar press or a host's key runs, awaitable: act("clipboard"), act("png"), act("image", file) (a File or Blob)
+  // 🧰 what a toolbar press runs, awaitable from Node or a host: act("clipboard"), act("png"), act("image", file) (a File or Blob)
   act: (name, value) => STUDIO_ACTS[name]?.(value),
   get selectedId() { return selected; },
   async replaceScene(value) {
@@ -4068,7 +4054,7 @@ PSWB_PARTS = {
         '</div>'
         '<div class="ui-toolbar-row" data-ui-group="file">'
         '<button type="button" data-act="new" data-ui-word="新規" aria-label="最初から（白紙 1 枚）" title="最初から（白紙 1 枚）">🆕</button>'
-        '<button type="button" data-close data-acts="image camera open" data-words="画像（PNG・JPEG・WebP をこのページに）|カメラ（撮った写真をこのページに）|JSON（全スライド。PC 版で保存したものも）" data-candidates="画像 カメラ JSON" data-act="import" data-ui-word="インポート" aria-label="インポート（どの形式から？ 候補から選ぶ）" title="インポート（どの形式から？ 候補から選ぶ）">📥</button>'
+        '<button type="button" data-close data-acts="image camera open" data-words="画像（PNG・JPEG・WebP をこのページに）|カメラ（撮った写真をこのページに）|JSON（全スライド）" data-candidates="画像 カメラ JSON" data-act="import" data-ui-word="インポート" aria-label="インポート（どの形式から？ 候補から選ぶ）" title="インポート（どの形式から？ 候補から選ぶ）">📥</button>'
         '<button type="button" data-close data-acts="pptx json png svg" data-words="PPTX（全スライド、PowerPoint で編集できる）|JSON（全スライド、また開ける）|PNG（このページ）|SVG（このページ）" data-candidates="PPTX JSON PNG SVG" data-act="export" data-ui-word="エクスポート" aria-label="エクスポート（どの形式に？ 候補から選ぶ）" title="エクスポート（どの形式に？ 候補から選ぶ）">📤</button>'
         '<a class="ui-button" href="../" data-act="home" data-ui-word="Image Studio" aria-label="Image Studio" title="Image Studio">🏠</a>'
         '<button type="button" class="ui-button" id="labels-switch" data-ui-labels-switch data-ui-word="📱 To iconic" aria-pressed="false" aria-label="💻 To textual ⇄ 📱 To iconic" title="💻 To textual ⇄ 📱 To iconic">💻</button>'
@@ -4103,7 +4089,7 @@ PSWB_PARTS = {
         '</fieldset>'
         '<input type="file" hidden data-ui-file="image" accept="image/png,image/jpeg,image/webp" aria-label="画像（PNG・JPEG・WebP をこのページに）" />'
         '<input type="file" hidden data-ui-file="camera" accept="image/png,image/jpeg,image/webp" capture="environment" aria-label="カメラ（撮った写真をこのページに）" />'
-        '<input type="file" hidden data-ui-file="open" accept=".json,application/json" aria-label="JSON（全スライド。PC 版で保存したものも）" />'
+        '<input type="file" hidden data-ui-file="open" accept=".json,application/json" aria-label="JSON（全スライド）" />'
         '</div>'),
     "image-toolbar": (
         '        <div class="ui-toolbar" id="studio-toolbar" role="toolbar" aria-label="道具">'
@@ -4201,7 +4187,7 @@ def studio_toolbar(page: str) -> tuple[list, dict[str, str], dict[str, str]]:
     }
     formats = {  # 📥 📤 the same act, each page's own formats
         "slides": {"import": ("画像 カメラ JSON", "image camera open",
-                              "画像（PNG・JPEG・WebP をこのページに）|カメラ（撮った写真をこのページに）|JSON（全スライド。PC 版で保存したものも）"),
+                              "画像（PNG・JPEG・WebP をこのページに）|カメラ（撮った写真をこのページに）|JSON（全スライド）"),
                    "export": ("PPTX JSON PNG SVG", "pptx json png svg",
                               "PPTX（全スライド、PowerPoint で編集できる）|JSON（全スライド、また開ける）|PNG（このページ）|SVG（このページ）")},
         "image": {"import": ("画像 カメラ クリップボード JSON 作業履歴 シェルフ", "image camera clipboard open-json open-workspace shelf",

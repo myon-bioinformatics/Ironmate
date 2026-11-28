@@ -21,7 +21,7 @@ On GitHub Pages it runs without Python. Only fixed HTML/JS/CSS is published; ima
    Drag-scaling text also changes the font size. Change what is already placed with `✏️ 編集` (edit) on the right: the words, `太字` (bold), `斜体` (italic), fill and line colors, the shape, a clock's time.
 6. Edit layers with `前へ／後ろへ` (forward / backward) for stacking order and `複製／削除` (duplicate / delete). Undo/redo keeps up to 40 states.
    Loading JSON and `新しいキャンバス` (new canvas) are also recorded in history. The selection frame is not included in exported images.
-7. Download PNG or SVG from `📤` (どの形式に？ to which format?): it lists PNG, SVG, JSON, 作業履歴 (history) and Base64 in words, and a pick hides the list again; the `1×` beside it is the output scale. `📥` (どの形式から？ from which format?) lists 画像, カメラ, クリップボード (an image or image text), JSON, 作業履歴 and the clipboard shelf, the first three in the same order as the slide editor's. Use JSON for re-editing; it contains original images, values and layers. The tools are one toolbar on the left, the same PySaiyanWeBoo `toolbar` as the slide editor's, from one table (`studio_toolbar`: an act has one face and one word on both pages): rows of make (`👆 🔤 🔷 ✦ 😊 (^^) 🕒`), adjust (`⏪ ↩️ ↪️ ⏩`), change (`⧉ 🗑️ ⬆️ ⬇️`: copy, delete, one step forward / back) and file (`📥 📤`), with a dashed line between them; `🔷 😊 (^^)` open their candidates right under their row. The buttons show emoji by default; `💻` (at the end of the file row, as on the slide editor, or the `⋯` row) swaps them for short words on the same page, and `📱` swaps back; the choice is remembered. When the studio is shown inside a site with a shared header (the portfolio), the page carries no header of its own: it declares its rows as data (`image_studio.host_rows`: the shelf and `💻 To textual ⇄ 📱 To iconic` under `⋯`), a key from the header runs the same act as the toolbar, and the page's own top bar (the logo and `🏭`) and `💻` are hidden, so both studios are just their work under the one header.
+7. Download PNG or SVG from `📤` (どの形式に？ to which format?): it lists PNG, SVG, JSON, 作業履歴 (history) and Base64 in words, and a pick hides the list again; the `1×` beside it is the output scale. `📥` (どの形式から？ from which format?) lists 画像, カメラ, クリップボード (an image or image text), JSON, 作業履歴 and the clipboard shelf, the first three in the same order as the slide editor's. Use JSON for re-editing; it contains original images, values and layers. The tools are one toolbar on the left, the same PySaiyanWeBoo `toolbar` as the slide editor's, from one table (`studio_toolbar`: an act has one face and one word on both pages): rows of make (`👆 🔤 🔷 ✦ 😊 (^^) 🕒`), adjust (`⏪ ↩️ ↪️ ⏩`), change (`⧉ 🗑️ ⬆️ ⬇️`: copy, delete, one step forward / back) and file (`📥 📤`), with a dashed line between them; `🔷 😊 (^^)` open their candidates right under their row. The buttons show emoji by default; `💻` (at the end of the file row, as on the slide editor, or the `⋯` row) swaps them for short words on the same page, and `📱` swaps back; the choice is remembered. When the studio is shown inside a site with a shared header (the portfolio), the page carries no header of its own: it declares its rows as data (`image_studio.host_rows`: only `💻 To textual ⇄ 📱 To iconic` under `⋯`, the same as the slide editor's; the shelf is 📥's), and the page's own top bar (the logo and `🏭`) and `💻` are hidden, so both studios are just their work under the one header.
    This JSON includes original images, so sharing it shares them too. Use PNG to share after applying a mosaic.
 
 PNG defaults to 1280×720, usable as a 16:9 image for documents. The background can be transparent.
@@ -32,7 +32,7 @@ Text and emoji in SVG are font-dependent alpha masks or text, not outlined, so u
 
 ## Passing to Flutter via Base64
 
-`Base64 / 渡す` (Base64 / hand off) converts the output PNG to standard Base64. You can switch between PNG data URI and plain Base64,
+`📤` → `Base64` converts the output PNG to standard Base64. You can switch between PNG data URI and plain Base64,
 and copy or save as text. If copying is refused, select the string and copy it manually.
 The output matches the PNG bytes exactly. No URL-safe conversion, padding removal or percent encoding.
 
@@ -44,12 +44,12 @@ It does not mean the operation in Flutter was re-run this time. It was verified 
 
 ## Image input and clipboard format selection
 
-Drop one PNG, JPEG or WebP file on the Image Studio canvas, or use the file picker. Both paths and the camera file input use the same byte limit, MIME check and PNG normalization as clipboard images. A drop containing multiple files is rejected as a whole.
+Drop one PNG, JPEG or WebP file on the Image Studio canvas, or use `📥` → `画像` / `カメラ`. These paths use the same byte limit, MIME check and PNG normalization as clipboard images. A drop containing multiple files is rejected as a whole.
 
 The Node entry runs the Python validator. Its regression test uses the same 19 Base64 cases as the archived Flutter project, including MIME mismatches, padding and data-URI parameters. The archived [Dart expectations](https://github.com/myon-bioinformatics/flutter_navigation_basic/blob/647fb74c36899e52906cce6db7fe0d1fbbb04bf2/test/fixtures/base64_bridge/flutter_expectations.json) can be compared offline. [Flutter #208](https://github.com/myon-bioinformatics/flutter_navigation_basic/pull/208) contains the published Ironmate → Flutter Web handoff test. Its PR-head Flutter workflow passed, and the separate Non-Dart E2E workflow reported a failure. These browser fixtures cover file delivery and decoded pixels. Camera hardware, OS dialogs and physical-device clipboard behavior require a separate device run.
 Canceling file selection does not change the scene. `capture` is a hint to the OS/browser and does not guarantee the camera opens.
 
-The clipboard's `画像を取り込む` (import image) chooses in this order.
+`📥` → `クリップボード` chooses in this order. Image text typed by hand goes through `📥` → `シェルフ`: its text box, then `取り込み`.
 
 1. If a valid image Base64/data URI can be read as text, it takes priority.
 2. An explicit `data:image/...`, or raw Base64 starting with PNG/JPEG/WebP magic bytes, that is invalid is an error.

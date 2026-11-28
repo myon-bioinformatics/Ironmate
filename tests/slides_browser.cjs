@@ -103,6 +103,19 @@ const url =
     await mobile.mouse.up();
     s = await state();
     assert.ok(Math.abs(s.deck.slides[0].layers[0].y - (before.y + 160)) < 8, JSON.stringify(s.deck.slides[0].layers[0]));
+    // A second finger on the empty stage must not take over an in-flight drag.
+    const touch = await mobile.context().newCDPSession(mobile);
+    const empty = await stageAt(0.95, 0.9);
+    const first = { ...to, id: 1 }, second = { ...empty, id: 2 };
+    const sendTouch = (type, touchPoints) => touch.send("Input.dispatchTouchEvent", { type, touchPoints });
+    await sendTouch("touchStart", [first]);
+    await sendTouch("touchStart", [first, second]);
+    await sendTouch("touchMove", [{ ...first, y: first.y + 20 }, second]);
+    await sendTouch("touchEnd", []);
+    await touch.detach();
+    assert.ok((await state()).deck.slides[0].layers[0].y > s.deck.slides[0].layers[0].y + 20);
+    await act("undo");
+    assert.deepEqual((await state()).deck, s.deck);
     // 🔼 🔄 🔽 every text box together
     await act("bigger");
     await act("bigger");

@@ -38,7 +38,7 @@ python -S image_studio.py --build-site build/studio-site
 | Image Studio | Existing shapes, images, text, heatmaps, mosaics, history, clipboard, PNG/SVG/JSON/Base64 | Existing input, pixel and size limits are kept |
 | Pixel art | 5 shapes × 4 treatments × 5 sizes, 10 palette IDs, click-editing color indices, JSON import, nearest-neighbor scaling, palette change, one-step undo | Preset source sizes are 16/23/31/32/64. Output grid is 1–256 cells per side. Python's arbitrary-size procedural generation, photo color reduction, sparse scanning and probe downscaling are not ported |
 | Pixel art export | PNG/SVG/JSON/Base64 at 1/2/8/16x | PNG deflates RGBA directly, keeping hidden RGB of transparent pixels and the color table. Compressed bytes are not guaranteed to match the Python version. PNG needs a browser with CompressionStream |
-| Image grid | Up to 20 PNG/JPEG/WebP, column count, grid PNG, HTML with embedded images | 8 MiB per image, 32 MiB total, 4 MP per image. Pixel count is checked after decoding; thumbnails up to 512 px on the long side are kept. Keeping original bytes/metadata and pass/fail or MAE/RMSE computation are out of scope |
+| Image grid | Up to 20 PNG/JPEG/WebP, column count, grid PNG, HTML with embedded images | 8 MiB per image, 32 MiB total; the type is read from the bytes (as on the studios), and each image is kept as a thumbnail up to 512 px on the long side. Keeping original bytes/metadata and pass/fail or MAE/RMSE computation are out of scope |
 | Songwriting | Lyrics, named chord sections and song order. Portfolio plays Ironmate’s note sequence with its local Tone.js bundle | Notes last for this page session |
 
 File-size calculation is available in [CaChereCyCle](https://myon-bioinformatics.github.io/CaChereCyCle/#capacity).

@@ -6,10 +6,22 @@
 No import-time I/O; optional backends are imported only when used.
 """
 from __future__ import annotations
+import importlib.util
+from pathlib import Path
 import argparse, json, math, os, re, struct, sys, zlib
 
 import photo_grid
 import pixel_grid
+
+
+def load_vendored(name, relpath):
+    """Load a vendored file by path under a repo-unique name (cli_args README: Loading a vendored copy)."""
+    if name not in sys.modules:
+        spec = importlib.util.spec_from_file_location(name, Path(__file__).resolve().parents[0] / relpath)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        spec.loader.exec_module(module)
+    return sys.modules[name]
 
 __all__ = ['FORMATS', 'make', 'photo', 'encode', 'restore', 'resize', 'sparse', 'downscale_2x',
            'recolor', 'cells', 'canonical', 'main']
@@ -63,7 +75,7 @@ def _decode_png(data, backend):
     # The reduced-bit writer emits palette PNG; use the existing bounded
     # stdlib decoder for that format while retaining the legacy RGBA path.
     if len(data) >= 26 and data[24] in (1, 2, 4, 8) and data[25] == 3:
-        from vendor.pillow_min import decode_png_rgba
+        decode_png_rgba = load_vendored("ironmate_pillow_min", "vendor/pillow_min.py").decode_png_rgba
         return decode_png_rgba(data, max_pixels=photo_grid.MAX_PIXELS)
     return photo_grid.decode_png(data)
 

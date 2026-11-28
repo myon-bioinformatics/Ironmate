@@ -1,5 +1,6 @@
 """🔬 Research measurements: bit representation, boundary synthesis and twins, fingerprint widths, observable choice, quality experiment, robust observation, stream phases and the survey holdout."""
 
+import importlib.util
 import ast
 import gzip
 import hashlib
@@ -27,7 +28,19 @@ from research.boundary_twins import audit_boundary_twins, evaluate_rule
 from research.observable_choice import ObservableChoice, Prototype
 from research.robust_observation import BoundedErrorChoice, temporal_prediction
 from research.stream_phase_report import csv_spins
-from vendor.cli_args import run_cli
+
+
+def load_vendored(name, relpath):
+    """Load a vendored file by path under a repo-unique name (cli_args README: Loading a vendored copy)."""
+    if name not in sys.modules:
+        spec = importlib.util.spec_from_file_location(name, Path(__file__).resolve().parents[1] / relpath)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        spec.loader.exec_module(module)
+    return sys.modules[name]
+
+
+run_cli = load_vendored("ironmate_cli_args", "vendor/cli_args.py").run_cli
 
 
 # ═══ · bit representation ════════════════════════════════════════════════════════════════════════════════

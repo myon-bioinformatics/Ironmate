@@ -291,6 +291,11 @@ def test_invalid_table_colors(deck,tmp_path,patch):
 def test_default_table_is_neutral_grayscale(deck,tmp_path):
     out=tmp_path/'gray.pptx'
     enrich(deck,[spec('table')],destination=out)
+    from xml.etree import ElementTree
+    with ZipFile(out) as package:
+        slide = ElementTree.fromstring(package.read('ppt/slides/slide1.xml'))
+    table_uri = 'http://schemas.openxmlformats.org/drawingml/2006/table'
+    assert slide.find(f'.//{{*}}graphicData[@uri="{table_uri}"]/{{*}}tbl') is not None
     table=Presentation(out).slides[0].shapes[-1].table
     assert str(table.cell(0,0).fill.fore_color.rgb)=='222222'
     assert str(table.cell(1,0).fill.fore_color.rgb)=='FFFFFF'

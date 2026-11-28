@@ -356,6 +356,29 @@ const url =
     assert.equal((await onPage()).at(-1).kind, "image");
     await act("undo");
     assert.equal((await onPage()).length, held);
+    // 🎛️ with nothing selected it is the page's: 幅・高さ for every page (the stage takes the shape), 透明 for this one
+    await act("inspect");
+    assert.deepEqual(await Promise.all(["width", "height", "transparent", "x"].map((k) => mobile.locator(`[data-property="${k}"]`).isVisible())),
+      [true, true, true, false]);
+    const field = async (key, value) => { const el = mobile.locator(`[data-property="${key}"]`); await el.fill(String(value)); await el.press("Tab"); };
+    await field("width", 720);
+    await field("height", 1280);
+    assert.ok((await state()).deck.slides.every((x) => x.width === 720 && x.height === 1280));
+    const tall = await mobile.locator("#slides-stage").boundingBox();
+    assert.ok(Math.abs(tall.width / tall.height - 720 / 1280) < 0.02, JSON.stringify(tall));
+    await mobile.locator('[data-property="transparent"]').check();
+    assert.equal((await state()).deck.slides[(await state()).active].background, "none");
+    await snap("page-tall-clear");
+    const [clear] = await Promise.all([mobile.waitForEvent("download"), saveAs("PNG")]);
+    const clearBytes = fs.readFileSync(await clear.path());
+    assert.deepEqual([clearBytes.readUInt32BE(16), clearBytes.readUInt32BE(20), clearBytes[25]], [720, 1280, 6]);   // RGBA
+    await field("width", 4096);                                                                  // 4096 × 1280 is over 4 MP
+    assert.equal(await mobile.getAttribute("#slides-status", "data-error"), "true");
+    assert.equal((await state()).deck.slides[0].width, 720);
+    assert.equal(await mobile.inputValue('[data-property="width"]'), "720");
+    for (let i = 0; i < 3; i++) await act("undo");
+    assert.ok((await state()).deck.slides.every((x) => x.width === 1280 && x.height === 720 && x.background === "#FFFFFF"));
+    await act("inspect");
     await snap("saved");
     const phoneCheck = spawnSync(process.env.PYTHON || "python", ["-S", "-c", `
 from pathlib import Path

@@ -3424,6 +3424,9 @@ function paint(node, s, format = () => {}) {
 }
 function render() {
   const s = slide();
+  stage.style.setProperty("--ui-stage-w", s.width); // 🖼️ PySaiyanWeBoo's stage takes the page's own shape
+  stage.style.setProperty("--ui-stage-h", s.height);
+  $("slides-svg").style.background = s.background === "none" ? "repeating-conic-gradient(#e4e9e2 0 25%,#f7f9f4 0 50%) 0 0/16px 16px" : "";
   paint($("slides-svg"), s); // 👀 打っている文字もそのままスライドに出る
   renderGrid();
   renderInspector();
@@ -3437,7 +3440,7 @@ function render() {
   layerList(s);
   pageList();
   const top = !l || s.layers.at(-1) === l, bottom = !l || s.layers[0] === l,
-    off = { edit: !["text", "clock"].includes(l?.kind), look: !l, turn: !l, inspect: !l, duplicate: !l || s.layers.length >= 100,
+    off = { edit: !["text", "clock"].includes(l?.kind), look: !l, turn: !l, duplicate: !l || s.layers.length >= 100,
     forward: top, front: top, backward: bottom, back: bottom,
     delete: !l, undo: !past.length, "undo-2": !past.length, redo: !future.length, "redo-2": !future.length,
     "slide-delete": deck.slides.length < 2, smaller: level === 0, bigger: level === scales.length - 1, reset: level === plain };
@@ -3527,26 +3530,40 @@ function renderGrid() {
     grid.replaceChildren(...slots);
   }
 }
+// 🎛️ a field belongs to a kind of layer (data-kinds; none: every layer) or to the page ("page": nothing is selected)
+const fieldFor = (input, l) => (input.dataset.kinds ? input.dataset.kinds.split(" ").includes(l ? l.kind : "page") : !!l);
 function renderInspector() {
-  const l = picked();
-  inspector.hidden = !inspectorOpen || !l;
+  const l = picked(), s = slide();
+  inspector.hidden = !inspectorOpen;
   document.querySelector('[data-act="inspect"]').setAttribute("aria-expanded", String(!inspector.hidden));
   for (const input of inspector.querySelectorAll("[data-property]")) {
     const key = input.dataset.property;
-    input.closest("label").hidden = !l || (input.dataset.kinds && !input.dataset.kinds.split(" ").includes(l.kind));
-    if (!l || input.closest("label").hidden || document.activeElement === input) continue;
-    if (input.type === "checkbox") input.checked = Boolean(l[key]);
+    input.closest("label").hidden = !fieldFor(input, l);
+    if (input.closest("label").hidden || document.activeElement === input) continue;
+    if (!l) {
+      if (key === "transparent") input.checked = s.background === "none";
+      else input.value = key === "background" ? (s.background === "none" ? "#ffffff" : s.background.toLowerCase()) : s[key];
+    } else if (input.type === "checkbox") input.checked = Boolean(l[key]);
     else input.value = l[key] ?? (key === "headPlacement" ? "tip" : "");
   }
 }
+function setPage(key, input) {
+  // 🖼️ 幅・高さはすべてのページ（PNG・PPTX もこの大きさ。置いたものはそのまま）、背景・透明はこのページ
+  const s = slide();
+  if (key === "width" || key === "height") for (const x of deck.slides) x[key] = input.valueAsNumber;
+  else if (key === "transparent")
+    s.background = input.checked ? "none" : inspector.querySelector('[data-property="background"]').value.toUpperCase();
+  else s.background = input.value.toUpperCase();
+}
 inspector.addEventListener("change", (e) => {
   const input = e.target, key = input.dataset.property, l = picked();
-  if (!key || !l || (input.dataset.kinds && !input.dataset.kinds.split(" ").includes(l.kind))) return;
+  if (!key || !fieldFor(input, l)) return;
   if (input.type === "number" && (!input.value || !input.checkValidity())) {
-    input.value = l[key];
+    input.value = (l || slide())[key];
     return;
   }
   run(() => change(() => {
+    if (!l) return setPage(key, input);
     l[key] = input.type === "number" ? input.valueAsNumber : input.type === "checkbox" ? input.checked : input.value;
     if (l.kind === "text" && (key === "italic" || key === "w")) fit(l);
   }));
@@ -4058,11 +4075,15 @@ PSWB_PARTS = {
         '<button type="button" data-act="smaller" data-ui-word="小さく" aria-label="文字をすべて小さく" title="文字をすべて小さく">🔽</button>'
         '<button type="button" data-act="reset" data-ui-word="元の大きさ" aria-label="文字をすべて元の大きさに" title="文字をすべて元の大きさに">🔄</button>'
         '<button type="button" data-act="bigger" data-ui-word="大きく" aria-label="文字をすべて大きく" title="文字をすべて大きく">🔼</button>'
-        '<button type="button" data-act="inspect" data-ui-word="詳細" aria-label="選んだものの詳細（位置・大きさ・種類別の設定）" title="選んだものの詳細（位置・大きさ・種類別の設定）">🎛️</button>'
+        '<button type="button" data-act="inspect" data-ui-word="詳細" aria-label="詳細（選んだものの位置・大きさ・種類別の設定。何も選んでいなければページの大きさ・背景）" title="詳細（選んだものの位置・大きさ・種類別の設定。何も選んでいなければページの大きさ・背景）">🎛️</button>'
         '<button type="button" data-act="grid" data-ui-word="4枚表示" aria-label="4枚表示（その場で編集）" title="4枚表示（その場で編集）">⊞</button>'
         '</div>'
         '<fieldset id="slides-inspector" hidden>'
         '<legend>詳細設定</legend>'
+        '<label>📄 幅<input type="number" data-property="width" data-kinds="page" min="64" max="4096" step="1">'
+        '</label>'
+        '<label>📄 高さ<input type="number" data-property="height" data-kinds="page" min="64" max="4096" step="1">'
+        '</label>'
         '<label>横の位置<input type="number" data-property="x" data-kinds="" min="-8192" max="8192" step="any">'
         '</label>'
         '<label>縦の位置<input type="number" data-property="y" data-kinds="" min="-8192" max="8192" step="any">'
@@ -4077,6 +4098,10 @@ PSWB_PARTS = {
         '</label>'
         '<label>色の段階<input type="number" data-property="levels" data-kinds="image" min="2" max="256" step="1">'
         '</label>'
+        '<label>📄 背景<input type="color" data-property="background" data-kinds="page">'
+        '</label>'
+        '<label>'
+        '<input type="checkbox" data-property="transparent" data-kinds="page">透明</label>'
         '<label>'
         '<input type="checkbox" data-property="italic" data-kinds="text">斜体</label>'
         '<label>矢印の先端<select data-property="headPlacement" data-kinds="arrow">'
@@ -4195,7 +4220,7 @@ def studio_toolbar(page: str) -> tuple[list, dict[str, str], dict[str, str]]:
         "export": ("📤", "エクスポート", "エクスポート（どの形式に？ 候補から選ぶ）"),
         "image-studio": ("🖼️", "画像工房", "画像工房へ"),
         "slide-studio": ("📽️", "スライド工房", "スライド工房へ"),
-        "inspect": ("🎛️", "詳細", "選んだものの詳細（位置・大きさ・種類別の設定）"),
+        "inspect": ("🎛️", "詳細", "詳細（選んだものの位置・大きさ・種類別の設定。何も選んでいなければページの大きさ・背景）"),
         "grid": ("⊞", "4枚表示", "4枚表示（その場で編集）"),
     }
     formats = {  # 📥 📤 the same act, each page's own formats
@@ -4238,7 +4263,8 @@ def studio_toolbar(page: str) -> tuple[list, dict[str, str], dict[str, str]]:
         scale = ('<select id="export-scale" title="出力倍率" aria-label="出力倍率">'
                  + "".join(f'<option value="{n}">{n}×</option>' for n in (1, 2, 4, 8)) + '</select>')
         return groups, {"file": scale}, {}
-    numbers = (
+    numbers = (  # 🎛️ with nothing selected, the page: 幅・高さ for every page (the deck has one size), 背景 for this one
+        ("width", "📄 幅", 64, 4096, 1, "page"), ("height", "📄 高さ", 64, 4096, 1, "page"),
         ("x", "横の位置", -8192, 8192, "any", ""), ("y", "縦の位置", -8192, 8192, "any", ""),
         ("w", "幅", 1, 8192, "any", ""), ("h", "高さ", 1, 8192, "any", ""),
         ("strokeWidth", "線幅", 0, 64, "any", "rect ellipse triangle arrow clock"),
@@ -4247,6 +4273,8 @@ def studio_toolbar(page: str) -> tuple[list, dict[str, str], dict[str, str]]:
     inspector = ('<fieldset id="slides-inspector" hidden><legend>詳細設定</legend>' + "".join(
         f'<label>{escape(label)}<input type="number" data-property="{key}" data-kinds="{kinds}" min="{lo}" max="{hi}" step="{step}"></label>'
         for key, label, lo, hi, step, kinds in numbers)
+        + '<label>📄 背景<input type="color" data-property="background" data-kinds="page"></label>'
+        + '<label><input type="checkbox" data-property="transparent" data-kinds="page">透明</label>'
         + '<label><input type="checkbox" data-property="italic" data-kinds="text">斜体</label>'
         + '<label>矢印の先端<select data-property="headPlacement" data-kinds="arrow">'
           '<option value="tip">端</option><option value="middle">中央</option></select></label></fieldset>')

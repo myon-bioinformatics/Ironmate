@@ -1221,6 +1221,9 @@ def test_slides_page_is_emoji_only_and_every_control_is_bound():
     assert not re.search(r'data-act="(pptx|save|open|image|bold|color)"', html)                   # 📥 📤 🎨 then the choice: no button each
     assert re.findall(r'<input type="file" hidden data-ui-file="([a-z]+)"', html) == ['image', 'camera', 'open'] and 'data-file=' not in html   # 📥 the toolbar's choosers
     assert f'data-text-scale="{" ".join(f"{v:g}" for v in b.SLIDES_TEXT["scale"])}"' in html
+    # 🎛️ with nothing selected the inspector is the page's: 幅・高さ (every page, 64–4096), 背景・透明 (this page); ONE-EDITOR P3
+    assert re.findall(r'data-property="(\w+)" data-kinds="page"', html) == ['width', 'height', 'background', 'transparent']
+    assert 'data-property="width" data-kinds="page" min="64" max="4096" step="1"' in html and 'function setPage(' in script
 
 
 def test_base64_payload_is_standard_padded_png_and_existing_decoder_accepts_it():

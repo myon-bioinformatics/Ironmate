@@ -20,7 +20,7 @@ One editor for phones and PCs, phone-first. The slide stays pinned at the top wh
 | 📚 | With two or more things on the page, a row lists them from back to front (a text shows its first three characters, a shape its sign); tap one to select it, even when it is covered. The selected one is underlined |
 | ✏️ | Edit the selected text, or a clock's time (`14:30`; what is not a time leaves it as it was). Tapping a selected text or clock again does the same |
 | 🎨 | The selection's look, from the candidate row: 🎨 fill and 🖌 line to the next colour (black, teal, red, blue, yellow, white), 🌗 opacity 1 → ¾ → ½ → ¼, 🅱️ bold, 🔠 monospace ⇄ regular. A candidate that does not apply (bold on a shape) does nothing |
-| 🎛️ | Exact position and size of the selected layer. Shows italic for text, line width for shapes, center/edge arrowhead for arrows, and mosaic cell size and color levels for pictures |
+| 🎛️ | Exact position and size of the selected layer. Shows italic for text, line width for shapes, center/edge arrowhead for arrows, and mosaic cell size and color levels for pictures. With nothing selected it is the page's: 📄 幅 and 📄 高さ (64–4096, at most 4 MP, every page together, as the deck has one size; the pinned slide takes the shape, and PNG / PPTX follow), 📄 背景 and 透明 (this page; a checkerboard shows it is clear, and its PNG keeps the transparency) |
 | ↻ | Turn the selection: ↻ 15° right, ↺ 15° left, ⏹ upright. The selection frame turns with it |
 | ⧉ | Duplicate the selection, a little down and right (32 on a 1280-wide page), in front |
 | ⬆️ ⬇️ ⏫ ⏬ | One step forward / back, or all the way to the front / back (the 📚 row shows the order) |

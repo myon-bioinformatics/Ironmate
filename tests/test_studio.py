@@ -1108,7 +1108,7 @@ def test_one_studio_toolbar_table_gives_each_act_one_face_and_one_meaning():
     assert {'undo-2', 'undo', 'redo', 'redo-2', 'duplicate', 'forward', 'backward', 'delete'} <= on('slides')   # ONE-EDITOR P1
     assert not hasattr(b, 'PHONE_TOOLS') and not hasattr(b, 'phone_toolbar') and not hasattr(b, 'image_toolbar')
     shared = lambda page: [k['face'] for _g, row in b.studio_toolbar(page)[0] for c in row if c['act'] == 'import' for k in c['candidates']]
-    assert [f for f in shared('image') if f in shared('slides')] == shared('slides') == ['画像', 'カメラ', 'JSON']   # 📥 the same order on both
+    assert [f for f in shared('image') if f in shared('slides')] == shared('slides') == ['画像', 'カメラ', 'クリップボード', 'JSON']   # 📥 the same order on both
 
 
 def test_image_studio_tools_are_the_pswb_toolbar_and_every_act_is_answered():
@@ -1209,18 +1209,26 @@ def test_slides_page_is_emoji_only_and_every_control_is_bound():
         assert re.search(rf'(^|[\s{{,])("{re.escape(act)}"|{re.escape(act)})(\(|:)', script, re.M), act  # acts.x / files.x
     assert 1 in b.SLIDES_TEXT['scale'] and b.SLIDES_TEXT['size'] % 8 == 0
     # 🔷 💾: a candidate that is an action names it in the markup, and the script has it; 😊 (^^) candidates are only stamped
-    named = dict((act, acts_) for acts_, act in re.findall(r'data-acts="([a-z ]+)" data-words="[^"]*" data-candidates="[^"]*" data-act="([a-z]+)"', html))
+    named = dict((act, acts_) for acts_, act in re.findall(r'data-acts="([a-z0-9 ]+)" data-words="[^"]*" data-candidates="[^"]*" data-act="([a-z]+)"', html))
     assert named == {'shape': 'rect ellipse triangle arrow', 'look': 'fill stroke fade bold font', 'turn': 'cw ccw upright',
-                     'import': 'image camera open', 'export': 'pptx json png svg'}, named
+                     'import': 'image camera clipboard open', 'export': 'pptx json png svg base64'}, named
     # 📥 どの形式から？ 📤 どの形式に？ the formats are candidates in words, and a pick hides the row (data-close)
     assert [(a, c) for c, a in re.findall(r'data-close data-acts="[^"]*" data-words="[^"]*" data-candidates="([^"]*)" data-act="(\w+)"', html)] == [
-        ('import', '画像 カメラ JSON'), ('export', 'PPTX JSON PNG SVG')]
+        ('import', '画像 カメラ クリップボード JSON'), ('export', 'PPTX JSON PNG SVG Base64')]
     assert '<select data-format' not in html
     for act in ' '.join(named.values()).split():
         assert re.search(rf'(^|[\s{{,])("{act}"|{act})(\(|:)', script, re.M), act
     assert not re.search(r'data-act="(pptx|save|open|image|bold|color)"', html)                   # 📥 📤 🎨 then the choice: no button each
     assert re.findall(r'<input type="file" hidden data-ui-file="([a-z]+)"', html) == ['image', 'camera', 'open'] and 'data-file=' not in html   # 📥 the toolbar's choosers
     assert f'data-text-scale="{" ".join(f"{v:g}" for v in b.SLIDES_TEXT["scale"])}"' in html
+    # 🎛️ with nothing selected the inspector is the page's: 幅・高さ (every page, 64–4096), 背景・透明 (this page); ONE-EDITOR P3
+    assert re.findall(r'data-property="(\w+)" data-kinds="page"', html) == ['width', 'height', 'background', 'transparent']
+    assert 'data-property="width" data-kinds="page" min="64" max="4096" step="1"' in html and 'function setPage(' in script
+    # 🎛️ Image Studio's detail settings, as fields of the one inspector (ONE-EDITOR P5); a select's first option is the default
+    fields = dict(re.findall(r'data-property="(\w+)" data-kinds="([a-z ]*)"', html))
+    assert {k: fields[k] for k in ('rotation', 'opacity', 'fontSize', 'mono', 'headStyle', 'sampling')} == {
+        'rotation': '', 'opacity': '', 'fontSize': 'text', 'mono': 'text image', 'headStyle': 'arrow', 'sampling': 'image'}
+    assert '<select data-property="sampling" data-kinds="image"><option value="pixelated">' in html
 
 
 def test_base64_payload_is_standard_padded_png_and_existing_decoder_accepts_it():
@@ -1540,7 +1548,7 @@ def test_studio_html_contains_unique_controls_used_by_initialization():
         pages.feed(html)
         required = set(re.findall(r'(?:\$|byId)\("([a-z][a-z0-9-]*)"\)', _page_ui(page)))  # studio/tools/slides use $(...)
         pixel_controls = {"pixel-editor", "pixel-status", "pixels"}
-        if page == "studio":
+        if page in ("studio", "slides"):       # ▦ the dot-art editor is on both editors (ONE-EDITOR P4)
             required.update(pixel_controls)
         elif page == "tools":
             # Tools shares the script with Studio but only exposes the digest and message fallback.

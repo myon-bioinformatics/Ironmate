@@ -34,7 +34,9 @@ THEME = "green"
 NOTE = "scripts/build_studio_css.py"
 
 # Ironmate-specific controls not provided by the shared layout.
-SLIDE_EDITOR_CSS = """#slides-inspector:not([hidden]){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;min-width:0}
+SLIDE_EDITOR_CSS = """#pixel-editor .workspace{display:block;padding:0}
+#pixel-editor #grid{width:min(100%,320px);height:auto;image-rendering:pixelated;cursor:crosshair}
+#slides-inspector:not([hidden]){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;min-width:0}
 #slides-inspector label:not([hidden]){display:flex;align-items:center;gap:6px}
 #slides-inspector input:not([type=checkbox]),#slides-inspector select{min-width:0;width:100%;font-size:16px}
 #slides-grid:not([hidden]){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;gap:6px;flex:0 0 auto;width:100%}

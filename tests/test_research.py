@@ -2,6 +2,7 @@
 
 import importlib.util
 import ast
+import functools
 import gzip
 import hashlib
 import inspect
@@ -533,6 +534,16 @@ def test_checked_in_evidence_recomputes_scores_without_timing_assertions():
     folder=ROOT/'docs/evidence/studio-quality'
     report=json.loads((folder/'results.json').read_text())
     assert len(report['cases'])==110
+    fixtures = {(f['name'], f['seed']): f['file']
+                for f in json.loads((folder / 'fixtures.json').read_text())['fixtures']}
+
+    @functools.cache
+    def prepared_source(filename, width, height):
+        source = (folder / filename).read_bytes()
+        sw, sh, rows = q.decode_png(source)
+        pixels = [tuple(row[i:i + 4]) for row in rows for i in range(0, len(row), 4)]
+        return hashlib.sha256(source).hexdigest(), q._resize(pixels, sw, sh, width, height)
+
     for c in report['cases']:
         def read(name):
             w,h,rows=q.decode_png((folder/c[name]).read_bytes())
@@ -541,12 +552,9 @@ def test_checked_in_evidence_recomputes_scores_without_timing_assertions():
         a,b=read('reference_png'),read('candidate_png')
         assert hashlib.sha256(bytes(x for p in a for x in p)).hexdigest()==c['reference_sha256']
         assert hashlib.sha256(bytes(x for p in b for x in p)).hexdigest()==c['candidate_sha256']
-        fixture=next(f for f in json.loads((folder/'fixtures.json').read_text())['fixtures'] if f['name']==c['scenario'] and f['seed']==c['seed'])
-        source=(folder/fixture['file']).read_bytes()
-        assert hashlib.sha256(source).hexdigest()==c['source_sha256']
-        sw,sh,srows=q.decode_png(source)
-        original=[tuple(row[i:i+4]) for row in srows for i in range(0,len(row),4)]
-        scaled=q._resize(original,sw,sh,c['width'],c['height'])
+        filename = fixtures[c['scenario'], c['seed']]
+        digest, scaled = prepared_source(filename, c['width'], c['height'])
+        assert digest == c['source_sha256']
         ra,rb,recipe=q.perturb(c['width'],c['height'],scaled,c['recipe']['kind'],c['seed'])
         assert (ra,rb,recipe)==(a,b,c['recipe'])
         m=metrics(c['width'],c['height'],q._mask(a),q._mask(b),q._energy(a,c['width'],c['height']))

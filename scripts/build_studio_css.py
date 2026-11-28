@@ -63,6 +63,13 @@ def classic_script(modules: str) -> str:
     return script
 
 
+def rows(pysaiyanweboo, page: str) -> str:
+    """🧰 A studio's rows for a host's header (``studio_bundle.studio_rows(page)``) as PySaiyanWeBoo's ``chrome_rows_script``."""
+    sys.path.insert(0, str(ROOT))
+    from ironlib import studio_bundle
+    return pysaiyanweboo.chrome_rows_script(studio_bundle.studio_rows(page))
+
+
 def toolbar(pysaiyanweboo, page: str) -> str:
     """🧰 A studio's toolbar (``studio_bundle.studio_toolbar(page)``: "slides" or "image") as PySaiyanWeBoo's ``toolbar_html``; both
     pages' file rows end with 💻 ⇄ 📱 (``labels_switch_html``, the one each page has; a host's ⋯ row stands in for it)."""
@@ -89,6 +96,8 @@ def pswb_parts() -> dict[str, str]:
             "pager": pysaiyanweboo.pager_html(1, label="ページ移動", words=words, keys=True, id="slides-pager"),
             "slides-toolbar": toolbar(pysaiyanweboo, "slides"),
             "image-toolbar": toolbar(pysaiyanweboo, "image"),
+            "slides-rows": rows(pysaiyanweboo, "slides"),
+            "image-rows": rows(pysaiyanweboo, "image"),
             "js": (f"/* ⬇️ pysaiyanweboo {commit[:8]} ({', '.join(PSWB)}): written by {NOTE} from the pinned commit; --check fails when it drifts */\n"
                    f"(() => {{\n{classic}globalThis.PySaiyanWeBoo = {{ pagerSet, pagerIndex, bindLabels, bindToolbar }};\n}})();\n/* ⬆️ pysaiyanweboo */\n")}
 
@@ -119,7 +128,7 @@ def with_parts(src: str) -> str:
     lines = lambda html: "".join(f"\n        {part!r}" for part in re.split(r"(?<=>)(?=<)", html))
     block = (f"# ⬇️ pysaiyanweboo: {NOTE} writes PSWB_PARTS from the pinned commit (--check fails when it drifts)\n"
              f"PSWB_PARTS = {{\n    \"stage\": ({lines(parts['stage'])}),\n    \"pager\": ({lines(parts['pager'])}),\n"
-             f"    \"slides-toolbar\": ({lines(parts['slides-toolbar'])}),\n    \"image-toolbar\": ({lines(parts['image-toolbar'])}),\n}}\n# ⬆️ pysaiyanweboo\n")
+             f"    \"slides-toolbar\": ({lines(parts['slides-toolbar'])}),\n    \"image-toolbar\": ({lines(parts['image-toolbar'])}),\n    \"slides-rows\": ({lines(parts['slides-rows'])}),\n    \"image-rows\": ({lines(parts['image-rows'])}),\n}}\n# ⬆️ pysaiyanweboo\n")
     src = replace_region(src, "# ⬇️ pysaiyanweboo", "# ⬆️ pysaiyanweboo\n", block)
     src = replace_region(src, "/* ⬇️ pysaiyanweboo", "/* ⬆️ pysaiyanweboo */\n", parts["js"])
     begin, end = "  /* PSWB heatmap-color.js", "  /* End PSWB heatmap-color.js */\n"

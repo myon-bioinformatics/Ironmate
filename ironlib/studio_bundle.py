@@ -2131,6 +2131,8 @@ queueMicrotask(() => {
   });
   setTool(tool);
 });
+// 🧰 a row of a host's header (studio_rows: 📋 the shelf) sends the key of an act: the same act the toolbar runs
+document.addEventListener("ui-chrome-action", (e) => STUDIO_ACTS[e.detail?.key]?.());
 for (const [id, name] of [["text", "text"], ["stamp-text", "stamp"], ["emoji-text", "emoji"], ["kaomoji-text", "kaomoji"]])
   $(id).onfocus = () => setTool(name); // typing into an input means its tool
 $("stamp-text").oninput = () => {
@@ -4097,8 +4099,21 @@ PSWB_PARTS = {
         '<input type="file" hidden data-ui-file="open-json" accept=".json" aria-label="JSON（再編集用のシーン）" />'
         '<input type="file" hidden data-ui-file="open-workspace" accept=".json,application/json" aria-label="作業履歴（最大40状態）" />'
         '</div>\n'),
+    "slides-rows": (
+        '<script type="application/json" id="ui-chrome-rows">{"screen":[{"label":"💻 To textual ⇄ 📱 To iconic","key":"labels"}],"replaces":"#labels-switch"}</script>'),
+    "image-rows": (
+        '<script type="application/json" id="ui-chrome-rows">{"screen":[{"label":"📋 クリップボード・シェルフ","key":"shelf"},{"label":"💻 To textual ⇄ 📱 To iconic","key":"labels"}],"replaces":"#labels-switch"}</script>'),
 }
 # ⬆️ pysaiyanweboo
+
+
+def studio_rows(page: str) -> dict:
+    """🧰 What a studio declares for a host's header (PySaiyanWeBoo's ``chrome_rows_script``; the portfolio's screen places it while the
+    studio's panel is open): ⋯ 💻 To textual ⇄ 📱 To iconic on both (``labels``, answered by ``bindLabels``), and on Image Studio 📋 the
+    shelf (``shelf``, an act of its toolbar, answered by ``ui-chrome-action``). The host hides what they replace: the page's own 💻."""
+    labels = {"label": "💻 To textual ⇄ 📱 To iconic", "key": "labels"}
+    shelf = [{"label": "📋 クリップボード・シェルフ", "key": "shelf"}] if page == "image" else []
+    return {"screen": [*shelf, labels], "replaces": "#labels-switch"}
 
 
 def studio_toolbar(page: str) -> tuple[list, dict[str, str], dict[str, str]]:
@@ -4216,6 +4231,7 @@ def _slides_html() -> str:
     scale = " ".join(f"{v:g}" for v in SLIDES_TEXT["scale"])
     return (head + "</head>\n"
             f'  <body class="ui-elements" data-ui-theme="green" data-page="slides" data-text-size="{SLIDES_TEXT["size"]}" data-text-scale="{scale}">\n'
+            f'    {PSWB_PARTS.get("slides-rows", "")}\n'                     # 🧰 its rows for a host's header (studio_rows)
             '    <main class="slides">\n'
             f'      {PSWB_PARTS["stage"].replace("{slide}", slide)}\n'
             '      <div id="slides-grid" role="group" aria-label="4枚表示" hidden></div>\n'
@@ -4228,6 +4244,7 @@ def _slides_html() -> str:
 
 SLIDES_HTML = _slides_html()
 STUDIO_HTML = STUDIO_HTML.replace('        <!-- 🧰 toolbar: studio_toolbar("image") -->\n', PSWB_PARTS.get("image-toolbar", ""), 1)   # 🧰 Image Studio's tools
+STUDIO_HTML = STUDIO_HTML.replace("    <main>", "    " + PSWB_PARTS.get("image-rows", "") + "\n    <main>", 1)                 # 🧰 its rows for a host's header
 
 BROWSER_TASK_JS = r"""/* PSWB async-task.js */
 /**

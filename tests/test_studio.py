@@ -1064,19 +1064,25 @@ def studio_acts(js):
             | {name for loop in loops for name in re.findall(r'\["([a-z0-9-]+)"', loop)})
 
 
-def test_studios_carry_no_header_and_link_each_other_from_their_file_rows():
-    """🧰 The portfolio frames both studios as built, under its one header, so neither carries a header, rows for a host's header or a
-    switch of its own there: 💻 ⇄ 📱 ends each file row, and 🖼️ ⇄ 📽️ link the two studios (the portfolio sends them to its panels)."""
+def test_studios_carry_no_header_declare_their_rows_and_link_each_other():
+    """🧰 The portfolio frames both studios under its one header, so neither carries a header of its own: each declares its rows for that
+    header (studio_rows, written by PySaiyanWeBoo's chrome_rows_script and read back by its chrome_rows_of: 💻 ⇄ 📱 on both, 📋 the shelf
+    on Image Studio), which hides the page's own 💻 at the end of its file row; 🖼️ ⇄ 📽️ link the two studios."""
     import image_studio
+    import pysaiyanweboo
     from ironlib import studio_bundle as b
     assets = image_studio.public_assets()
-    for name, link in (('index.html', ('slides/', 'slide-studio')), ('slides/index.html', ('../', 'image-studio'))):
+    for name, page, link in (('index.html', 'image', ('slides/', 'slide-studio')), ('slides/index.html', 'slides', ('../', 'image-studio'))):
         html = assets[name].decode('utf-8')
-        assert '<header' not in html and 'ui-chrome-rows' not in html and 'data-ui-chrome' not in html, name
+        assert '<header' not in html and 'data-ui-chrome' not in html and html.count('id="ui-chrome-rows"') == 1, name
+        declared = pysaiyanweboo.chrome_rows_of(html)
+        assert {k: v for k, v in declared.items() if v} == b.studio_rows(page), name
+        assert all(f'id="{i[1:]}"' in html for i in declared['replaces'].split(',')), name   # what the host hides is there
         assert html.count('id="labels-switch" data-ui-labels-switch') == 1 and 'PySaiyanWeBoo.bindLabels()' in b.STUDIO_JS
         file_row = re.search(r'data-ui-group="file">(.*?)</div>', html, re.S)[1]
         assert f'href="{link[0]}" data-act="{link[1]}"' in file_row and file_row.rstrip().endswith('</button>'), name
-    assert 'ui-chrome-action' not in b.STUDIO_JS[b.STUDIO_JS.index('/* Image Studio UI'):b.STUDIO_JS.index('/* Tools page UI')]
+    keys = {row['key'] for row in b.studio_rows('image')['screen']} - {'labels'}               # labels: bindLabels
+    assert keys <= studio_acts(b.STUDIO_JS) and 'document.addEventListener("ui-chrome-action", (e) => STUDIO_ACTS[e.detail?.key]?.());' in b.STUDIO_JS
     assert not hasattr(image_studio, 'host_rows')
 
 

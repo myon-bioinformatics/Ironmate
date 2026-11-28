@@ -131,7 +131,7 @@ let browser;
         };
         Object.defineProperty(navigator, "clipboard", { configurable: true, value: config.absent ? undefined : clipboard });
       }, config);
-      await page.evaluate(() => document.querySelector("#paste-image").onclick());
+      await page.evaluate(() => IronmateStudio.act("clipboard"));                      // 📥 クリップボード, awaited
       if (code) {
         assert.equal(await page.locator("#error").getAttribute("data-code"), code, name);
         assert.equal(await page.locator("#error").isVisible(), true, name);
@@ -279,7 +279,8 @@ let browser;
           "image/png": new Blob([bytes], { type: "image/png" }),
         })]);
       }, { image });
-      await page.click("#paste-image");
+      await page.click('#studio-toolbar [data-act="import"]');                        // 📥 どの形式から？ → クリップボード
+      await page.click('#studio-candidates button:text-is("クリップボード")');
       await page.waitForFunction(() => IronmateStudio.scene.layers.length === 1 || document.querySelector("#error").open);
       assert.equal(await page.locator("#error").isVisible(), false);
       assert.deepEqual((await normalized()).pixels, pixels);

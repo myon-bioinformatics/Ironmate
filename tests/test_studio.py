@@ -1085,6 +1085,8 @@ def test_one_studio_toolbar_table_gives_each_act_one_face_and_one_meaning():
                 assert 0 < len(c['word']) <= 12 and c['close'] == (c['act'] in ('import', 'export')), c
     assert {'forward', 'backward', 'front', 'back', 'duplicate', 'slide-copy'} <= set(seen)          # ⬆️ ⬇️ one step, ⏫ ⏬ all the way; ⧉ 📑
     assert not hasattr(b, 'PHONE_TOOLS') and not hasattr(b, 'phone_toolbar') and not hasattr(b, 'image_toolbar')
+    shared = lambda page: [k['face'] for _g, row in b.studio_toolbar(page)[0] for c in row if c['act'] == 'import' for k in c['candidates']]
+    assert [f for f in shared('image') if f in shared('slides')] == shared('slides') == ['画像', 'カメラ', 'JSON']   # 📥 the same order on both
 
 
 def test_image_studio_tools_are_the_pswb_toolbar_and_every_act_is_answered():
@@ -1100,7 +1102,8 @@ def test_image_studio_tools_are_the_pswb_toolbar_and_every_act_is_answered():
     assert 'id="studio-toolbar"' in html and 'id="studio-candidates"' in html and 'data-tool=' not in html
     assert not re.search(r'id="(undo|redo|png|svg|save|save-workspace|base64|shelf-button|duplicate|delete|front|back|candidates|studio-import|studio-export)"', html)
     files = {c['act']: c for _g, row in groups for c in row if _g == 'file'}
-    assert [k['face'] for k in files['import']['candidates']] == ['JSON', '作業履歴', 'シェルフ'] and files['import']['close']
+    assert [k['face'] for k in files['import']['candidates']] == ['画像', 'カメラ', 'クリップボード', 'JSON', '作業履歴', 'シェルフ'] and files['import']['close']
+    assert not re.search(r'id="paste-image"|＋ 写真|＋ カメラ', html) and 'id="camera-image" type="file"' in html and 'capture="environment"' in html
     assert [k['face'] for k in files['export']['candidates']] == ['PNG', 'SVG', 'JSON', '作業履歴', 'Base64'] and files['export']['close']
     script = b.STUDIO_JS[b.STUDIO_JS.index('/* Image Studio UI'):b.STUDIO_JS.index('/* Tools page UI')]
     modes = set(re.search(r'const MODES = \[([^\]]*)\]', script)[1].replace('"', '').replace(' ', '').split(','))
@@ -1186,15 +1189,15 @@ def test_phone_page_is_emoji_only_and_every_control_is_bound():
     # 🔷 💾: a candidate that is an action names it in the markup, and the script has it; 😊 (^^) candidates are only stamped
     named = dict((act, acts_) for acts_, act in re.findall(r'data-acts="([a-z ]+)" data-words="[^"]*" data-candidates="[^"]*" data-act="([a-z]+)"', html))
     assert named == {'shape': 'rect ellipse triangle arrow', 'look': 'fill stroke fade bold font', 'turn': 'cw ccw upright',
-                     'import': 'open image', 'export': 'pptx json png svg'}, named
+                     'import': 'image camera open', 'export': 'pptx json png svg'}, named
     # 📥 どの形式から？ 📤 どの形式に？ the formats are candidates in words, and a pick hides the row (data-close)
     assert [(a, c) for c, a in re.findall(r'data-close data-acts="[^"]*" data-words="[^"]*" data-candidates="([^"]*)" data-act="(\w+)"', html)] == [
-        ('import', 'JSON 画像'), ('export', 'PPTX JSON PNG SVG')]
+        ('import', '画像 カメラ JSON'), ('export', 'PPTX JSON PNG SVG')]
     assert '<select data-format' not in html
     for act in ' '.join(named.values()).split():
         assert re.search(rf'(^|[\s{{,])("{act}"|{act})(\(|:)', script, re.M), act
     assert not re.search(r'data-act="(pptx|save|open|image|bold|color)"', html)                   # 📥 📤 🎨 then the choice: no button each
-    assert re.findall(r'<input type="file" data-file="([a-z]+)"', html) == ['open', 'image']
+    assert re.findall(r'<input type="file" data-file="([a-z]+)"', html) == ['open', 'image', 'camera']
     assert f'data-text-scale="{" ".join(f"{v:g}" for v in b.PHONE_TEXT["scale"])}"' in html
 
 

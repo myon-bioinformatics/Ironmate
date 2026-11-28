@@ -158,13 +158,6 @@ STUDIO_HTML = r"""<!doctype html>
         <label class="check"
           ><input id="outline" type="checkbox" />枠線だけにする</label
         >
-        <label class="button wide"
-          >＋ 写真・画像スタンプ<input
-            id="image"
-            type="file"
-            accept="image/png,image/jpeg,image/webp" /></label
-        ><label class="button wide">＋ カメラから写真<input id="camera-image" type="file" accept="image/png,image/jpeg,image/webp" capture="environment" /></label
-        ><button id="paste-image" class="wide">クリップボードの画像を取り込む</button>
         <label>Base64 / PNG data URIを貼り付け<textarea id="import-base64" rows="3" aria-label="画像Base64入力"></textarea></label>
         <button id="import-base64-button" class="wide">Base64画像を取り込む</button>
         <button id="custom" class="wide">選択したレイヤーをスタンプに</button>
@@ -2155,6 +2148,8 @@ queueMicrotask(() => {
 });
 STUDIO_ACTS["open-json"] = () => $("open").click();
 STUDIO_ACTS["open-workspace"] = () => $("open-workspace").click();
+STUDIO_ACTS.image = () => $("image").click();
+STUDIO_ACTS.camera = () => $("camera-image").click();
 // 🧰 A host's header (PySaiyanWeBoo chrome rows, declared in #ui-chrome-rows by image_studio.host_rows) sends a key: the same act.
 document.addEventListener("ui-chrome-action", (e) => {
   const [key, scale] = String(e.detail?.key).split(/-(?=\d+$)/);
@@ -2532,7 +2527,8 @@ function clipboardImageText(text) {
   }
   return null; // Ordinary text, even if it happens to be valid Base64.
 }
-$("paste-image").onclick = guarded(async () => {
+STUDIO_ACTS.clipboard = guarded(async () => {
+  // 📥 クリップボード: an image, or image text (Base64 / data URI), from the clipboard
   const clipboard = navigator.clipboard;
   if (!clipboard || (typeof clipboard.readText !== "function" && typeof clipboard.read !== "function"))
     throw clipboardError("clipboard-unsupported", "このブラウザにはクリップボード読取APIがありません。ファイル選択またはBase64入力を利用してください");
@@ -2847,6 +2843,7 @@ window.IronmateStudio = {
   },
   pngBlob,
   importImageFile,
+  act: (name) => STUDIO_ACTS[name]?.(), // 🧰 what a toolbar press or a host's key runs (awaitable): IronmateStudio.act("clipboard")
   get selectedId() { return selected; },
   async replaceScene(value) {
     const next = C.validate(value);
@@ -3910,6 +3907,7 @@ const acts = {
   }),
   open: () => document.querySelector('input[data-file="open"]').click(),
   image: () => document.querySelector('input[data-file="image"]').click(),
+  camera: () => document.querySelector('input[data-file="camera"]').click(),
   json: () => C.save("ironmate-slides.json", D.deckText(deck), "application/json"),
   async svg() {
     const s = slide();
@@ -3978,7 +3976,7 @@ for (const input of document.querySelectorAll("input[data-file]"))
     const file = input.files[0];
     input.value = "";
     finishEdit();
-    if (file) run(() => files[input.dataset.file](file));
+    if (file) run(() => files[input.dataset.file === "camera" ? "image" : input.dataset.file](file)); // 📷 a photo is an image
   });
 document.addEventListener("keydown", (e) => {
   if (editing || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return; // ← → Home End: the pager's own keys
@@ -4089,7 +4087,7 @@ PSWB_PARTS = {
         '</div>'
         '<div class="ui-toolbar-row" data-ui-group="file">'
         '<button type="button" data-act="new" data-ui-word="新規" aria-label="最初から（白紙 1 枚）" title="最初から（白紙 1 枚）">🆕</button>'
-        '<button type="button" data-close data-acts="open image" data-words="JSON（全スライド。PC 版で保存したものも）|画像（PNG・JPEG・WebP をこのページに）" data-candidates="JSON 画像" data-act="import" data-ui-word="インポート" aria-label="インポート（どの形式から？ 候補から選ぶ）" title="インポート（どの形式から？ 候補から選ぶ）">📥</button>'
+        '<button type="button" data-close data-acts="image camera open" data-words="画像（PNG・JPEG・WebP をこのページに）|カメラ（撮った写真をこのページに）|JSON（全スライド。PC 版で保存したものも）" data-candidates="画像 カメラ JSON" data-act="import" data-ui-word="インポート" aria-label="インポート（どの形式から？ 候補から選ぶ）" title="インポート（どの形式から？ 候補から選ぶ）">📥</button>'
         '<button type="button" data-close data-acts="pptx json png svg" data-words="PPTX（全スライド、PowerPoint で編集できる）|JSON（全スライド、また開ける）|PNG（このページ）|SVG（このページ）" data-candidates="PPTX JSON PNG SVG" data-act="export" data-ui-word="エクスポート" aria-label="エクスポート（どの形式に？ 候補から選ぶ）" title="エクスポート（どの形式に？ 候補から選ぶ）">📤</button>'
         '<a class="ui-button" href="../" data-act="home" data-ui-word="Image Studio" aria-label="Image Studio" title="Image Studio">🏠</a>'
         '<button type="button" class="ui-button" id="labels-switch" data-ui-labels-switch data-ui-word="📱 To iconic" aria-pressed="false" aria-label="💻 To textual ⇄ 📱 To iconic" title="💻 To textual ⇄ 📱 To iconic">💻</button>'
@@ -4124,6 +4122,7 @@ PSWB_PARTS = {
         '</fieldset>'
         '<input type="file" data-file="open" accept=".json,application/json" aria-label="全スライドJSON" />'
         '<input type="file" data-file="image" accept="image/png,image/jpeg,image/webp" aria-label="画像" />'
+        '<input type="file" data-file="camera" accept="image/png,image/jpeg,image/webp" capture="environment" aria-label="カメラ" />'
         '</div>'),
     "image-toolbar": (
         '        <div class="ui-toolbar" id="studio-toolbar" role="toolbar" aria-label="道具">'
@@ -4151,7 +4150,7 @@ PSWB_PARTS = {
         '<button type="button" data-act="delete" data-ui-word="削除" aria-label="選んだものを削除" title="選んだものを削除">🗑️</button>'
         '</div>'
         '<div class="ui-toolbar-row" data-ui-group="file">'
-        '<button type="button" data-close data-acts="open-json open-workspace shelf" data-words="JSON（再編集用のシーン）|作業履歴（最大40状態）|シェルフ（クリップボード・シェルフ）" data-candidates="JSON 作業履歴 シェルフ" data-act="import" data-ui-word="インポート" aria-label="インポート（どの形式から？ 候補から選ぶ）" title="インポート（どの形式から？ 候補から選ぶ）">📥</button>'
+        '<button type="button" data-close data-acts="image camera clipboard open-json open-workspace shelf" data-words="画像（PNG・JPEG・WebP をキャンバスに）|カメラ（撮った写真をキャンバスに）|クリップボード（コピーした画像・Base64）|JSON（再編集用のシーン）|作業履歴（最大40状態）|シェルフ（クリップボード・シェルフ）" data-candidates="画像 カメラ クリップボード JSON 作業履歴 シェルフ" data-act="import" data-ui-word="インポート" aria-label="インポート（どの形式から？ 候補から選ぶ）" title="インポート（どの形式から？ 候補から選ぶ）">📥</button>'
         '<button type="button" data-close data-acts="png svg json workspace base64" data-words="PNG（出力倍率で）|SVG（出力倍率で）|JSON（再編集用）|作業履歴（最大40状態）|Base64（Flutter などへ渡す）" data-candidates="PNG SVG JSON 作業履歴 Base64" data-act="export" data-ui-word="エクスポート" aria-label="エクスポート（どの形式に？ 候補から選ぶ）" title="エクスポート（どの形式に？ 候補から選ぶ）">📤</button>'
         '<select id="export-scale" title="出力倍率" aria-label="出力倍率">'
         '<option value="1">1×</option>'
@@ -4162,6 +4161,8 @@ PSWB_PARTS = {
         '</div>'
         '<input id="open" type="file" accept=".json" aria-label="JSONを開く" hidden />'
         '<input id="open-workspace" type="file" accept=".json,application/json" aria-label="作業履歴を開く" hidden />'
+        '<input id="image" type="file" accept="image/png,image/jpeg,image/webp" aria-label="画像" hidden />'
+        '<input id="camera-image" type="file" accept="image/png,image/jpeg,image/webp" capture="environment" aria-label="カメラ" hidden />'
         '</div>\n'),
 }
 # ⬆️ pysaiyanweboo
@@ -4216,11 +4217,13 @@ def studio_toolbar(page: str) -> tuple[list, dict[str, str], dict[str, str]]:
         "grid": ("⊞", "4枚表示", "4枚表示（その場で編集）"),
     }
     formats = {  # 📥 📤 the same act, each page's own formats
-        "slides": {"import": ("JSON 画像", "open image", "JSON（全スライド。PC 版で保存したものも）|画像（PNG・JPEG・WebP をこのページに）"),
+        "slides": {"import": ("画像 カメラ JSON", "image camera open",
+                              "画像（PNG・JPEG・WebP をこのページに）|カメラ（撮った写真をこのページに）|JSON（全スライド。PC 版で保存したものも）"),
                    "export": ("PPTX JSON PNG SVG", "pptx json png svg",
                               "PPTX（全スライド、PowerPoint で編集できる）|JSON（全スライド、また開ける）|PNG（このページ）|SVG（このページ）")},
-        "image": {"import": ("JSON 作業履歴 シェルフ", "open-json open-workspace shelf",
-                             "JSON（再編集用のシーン）|作業履歴（最大40状態）|シェルフ（クリップボード・シェルフ）"),
+        "image": {"import": ("画像 カメラ クリップボード JSON 作業履歴 シェルフ", "image camera clipboard open-json open-workspace shelf",
+                             "画像（PNG・JPEG・WebP をキャンバスに）|カメラ（撮った写真をキャンバスに）|クリップボード（コピーした画像・Base64）"
+                             "|JSON（再編集用のシーン）|作業履歴（最大40状態）|シェルフ（クリップボード・シェルフ）"),
                   "export": ("PNG SVG JSON 作業履歴 Base64", "png svg json workspace base64",
                              "PNG（出力倍率で）|SVG（出力倍率で）|JSON（再編集用）|作業履歴（最大40状態）|Base64（Flutter などへ渡す）")}}[page]
     rows = {"slides": (("create", "text shape emoji kaomoji clock"), ("adjust", "smaller reset bigger undo redo"),
@@ -4242,7 +4245,9 @@ def studio_toolbar(page: str) -> tuple[list, dict[str, str], dict[str, str]]:
         scale = ('<select id="export-scale" title="出力倍率" aria-label="出力倍率">'
                  + "".join(f'<option value="{n}">{n}×</option>' for n in (1, 2, 4, 8)) + '</select>')
         files = ('<input id="open" type="file" accept=".json" aria-label="JSONを開く" hidden />'
-                 '<input id="open-workspace" type="file" accept=".json,application/json" aria-label="作業履歴を開く" hidden />')
+                 '<input id="open-workspace" type="file" accept=".json,application/json" aria-label="作業履歴を開く" hidden />'
+                 '<input id="image" type="file" accept="image/png,image/jpeg,image/webp" aria-label="画像" hidden />'
+                 '<input id="camera-image" type="file" accept="image/png,image/jpeg,image/webp" capture="environment" aria-label="カメラ" hidden />')
         return groups, {"file": scale}, {"file": files}
     numbers = (
         ("x", "横の位置", -8192, 8192, "any", ""), ("y", "縦の位置", -8192, 8192, "any", ""),
@@ -4257,7 +4262,8 @@ def studio_toolbar(page: str) -> tuple[list, dict[str, str], dict[str, str]]:
         + '<label>矢印の先端<select data-property="headPlacement" data-kinds="arrow">'
           '<option value="tip">端</option><option value="middle">中央</option></select></label></fieldset>')
     files = ('<input type="file" data-file="open" accept=".json,application/json" aria-label="全スライドJSON" />'
-             '<input type="file" data-file="image" accept="image/png,image/jpeg,image/webp" aria-label="画像" />')
+             '<input type="file" data-file="image" accept="image/png,image/jpeg,image/webp" aria-label="画像" />'
+             '<input type="file" data-file="camera" accept="image/png,image/jpeg,image/webp" capture="environment" aria-label="カメラ" />')
     after = {"adjust": '<div id="phone-layers" class="ui-toolbar-row ui-current-items" role="group" aria-label="レイヤー（奥から手前）" hidden></div>',
              "pages": '<div id="phone-pages" class="ui-toolbar-row ui-current-items" role="group" aria-label="ページの一覧" hidden></div>',
              "detail": inspector + files}

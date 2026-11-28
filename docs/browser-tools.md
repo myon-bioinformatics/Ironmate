@@ -13,7 +13,7 @@ No extra JavaScript packages or external CDNs are used. Only HTML/CSS/JavaScript
 ```sh
 docker build -f Dockerfile.pages --target runtime -t ironmate-pages .
 docker run --rm -p 127.0.0.1:8080:8080 ironmate-pages
-# http://localhost:8080/Ironmate/ or http://localhost:8080/Ironmate/tools/ or http://localhost:8080/Ironmate/slides/
+# http://localhost:8080/Ironmate/ (the editor) or http://localhost:8080/Ironmate/tools/
 ```
 
 To extract only the public files for GitHub Pages:
@@ -35,7 +35,7 @@ python -S image_studio.py --build-site build/studio-site
 
 | Feature | Behavior on Pages | Boundary with the local version |
 | --- | --- | --- |
-| Image Studio | Existing shapes, images, text, heatmaps, mosaics, history, clipboard, PNG/SVG/JSON/Base64 | Existing input, pixel and size limits are kept |
+| The editor (slides and pictures; Image Studio joined it) | Shapes, images, text, heatmaps, mosaics, dot art, undo, clipboard, PPTX/PNG/SVG/JSON/Base64 | Existing input, pixel and size limits are kept |
 | Pixel art | 5 shapes × 4 treatments × 5 sizes, 10 palette IDs, click-editing color indices, JSON import, nearest-neighbor scaling, palette change, one-step undo | Preset source sizes are 16/23/31/32/64. Output grid is 1–256 cells per side. Python's arbitrary-size procedural generation, photo color reduction, sparse scanning and probe downscaling are not ported |
 | Pixel art export | PNG/SVG/JSON/Base64 at 1/2/8/16x | PNG deflates RGBA directly, keeping hidden RGB of transparent pixels and the color table. Compressed bytes are not guaranteed to match the Python version. PNG needs a browser with CompressionStream |
 | Image grid | Up to 20 PNG/JPEG/WebP, column count, grid PNG, HTML with embedded images | 8 MiB per image, 32 MiB total; the type is read from the bytes (as on the studios), and each image is kept as a thumbnail up to 512 px on the long side. Keeping original bytes/metadata and pass/fail or MAE/RMSE computation are out of scope |

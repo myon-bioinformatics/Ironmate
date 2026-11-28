@@ -306,13 +306,6 @@ jobs:
           node tests/flow_export_browser.cjs
       - name: Generate Open XML before-after PPTX web review fixtures
         run: python -c 'import runpy; runpy.run_path("tests/test_pptx_web_review_fixture.py")["generate"]("build/test-results/pptx-web-review")'
-      - name: Exercise Image Studio and preserve browser exports
-        if: ${{ !cancelled() }}
-        shell: bash
-        run: |
-          IRONMATE_CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
-          export IRONMATE_CHROME
-          IRONMATE_STUDIO_STATIC=1 node tests/image_studio_browser.cjs
       - name: Preserve Marp JUnit
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -334,7 +327,6 @@ jobs:
             build/test-results/flow-export/
             build/test-results/flow.xml
             build/test-results/pptx-web-review/
-            build/image-studio/
           if-no-files-found: warn
           retention-days: 14
 

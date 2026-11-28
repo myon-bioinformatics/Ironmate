@@ -1108,7 +1108,7 @@ def test_one_studio_toolbar_table_gives_each_act_one_face_and_one_meaning():
     assert {'undo-2', 'undo', 'redo', 'redo-2', 'duplicate', 'forward', 'backward', 'delete'} <= on('slides')   # ONE-EDITOR P1
     assert not hasattr(b, 'PHONE_TOOLS') and not hasattr(b, 'phone_toolbar') and not hasattr(b, 'image_toolbar')
     shared = lambda page: [k['face'] for _g, row in b.studio_toolbar(page)[0] for c in row if c['act'] == 'import' for k in c['candidates']]
-    assert [f for f in shared('image') if f in shared('slides')] == shared('slides') == ['画像', 'カメラ', 'JSON']   # 📥 the same order on both
+    assert [f for f in shared('image') if f in shared('slides')] == shared('slides') == ['画像', 'カメラ', 'クリップボード', 'JSON']   # 📥 the same order on both
 
 
 def test_image_studio_tools_are_the_pswb_toolbar_and_every_act_is_answered():
@@ -1209,12 +1209,12 @@ def test_slides_page_is_emoji_only_and_every_control_is_bound():
         assert re.search(rf'(^|[\s{{,])("{re.escape(act)}"|{re.escape(act)})(\(|:)', script, re.M), act  # acts.x / files.x
     assert 1 in b.SLIDES_TEXT['scale'] and b.SLIDES_TEXT['size'] % 8 == 0
     # 🔷 💾: a candidate that is an action names it in the markup, and the script has it; 😊 (^^) candidates are only stamped
-    named = dict((act, acts_) for acts_, act in re.findall(r'data-acts="([a-z ]+)" data-words="[^"]*" data-candidates="[^"]*" data-act="([a-z]+)"', html))
+    named = dict((act, acts_) for acts_, act in re.findall(r'data-acts="([a-z0-9 ]+)" data-words="[^"]*" data-candidates="[^"]*" data-act="([a-z]+)"', html))
     assert named == {'shape': 'rect ellipse triangle arrow', 'look': 'fill stroke fade bold font', 'turn': 'cw ccw upright',
-                     'import': 'image camera open', 'export': 'pptx json png svg'}, named
+                     'import': 'image camera clipboard open', 'export': 'pptx json png svg base64'}, named
     # 📥 どの形式から？ 📤 どの形式に？ the formats are candidates in words, and a pick hides the row (data-close)
     assert [(a, c) for c, a in re.findall(r'data-close data-acts="[^"]*" data-words="[^"]*" data-candidates="([^"]*)" data-act="(\w+)"', html)] == [
-        ('import', '画像 カメラ JSON'), ('export', 'PPTX JSON PNG SVG')]
+        ('import', '画像 カメラ クリップボード JSON'), ('export', 'PPTX JSON PNG SVG Base64')]
     assert '<select data-format' not in html
     for act in ' '.join(named.values()).split():
         assert re.search(rf'(^|[\s{{,])("{act}"|{act})(\(|:)', script, re.M), act

@@ -35,7 +35,8 @@ const url =
     await destination.close();
     await source.close();
     // 📽️ The one slide editor (slides/, phone-first): the slide stays pinned on top, emoji controls, 🧭 PySaiyanWeBoo's pager in every shape, text editable later.
-    const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, acceptDownloads: true }),
+    const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, acceptDownloads: true,
+      permissions: ["clipboard-read", "clipboard-write"] }),
       mobile = await phone.newPage(),
       shots = [];
     mobile.on("pageerror", (e) => errors.push(e.message));
@@ -330,7 +331,7 @@ const url =
     // SVG; a pick does it and the row hides again.
     const saveAs = (format) => pick("export", format);
     await act("export");
-    assert.deepEqual(await mobile.locator("#slides-candidates button").allTextContents(), ["PPTX", "JSON", "PNG", "SVG"]);
+    assert.deepEqual(await mobile.locator("#slides-candidates button").allTextContents(), ["PPTX", "JSON", "PNG", "SVG", "Base64"]);
     assert.equal(await mobile.getAttribute('#slides-candidates button >> nth=2', "title"), "PNG（このページ）");
     const [pptx] = await Promise.all([mobile.waitForEvent("download"), mobile.locator("#slides-candidates button", { hasText: "PPTX" }).tap()]);
     assert.equal(await mobile.locator("#slides-candidates").isHidden(), true);                       // 選んだら候補は隠れる
@@ -344,6 +345,17 @@ const url =
     assert.deepEqual([pngBytes.readUInt32BE(16), pngBytes.readUInt32BE(20)], [1280, 720]);  // the slide's own size
     const [svg] = await Promise.all([mobile.waitForEvent("download"), saveAs("SVG")]);
     assert.match(fs.readFileSync(await svg.path(), "utf8"), /^<svg [^>]*width="1280" height="720"/);
+    // 📤 Base64: this page's PNG as a data URI on the clipboard; 📥 クリップボード puts it back on the page as a picture (then ↩️)
+    await saveAs("Base64");
+    await mobile.waitForFunction(() => document.querySelector("#slides-status").textContent === "📤 ✅ 📋");
+    assert.match(await mobile.evaluate(() => navigator.clipboard.readText()), /^data:image\/png;base64,iVBORw0KGgo/);
+    const onPage = async () => { const t = await state(); return t.deck.slides[t.active].layers; };
+    const held = (await onPage()).length;
+    await pick("import", "クリップボード");
+    await mobile.waitForFunction((n) => IronmateSlideStudio.deck.slides[IronmateSlideStudio.active].layers.length === n + 1, held);
+    assert.equal((await onPage()).at(-1).kind, "image");
+    await act("undo");
+    assert.equal((await onPage()).length, held);
     await snap("saved");
     const phoneCheck = spawnSync(process.env.PYTHON || "python", ["-S", "-c", `
 from pathlib import Path

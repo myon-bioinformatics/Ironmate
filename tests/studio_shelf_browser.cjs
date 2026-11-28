@@ -130,9 +130,17 @@ module.exports = async ({page, out}) => {
       const deletedUrl = S.shelfItems[1].dataUrl;
       cardButton(1, "削除").click();
       check(released.includes(deletedUrl) && S.shelfItems.length === 19, "delete failed to release URL");
-      await note("日本語 🌱 note");
+      const sourceText = "    日本語 🌱 note\n";
+      await note(sourceText);
       await cardButton(0, "コピー").onclick();
-      check(copies.at(-1) === "日本語 🌱 note", "plain note copy changed content");
+      check(copies.at(-1) === sourceText, "plain note copy changed content");
+      navigator.clipboard.writeText = async () => { throw Error("denied"); };
+      $("shelf-input-text").value = "未追加の下書き";
+      await cardButton(0, "コピー").onclick();
+      const manual = $("shelf-copy-text");
+      check(manual.value === sourceText && !manual.hidden && document.activeElement === manual
+        && manual.selectionStart === 0 && manual.selectionEnd === sourceText.length, "manual copy lost the original selection");
+      check($("shelf-input-text").value === "未追加の下書き", "manual copy overwrote the draft");
       clear();
       // Binary clipboard + raw Base64 produce portable copies and still import.
       clip("", new Blob([bytes], {type:"image/png"}));
@@ -140,7 +148,7 @@ module.exports = async ({page, out}) => {
       await note(uri.split(",")[1]);
       check(S.shelfItems.length === 2, "binary or raw Base64 image not retained");
       for (const index of [0, 1]) {
-        await cardButton(index, "コピー").onclick();
+        await cardButton(index, "データURLをコピー").onclick();
         const copied = copies.at(-1);
         check(copied.startsWith("data:image/png;base64,"), "image copy is not portable data URI");
         check(copied === uri, "copied bytes differ from original image");

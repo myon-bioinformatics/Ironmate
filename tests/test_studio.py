@@ -1068,30 +1068,47 @@ def test_studios_declare_the_rows_a_hosts_header_shows_and_carry_no_header_of_th
     assert 'id="ui-chrome-rows"' not in b.STUDIO_HTML and '</script>' not in image_studio.host_rows()[:-9]
 
 
-def test_image_studio_tools_are_the_pswb_toolbar_and_every_act_is_answered():
-    """🧰 Image Studio's tools are PySaiyanWeBoo's toolbar (image_toolbar's data, written by scripts/build_studio_css.py): the same rows as
-    the slide editor's, the make row's faces are the slide editor's candidates too, 📥 📤 name the formats in words and hide after a pick,
-    and every act but a mode is an entry of STUDIO_ACTS."""
+def test_one_studio_toolbar_table_gives_each_act_one_face_and_one_meaning():
+    """🧰 studio_toolbar(page) is both studios' toolbars from one table: an act listed on both pages has the same face, word and tip
+    there (and the same candidates, but for 📥 📤, whose formats are each page's), no face stands for two acts, every word is short
+    enough to replace its face, and the rows are make / adjust / change (/ pages) / file (/ detail)."""
     from ironlib import studio_bundle as b
-    groups, inside, after = b.image_toolbar()
-    assert [g for g, _ in groups] == ['create', 'adjust', 'update', 'file'] and set(inside) == set(after) == {'file'}
-    assert b.PSWB_PHONE['image'] in b.STUDIO_HTML and '<!-- 🧰 toolbar' not in b.STUDIO_HTML
+    seen, faces = {}, {}
+    for page, rows in (('slides', ['create', 'adjust', 'update', 'pages', 'file', 'detail']), ('image', ['create', 'adjust', 'update', 'file'])):
+        groups, _inside, _after = b.studio_toolbar(page)
+        assert [g for g, _ in groups] == rows
+        for _g, row in groups:
+            for c in row:
+                same = {k: c[k] for k in ('face', 'word', 'words')} | ({} if c['act'] in ('import', 'export') else {'candidates': c['candidates']})
+                assert seen.setdefault(c['act'], same) == same, c['act']
+                assert faces.setdefault(c['face'], c['act']) == c['act'], (c['face'], c['act'], faces[c['face']])
+                assert 0 < len(c['word']) <= 12 and c['close'] == (c['act'] in ('import', 'export')), c
+    assert {'forward', 'backward', 'front', 'back', 'duplicate', 'slide-copy'} <= set(seen)          # ⬆️ ⬇️ one step, ⏫ ⏬ all the way; ⧉ 📑
+    assert not hasattr(b, 'PHONE_TOOLS') and not hasattr(b, 'phone_toolbar') and not hasattr(b, 'image_toolbar')
+
+
+def test_image_studio_tools_are_the_pswb_toolbar_and_every_act_is_answered():
+    """🧰 Image Studio's tools are PySaiyanWeBoo's toolbar (studio_toolbar("image"), written by scripts/build_studio_css.py into
+    PSWB_PARTS["image-toolbar"]): 📥 📤 name the formats in words and hide after a pick, 🔷's candidates run their kind, and every act but a
+    mode is an entry of STUDIO_ACTS."""
+    from ironlib import studio_bundle as b
+    groups, inside, after = b.studio_toolbar('image')
+    assert set(inside) == set(after) == {'file'}
+    assert b.PSWB_PARTS['image-toolbar'] in b.STUDIO_HTML and '<!-- 🧰 toolbar' not in b.STUDIO_HTML
     html = b.STUDIO_HTML
     assert re.findall(r'class="ui-toolbar-row" data-ui-group="(\w+)"', html) == ['create', 'adjust', 'update', 'file']
     assert 'id="studio-toolbar"' in html and 'id="studio-candidates"' in html and 'data-tool=' not in html
     assert not re.search(r'id="(undo|redo|png|svg|save|save-workspace|base64|shelf-button|duplicate|delete|front|back|candidates|studio-import|studio-export)"', html)
-    for _g, row in b.phone_toolbar()[0]:
-        for c in row:
-            if c['act'] in ('shape', 'emoji', 'kaomoji'):        # 🔷 😊 (^^) the same faces on both pages
-                mine = next(k for _g2, r in groups for k in r if k['act'] == c['act'])
-                assert [k['face'] for k in c['candidates']] == [k['face'] for k in mine['candidates']], c['act']
     files = {c['act']: c for _g, row in groups for c in row if _g == 'file'}
     assert [k['face'] for k in files['import']['candidates']] == ['JSON', '作業履歴', 'シェルフ'] and files['import']['close']
     assert [k['face'] for k in files['export']['candidates']] == ['PNG', 'SVG', 'JSON', '作業履歴', 'Base64'] and files['export']['close']
     script = b.STUDIO_JS[b.STUDIO_JS.index('/* Image Studio UI'):b.STUDIO_JS.index('/* Tools page UI')]
     modes = set(re.search(r'const MODES = \[([^\]]*)\]', script)[1].replace('"', '').replace(' ', '').split(','))
     assert modes == {c['act'] for c in groups[0][1]}
-    named = {k['act'] for _g, row in groups for c in row for k in c['candidates'] if k.get('act')}
+    kinds = set(re.findall(r'(\w+): "[▭◯△→]"', re.search(r'const SHAPES = \{[^}]*\}', script)[0]))
+    shape = next(c for c in groups[0][1] if c['act'] == 'shape')
+    assert [k['act'] for k in shape['candidates']] == ['rect', 'ellipse', 'triangle', 'arrow'] and kinds == {'rect', 'ellipse', 'triangle', 'arrow'}
+    named = {k['act'] for _g, row in groups[1:] for c in row for k in c['candidates'] if k.get('act')}
     plain = {c['act'] for _g, row in groups[1:] for c in row if not c['candidates']}
     assert named | plain <= studio_acts(b.STUDIO_JS), (named | plain) - studio_acts(b.STUDIO_JS)
     assert 'PySaiyanWeBoo.bindToolbar($("studio-toolbar")' in script and 'id="export-scale"' in html and 'id="open" type="file"' in html
@@ -1131,19 +1148,19 @@ def test_phone_page_is_emoji_only_and_every_control_is_bound():
                 self.open['face'] += data.strip()
     parser = Controls(); parser.feed(html)
     acts = [i['data-act'] for i in parser.items if 'data-act' in i]
-    assert acts == [act for _group, row in b.PHONE_TOOLS for act, *_ in row]
+    groups, _inside, after = b.studio_toolbar('slides')
+    assert acts == [c['act'] for _group, row in groups for c in row]
     # 💻 ⇄ 📱 every control has a short word for the words view (PySaiyanWeBoo's bindLabels); rows are CRUD-like groups
     short = {i['data-act']: i.get('data-ui-word') for i in parser.items if 'data-act' in i}
-    assert short == {act: word for _group, row in b.PHONE_TOOLS for act, _e, word, _w in row} and all(short.values()), short
+    assert short == {c['act']: c['word'] for _group, row in groups for c in row} and all(short.values()), short
     assert all(len(word) <= 12 for word in short.values()), short                                # short: it replaces a face
     assert re.findall(r'class="ui-toolbar-row" data-ui-group="(\w+)"', html) == ['create', 'adjust', 'update', 'pages', 'file', 'detail']
-    # 🧰 the toolbar is PySaiyanWeBoo's (toolbar_html from phone_toolbar's data), and bindToolbar runs it
-    groups, after = b.phone_toolbar()
-    assert b.PSWB_PHONE['tools'] in html and 'id="phone-toolbar"' in b.PSWB_PHONE['tools'] and 'id="phone-candidates"' in b.PSWB_PHONE['tools']
-    assert [g for g, _ in groups] == [g for g, _ in b.PHONE_TOOLS] and set(after) == {'adjust', 'pages', 'detail'}
+    # 🧰 the toolbar is PySaiyanWeBoo's (toolbar_html from studio_toolbar("slides")), and bindToolbar runs it
+    parts = b.PSWB_PARTS['slides-toolbar']
+    assert parts in html and 'id="phone-toolbar"' in parts and 'id="phone-candidates"' in parts and set(after) == {'adjust', 'pages', 'detail'}
     assert 'PySaiyanWeBoo.bindToolbar($("phone-toolbar")' in b.STUDIO_JS and 'function offer(' not in b.STUDIO_JS
-    assert b.PSWB_PHONE['labels'] in html and html.index(b.PSWB_PHONE['labels']) > html.index('data-ui-group="file"')
-    assert 'id="labels-switch" data-ui-labels-switch' in b.PSWB_PHONE['labels']
+    assert b.PSWB_PARTS['labels'] in html and html.index(b.PSWB_PARTS['labels']) > html.index('data-ui-group="file"')
+    assert 'id="labels-switch" data-ui-labels-switch' in b.PSWB_PARTS['labels']
     assert "PySaiyanWeBoo.bindLabels();" in b.STUDIO_JS
     words = re.compile(r'[\u3040-\u30ff\u4e00-\u9fffA-Za-z0-9]')
     for item in parser.items:
@@ -1151,8 +1168,8 @@ def test_phone_page_is_emoji_only_and_every_control_is_bound():
         assert item['aria-label'] and item['title'] == item['aria-label'], item
     assert [(i['data-ui-pager-go'], i['face']) for i in parser.items if 'data-ui-pager-go' in i] == [
         ('first', '⬆️'), ('first', '⏮️'), ('prev', '⬅️'), ('next', '➡️'), ('last', '⏭️'), ('last', '⬇️')]   # every shape is in the markup
-    assert b.PSWB_PHONE['pager'] in html and 'data-ui-pager="arrows"' in html and 'data-ui-pager-keys' in html   # ⬅️ 1/N ➡️ first, ← → too
-    assert b.PSWB_PHONE['stage'].split('{slide}')[0] + '<div id="phone-svg" class="phone-svg" data-ui-fill>' in html
+    assert b.PSWB_PARTS['pager'] in html and 'data-ui-pager="arrows"' in html and 'data-ui-pager-keys' in html   # ⬅️ 1/N ➡️ first, ← → too
+    assert b.PSWB_PARTS['stage'].split('{slide}')[0] + '<div id="phone-svg" class="phone-svg" data-ui-fill>' in html
     assert ' style="' not in html                                                                 # the CSP allows no inline style
     region = b.STUDIO_JS[b.STUDIO_JS.index('/* ⬇️ pysaiyanweboo'):b.STUDIO_JS.index('/* ⬆️ pysaiyanweboo */')]
     declared = re.findall(r'^(?:async )?function (\w+)\(', region, re.M)

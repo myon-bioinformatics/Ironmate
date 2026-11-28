@@ -132,7 +132,7 @@ STUDIO_HTML = r"""<!doctype html>
         <p class="hint">
           ツールを選び、キャンバスを押して配置します。
         </p>
-        <!-- 🧰 toolbar: image_toolbar() -->
+        <!-- 🧰 toolbar: studio_toolbar("image") -->
 """ + STUDIO_PIXEL_PANEL + r"""
         <div id="keyboard-input" hidden>
           <button id="keyboard-focus">⌨ ほかの文字を入力</button>
@@ -1916,7 +1916,7 @@ function updateInspector() {
   $("value-labels").disabled = l?.kind !== "heatmap";
   $("value-labels").checked = l?.labels ?? true;
   $("continuous").disabled = l?.kind !== "heatmap";
-  for (const name of ["delete", "duplicate", "front", "back"]) control(name).disabled = !l;
+  for (const name of ["delete", "duplicate", "forward", "backward"]) control(name).disabled = !l;
   $("custom").disabled = !l;
   for (const name of ["undo", "undo-2"]) control(name).disabled = history.index === 0;
   for (const name of ["redo", "redo-2"]) control(name).disabled = history.index === history.items.length - 1;
@@ -1967,7 +1967,7 @@ function add(layer) {
   change((doc) => doc.layers.push(layer));
   message(`${layer.name || layer.kind}を追加しました`);
 }
-const SHAPES = { "▭": "rect", "◯": "ellipse", "△": "triangle", "→": "arrow" };
+const SHAPES = { rect: "▭", ellipse: "◯", triangle: "△", arrow: "→" }; // 🔷 a kind and the face it shows
 function setTool(value, opened = false) {
   // 🧰 a mode of the toolbar's make row; 🔷 😊 (^^) show their candidates (PySaiyanWeBoo's bindToolbar opened them already when pressed)
   tool = value;
@@ -1981,11 +1981,12 @@ function setTool(value, opened = false) {
   else if (!opened && (row.hidden || row.dataset.tool !== value)) toolbar?.offer(button);
 }
 function pick(value, face) {
-  // A candidate: 図形 sets the shape the next press places, 絵文字・顔文字 the text.
+  // A candidate: 図形 sets the shape the next press places (face is its kind: rect …), 絵文字・顔文字 the text.
   setTool(value, true);
   if (value === "shape") {
     const button = control("shape");
-    shape = SHAPES[face];
+    shape = face;
+    face = SHAPES[shape];
     button.textContent = face; // 💻 の表示では「図形(◯)」（data-ui-word）
     button.dataset.uiWord = button.title = `図形(${face})`;
     button.setAttribute("aria-label", button.title);
@@ -2146,8 +2147,9 @@ queueMicrotask(() => {
   // PySaiyanWeBoo's script comes later in studio.js: 💻 To textual ⇄ 📱 To iconic（ページ内と ⋯ の行）and the toolbar
   globalThis.PySaiyanWeBoo.bindLabels();
   toolbar = globalThis.PySaiyanWeBoo.bindToolbar($("studio-toolbar"), (name, face) => {
+    if (SHAPES[name]) return pick("shape", name); // 🔷 ▭ ◯ △ → run their kind
     if (MODES.includes(name)) return face === undefined ? setTool(name, true) : pick(name, face);
-    STUDIO_ACTS[name]?.(); // 📥 📤 the format picked (their rows hide after it), ↩️ ↪️, 📑 🗑️ ⏫ ⏬
+    STUDIO_ACTS[name]?.(); // 📥 📤 the format picked (their rows hide after it), ↩️ ↪️, ⧉ 🗑️ ⬆️ ⬇️
   });
   setTool(tool);
 });
@@ -2195,8 +2197,8 @@ STUDIO_ACTS.delete = () => {
     });
 };
 for (const [act, delta] of [
-  ["front", 1],
-  ["back", -1],
+  ["forward", 1],
+  ["backward", -1],
 ])
   STUDIO_ACTS[act] = () =>
     change((doc) => {
@@ -4021,32 +4023,11 @@ window.IronmatePhone = {
 """
 
 
-# 📱 Phone slides (slides/phone/): the slide stays pinned on top and every control is an emoji; the words live in
-# aria-label / title only. Each row is (data-act, emoji, words); the browser script binds data-act by name.
-# 🧰 (group, controls): each control is (act, emoji face, short word, words). The face shows by default; 💻 swaps every face
-# for its short word, as on a PC (PySaiyanWeBoo's bindLabels), and 📱 swaps back. Groups (make / adjust / change / pages / file,
-# CRUD-like) are rows with a light dashed line between them.
-PHONE_TOOLS = (
-    ("create", (("text", "🔤", "文字", "テキストボックスを追加"), ("shape", "🔷", "図形", "図形（四角・丸・三角・矢印）を候補から追加"),
-                ("emoji", "😊", "絵文字", "絵文字を候補から追加"), ("kaomoji", "(^^)", "顔文字", "顔文字を候補から追加"),
-                ("clock", "🕒", "時計", "いまの時刻の時計を追加"))),
-    ("adjust", (("smaller", "🔽", "小さく", "文字をすべて小さく"), ("reset", "🔄", "元の大きさ", "文字をすべて元の大きさに"),
-                ("bigger", "🔼", "大きく", "文字をすべて大きく"), ("undo", "↩️", "戻す", "戻す"), ("redo", "↪️", "やり直す", "やり直す"))),
-    ("update", (("edit", "✏️", "編集", "選んだ文字・時計を編集（選んだものをもう一度タップしても編集。時計は 14:30 のように）"),
-                ("look", "🎨", "見た目", "選んだものの見た目（塗り・線の色・不透明度・太字・等幅）"), ("turn", "↻", "回転", "選んだものを回す"),
-                ("front", "⏫", "手前へ", "選んだものをいちばん手前へ"), ("back", "⏬", "奥へ", "選んだものをいちばん奥へ"),
-                ("delete", "🗑️", "削除", "選んだものを削除"))),
-    ("pages", (("slide-add", "➕📄", "ページ追加", "白紙のページを追加"), ("slide-copy", "📑", "複製", "ページを複製"),
-               ("slide-delete", "✖️📄", "ページ削除", "ページを削除"), ("pages", "🗂️", "一覧", "ページの一覧（タップでそのページへ）"))),
-    ("file", (("new", "🆕", "新規", "最初から（白紙 1 枚）"), ("import", "📥", "インポート", "インポート（どの形式から？ 候補から選ぶ）"),
-              ("export", "📤", "エクスポート", "エクスポート（どの形式に？ 候補から選ぶ）"), ("home", "🏠", "Image Studio", "Image Studio"))),
-    ("detail", (("inspect", "🎛️", "詳細", "選んだものの詳細（位置・大きさ・種類別の設定）"), ("grid", "⊞", "4枚表示", "4枚表示（その場で編集）"))),
-)
 # 🔽 🔄 🔼 multiply every text box by the next / plain / previous step; new boxes are 32 px on the 1280×720 slide.
 PHONE_TEXT = {"size": 32, "scale": (0.5, 0.75, 1, 1.25, 1.5, 2, 2.5)}
 # 🖼️ the stage and 🧭 the pager (⬅️ 1/N ➡️ by default; ← → Home End too) are PySaiyanWeBoo's, written below from the pinned commit.
-# ⬇️ pysaiyanweboo: scripts/build_studio_css.py writes PSWB_PHONE from the pinned commit (--check fails when it drifts)
-PSWB_PHONE = {
+# ⬇️ pysaiyanweboo: scripts/build_studio_css.py writes PSWB_PARTS from the pinned commit (--check fails when it drifts)
+PSWB_PARTS = {
     "stage": (
         '<div class="ui-stage" role="region" aria-label="スライド" data-ui-stage="pinned" id="phone-stage">{slide}</div>'),
     "pager": (
@@ -4070,14 +4051,14 @@ PSWB_PHONE = {
         '</div>'),
     "labels": (
         '<button type="button" class="ui-button" id="labels-switch" data-ui-labels-switch data-ui-word="📱 To iconic" aria-pressed="false" aria-label="💻 To textual ⇄ 📱 To iconic" title="💻 To textual ⇄ 📱 To iconic">💻</button>'),
-    "tools": (
+    "slides-toolbar": (
         '<div class="ui-toolbar" id="phone-toolbar" role="toolbar" aria-label="道具">'
         '<div class="ui-toolbar-row" data-ui-group="create">'
-        '<button type="button" data-act="text" data-ui-word="文字" aria-label="テキストボックスを追加" title="テキストボックスを追加">🔤</button>'
-        '<button type="button" data-acts="rect ellipse triangle arrow" data-words="四角|丸|三角|矢印" data-candidates="▭ ◯ △ →" data-act="shape" data-ui-word="図形" aria-label="図形（四角・丸・三角・矢印）を候補から追加" title="図形（四角・丸・三角・矢印）を候補から追加">🔷</button>'
-        '<button type="button" data-candidates="❤️ 😊 🌱 📊 ✨ 📌 🔰" data-act="emoji" data-ui-word="絵文字" aria-label="絵文字を候補から追加" title="絵文字を候補から追加">😊</button>'
-        '<button type="button" data-candidates="(・∀・) (｡•̀ᴗ-)✧ ٩(๑❛ᴗ❛๑)۶" data-act="kaomoji" data-ui-word="顔文字" aria-label="顔文字を候補から追加" title="顔文字を候補から追加">(^^)</button>'
-        '<button type="button" data-act="clock" data-ui-word="時計" aria-label="いまの時刻の時計を追加" title="いまの時刻の時計を追加">🕒</button>'
+        '<button type="button" data-act="text" data-ui-word="文字" aria-label="文字を置く" title="文字を置く">🔤</button>'
+        '<button type="button" data-acts="rect ellipse triangle arrow" data-words="四角|丸|三角|矢印" data-candidates="▭ ◯ △ →" data-act="shape" data-ui-word="図形" aria-label="図形（四角・丸・三角・矢印）" title="図形（四角・丸・三角・矢印）">🔷</button>'
+        '<button type="button" data-candidates="❤️ 😊 🌱 📊 ✨ 📌 🔰" data-act="emoji" data-ui-word="絵文字" aria-label="絵文字" title="絵文字">😊</button>'
+        '<button type="button" data-candidates="(・∀・) (｡•̀ᴗ-)✧ ٩(๑❛ᴗ❛๑)۶" data-act="kaomoji" data-ui-word="顔文字" aria-label="顔文字" title="顔文字">(^^)</button>'
+        '<button type="button" data-act="clock" data-ui-word="時計" aria-label="いまの時刻の時計" title="いまの時刻の時計">🕒</button>'
         '</div>'
         '<div class="ui-toolbar-row" data-ui-candidates id="phone-candidates" role="group" aria-label="候補" hidden>'
         '</div>'
@@ -4100,7 +4081,7 @@ PSWB_PHONE = {
         '</div>'
         '<div class="ui-toolbar-row" data-ui-group="pages">'
         '<button type="button" data-act="slide-add" data-ui-word="ページ追加" aria-label="白紙のページを追加" title="白紙のページを追加">➕📄</button>'
-        '<button type="button" data-act="slide-copy" data-ui-word="複製" aria-label="ページを複製" title="ページを複製">📑</button>'
+        '<button type="button" data-act="slide-copy" data-ui-word="ページ複製" aria-label="ページを複製" title="ページを複製">📑</button>'
         '<button type="button" data-act="slide-delete" data-ui-word="ページ削除" aria-label="ページを削除" title="ページを削除">✖️📄</button>'
         '<button type="button" data-act="pages" data-ui-word="一覧" aria-label="ページの一覧（タップでそのページへ）" title="ページの一覧（タップでそのページへ）">🗂️</button>'
         '</div>'
@@ -4144,16 +4125,16 @@ PSWB_PHONE = {
         '<input type="file" data-file="open" accept=".json,application/json" aria-label="全スライドJSON" />'
         '<input type="file" data-file="image" accept="image/png,image/jpeg,image/webp" aria-label="画像" />'
         '</div>'),
-    "image": (
+    "image-toolbar": (
         '        <div class="ui-toolbar" id="studio-toolbar" role="toolbar" aria-label="道具">'
         '<div class="ui-toolbar-row" data-ui-group="create">'
-        '<button type="button" data-act="select" data-ui-word="選択" aria-label="選択" title="選択">👆</button>'
-        '<button type="button" data-act="text" data-ui-word="文字列" aria-label="文字列" title="文字列">🔤</button>'
-        '<button type="button" data-candidates="▭ ◯ △ →" data-act="shape" data-ui-word="図形(▭)" aria-label="図形(▭)" title="図形(▭)">▭</button>'
-        '<button type="button" data-act="stamp" data-ui-word="スタンプ" aria-label="スタンプ" title="スタンプ">✦</button>'
-        '<button type="button" data-candidates="❤️ 😊 🌱 📊 ✨ 📌 🔰" data-act="emoji" data-ui-word="絵文字(😊)" aria-label="絵文字(😊)" title="絵文字(😊)">😊</button>'
-        '<button type="button" data-candidates="(・∀・) (｡•̀ᴗ-)✧ ٩(๑❛ᴗ❛๑)۶" data-act="kaomoji" data-ui-word="顔文字(^^)" aria-label="顔文字(^^)" title="顔文字(^^)">(^^)</button>'
-        '<button type="button" data-act="clock" data-ui-word="時計" aria-label="時計" title="時計">🕒</button>'
+        '<button type="button" data-act="select" data-ui-word="選択" aria-label="選んで動かす" title="選んで動かす">👆</button>'
+        '<button type="button" data-act="text" data-ui-word="文字" aria-label="文字を置く" title="文字を置く">🔤</button>'
+        '<button type="button" data-acts="rect ellipse triangle arrow" data-words="四角|丸|三角|矢印" data-candidates="▭ ◯ △ →" data-act="shape" data-ui-word="図形" aria-label="図形（四角・丸・三角・矢印）" title="図形（四角・丸・三角・矢印）">🔷</button>'
+        '<button type="button" data-act="stamp" data-ui-word="スタンプ" aria-label="スタンプを押す" title="スタンプを押す">✦</button>'
+        '<button type="button" data-candidates="❤️ 😊 🌱 📊 ✨ 📌 🔰" data-act="emoji" data-ui-word="絵文字" aria-label="絵文字" title="絵文字">😊</button>'
+        '<button type="button" data-candidates="(・∀・) (｡•̀ᴗ-)✧ ٩(๑❛ᴗ❛๑)۶" data-act="kaomoji" data-ui-word="顔文字" aria-label="顔文字" title="顔文字">(^^)</button>'
+        '<button type="button" data-act="clock" data-ui-word="時計" aria-label="いまの時刻の時計" title="いまの時刻の時計">🕒</button>'
         '</div>'
         '<div class="ui-toolbar-row" data-ui-candidates id="studio-candidates" role="group" aria-label="候補" hidden>'
         '</div>'
@@ -4164,14 +4145,14 @@ PSWB_PHONE = {
         '<button type="button" data-act="redo-2" data-ui-word="2つやり直す" aria-label="2つやり直す" title="2つやり直す">⏩</button>'
         '</div>'
         '<div class="ui-toolbar-row" data-ui-group="update">'
-        '<button type="button" data-act="duplicate" data-ui-word="複製" aria-label="複製" title="複製">📑</button>'
-        '<button type="button" data-act="delete" data-ui-word="削除" aria-label="削除" title="削除">🗑️</button>'
-        '<button type="button" data-act="front" data-ui-word="前へ" aria-label="前へ" title="前へ">⏫</button>'
-        '<button type="button" data-act="back" data-ui-word="後ろへ" aria-label="後ろへ" title="後ろへ">⏬</button>'
+        '<button type="button" data-act="duplicate" data-ui-word="複製" aria-label="選んだものを複製" title="選んだものを複製">⧉</button>'
+        '<button type="button" data-act="forward" data-ui-word="前へ" aria-label="選んだものをひとつ手前へ" title="選んだものをひとつ手前へ">⬆️</button>'
+        '<button type="button" data-act="backward" data-ui-word="後ろへ" aria-label="選んだものをひとつ奥へ" title="選んだものをひとつ奥へ">⬇️</button>'
+        '<button type="button" data-act="delete" data-ui-word="削除" aria-label="選んだものを削除" title="選んだものを削除">🗑️</button>'
         '</div>'
         '<div class="ui-toolbar-row" data-ui-group="file">'
-        '<button type="button" data-close data-acts="open-json open-workspace shelf" data-words="JSON（再編集用のシーン）|作業履歴（最大40状態）|シェルフ（クリップボード・シェルフ）" data-candidates="JSON 作業履歴 シェルフ" data-act="import" data-ui-word="インポート" aria-label="インポート（どの形式から？）" title="インポート（どの形式から？）">📥</button>'
-        '<button type="button" data-close data-acts="png svg json workspace base64" data-words="PNG（出力倍率で）|SVG（出力倍率で）|JSON（再編集用）|作業履歴（最大40状態）|Base64（Flutter などへ渡す）" data-candidates="PNG SVG JSON 作業履歴 Base64" data-act="export" data-ui-word="エクスポート" aria-label="エクスポート（どの形式に？）" title="エクスポート（どの形式に？）">📤</button>'
+        '<button type="button" data-close data-acts="open-json open-workspace shelf" data-words="JSON（再編集用のシーン）|作業履歴（最大40状態）|シェルフ（クリップボード・シェルフ）" data-candidates="JSON 作業履歴 シェルフ" data-act="import" data-ui-word="インポート" aria-label="インポート（どの形式から？ 候補から選ぶ）" title="インポート（どの形式から？ 候補から選ぶ）">📥</button>'
+        '<button type="button" data-close data-acts="png svg json workspace base64" data-words="PNG（出力倍率で）|SVG（出力倍率で）|JSON（再編集用）|作業履歴（最大40状態）|Base64（Flutter などへ渡す）" data-candidates="PNG SVG JSON 作業履歴 Base64" data-act="export" data-ui-word="エクスポート" aria-label="エクスポート（どの形式に？ 候補から選ぶ）" title="エクスポート（どの形式に？ 候補から選ぶ）">📤</button>'
         '<select id="export-scale" title="出力倍率" aria-label="出力倍率">'
         '<option value="1">1×</option>'
         '<option value="2">2×</option>'
@@ -4186,68 +4167,83 @@ PSWB_PHONE = {
 # ⬆️ pysaiyanweboo
 
 
-def image_toolbar() -> tuple[list, dict[str, str], dict[str, str]]:
-    """🧰 Image Studio's toolbar as PySaiyanWeBoo's ``toolbar_html`` data: ``(groups, inside, after)``, the same rows as the slide
-    editor's (make / adjust / change / file). The make row are modes: a press makes that the tool, and 🔷 😊 (^^) open their candidates
-    (the slide editor reads these faces too). 📥 どの形式から？ 📤 どの形式に？ name the formats in words and hide after a pick; their
-    acts are the keys a host's header sends (``image_studio.host_rows``), so the page and the header call the same thing. The output
-    scale stays beside 📤, and 📥's file choosers wait after the row. scripts/build_studio_css.py writes the markup into
-    PSWB_PHONE["image"]; --check fails when this data and that markup drift."""
-    def tool(act, face, word, words=None, candidates="", said="", **more):
-        named = said.split("|") if said else []
-        acts = more.pop("acts", "").split()
-        return {"act": act, "face": face, "word": word, "words": words or word, **more,
-                "candidates": [{"face": f, **({"act": acts[i]} if acts else {}), **({"words": named[i]} if named else {})}
-                               for i, f in enumerate(candidates.split())]}
-    groups = [
-        ("create", [tool("select", "👆", "選択"), tool("text", "🔤", "文字列"),
-                    tool("shape", "▭", "図形(▭)", candidates="▭ ◯ △ →", said="四角|丸|三角|矢印"), tool("stamp", "✦", "スタンプ"),
-                    tool("emoji", "😊", "絵文字(😊)", candidates="❤️ 😊 🌱 📊 ✨ 📌 🔰"),
-                    tool("kaomoji", "(^^)", "顔文字(^^)", candidates="(・∀・) (｡•̀ᴗ-)✧ ٩(๑❛ᴗ❛๑)۶"), tool("clock", "🕒", "時計")]),
-        ("adjust", [tool("undo-2", "⏪", "2つ戻す"), tool("undo", "↩️", "戻す"), tool("redo", "↪️", "やり直す"), tool("redo-2", "⏩", "2つやり直す")]),
-        ("update", [tool("duplicate", "📑", "複製"), tool("delete", "🗑️", "削除"), tool("front", "⏫", "前へ"), tool("back", "⏬", "後ろへ")]),
-        ("file", [tool("import", "📥", "インポート", "インポート（どの形式から？）", "JSON 作業履歴 シェルフ",
-                       "JSON（再編集用のシーン）|作業履歴（最大40状態）|シェルフ（クリップボード・シェルフ）", acts="open-json open-workspace shelf", close=True),
-                  tool("export", "📤", "エクスポート", "エクスポート（どの形式に？）", "PNG SVG JSON 作業履歴 Base64",
-                       "PNG（出力倍率で）|SVG（出力倍率で）|JSON（再編集用）|作業履歴（最大40状態）|Base64（Flutter などへ渡す）",
-                       acts="png svg json workspace base64", close=True)]),
-    ]
-    scale = ('<select id="export-scale" title="出力倍率" aria-label="出力倍率">'
-             + "".join(f'<option value="{n}">{n}×</option>' for n in (1, 2, 4, 8)) + '</select>')
-    files = ('<input id="open" type="file" accept=".json" aria-label="JSONを開く" hidden />'
-             '<input id="open-workspace" type="file" accept=".json,application/json" aria-label="作業履歴を開く" hidden />')
-    return groups, {"file": scale}, {"file": files}
-
-
-def phone_toolbar() -> tuple[list, dict[str, str]]:
-    """🧰 The slide editor's toolbar as PySaiyanWeBoo's ``toolbar_html`` data: ``(groups, after)``. Each control of PHONE_TOOLS gets
-    its candidates (🔷 😊 (^^) from ``image_toolbar``, so both pages offer the same; 🎨 ↻ 📥 📤 here, the last two in
-    words and hiding after a pick), and ``after`` places the page's own rows: 📚 layers above the row that acts on the selected one,
-    🗂️ pages under the page row, and the inspector and 📥's file choosers at the end. scripts/build_studio_css.py writes the markup
-    into PSWB_PHONE["tools"] from the pinned PySaiyanWeBoo; --check fails when this data and that markup drift."""
+def studio_toolbar(page: str) -> tuple[list, dict[str, str], dict[str, str]]:
+    """🧰 Both studios' toolbars as PySaiyanWeBoo's ``toolbar_html`` data, ``(groups, inside, after)``, from one table: an act has one
+    face, one word (💻 To textual) and one tip wherever it is listed, so a face never means two things (⬆️ ⬇️ one step, ⏫ ⏬ all the way;
+    ⧉ a copy of the selected, 📑 of the page). ``page`` is "slides" (the one slide editor) or "image" (Image Studio) and picks the rows:
+    make / adjust / change (/ pages) / file (/ detail). 🔷 😊 (^^) 🎨 ↻ open candidates under their row; 📥 どの形式から？ 📤 どの形式に？
+    name each page's formats in words and hide after a pick (Image Studio's are the keys a host's header sends, ``image_studio.host_rows``).
+    ``inside`` and ``after`` place each page's own pieces: Image Studio's output scale beside 📤 and its file choosers; the slide editor's
+    📚 layers, 🗂️ pages, inspector and file choosers. scripts/build_studio_css.py writes the markup into PSWB_PARTS ("slides-toolbar",
+    "image-toolbar"); --check fails when this table and that markup drift."""
     from html import escape
 
-    faces = {c["act"]: " ".join(k["face"] for k in c["candidates"]) for _g, row in image_toolbar()[0] for c in row
-             if c["act"] in ("shape", "emoji", "kaomoji")} | {
-        "look": "🎨 🖌 🌗 🅱️ 🔠", "turn": "↻ ↺ ⏹", "import": "JSON 画像", "export": "PPTX JSON PNG SVG"}
-    named = {"shape": ("rect ellipse triangle arrow", "四角|丸|三角|矢印"),
-             "look": ("fill stroke fade bold font", "塗りを次の色へ|線を次の色へ|不透明度（1 → ¾ → ½ → ¼）|太字|等幅 ⇄ ふつう"),
-             "turn": ("cw ccw upright", "右へ 15°|左へ 15°|まっすぐに戻す"),
-             # 📥 どの形式から？ 📤 どの形式に？ the formats in words; a pick hides the row
-             "import": ("open image", "JSON（全スライド。PC 版で保存したものも）|画像（PNG・JPEG・WebP をこのページに）"),
-             "export": ("pptx json png svg", "PPTX（全スライド、PowerPoint で編集できる）|JSON（全スライド、また開ける）|PNG（このページ）|SVG（このページ）")}
+    # act: (face, word, tip[, candidate faces, their acts, their words "|"]); a candidate without acts passes its face
+    tools = {
+        "select": ("👆", "選択", "選んで動かす"),
+        "text": ("🔤", "文字", "文字を置く"),
+        "shape": ("🔷", "図形", "図形（四角・丸・三角・矢印）", "▭ ◯ △ →", "rect ellipse triangle arrow", "四角|丸|三角|矢印"),
+        "stamp": ("✦", "スタンプ", "スタンプを押す"),
+        "emoji": ("😊", "絵文字", "絵文字", "❤️ 😊 🌱 📊 ✨ 📌 🔰"),
+        "kaomoji": ("(^^)", "顔文字", "顔文字", "(・∀・) (｡•̀ᴗ-)✧ ٩(๑❛ᴗ❛๑)۶"),
+        "clock": ("🕒", "時計", "いまの時刻の時計"),
+        "smaller": ("🔽", "小さく", "文字をすべて小さく"),
+        "reset": ("🔄", "元の大きさ", "文字をすべて元の大きさに"),
+        "bigger": ("🔼", "大きく", "文字をすべて大きく"),
+        "undo-2": ("⏪", "2つ戻す", "2つ戻す"),
+        "undo": ("↩️", "戻す", "戻す"),
+        "redo": ("↪️", "やり直す", "やり直す"),
+        "redo-2": ("⏩", "2つやり直す", "2つやり直す"),
+        "edit": ("✏️", "編集", "選んだ文字・時計を編集（選んだものをもう一度タップしても編集。時計は 14:30 のように）"),
+        "look": ("🎨", "見た目", "選んだものの見た目（塗り・線の色・不透明度・太字・等幅）", "🎨 🖌 🌗 🅱️ 🔠", "fill stroke fade bold font",
+                 "塗りを次の色へ|線を次の色へ|不透明度（1 → ¾ → ½ → ¼）|太字|等幅 ⇄ ふつう"),
+        "turn": ("↻", "回転", "選んだものを回す", "↻ ↺ ⏹", "cw ccw upright", "右へ 15°|左へ 15°|まっすぐに戻す"),
+        "duplicate": ("⧉", "複製", "選んだものを複製"),
+        "forward": ("⬆️", "前へ", "選んだものをひとつ手前へ"),
+        "backward": ("⬇️", "後ろへ", "選んだものをひとつ奥へ"),
+        "front": ("⏫", "手前へ", "選んだものをいちばん手前へ"),
+        "back": ("⏬", "奥へ", "選んだものをいちばん奥へ"),
+        "delete": ("🗑️", "削除", "選んだものを削除"),
+        "slide-add": ("➕📄", "ページ追加", "白紙のページを追加"),
+        "slide-copy": ("📑", "ページ複製", "ページを複製"),
+        "slide-delete": ("✖️📄", "ページ削除", "ページを削除"),
+        "pages": ("🗂️", "一覧", "ページの一覧（タップでそのページへ）"),
+        "new": ("🆕", "新規", "最初から（白紙 1 枚）"),
+        "import": ("📥", "インポート", "インポート（どの形式から？ 候補から選ぶ）"),
+        "export": ("📤", "エクスポート", "エクスポート（どの形式に？ 候補から選ぶ）"),
+        "home": ("🏠", "Image Studio", "Image Studio"),
+        "inspect": ("🎛️", "詳細", "選んだものの詳細（位置・大きさ・種類別の設定）"),
+        "grid": ("⊞", "4枚表示", "4枚表示（その場で編集）"),
+    }
+    formats = {  # 📥 📤 the same act, each page's own formats
+        "slides": {"import": ("JSON 画像", "open image", "JSON（全スライド。PC 版で保存したものも）|画像（PNG・JPEG・WebP をこのページに）"),
+                   "export": ("PPTX JSON PNG SVG", "pptx json png svg",
+                              "PPTX（全スライド、PowerPoint で編集できる）|JSON（全スライド、また開ける）|PNG（このページ）|SVG（このページ）")},
+        "image": {"import": ("JSON 作業履歴 シェルフ", "open-json open-workspace shelf",
+                             "JSON（再編集用のシーン）|作業履歴（最大40状態）|シェルフ（クリップボード・シェルフ）"),
+                  "export": ("PNG SVG JSON 作業履歴 Base64", "png svg json workspace base64",
+                             "PNG（出力倍率で）|SVG（出力倍率で）|JSON（再編集用）|作業履歴（最大40状態）|Base64（Flutter などへ渡す）")}}[page]
+    rows = {"slides": (("create", "text shape emoji kaomoji clock"), ("adjust", "smaller reset bigger undo redo"),
+                       ("update", "edit look turn front back delete"), ("pages", "slide-add slide-copy slide-delete pages"),
+                       ("file", "new import export home"), ("detail", "inspect grid")),
+            "image": (("create", "select text shape stamp emoji kaomoji clock"), ("adjust", "undo-2 undo redo redo-2"),
+                      ("update", "duplicate forward backward delete"), ("file", "import export"))}[page]
 
-    def control(act: str, face: str, word: str, words: str) -> dict:
-        c = {"act": act, "face": face, "word": word, "words": words}
-        if act == "home":
-            c["href"] = "../"
-        if act in faces:
-            acts, said = (named[act][0].split(), named[act][1].split("|")) if act in named else ((), ())
-            c["candidates"] = [{"face": f, **({"act": acts[i], "words": said[i]} if acts else {})} for i, f in enumerate(faces[act].split())]
-            c["close"] = act in ("import", "export")
-        return c
+    def control(act: str) -> dict:
+        face, word, tip, *offered = tools[act]
+        faces, acts, said = (*formats.get(act, offered), "", "", "")[:3]
+        named, picks = said.split("|") if said else [], acts.split()
+        return {"act": act, "face": face, "word": word, "words": tip, **({"href": "../"} if act == "home" else {}),
+                "candidates": [{"face": f, **({"act": picks[i]} if picks else {}), **({"words": named[i]} if named else {})}
+                               for i, f in enumerate(faces.split())], "close": act in formats}
 
-    groups = [(group, [control(*tool) for tool in row]) for group, row in PHONE_TOOLS]
+    groups = [(group, [control(act) for act in listed.split()]) for group, listed in rows]
+    if page == "image":
+        scale = ('<select id="export-scale" title="出力倍率" aria-label="出力倍率">'
+                 + "".join(f'<option value="{n}">{n}×</option>' for n in (1, 2, 4, 8)) + '</select>')
+        files = ('<input id="open" type="file" accept=".json" aria-label="JSONを開く" hidden />'
+                 '<input id="open-workspace" type="file" accept=".json,application/json" aria-label="作業履歴を開く" hidden />')
+        return groups, {"file": scale}, {"file": files}
     numbers = (
         ("x", "横の位置", -8192, 8192, "any", ""), ("y", "縦の位置", -8192, 8192, "any", ""),
         ("w", "幅", 1, 8192, "any", ""), ("h", "高さ", 1, 8192, "any", ""),
@@ -4264,8 +4260,8 @@ def phone_toolbar() -> tuple[list, dict[str, str]]:
              '<input type="file" data-file="image" accept="image/png,image/jpeg,image/webp" aria-label="画像" />')
     after = {"adjust": '<div id="phone-layers" class="ui-toolbar-row ui-current-items" role="group" aria-label="レイヤー（奥から手前）" hidden></div>',
              "pages": '<div id="phone-pages" class="ui-toolbar-row ui-current-items" role="group" aria-label="ページの一覧" hidden></div>',
-             groups[-1][0]: inspector + files}
-    return groups, after
+             "detail": inspector + files}
+    return groups, {}, after
 
 
 def _phone_html() -> str:
@@ -4280,17 +4276,17 @@ def _phone_html() -> str:
     return (head + "</head>\n"
             f'  <body class="ui-elements" data-ui-theme="green" data-page="phone" data-text-size="{PHONE_TEXT["size"]}" data-text-scale="{scale}">\n'
             '    <main class="phone">\n'
-            f'      {PSWB_PHONE["stage"].replace("{slide}", slide)}\n'
+            f'      {PSWB_PARTS["stage"].replace("{slide}", slide)}\n'
             '      <div id="phone-grid" role="group" aria-label="4枚表示" hidden></div>\n'
             '      <div class="phone-deck"><textarea id="phone-edit" class="phone-edit" hidden aria-label="文字" rows="3" spellcheck="false"></textarea>'
-            f'{PSWB_PHONE["pager"]}'
+            f'{PSWB_PARTS["pager"]}'
             '<p id="phone-status" class="phone-status" role="status"></p>'
-            f'<div class="phone-tools">{PSWB_PHONE.get("tools", "")}</div></div>\n'
+            f'<div class="phone-tools">{PSWB_PARTS.get("slides-toolbar", "")}</div></div>\n'
             "    </main>\n  </body>\n</html>\n")
 
 
 PHONE_HTML = _phone_html()
-STUDIO_HTML = STUDIO_HTML.replace('        <!-- 🧰 toolbar: image_toolbar() -->\n', PSWB_PHONE.get("image", ""), 1)   # 🧰 Image Studio's tools
+STUDIO_HTML = STUDIO_HTML.replace('        <!-- 🧰 toolbar: studio_toolbar("image") -->\n', PSWB_PARTS.get("image-toolbar", ""), 1)   # 🧰 Image Studio's tools
 
 BROWSER_TASK_JS = r"""/* PSWB async-task.js */
 /**

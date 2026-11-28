@@ -11,7 +11,7 @@ The file is committed (the studio is served as static files and image_studio.py 
 ``tests/test_studio.py`` (``pysaiyanweboo.check_bundle``) fails when it drifts.
 
 The 📱 page's 🖼️ stage and 🧭 pager are PySaiyanWeBoo components too (``pswb_parts()``): their stylesheets join the sheet, their
-markup is ``PSWB_PHONE`` and their modules ride in studio.js as one classic script, each written here from the pinned commit.
+markup is ``PSWB_PARTS`` and their modules ride in studio.js as one classic script, each written here from the pinned commit.
 The heatmap color module, the dot-art grid and the slide deck (check, JSON, template, page operations) also come from the same
 pin and are embedded in studio.js.
 """
@@ -63,18 +63,17 @@ def classic_script(modules: str) -> str:
     return script
 
 
-def toolbar(pysaiyanweboo, page: str = "phone") -> str:
-    """🧰 A studio's toolbar as PySaiyanWeBoo's ``toolbar_html``: the 📱 slide editor's (``studio_bundle.phone_toolbar``, with
-    💻 ⇄ 📱 at the end of the file row) or Image Studio's (``page="image"``: ``studio_bundle.image_toolbar``)."""
+def toolbar(pysaiyanweboo, page: str) -> str:
+    """🧰 A studio's toolbar (``studio_bundle.studio_toolbar(page)``: "slides" or "image") as PySaiyanWeBoo's ``toolbar_html``; the
+    slide editor's file row ends with 💻 ⇄ 📱 (Image Studio's is in its top bar)."""
     sys.path.insert(0, str(ROOT))
     from ironlib import studio_bundle
-    if page == "image":
-        groups, inside, after = studio_bundle.image_toolbar()
-        return "        " + pysaiyanweboo.toolbar_html(groups, label="道具", id="studio-toolbar", candidates_id="studio-candidates",
-                                                     inside=inside, after=after) + "\n"
-    groups, after = studio_bundle.phone_toolbar()
-    return pysaiyanweboo.toolbar_html(groups, label="道具", id="phone-toolbar", candidates_id="phone-candidates",
-                                      inside={"file": pysaiyanweboo.labels_switch_html(id="labels-switch")}, after=after)
+    groups, inside, after = studio_bundle.studio_toolbar(page)
+    if page == "slides":
+        return pysaiyanweboo.toolbar_html(groups, label="道具", id="phone-toolbar", candidates_id="phone-candidates",
+                                          inside={"file": pysaiyanweboo.labels_switch_html(id="labels-switch")}, after=after)
+    return "        " + pysaiyanweboo.toolbar_html(groups, label="道具", id="studio-toolbar", candidates_id="studio-candidates",
+                                                 inside=inside, after=after) + "\n"
 
 
 def pswb_parts() -> dict[str, str]:
@@ -89,8 +88,8 @@ def pswb_parts() -> dict[str, str]:
     return {"stage": pysaiyanweboo.stage_html("{slide}", label="スライド", id="phone-stage"),
             "pager": pysaiyanweboo.pager_html(1, label="ページ移動", words=words, keys=True, id="phone-pager"),
             "labels": pysaiyanweboo.labels_switch_html(id="labels-switch"),
-            "tools": toolbar(pysaiyanweboo),
-            "image": toolbar(pysaiyanweboo, "image"),
+            "slides-toolbar": toolbar(pysaiyanweboo, "slides"),
+            "image-toolbar": toolbar(pysaiyanweboo, "image"),
             "js": (f"/* ⬇️ pysaiyanweboo {commit[:8]} ({', '.join(PSWB)}): written by {NOTE} from the pinned commit; --check fails when it drifts */\n"
                    f"(() => {{\n{classic}globalThis.PySaiyanWeBoo = {{ pagerSet, pagerIndex, bindLabels, bindToolbar }};\n}})();\n/* ⬆️ pysaiyanweboo */\n")}
 
@@ -119,9 +118,9 @@ def with_parts(src: str) -> str:
         src = replace_region(src, begin, end, f"{begin}\n{module}\n{end}")
     parts = pswb_parts()
     lines = lambda html: "".join(f"\n        {part!r}" for part in re.split(r"(?<=>)(?=<)", html))
-    block = (f"# ⬇️ pysaiyanweboo: {NOTE} writes PSWB_PHONE from the pinned commit (--check fails when it drifts)\n"
-             f"PSWB_PHONE = {{\n    \"stage\": ({lines(parts['stage'])}),\n    \"pager\": ({lines(parts['pager'])}),\n"
-             f"    \"labels\": ({lines(parts['labels'])}),\n    \"tools\": ({lines(parts['tools'])}),\n    \"image\": ({lines(parts['image'])}),\n}}\n# ⬆️ pysaiyanweboo\n")
+    block = (f"# ⬇️ pysaiyanweboo: {NOTE} writes PSWB_PARTS from the pinned commit (--check fails when it drifts)\n"
+             f"PSWB_PARTS = {{\n    \"stage\": ({lines(parts['stage'])}),\n    \"pager\": ({lines(parts['pager'])}),\n"
+             f"    \"labels\": ({lines(parts['labels'])}),\n    \"slides-toolbar\": ({lines(parts['slides-toolbar'])}),\n    \"image-toolbar\": ({lines(parts['image-toolbar'])}),\n}}\n# ⬆️ pysaiyanweboo\n")
     src = replace_region(src, "# ⬇️ pysaiyanweboo", "# ⬆️ pysaiyanweboo\n", block)
     src = replace_region(src, "/* ⬇️ pysaiyanweboo", "/* ⬆️ pysaiyanweboo */\n", parts["js"])
     begin, end = "  /* PSWB heatmap-color.js", "  /* End PSWB heatmap-color.js */\n"
@@ -161,7 +160,7 @@ def main(argv: list[str] | None = None) -> int:
                 fields = pysaiyanweboo.write_bundle(tmp_css, note=NOTE, **options)
                 new_css = tmp_css.read_text(encoding="utf-8")
                 bundle_py.write_text(with_parts(src[:start] + new_css + src[end:]), encoding="utf-8")
-                print(f"{bundle_py.relative_to(ROOT)} (STYLE_CSS, PSWB_PHONE, studio.js) pysaiyanweboo {fields['commit'][:8]}")
+                print(f"{bundle_py.relative_to(ROOT)} (STYLE_CSS, PSWB_PARTS, studio.js) pysaiyanweboo {fields['commit'][:8]}")
     for problem in problems:
         print(problem, file=sys.stderr)
     return 1 if problems else 0

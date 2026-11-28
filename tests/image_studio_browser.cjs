@@ -98,7 +98,7 @@ const failures = [],
   await page.click("#labels-switch");
   assert.equal(await page.evaluate(() => document.body.dataset.uiLabels), "words");
   assert.deepEqual([(await face(act("undo"), "::after")).content, (await face(act("undo"), null)).size], ['"戻す"', "0px"]);
-  assert.equal((await face(act("text"), "::after")).content, '"文字列"');
+  assert.equal((await face(act("text"), "::after")).content, '"文字"');                 // the same word as the slide editor's
   await page.screenshot({ path: path.join(out, "desktop-words.png"), fullPage: true });
   await page.reload();
   await page.waitForFunction(() => !!window.IronmateStudio, null, {timeout:10000});
@@ -114,7 +114,7 @@ const failures = [],
     await page.fill("#text", value);
     await page.locator("#board svg").click({position: {x: 50, y: 40}});
   }
-  await page.click(act("back"));
+  await page.click(act("backward"));                                       // ⬇️ one step back
   const texts = () => page.evaluate(() => IronmateStudio.scene.layers.map(layer => layer.text));
   assert.deepEqual(await texts(), ["背面", "中央", "前面"]);
   assert.equal(await page.inputValue("#edit-text"), "中央"); // ✏️ 編集 shows the selected layer's words
@@ -122,7 +122,7 @@ const failures = [],
   await page.click("#apply-text");
   assert.equal(await page.inputValue("#text"), "中央"); // the tool's own input keeps what it had
   assert.deepEqual(await texts(), ["背面", "中央を編集", "前面"]);
-  await page.click(act("front"));
+  await page.click(act("forward"));                                      // ⬆️ one step forward
   assert.deepEqual(await texts(), ["背面", "前面", "中央を編集"]);
   // Older saved scenes remain editable on the empty canvas.
   await page.setInputFiles("#open", path.join(root, "docs/evidence/image-studio/demo-scene.json"));

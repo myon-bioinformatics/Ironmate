@@ -71,7 +71,7 @@ def host_rows(page: str = 'studio') -> str:
 
 def public_assets():
     """Explicit publication allowlist; no user scenes, globbing, or local images."""
-    from ironlib.studio_bundle import BRAND_HTML, BROWSER_TASK_JS, PHONE_HTML, PSWB_PHONE, RECORDS_JS, STUDIO_HTML, STUDIO_JS, STYLE_CSS, TOOLS_HTML
+    from ironlib.studio_bundle import BRAND_HTML, BROWSER_TASK_JS, PHONE_HTML, PSWB_PARTS, RECORDS_JS, STUDIO_HTML, STUDIO_JS, STYLE_CSS, TOOLS_HTML
     names = ('brand/mono.svg', 'brand/dark-green.svg',
              'brand/famicom.svg', 'brand/gameboy.svg', 'brand/pixel-3d.svg',
              'brand/manifest.webmanifest', 'brand/apple-touch-icon.png', 'brand/app-192.png',
@@ -81,7 +81,7 @@ def public_assets():
     assets = {name: (ROOT / 'studio' / name).read_bytes() for name in names}
     # 💻 ⇄ 📱 the same switch as the slide editor's, at the end of the top actions (a host's ⋯ row stands in for it)
     page = STUDIO_HTML.replace('<header>', host_rows() + '<header>', 1)
-    page = page.replace('      </div>\n    </header>', '        ' + PSWB_PHONE['labels'] + '\n      </div>\n    </header>', 1)
+    page = page.replace('      </div>\n    </header>', '        ' + PSWB_PARTS['labels'] + '\n      </div>\n    </header>', 1)
     assets['index.html'] = page.encode('utf-8')
     assets['style.css'] = STYLE_CSS.encode('utf-8')
     from scripts.pages_catalog import catalog_script

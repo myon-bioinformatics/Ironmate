@@ -28,7 +28,7 @@ ROOT = Path(__file__).resolve().parents[1]
 import browser_matrix as bm
 import flow_export as f
 import flow_workspace as w
-from vendor.cli_args import run_cli
+from vendor.cli_args import Command, run_cli, run_command
 import grid_tools
 import grid_tools as g
 import image_compare as c
@@ -301,14 +301,14 @@ def test_dimensions_and_output_collision_fail_without_mutating_sources(tmp_path)
     before=[p.read_bytes() for p in paths]
     out=tmp_path/'variants'
     cmd=[sys.executable,'-S',str(Path(c.__file__)), '--reference',str(paths[0]),'--nearest',str(paths[1]),'--smooth',str(paths[2]),'--out',str(out)]
-    run=subprocess.run(cmd,capture_output=True,text=True)
+    run=run_command(Command(cmd))
     assert run.returncode==0,run.stderr
     report=json.loads((out/'report.json').read_text())
     assert len(report['candidates'])==11 and len(report['input_sha256'])==3
     assert len(list(out.glob('variant-*.png')))==11
     for role,index in report['roles'].items():
         assert (out/(role+'.png')).read_bytes()==(out/f'variant-{index:02d}.png').read_bytes()
-    assert subprocess.run(cmd,capture_output=True).returncode==2
+    assert run_command(Command(cmd)).returncode==2
     assert [p.read_bytes() for p in paths]==before
 
 
@@ -921,7 +921,7 @@ def test_quality_cli_selected_png_constraints_and_no_output_on_bad_policy(tmp_pa
     cmd=[sys.executable,'-S',str(ROOT/'image_compare.py'),'--reference',str(paths[0]),
          '--nearest',str(paths[1]),'--smooth',str(paths[2]),'--out',str(out),
          '--quality','--select-by','near_field','--max-missing-foreground','0']
-    run=subprocess.run(cmd,capture_output=True,text=True)
+    run=run_command(Command(cmd))
     assert run.returncode == 0,run.stderr
     report=json.loads((out/'report.json').read_text())
     chosen=report['quality']['selection']['selected_index']
@@ -930,7 +930,7 @@ def test_quality_cli_selected_png_constraints_and_no_output_on_bad_policy(tmp_pa
     bad=tmp_path/'invalid'
     cmd[cmd.index(str(out))]=str(bad)
     cmd.remove('--quality')
-    assert subprocess.run(cmd,capture_output=True).returncode == 2
+    assert run_command(Command(cmd)).returncode == 2
     assert not bad.exists()
 
 
@@ -1252,11 +1252,11 @@ def test_cli_svg_needs_no_browser_and_preserves_existing_destination(tmp_path):
     src,out=tmp_path/'scene.json',tmp_path/'scene.svg'
     src.write_text(json.dumps(s.heatmap_scene([[1,None]])))
     cmd=[sys.executable,'-S',str(ROOT/'image_studio.py'),'--render',str(src),'--format','svg','--scale','2','-o',str(out)]
-    p=subprocess.run(cmd,capture_output=True,text=True)
+    p=run_command(Command(cmd))
     assert p.returncode==0,p.stderr
     assert ET.fromstring(out.read_text()).attrib['width']=='2560'
     before=out.read_bytes()
-    assert subprocess.run(cmd,capture_output=True).returncode==2
+    assert run_command(Command(cmd)).returncode==2
     assert out.read_bytes()==before
 
 

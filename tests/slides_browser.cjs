@@ -24,6 +24,21 @@ const url =
     await old.goto(url + "pc/");
     await old.waitForURL(url);
     await old.close();
+    // The shelf hands the canvas to the normal slide image importer and leaves the source open.
+    const source = await browser.newPage();
+    await source.goto(new URL("../", url).href);
+    await source.locator('#studio-toolbar [data-act="import"]').click();                       // 📥 どの形式から？ → シェルフ
+    await source.locator('#studio-candidates button:text-is("シェルフ")').click();
+    const popup = source.waitForEvent("popup");
+    await source.getByRole("link", {name: "編集中の画像をスライド工房へ"}).click();
+    const destination = await popup;
+    await destination.locator('[data-act="undo"]:enabled').waitFor();
+    assert.equal(await destination.evaluate(() => IronmatePhone.deck.slides[0].layers[0].kind), "image");
+    await destination.locator('[data-act="undo"]').click();
+    await destination.reload();
+    assert.equal(await destination.evaluate(() => IronmatePhone.deck.slides[0].layers.length), 0);
+    await destination.close();
+    await source.close();
     // 📽️ The one slide editor (slides/, phone-first): the slide stays pinned on top, emoji controls, 🧭 PySaiyanWeBoo's pager in every shape, text editable later.
     const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, acceptDownloads: true }),
       mobile = await phone.newPage(),

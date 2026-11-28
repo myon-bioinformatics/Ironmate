@@ -1042,7 +1042,7 @@ def test_build_site_contains_only_public_client_assets_and_relative_paths(tmp_pa
 def studio_acts(js):
     """What Image Studio's script answers: every ``STUDIO_ACTS`` entry (a toolbar act, and a key from a host's header)."""
     script = js[js.index('/* Image Studio UI'):js.index('/* Tools page UI')]
-    loops = re.findall(r'for \(const \[act[^\]]*\] of \[(.*?)\]\)\n  STUDIO_ACTS\[act\] =', script, re.S)
+    loops = re.findall(r'for \(const \[act[^\]]*\] of \[(.*?)\]\)(?: \{)?\n  STUDIO_ACTS\[act\] =', script, re.S)
     return (set(re.findall(r'STUDIO_ACTS\.([a-z0-9]+) =', script)) | set(re.findall(r'STUDIO_ACTS\["([a-z0-9-]+)"\] =', script))
             | {name for loop in loops for name in re.findall(r'\["([a-z0-9-]+)"', loop)})
 
@@ -1063,7 +1063,7 @@ def test_studios_declare_the_rows_a_hosts_header_shows_and_carry_no_header_of_th
     assert 'id="labels-switch" data-ui-labels-switch' in html and 'PySaiyanWeBoo.bindLabels()' in b.STUDIO_JS   # 💻 ⇄ 📱 bindLabels answers it
     head = re.search(r'<header id="studio-head">.*?</header>', html, re.S)[0]
     assert 'labels-switch' not in head and html.index('id="labels-switch"') > html.index('data-ui-group="file"')   # 💻 ends the file row, as on the slide editor
-    assert {'shelf', 'png', 'svg', 'json', 'workspace', 'base64', 'open-json', 'open-workspace'} <= acts, acts
+    assert {'shelf', 'png', 'svg', 'json', 'workspace', 'base64', 'open-json', 'open-workspace', 'image', 'camera', 'clipboard'} <= acts, acts
     assert re.fullmatch(r'#[a-z-]+(,#[a-z-]+)*', spec['replaces']) and all(f'id="{i[1:]}"' in html for i in spec['replaces'].split(','))
     slides = json.loads(re.search(r'id="ui-chrome-rows">(.*?)</script>', assets['slides/index.html'].decode('utf-8'), re.S)[1])
     assert slides == {'screen': [{'label': '💻 To textual ⇄ 📱 To iconic', 'key': 'labels'}], 'replaces': '#labels-switch'}   # the one editor: ⋯ only
@@ -1164,7 +1164,7 @@ def test_phone_page_is_emoji_only_and_every_control_is_bound():
     parts = b.PSWB_PARTS['slides-toolbar']
     assert parts in html and 'id="phone-toolbar"' in parts and 'id="phone-candidates"' in parts and set(after) == {'adjust', 'pages', 'detail'}
     assert 'PySaiyanWeBoo.bindToolbar($("phone-toolbar"), press)' in b.STUDIO_JS and 'function offer(' not in b.STUDIO_JS
-    assert 'act: (name, value) => press(name, value)' in b.STUDIO_JS and 'act: (name) => STUDIO_ACTS[name]?.()' in b.STUDIO_JS   # 🧰 both pages' hook
+    assert 'act: (name, value) => press(name, value)' in b.STUDIO_JS and 'act: (name, value) => STUDIO_ACTS[name]?.(value)' in b.STUDIO_JS   # 🧰 both pages' hook
     assert html.count('id="labels-switch" data-ui-labels-switch') == 1 and html.index('id="labels-switch"') > html.index('data-ui-group="file"')
     assert "PySaiyanWeBoo.bindLabels();" in b.STUDIO_JS
     words = re.compile(r'[\u3040-\u30ff\u4e00-\u9fffA-Za-z0-9]')

@@ -2146,10 +2146,6 @@ queueMicrotask(() => {
   });
   setTool(tool);
 });
-STUDIO_ACTS["open-json"] = () => $("open").click();
-STUDIO_ACTS["open-workspace"] = () => $("open-workspace").click();
-STUDIO_ACTS.image = () => $("image").click();
-STUDIO_ACTS.camera = () => $("camera-image").click();
 // 🧰 A host's header (PySaiyanWeBoo chrome rows, declared in #ui-chrome-rows by image_studio.host_rows) sends a key: the same act.
 document.addEventListener("ui-chrome-action", (e) => {
   const [key, scale] = String(e.detail?.key).split(/-(?=\d+$)/);
@@ -2318,25 +2314,20 @@ STUDIO_ACTS.workspace = guarded(async () => {
   download("ironmate-workspace.json", serialized, "application/json");
   message("作業履歴を保存しました");
 });
-$("open-workspace").onchange = guarded(async () => {
-  const input = $("open-workspace");
-  const file = input.files?.[0];
-  if (!file) return;
-  try {
-    if (file.size > C.WORKSPACE_MAX_BYTES) throw new Error("作業履歴は32MiB以下にしてください");
-    const next = C.workspaceHistory(await file.text());
-    // Decode every state's images before replacing the editable workspace.
-    const sources = new Set(next.items.flatMap(state => state.layers
-      .filter(layer => layer.kind === "image").map(layer => layer.src)));
-    for (const src of sources) await decoded(src);
-    history = next;
-    scene = next.current;
-    selected = null;
-    dirty = true;
-    await render();
-    message("作業履歴を復元しました");
-  } finally { input.value = ""; }
-});
+async function openWorkspace(file) {
+  if (file.size > C.WORKSPACE_MAX_BYTES) throw new Error("作業履歴は32MiB以下にしてください");
+  const next = C.workspaceHistory(await file.text());
+  // Decode every state's images before replacing the editable workspace.
+  const sources = new Set(next.items.flatMap(state => state.layers
+    .filter(layer => layer.kind === "image").map(layer => layer.src)));
+  for (const src of sources) await decoded(src);
+  history = next;
+  scene = next.current;
+  selected = null;
+  dirty = true;
+  await render();
+  message("作業履歴を復元しました");
+}
 $("trim-history").onclick = guarded(async () => {
   if (!window.confirm("現在の状態だけ残して、過去の作業履歴を削除しますか？")) return;
   history = new C.History(scene);
@@ -2403,9 +2394,7 @@ $("copy-base64").onclick = () => copyDialogText(
 );
 $("download-base64").onclick = () =>
   download("ironmate-image.base64.txt", $("base64-text").value, "text/plain");
-$("open").onchange = guarded(async () => {
-  const file = $("open").files[0];
-  if (!file) return;
+async function openScene(file) {
   if (file.size > 20000000) throw new Error("JSONは20MB以下にしてください");
   const next = C.validate(JSON.parse(await file.text()));
   await prepare(next);
@@ -2416,8 +2405,7 @@ $("open").onchange = guarded(async () => {
   dirty = false;
   await render();
   message("JSONを読み込みました（戻すで前の編集へ戻れます）");
-  $("open").value = "";
-});
+}
 // Keep acquisition (picker, camera capture, clipboard) separate from normalization.
 async function importImageBytes(bytes, declaredMime, name = "取り込み画像") {
   if (!(bytes instanceof Uint8Array) || !bytes.length || bytes.length > 32 * 1024 * 1024)
@@ -2483,12 +2471,6 @@ async function importImageFile(file) {
   if (file.size > 32 * 1024 * 1024) throw new Error("画像は32MiB以下にしてください");
   await importImageBytes(new Uint8Array(await file.arrayBuffer()), file.type || null, file.name);
 }
-async function importPickedFile(input) {
-  const file = input.files?.[0];
-  if (!file) return;
-  try { await importImageFile(file); }
-  finally { input.value = ""; }
-}
 if (!document.body.dataset.page.split(" ").includes("slides")) {
   const board = $("board");
   board.addEventListener("dragover", event => {
@@ -2502,8 +2484,16 @@ if (!document.body.dataset.page.split(" ").includes("slides")) {
     await importImageFile(files[0]);
   }));
 }
-$("image").onchange = guarded(() => importPickedFile($("image")));
-$("camera-image").onchange = guarded(() => importPickedFile($("camera-image")));
+// 📥 画像 カメラ JSON 作業履歴: a press opens the file chooser; a chosen file, or a File / Blob given to IronmateStudio.act, is opened
+for (const [act, id, open] of [["image", "image", importImageFile], ["camera", "camera-image", importImageFile],
+  ["open-json", "open", openScene], ["open-workspace", "open-workspace", openWorkspace]]) {
+  STUDIO_ACTS[act] = guarded(async (file) => (file instanceof Blob ? open(file) : $(id).click()));
+  $(id).onchange = () => {
+    const file = $(id).files?.[0];
+    $(id).value = "";
+    if (file) STUDIO_ACTS[act](file);
+  };
+}
 $("import-base64-button").onclick = guarded(async () => {
   const { bytes, mime } = imageBase64($("import-base64").value);
   await importImageBytes(bytes, mime, "Base64画像");
@@ -2843,7 +2833,8 @@ window.IronmateStudio = {
   },
   pngBlob,
   importImageFile,
-  act: (name) => STUDIO_ACTS[name]?.(), // 🧰 what a toolbar press or a host's key runs (awaitable): IronmateStudio.act("clipboard")
+  // 🧰 what a toolbar press or a host's key runs, awaitable: act("clipboard"), act("png"), act("image", file) (a File or Blob)
+  act: (name, value) => STUDIO_ACTS[name]?.(value),
   get selectedId() { return selected; },
   async replaceScene(value) {
     const next = C.validate(value);

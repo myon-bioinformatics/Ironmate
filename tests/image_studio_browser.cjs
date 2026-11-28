@@ -135,6 +135,12 @@ const failures = [],
     await page.evaluate(() => window.IronmateStudio.scene.layers.length),
     0,
   );
+  // 🧰 IronmateStudio.act opens a File / Blob the way 📥's chooser does (a host or Node needs no file input); loading is undoable
+  const demo = fs.readFileSync(path.join(root, "docs/evidence/image-studio/demo-scene.json"), "utf8");
+  await page.evaluate((text) => IronmateStudio.act("open-json", new Blob([text], { type: "application/json" })), demo);
+  assert.ok((await page.evaluate(() => IronmateStudio.scene.layers.length)) > 0);
+  await page.evaluate(() => IronmateStudio.act("undo"));
+  assert.equal(await page.evaluate(() => IronmateStudio.scene.layers.length), 0);
   await page.click(act("shape")); // 図形(▭ ◯ △ →): one tool, the shape is a candidate
   assert.deepEqual(await page.locator("#studio-candidates button").allTextContents(), ["▭", "◯", "△", "→"]);
   await page.locator("#studio-candidates button", {hasText: "△"}).click();

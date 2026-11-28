@@ -66,6 +66,7 @@ const failures = [],
   // 🧰 PySaiyanWeBoo's toolbar: act(name) is a control; as(tool, face) opens 📥 / 📤 (or 🔷 😊 (^^)) unless its row is already open and
   // gives the candidate. 📥 どの形式から？ 📤 どの形式に？ hide after a pick, so each use opens them again.
   const act = (name) => `#studio-toolbar [data-act="${name}"]`;
+  const chooser = (name) => `#studio-toolbar [data-ui-file="${name}"]`; // 📥 the toolbar's own file chooser for a format
   const as = async (tool, face) => {
     if (!(await page.evaluate((t) => { const r = document.getElementById("studio-candidates"); return !r.hidden && r.dataset.tool === t; }, tool)))
       await page.click(act(tool));
@@ -82,8 +83,10 @@ const failures = [],
     dialog.type() === "confirm" && !acceptHistoryTrim ? dialog.dismiss() : dialog.accept());
   await page.goto(url);
   assert.equal(await page.locator("#studio-candidates").isHidden(), true);                   // no candidates until a tool asks
-  for (const id of ["studio-toolbar", "export-scale", "trim-history", "open-workspace", "open"])
+  for (const id of ["studio-toolbar", "export-scale", "trim-history"])
     assert.equal(await page.locator(`#${id}`).count(), 1, `required Studio control: ${id}`);
+  for (const name of ["image", "camera", "open-json", "open-workspace"])                       // 📥 the toolbar's own choosers
+    assert.equal(await page.locator(chooser(name)).count(), 1, `required Studio chooser: ${name}`);
   await page.waitForFunction(() => !!window.IronmateStudio, null, {timeout:10000});
   await page.evaluate(() => window.IronmateStudio.ready);
   await page.screenshot({
@@ -125,7 +128,7 @@ const failures = [],
   await page.click(act("forward"));                                      // ⬆️ one step forward
   assert.deepEqual(await texts(), ["背面", "前面", "中央を編集"]);
   // Older saved scenes remain editable on the empty canvas.
-  await page.setInputFiles("#open", path.join(root, "docs/evidence/image-studio/demo-scene.json"));
+  await page.setInputFiles(chooser("open-json"), path.join(root, "docs/evidence/image-studio/demo-scene.json"));
   const legacyText = page.locator("#layers button").filter({hasText: /^タイトル$/});
   await legacyText.click();
   assert.equal(await page.isChecked("#monochrome"), false);
@@ -217,7 +220,7 @@ const failures = [],
   heatScene.layers.push({id:"heat", kind:"heatmap", name:"Heatmap", x:80, y:90, w:500, h:300,
     rotation:0, opacity:1, z:[[-1.123456789,null],[4,9]], xlabels:[2025,2026], ylabels:["A","B"],
     low:-1.123456789, high:9, levels:0, labels:true, palette:heatPalette});
-  await page.setInputFiles("#open", {name:"heatmap.json", mimeType:"application/json", buffer:Buffer.from(JSON.stringify(heatScene))});
+  await page.setInputFiles(chooser("open-json"), {name:"heatmap.json", mimeType:"application/json", buffer:Buffer.from(JSON.stringify(heatScene))});
   await page.waitForFunction(() => window.IronmateStudio.scene.layers.at(-1)?.id === "heat");
   await page.click('[data-layer-id="heat"]');
   const exact = await page.evaluate(
@@ -258,7 +261,10 @@ const failures = [],
   });
   const fixturePath = path.join(out, "fixture.png");
   fs.writeFileSync(fixturePath, Buffer.from(fixture.split(",")[1], "base64"));
-  await page.setInputFiles("#image", fixturePath);
+  const [picker] = await Promise.all([page.waitForEvent("filechooser"), page.click(await as("import", "画像"))]); // 📥 どの形式から？ 画像
+  assert.equal(await picker.element().getAttribute("accept"), "image/png,image/jpeg,image/webp");
+  assert.equal(await page.locator("#studio-candidates").isHidden(), true);                     // the row hides; the chooser is open
+  await picker.setFiles(fixturePath);
   await page.waitForFunction(
     () => window.IronmateStudio.scene.layers.at(-1)?.kind === "image",
   );
@@ -300,7 +306,7 @@ const failures = [],
     ),
   );
   await page.click("#blank");
-  await page.setInputFiles("#open", path.join(out, "scene.json"));
+  await page.setInputFiles(chooser("open-json"), path.join(out, "scene.json"));
   await page.waitForFunction(
     (n) => window.IronmateStudio.scene.layers.length === n,
     saved.layers.length,
@@ -391,7 +397,7 @@ const failures = [],
   };
   const cachePath = path.join(out, "cache-scene.json");
   fs.writeFileSync(cachePath, JSON.stringify(cacheDoc));
-  await page.setInputFiles("#open", cachePath);
+  await page.setInputFiles(chooser("open-json"), cachePath);
   await page.waitForFunction(
     () => window.IronmateStudio.scene.layers.length === 20,
   );
@@ -447,7 +453,7 @@ const failures = [],
   assert(historyData.items.length >= 1 && historyData.items.length <= 40);
   const historyCurrent = historyData.items[historyData.index];
   await page.click("#blank");
-  await page.setInputFiles("#open-workspace", workspacePath);
+  await page.setInputFiles(chooser("open-workspace"), workspacePath);
   await page.waitForFunction(() => document.querySelector("#status").textContent === "作業履歴を復元しました");
   assert.deepEqual(await page.evaluate(() => IronmateStudio.scene), historyCurrent);
   assert.equal(await page.locator("#history-list li").count(), historyData.items.length);
@@ -471,7 +477,7 @@ const failures = [],
   const brokenImage = brokenWorkspace.items.flatMap(s => s.layers).find(l => l.kind === "image");
   assert(brokenImage, "workspace fixture includes an embedded image");
   brokenImage.src = "data:image/png;base64,AAAA";
-  await page.setInputFiles("#open-workspace", {name:"broken.json",mimeType:"application/json",
+  await page.setInputFiles(chooser("open-workspace"), {name:"broken.json",mimeType:"application/json",
     buffer:Buffer.from(JSON.stringify(brokenWorkspace))});
   await page.locator("#error").waitFor({state:"visible"});
   assert.deepEqual(await page.evaluate(() => IronmateStudio.scene), historyCurrent);

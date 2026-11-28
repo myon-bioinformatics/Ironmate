@@ -219,21 +219,23 @@ let browser;
       await page.evaluate(() => document.querySelector("#error").close());
     }
     checks.push("drop-rejects-wrong-MIME-and-multiple-files");
-    // File and camera input paths still use the same strict import pipeline.
-    for (const id of ["image", "camera-image"]) {
+    // File and camera choosers (📥 画像 カメラ, PySaiyanWeBoo's toolbar holds them) still use the same strict import pipeline.
+    for (const [act, id] of [["image", "image"], ["camera", "camera-image"]]) {
+      const chooser = `#studio-toolbar [data-ui-file="${act}"]`;
       await reset();
-      await page.locator("#" + id).setInputFiles({ name: "rgba.png", mimeType: "image/png", buffer: Buffer.from(image, "base64") });
+      await page.locator(chooser).setInputFiles({ name: "rgba.png", mimeType: "image/png", buffer: Buffer.from(image, "base64") });
       await page.waitForFunction(() => IronmateStudio.scene.layers.length === 1);
       assert.deepEqual(await normalized(), { width: 3, height: 1, pixels });
       checks.push(id + "-file-input-RGBA-dimensions");
       const before = await snapshot();
-      await page.evaluate(id => {
-        Object.defineProperty(document.querySelector("#" + id), "files", { configurable: true, value: [] });
-      }, id);
-      await page.evaluate(id => document.querySelector("#" + id).onchange(), id);
+      await page.evaluate(sel => {
+        const input = document.querySelector(sel);
+        Object.defineProperty(input, "files", { configurable: true, value: [] });
+        input.dispatchEvent(new Event("change"));
+      }, chooser);
       assert.equal(await snapshot(), before);
       checks.push(id + "-cancel-keeps-scene");
-      await page.evaluate(id => delete document.querySelector("#" + id).files, id);
+      await page.evaluate(sel => delete document.querySelector(sel).files, chooser);
     }
     await reset();
     await page.fill("#import-base64", uri);

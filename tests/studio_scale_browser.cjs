@@ -8,7 +8,7 @@ module.exports = async function ({ page, out, root, download, act }) {
   const load = async (scene, name) => {
     const file = path.join(out, name + ".json");
     fs.writeFileSync(file, JSON.stringify(scene));
-    await page.setInputFiles("#open", file);
+    await page.setInputFiles(`#studio-toolbar [data-ui-file="open-json"]`, file);
     await page.waitForFunction(
       (s) => JSON.stringify(IronmateStudio.scene) === JSON.stringify(s),
       scene,

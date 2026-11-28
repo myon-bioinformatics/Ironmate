@@ -1097,7 +1097,7 @@ def test_image_studio_tools_are_the_pswb_toolbar_and_every_act_is_answered():
     mode is an entry of STUDIO_ACTS."""
     from ironlib import studio_bundle as b
     groups, inside, after = b.studio_toolbar('image')
-    assert set(inside) == set(after) == {'file'}
+    assert set(inside) == {'file'} and after == {}                                     # the output scale beside 📤; no chooser of its own
     assert b.PSWB_PARTS['image-toolbar'] in b.STUDIO_HTML and '<!-- 🧰 toolbar' not in b.STUDIO_HTML
     html = b.STUDIO_HTML
     assert re.findall(r'class="ui-toolbar-row" data-ui-group="(\w+)"', html) == ['create', 'adjust', 'update', 'file']
@@ -1105,7 +1105,7 @@ def test_image_studio_tools_are_the_pswb_toolbar_and_every_act_is_answered():
     assert not re.search(r'id="(undo|redo|png|svg|save|save-workspace|base64|shelf-button|duplicate|delete|front|back|candidates|studio-import|studio-export)"', html)
     files = {c['act']: c for _g, row in groups for c in row if _g == 'file'}
     assert [k['face'] for k in files['import']['candidates']] == ['画像', 'カメラ', 'クリップボード', 'JSON', '作業履歴', 'シェルフ'] and files['import']['close']
-    assert not re.search(r'id="paste-image"|＋ 写真|＋ カメラ', html) and 'id="camera-image" type="file"' in html and 'capture="environment"' in html
+    assert not re.search(r'id="paste-image"|＋ 写真|＋ カメラ', html) and '<input type="file" hidden data-ui-file="camera" accept="image/png,image/jpeg,image/webp" capture="environment"' in html
     assert [k['face'] for k in files['export']['candidates']] == ['PNG', 'SVG', 'JSON', '作業履歴', 'Base64'] and files['export']['close']
     script = b.STUDIO_JS[b.STUDIO_JS.index('/* Image Studio UI'):b.STUDIO_JS.index('/* Tools page UI')]
     modes = set(re.search(r'const MODES = \[([^\]]*)\]', script)[1].replace('"', '').replace(' ', '').split(','))
@@ -1116,7 +1116,8 @@ def test_image_studio_tools_are_the_pswb_toolbar_and_every_act_is_answered():
     named = {k['act'] for _g, row in groups[1:] for c in row for k in c['candidates'] if k.get('act')}
     plain = {c['act'] for _g, row in groups[1:] for c in row if not c['candidates']}
     assert named | plain <= studio_acts(b.STUDIO_JS), (named | plain) - studio_acts(b.STUDIO_JS)
-    assert 'PySaiyanWeBoo.bindToolbar($("studio-toolbar")' in script and 'id="export-scale"' in html and 'id="open" type="file"' in html
+    assert 'PySaiyanWeBoo.bindToolbar($("studio-toolbar")' in script and 'id="export-scale"' in html and 'data-ui-file="open-json" accept=".json"' in html
+    assert re.findall(r'data-ui-file="([a-z-]+)"', html) == ['image', 'camera', 'open-json', 'open-workspace'] and 'toolbar.choose(act)' in script
 
 
 
@@ -1531,7 +1532,7 @@ def test_studio_html_contains_unique_controls_used_by_initialization():
         assert all(len(pages.ids.get(name, [])) == 1 for name in required), (page, sorted(n for n in required if len(pages.ids.get(n, [])) != 1))
     parser = _Controls()
     parser.feed(STUDIO_HTML)
-    assert parser.ids["trim-history"] == ["button"] and parser.ids["open-workspace"] == parser.ids["open"] == ["input"]
+    assert parser.ids["trim-history"] == ["button"] and 'data-ui-file="open-workspace"' in STUDIO_HTML   # 📥 the toolbar's chooser
     assert 'data-close data-acts="png svg json workspace base64"' in STUDIO_HTML    # 📤 JSON・作業履歴 are the toolbar's candidates
 
 

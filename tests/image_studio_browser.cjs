@@ -365,13 +365,12 @@ const failures = [],
     .click();
   await page.selectOption("#export-scale", "2");
   await download("PNG", "composition-2x.png");
-  // 🧰 a row of a host's header: its key presses this page's own control (a PNG's size is the row's own), with the menus shut
-  const fromHost = (key) => page.evaluate((k) => document.dispatchEvent(new CustomEvent("ui-chrome-action", {detail: {key: k}})), key);
-  const hosted = page.waitForEvent("download");
-  await fromHost("png-4");
-  assert.match((await hosted).suggestedFilename(), /\.png$/);
-  assert.equal(await page.inputValue("#export-scale"), "4");
-  await fromHost("shelf");
+  // 🧰 IronmateStudio.act runs what the toolbar runs, by its act's name (a host or Node needs no button)
+  const viaAct = page.waitForEvent("download");
+  await page.evaluate(() => IronmateStudio.act("png"));
+  assert.match((await viaAct).suggestedFilename(), /\.png$/);
+  assert.equal(await page.inputValue("#export-scale"), "2");
+  await page.evaluate(() => IronmateStudio.act("shelf"));
   assert.equal(await page.evaluate(() => document.getElementById("shelf-dialog").open), true);
   await page.evaluate(() => document.getElementById("shelf-dialog").close());
   const enlarged = fs.readFileSync(path.join(out, "composition-2x.png"));
@@ -501,8 +500,15 @@ const failures = [],
     new Uint8Array(await (await IronmateStudio.pngBlob()).arrayBuffer())));
   const inputText = "data:image/png;base64," + Buffer.from(pngIn).toString("base64");
   await page.click("#blank");
-  await page.fill("#import-base64", inputText);
-  await page.click("#import-base64-button");
+  // 🗂️ image text typed by hand goes through シェルフ: its text box, then 取り込み (📥 → シェルフ)
+  const throughShelf = async (text) => {
+    await page.click(await as("import", "シェルフ"));
+    const cards = page.locator("#shelf-items-container .shelf-card"), before = await cards.count();
+    await page.fill("#shelf-input-text", text);
+    await page.click("#shelf-add-text");
+    if ((await cards.count()) > before) await cards.last().locator("button", { hasText: "取り込み" }).click();
+  };
+  await throughShelf(inputText);
   await page.waitForFunction(() => IronmateStudio.scene.layers.some(l => l.kind === "image"));
   assert.equal(await page.evaluate(() => IronmateStudio.scene.layers.at(-1).kind), "image");
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
@@ -510,11 +516,12 @@ const failures = [],
   await page.click(await as("import", "クリップボード"));                                 // 📥 どの形式から？ → クリップボード
   await page.waitForFunction(() => IronmateStudio.scene.layers.filter(l => l.kind === "image").length === 2 || document.querySelector("#error")?.open);
   assert.equal(await page.evaluate(() => IronmateStudio.scene.layers.filter(l => l.kind === "image").length), 2);
-  await page.fill("#import-base64", inputText.replace("image/png", "image/jpeg"));
-  await page.click("#import-base64-button");
+  await throughShelf(inputText.replace("image/png", "image/jpeg"));                          // the type and the bytes disagree
   await assert.doesNotReject(() => page.locator("#error").waitFor({state: "visible", timeout: 3000}));
   assert.equal(await page.evaluate(() => IronmateStudio.scene.layers.filter(l => l.kind === "image").length), 2);
   await page.locator("#error button").click();
+  await page.click("#shelf-clear");                                                           // the shelf suite starts from an empty shelf
+  await page.evaluate(() => document.getElementById("shelf-dialog").close());
   await page.setViewportSize({ width: 390, height: 844 });
   assert.equal(await page.locator("#demo, #stamp-demo, #example-view").count(), 0);
   await page.evaluate(() => window.IronmateStudio.ready);

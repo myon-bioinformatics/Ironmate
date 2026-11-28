@@ -6,9 +6,7 @@ const assert = require("node:assert/strict"),
 const { chromium } = require(
   process.env.IRONMATE_PLAYWRIGHT_MODULE || "playwright",
 );
-const url =
-    (process.env.IRONMATE_PAGES_URL || "http://127.0.0.1:8080/Ironmate/") +
-    "slides/",
+const url = process.env.IRONMATE_PAGES_URL || "http://127.0.0.1:8080/Ironmate/", // 📽️ the one editor is the site's root
   out = path.resolve("build/pages-evidence");
 (async () => {
   fs.mkdirSync(out, { recursive: true });
@@ -19,22 +17,7 @@ const url =
   try {
     const errors = [],
       requests = [];
-    // The shelf hands the canvas to the normal slide image importer and leaves the source open.
-    const source = await browser.newPage();
-    await source.goto(new URL("../", url).href);
-    await source.locator('#studio-toolbar [data-act="import"]').click();                       // 📥 どの形式から？ → シェルフ
-    await source.locator('#studio-candidates button:text-is("シェルフ")').click();
-    const popup = source.waitForEvent("popup");
-    await source.getByRole("link", {name: "編集中の画像をスライド工房へ"}).click();
-    const destination = await popup;
-    await destination.locator('[data-act="undo"]:enabled').waitFor();
-    assert.equal(await destination.evaluate(() => IronmateSlideStudio.deck.slides[0].layers[0].kind), "image");
-    await destination.locator('[data-act="undo"]').click();
-    await destination.reload();
-    assert.equal(await destination.evaluate(() => IronmateSlideStudio.deck.slides[0].layers.length), 0);
-    await destination.close();
-    await source.close();
-    // 📽️ The one slide editor (slides/, phone-first): the slide stays pinned on top, emoji controls, 🧭 PySaiyanWeBoo's pager in every shape, text editable later.
+    // 📽️ The one editor (the site's root, phone-first): the slide stays pinned on top, emoji controls, 🧭 PySaiyanWeBoo's pager in every shape, text editable later.
     const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, acceptDownloads: true,
       permissions: ["clipboard-read", "clipboard-write"] }),
       mobile = await phone.newPage(),
@@ -379,6 +362,36 @@ const url =
     for (let i = 0; i < 3; i++) await act("undo");
     assert.ok((await state()).deck.slides.every((x) => x.width === 1280 && x.height === 720 && x.background === "#FFFFFF"));
     await act("inspect");
+    // 📥 JSON: one scene (Image Studio's, DRAgoWing's heatmap) opens as a one-page deck of its size; a heatmap has 値を表示 and
+    // 色の段階 (0: continuous) in 🎛️; ↩️ brings the deck back. 🖱️ a file dropped on the slide goes the same way as 📥.
+    const deckBefore = (await state()).deck;
+    const heatScene = { schema: "ironmate-image-studio/1", width: 640, height: 480, background: "#FFFFFF", layers: [{ id: "heat", kind: "heatmap",
+      name: "heat", x: 40, y: 40, w: 560, h: 400, rotation: 0, opacity: 1, z: [[1, 2], [3, 4]], xlabels: ["a", "b"], ylabels: ["c", "d"],
+      low: 1, high: 4, levels: 0, labels: true }] };
+    const [sceneChooser] = await Promise.all([mobile.waitForEvent("filechooser"), pick("import", "JSON")]);
+    await sceneChooser.setFiles({ name: "heat.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(heatScene)) });
+    await mobile.waitForFunction(() => IronmateSlideStudio.deck.slides[0].width === 640);
+    let opened = (await state()).deck;
+    assert.ok(opened.slides.length === 1 && opened.slides[0].height === 480 && opened.slides[0].layers[0].kind === "heatmap", JSON.stringify(opened));
+    const heatBox = await stageAt(0.5, 0.5);
+    await mobile.touchscreen.tap(heatBox.x, heatBox.y);
+    await act("inspect");
+    assert.deepEqual(await Promise.all(['labels', 'levels'].map((k) => mobile.locator(`[data-property="${k}"]:visible`).count())), [1, 1]);
+    await mobile.locator('[data-property="labels"]').uncheck();
+    assert.equal((await state()).deck.slides[0].layers[0].labels, false);
+    await act("inspect");
+    await act("undo");
+    await act("undo");
+    assert.deepEqual((await state()).deck, deckBefore);
+    const dropped = await mobile.evaluateHandle((text) => {
+      const t = new DataTransfer();
+      t.items.add(new File([text], "dropped.json", { type: "application/json" }));
+      return t;
+    }, JSON.stringify(heatScene));
+    await mobile.dispatchEvent("#slides-stage", "drop", { dataTransfer: dropped });
+    await mobile.waitForFunction(() => IronmateSlideStudio.deck.slides[0].width === 640);
+    await act("undo");
+    assert.deepEqual((await state()).deck, deckBefore);
     // ▦ the dot-art editor under the tools: ➕ puts the art on this page, crisp (pixelated), and folds the editor away; then ↩️
     await mobile.locator("#pixel-editor summary").tap();
     await mobile.waitForFunction(() => !!window.IronmateWorkbench?.grid);
@@ -496,7 +509,6 @@ print('📱 phone: 2 slides, native text kept')
     const exportWord = await look('[data-act="export"]', "::after");
     assert.ok(exportWord.content === '"エクスポート"' && (await look('[data-act="export"]', null)).size === "0px", JSON.stringify(exportWord));
     assert.equal((await look("[data-ui-labels-switch]", "::after")).content, '"📱 To iconic"');   // the way back
-    assert.equal((await look('[data-act="image-studio"]', null)).size, "0px");                          // a link button too: only its word
     await wide.click('[data-act="export"]');
     assert.equal((await look('#slides-candidates button[title^="PPTX"]', "::after")).content, '"PPTX"'); // the format's own word
     await wide.click('[data-act="export"]');                                                        // a second press hides them

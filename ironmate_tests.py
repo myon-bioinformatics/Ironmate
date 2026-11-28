@@ -35,13 +35,10 @@ NODE = (
     {'id': 'studio-ingress', 'argv': ['node', '--test', 'tests/studio_ingress.test.cjs'], 'needs': []},
     {'id': 'image-digest', 'argv': ['node', '--test', 'tests/image_digest.test.cjs'], 'needs': ['DIGEST_PNG']},
     {'id': 'flow-export-browser', 'argv': ['node', 'tests/flow_export_browser.cjs'], 'needs': ['browser']},
-    {'id': 'image-studio-browser', 'argv': ['node', 'tests/image_studio_browser.cjs'], 'needs': ['browser']},
     {'id': 'pages-browser', 'argv': ['node', 'tests/pages_browser.cjs'], 'needs': ['browser']},
     {'id': 'slides-browser', 'argv': ['node', 'tests/slides_browser.cjs'], 'needs': ['browser']},
     {'id': 'studio-clipboard', 'argv': ['node', 'tests/studio_clipboard.cjs'], 'needs': ['browser']},
     {'id': 'studio-quality-browser', 'argv': ['node', 'tests/studio_quality_browser.cjs'], 'needs': ['browser']},
-    {'id': 'studio-scale-browser', 'argv': ['node', 'tests/studio_scale_browser.cjs'], 'needs': ['browser']},
-    {'id': 'studio-shelf-browser', 'argv': ['node', 'tests/studio_shelf_browser.cjs'], 'needs': ['browser']},
     {'id': 'studio-tradeoff-browser', 'argv': ['node', 'tests/studio_tradeoff_browser.cjs'], 'needs': ['browser']},
 )
 

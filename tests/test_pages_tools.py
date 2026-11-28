@@ -50,10 +50,9 @@ def test_static_allowlist_excludes_private_scenes_and_generation_inputs(tmp_path
         'brand/manifest.webmanifest', 'brand/apple-touch-icon.png', 'brand/app-192.png',
         'brand/app-512.png', 'brand/app-maskable-512.png',
         'brand/icon.svg', 'brand/heatmap.svg', 'brand/hero.svg', 'brand/favicon.ico', 'brand/favicon-16.png',
-        'brand/favicon-32.png', 'brand/favicon-48.png', 'brand/icon-192.png',
-        'slides/index.html'}                                    # one slide editor, no forwarding pages
+        'brand/favicon-32.png', 'brand/favicon-48.png', 'brand/icon-192.png'}   # 📽️ the one editor is index.html, no other page
     assert not list(target.rglob('*.py')) and not list(target.rglob('*.json'))
-    assert 'href="slides/" data-act="slide-studio"' in (target / 'index.html').read_text()   # 🖼️ → 📽️ (other tools: the portfolio's)
+    assert 'data-page="slides"' in (target / 'index.html').read_text() and 'data-act="slide-studio"' not in (target / 'index.html').read_text()
     assert 'connect-src \'none\'' in (target / 'tools/index.html').read_text()
     assert 'href="https://myon-bioinformatics.github.io/#projects"' in (target / 'tools/index.html').read_text()
     link = tmp_path / 'link'
@@ -73,12 +72,10 @@ def test_home_screen_manifest_stays_within_pages_subpath():
     for icon in manifest['icons']:
         assert 'brand/' + icon['src'] in assets
     assert {urljoin(base, item['url']) for item in manifest['shortcuts']} == {
-        'https://example.test/Ironmate/', 'https://example.test/Ironmate/slides/',
-        'https://example.test/Ironmate/tools/'}
+        'https://example.test/Ironmate/', 'https://example.test/Ironmate/tools/'}
     assert 'brand/index.html' not in assets                       # the logos are the Tools page's (#brand)
     assert b'id="brand"' in assets['tools/index.html']
-    for path, prefix in (('index.html', 'brand/'), ('slides/index.html', '../brand/'),
-                         ('tools/index.html', '../brand/')):
+    for path, prefix in (('index.html', 'brand/'), ('tools/index.html', '../brand/')):
         page = assets[path].decode()
         assert f'href="{prefix}manifest.webmanifest"' in page
         assert f'href="{prefix}apple-touch-icon.png"' in page

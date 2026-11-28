@@ -81,22 +81,20 @@ let browser;
     page.on("pageerror", e => errors.push(e.message));
     page.on("request", r => { if (!/^(http:\/\/127\.0\.0\.1:|blob:|data:)/.test(r.url())) remote.push(r.url()); });
     page.on("dialog", d => d.accept());
-    await page.goto(url);
-    await page.evaluate(() => IronmateStudio.ready);
+    await page.goto(url);                                                              // 📽️ the one editor (ONE-EDITOR #301)
+    await page.waitForFunction(() => !!window.IronmateSlideStudio);
+    const layers = () => page.evaluate(() => IronmateSlideStudio.deck.slides[IronmateSlideStudio.active].layers.length);
+    const failed = () => page.evaluate(() => document.querySelector("#slides-status").dataset);   // { error, code }
     async function reset() {
-      await page.evaluate(async () => {
-        document.querySelector("#error").close();
-        document.querySelector("#blank").click();
-        await IronmateStudio.ready;
-      });
-      assert.equal(await page.evaluate(() => IronmateStudio.scene.layers.length), 0);
+      await page.evaluate(() => IronmateSlideStudio.act("new"));                      // 🆕 one blank page, the status cleared
+      assert.equal(await layers(), 0);
     }
     async function snapshot() {
-      return page.evaluate(() => JSON.stringify(IronmateStudio.scene));
+      return page.evaluate(() => JSON.stringify(IronmateSlideStudio.deck));
     }
     async function normalized() {
       return page.evaluate(async () => {
-        const layer = IronmateStudio.scene.layers.at(-1);
+        const layer = IronmateSlideStudio.deck.slides[IronmateSlideStudio.active].layers.at(-1);
         const img = new Image(); img.src = layer.src; await img.decode();
         const cv = document.createElement("canvas"); cv.width = img.width; cv.height = img.height;
         const ctx = cv.getContext("2d"); ctx.drawImage(img, 0, 0);
@@ -131,14 +129,13 @@ let browser;
         };
         Object.defineProperty(navigator, "clipboard", { configurable: true, value: config.absent ? undefined : clipboard });
       }, config);
-      await page.evaluate(() => IronmateStudio.act("clipboard"));                      // 📥 クリップボード, awaited
+      await page.evaluate(() => IronmateSlideStudio.act("clipboard"));                 // 📥 クリップボード, awaited
       if (code) {
-        assert.equal(await page.locator("#error").getAttribute("data-code"), code, name);
-        assert.equal(await page.locator("#error").isVisible(), true, name);
-        assert.equal(await snapshot(), before, name + " must preserve scene");
+        assert.deepEqual({ ...(await failed()) }, { error: "true", code }, name);
+        assert.equal(await snapshot(), before, name + " must preserve the deck");
       } else {
-        assert.equal(await page.locator("#error").isVisible(), false, name);
-        assert.equal(await page.evaluate(() => IronmateStudio.scene.layers.length), 1, name);
+        assert.equal((await failed()).code, "", name);
+        assert.equal(await layers(), 1, name);
         if (expectedPixels) assert.deepEqual((await normalized()).pixels, expectedPixels, name);
       }
       checks.push(name);
@@ -202,29 +199,29 @@ let browser;
         for (const type of types) transfer.items.add(new File([bytes], "drop.png", {type}));
         const event = new Event("drop", {bubbles: true, cancelable: true});
         Object.defineProperty(event, "dataTransfer", {value: transfer});
-        document.querySelector("#board").dispatchEvent(event);
+        document.querySelector("#slides-stage").dispatchEvent(event);
         if (!event.defaultPrevented) throw Error("file drop was not handled");
       }, {types, image});
     }
     await reset();
     await dropFile(["image/png"]);
-    await page.waitForFunction(() => IronmateStudio.scene.layers.length === 1);
+    await page.waitForFunction(() => IronmateSlideStudio.deck.slides[0].layers.length === 1);
     assert.deepEqual(await normalized(), {width: 3, height: 1, pixels});
     checks.push("drop-file-RGBA-dimensions");
-    for (const types of [["image/jpeg"], ["image/png", "image/png"]]) {
-      const before = await snapshot();
-      await dropFile(types);
-      await page.waitForFunction(() => document.querySelector("#error").open);
-      assert.equal(await snapshot(), before);
-      await page.evaluate(() => document.querySelector("#error").close());
-    }
-    checks.push("drop-rejects-wrong-MIME-and-multiple-files");
+    let before = await snapshot();
+    await dropFile(["image/jpeg"]);                                                       // PNG bytes declared as JPEG
+    await page.waitForFunction(() => document.querySelector("#slides-status").dataset.error === "true");
+    assert.equal(await snapshot(), before);
+    await reset();
+    await dropFile(["image/png", "image/png"]);                                           // two files: the first comes in
+    await page.waitForFunction(() => IronmateSlideStudio.deck.slides[0].layers.length === 1);
+    checks.push("drop-rejects-wrong-MIME-and-takes-the-first-file");
     // File and camera choosers (📥 画像 カメラ, PySaiyanWeBoo's toolbar holds them) still use the same strict import pipeline.
     for (const [act, id] of [["image", "image"], ["camera", "camera-image"]]) {
-      const chooser = `#studio-toolbar [data-ui-file="${act}"]`;
+      const chooser = `#slides-toolbar [data-ui-file="${act}"]`;
       await reset();
       await page.locator(chooser).setInputFiles({ name: "rgba.png", mimeType: "image/png", buffer: Buffer.from(image, "base64") });
-      await page.waitForFunction(() => IronmateStudio.scene.layers.length === 1);
+      await page.waitForFunction(() => IronmateSlideStudio.deck.slides[0].layers.length === 1);
       assert.deepEqual(await normalized(), { width: 3, height: 1, pixels });
       checks.push(id + "-file-input-RGBA-dimensions");
       const before = await snapshot();
@@ -234,28 +231,9 @@ let browser;
         input.dispatchEvent(new Event("change"));
       }, chooser);
       assert.equal(await snapshot(), before);
-      checks.push(id + "-cancel-keeps-scene");
+      checks.push(id + "-cancel-keeps-deck");
       await page.evaluate(sel => delete document.querySelector(sel).files, chooser);
     }
-    await reset();
-    // 🗂️ image text typed by hand: シェルフ's text box, then 取り込み (the same strict pipeline)
-    await page.evaluate(() => IronmateStudio.act("shelf"));
-    await page.fill("#shelf-input-text", uri);
-    await page.click("#shelf-add-text");
-    await page.locator("#shelf-items-container .shelf-card").last().locator("button", { hasText: "取り込み" }).click();
-    await page.waitForFunction(() => IronmateStudio.scene.layers.length === 1);
-    assert.deepEqual(await normalized(), { width: 3, height: 1, pixels });
-    checks.push("explicit-Base64-input-preserved");
-    const retained = await snapshot();
-    await page.evaluate(() => IronmateStudio.act("shelf"));
-    const cards = await page.locator("#shelf-items-container .shelf-card").count();
-    await page.fill("#shelf-input-text", "data:image/png;base64,!!!");
-    await page.click("#shelf-add-text");
-    assert.equal(await page.locator("#error").isVisible(), true);
-    assert.equal(await page.locator("#shelf-items-container .shelf-card").count(), cards, "an invalid image text is not shelved");
-    assert.equal(await snapshot(), retained, "invalid explicit input preserves an existing image");
-    await page.evaluate(() => { document.getElementById("error").close(); document.getElementById("shelf-dialog").close(); });
-    checks.push("invalid-Base64-input-retains-existing-scene");
     // Browser-owned JPEG/WebP encoders -> real decoders, compare dimensions only.
     for (const mime of ["image/jpeg", "image/webp"]) {
       const encoded = await page.evaluate(mime => {
@@ -267,19 +245,16 @@ let browser;
       await scenario(mime + "-binary", { items: [binary(encoded.split(",")[1], mime)] }, null, null);
       const result = await normalized(); assert.equal(result.width, 3); assert.equal(result.height, 2);
     }
-    await scenario("4MP-boundary-accepted-without-resize", { items: [binary(png(2048, 2048).toString("base64"))] }, null, null);
-    const dimensions = await page.evaluate(async () => {
-      const img = new Image(); img.src = IronmateStudio.scene.layers.at(-1).src; await img.decode();
+    // 🖼️ a picture is never refused for its size in pixels: StudioCore's picture() fits it to 4 MP and the editor's 1920 long side
+    const sides = () => page.evaluate(async () => {
+      const img = new Image(); img.src = IronmateSlideStudio.deck.slides[0].layers.at(-1).src; await img.decode();
       return [img.width, img.height];
     });
-    assert.deepEqual(dimensions, [2048, 2048]);
-    // 🖼️ over 4 MP it is shrunk, not refused (StudioCore's picture(), as on the slide editor: a phone's photo comes in)
-    await scenario("over-4MP-shrunk-to-4MP", { items: [binary(png(4096, 3072).toString("base64"))] }, null, null);
-    const shrunk = await page.evaluate(async () => {
-      const img = new Image(); img.src = IronmateStudio.scene.layers.at(-1).src; await img.decode();
-      return [img.width, img.height];
-    });
-    assert(shrunk[0] * shrunk[1] <= 4194304 && Math.abs(shrunk[0] / shrunk[1] - 4 / 3) < 0.01, "shrunk to 4MP, aspect kept: " + shrunk);
+    await scenario("1920-long-side-accepted-without-resize", { items: [binary(png(1920, 1080).toString("base64"))] }, null, null);
+    assert.deepEqual(await sides(), [1920, 1080]);
+    await scenario("over-4MP-shrunk-to-1920", { items: [binary(png(4096, 3072).toString("base64"))] }, null, null);
+    const shrunk = await sides();
+    assert(shrunk[0] === 1920 && Math.abs(shrunk[0] / shrunk[1] - 4 / 3) < 0.01, "shrunk, aspect kept: " + shrunk);
     // Genuine OS Clipboard API integration, Chromium only; other engines use
     // deterministic boundary doubles above, not claims of native OS success.
     let nativeClipboard = "not exercised";
@@ -294,10 +269,11 @@ let browser;
           "image/png": new Blob([bytes], { type: "image/png" }),
         })]);
       }, { image });
-      await page.click('#studio-toolbar [data-act="import"]');                        // 📥 どの形式から？ → クリップボード
-      await page.click('#studio-candidates button:text-is("クリップボード")');
-      await page.waitForFunction(() => IronmateStudio.scene.layers.length === 1 || document.querySelector("#error").open);
-      assert.equal(await page.locator("#error").isVisible(), false);
+      await page.click('#slides-toolbar [data-act="import"]');                        // 📥 どの形式から？ → クリップボード
+      await page.click('#slides-candidates button:text-is("クリップボード")');
+      await page.waitForFunction(() => IronmateSlideStudio.deck.slides[0].layers.length === 1
+        || document.querySelector("#slides-status").dataset.error === "true");
+      assert.equal((await failed()).error, "false");
       assert.deepEqual((await normalized()).pixels, pixels);
       checks.push("native-Chromium-mixed-text-PNG");
       nativeClipboard = "ClipboardItem write + button read, mixed text/plain and image/png";

@@ -55,6 +55,7 @@ def test_static_allowlist_excludes_private_scenes_and_generation_inputs(tmp_path
     assert not list(target.rglob('*.py')) and not list(target.rglob('*.json'))
     assert 'href="slides/" data-act="slide-studio"' in (target / 'index.html').read_text()   # 🖼️ → 📽️ (other tools: the portfolio's)
     assert 'connect-src \'none\'' in (target / 'tools/index.html').read_text()
+    assert 'href="https://myon-bioinformatics.github.io/#projects"' in (target / 'tools/index.html').read_text()
     link = tmp_path / 'link'
     link.symlink_to(tmp_path / 'missing')
     with pytest.raises(FileExistsError):

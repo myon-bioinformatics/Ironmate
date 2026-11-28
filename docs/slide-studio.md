@@ -36,7 +36,7 @@ One editor for phones and PCs, phone-first. The slide stays pinned at the top wh
 
 The GIF is the frames `tests/slides_browser.cjs` saves (`build/pages-evidence/phone-*.png`, 390×844; `phone-frames.json` lists them) at 1.4 s each.
 
-From Image Studio, open the clipboard shelf and choose **編集中の画像をスライド工房へ**. A new tab adds the current canvas as one PNG layer to the active slide. The source tab keeps the editable scene. Undo removes the imported layer.
+From Image Studio, open the clipboard shelf and choose **編集中の画像をスライド工房へ**. On the portfolio, Slide Studio opens in the same tab and adds the canvas as one PNG layer to the active slide. Browser Back returns to the editable canvas. In the standalone build, Slide Studio opens in a new tab. Undo removes the imported layer.
 
 The deck is also kept in the browser's local storage, so a reload or a killed tab comes back where it was. Nothing is sent anywhere. If the local storage is full (large pictures), the status shows ⚠️ 💾; save with 💾.
 

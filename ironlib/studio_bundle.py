@@ -4391,7 +4391,7 @@ TOOLS_HTML = r"""<!doctype html>
       <a class="brand" href="../"><img src="../brand/heatmap.svg" width="48" height="48" alt="I’m — 🔰がアポストロフィのIronmateロゴ" /> IRONMATE</a>
       <nav aria-label="サイト">
         <a href="#brand">ロゴ素材</a><a href="../">Image Studio ↗</a
-        ><a href="https://myon-bioinformatics.github.io/#ironmate"
+        ><a href="https://myon-bioinformatics.github.io/#projects"
           >🏠 ポートフォリオ ↗</a
         ><a href="https://github.com/myon-bioinformatics/Ironmate">🐙 GitHub リポジトリ ↗</a>
       </nav>

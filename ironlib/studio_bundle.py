@@ -358,7 +358,7 @@ STUDIO_HTML = r"""<!doctype html>
 </html>
 """
 
-STYLE_CSS = r"""/* web-ui-bundle/1 commit=7825ec40f81d800349f2763da0cc1b27d9927d5a sha256=b06a0d1e551002b33d74f3783450e0163a44148726927ee03ac14cf064560548 scripts/build_studio_css.py*/
+STYLE_CSS = r"""/* web-ui-bundle/1 commit=7825ec40f81d800349f2763da0cc1b27d9927d5a sha256=6d3845ce3842646d49c67658e5d339a617830a4db4da16b99702f01060f8f924 scripts/build_studio_css.py*/
 @layer base,components,theme;
 /* css/tokens.css */
 :root{--ui-bg:#0d1117;--ui-panel:#101820;--ui-fg:#d1f7c4;--ui-muted:#8b949e;--ui-border:#58a6ff;--ui-accent:#7ee787;--ui-danger:#cf222e;--ui-radius:0;--ui-text:16px;--ui-space:1rem;--ui-max:960px;--ui-font:Meiryo,メイリオ,sans-serif;--ui-font-mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
@@ -522,6 +522,8 @@ body:where([data-page~="slides"]){margin:0;background:var(--ui-bg)}
 @media(orientation:landscape) and (max-height:560px),(min-width:960px){:where([data-page~="slides"]) .slides{flex-direction:row;max-width:none}:where([data-page~="slides"]) .ui-stage{max-width:72vw;--ui-stage-room:100dvh}:where([data-page~="slides"]) .slides-deck{flex-direction:column;flex-wrap:nowrap}:where([data-page~="slides"]) .slides-tools,:where([data-page~="slides"]) .slides-status{flex:none}}
 @media(min-width:960px){:where([data-page~="slides"]) .ui-stage{max-width:calc(100vw - 376px)}}
 
+#pixel-editor .workspace{display:block;padding:0}
+#pixel-editor #grid{width:min(100%,320px);height:auto;image-rendering:pixelated;cursor:crosshair}
 #slides-inspector:not([hidden]){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;min-width:0}
 #slides-inspector label:not([hidden]){display:flex;align-items:center;gap:6px}
 #slides-inspector input:not([type=checkbox]),#slides-inspector select{min-width:0;width:100%;font-size:16px}
@@ -3070,7 +3072,11 @@ if (typeof document !== "undefined" && (document.getElementById("pixel-editor") 
       });
       window.IronmateWorkbench = workbench;
       action("place-grid", async () => {
-        await window.IronmateStudio.importImageFile(new File([await workbench.png()], "ドット絵.png", { type: "image/png" }));
+        const art = new File([await workbench.png()], "ドット絵.png", { type: "image/png" });
+        // ▦ → the slide editor's page, crisp (ONE-EDITOR #301), or Image Studio's canvas until that page goes (P7)
+        if (window.IronmateSlideStudio) {
+          if (!(await window.IronmateSlideStudio.act("pixels", art))) return;
+        } else await window.IronmateStudio.importImageFile(art);
         editor.open = false;
       });
     });
@@ -3906,16 +3912,17 @@ const acts = {
   },
 };
 const files = {
-  async image(file, destination = slide()) {
+  async image(file, destination = slide(), sampling = "smooth") {
     const p = await C.picture(file, 1920); // 🖼️ 写真は 4MP・長辺 1920 まで縮めて PNG に（画像工房と同じ取り込み）
     if (slide() !== destination) throw Error("スライドが切り替わりました。追加したいページで画像を選び直してください。");
     const before = place((s) => {
       const k = Math.min((s.width * 0.6) / p.w, (s.height * 0.6) / p.h);
       return { id: uid("image"), kind: "image", name: "image", x: (s.width - p.w * k) / 2, y: (s.height - p.h * k) / 2,
-        w: p.w * k, h: p.h * k, rotation: 0, opacity: 1, src: p.src, cell: 1, levels: 256, sampling: "smooth" };
+        w: p.w * k, h: p.h * k, rotation: 0, opacity: 1, src: p.src, cell: 1, levels: 256, sampling };
     });
     record(before);
   },
+  pixels: (file) => files.image(file, slide(), "pixelated"), // ▦ ドット絵はくっきり拡大
   async open(file) {
     const next = D.parse(await file.text()); // Slide Studio の「全スライドJSON」もそのまま開ける
     const before = state();
@@ -4302,7 +4309,8 @@ def _slides_html() -> str:
             '      <div class="slides-deck"><textarea id="slides-edit" class="slides-edit" hidden aria-label="文字" rows="3" spellcheck="false"></textarea>'
             f'{PSWB_PARTS["pager"]}'
             '<p id="slides-status" class="slides-status" role="status"></p>'
-            f'<div class="slides-tools">{PSWB_PARTS.get("slides-toolbar", "")}</div></div>\n'
+            f'<div class="slides-tools">{PSWB_PARTS.get("slides-toolbar", "")}</div>\n'
+            f'{STUDIO_PIXEL_PANEL}</div>\n'                                       # ▦ the dot-art editor; its ➕ puts the art on this page
             "    </main>\n  </body>\n</html>\n")
 
 

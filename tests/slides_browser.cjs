@@ -379,6 +379,19 @@ const url =
     for (let i = 0; i < 3; i++) await act("undo");
     assert.ok((await state()).deck.slides.every((x) => x.width === 1280 && x.height === 720 && x.background === "#FFFFFF"));
     await act("inspect");
+    // ▦ the dot-art editor under the tools: ➕ puts the art on this page, crisp (pixelated), and folds the editor away; then ↩️
+    await mobile.locator("#pixel-editor summary").tap();
+    await mobile.waitForFunction(() => !!window.IronmateWorkbench?.grid);
+    await mobile.locator("#generate").tap();
+    const beforeArt = (await onPage()).length;
+    await mobile.locator("#place-grid").tap();
+    await mobile.waitForFunction((n) => IronmateSlideStudio.deck.slides[IronmateSlideStudio.active].layers.length === n + 1, beforeArt);
+    const art = (await onPage()).at(-1);
+    assert.ok(art.kind === "image" && art.sampling === "pixelated" && art.name === "image", JSON.stringify({ ...art, src: art.src.slice(0, 32) }));
+    assert.equal(await mobile.locator("#pixel-editor").getAttribute("open"), null);
+    await snap("pixel-art");
+    await act("undo");
+    assert.equal((await onPage()).length, beforeArt);
     await snap("saved");
     const phoneCheck = spawnSync(process.env.PYTHON || "python", ["-S", "-c", `
 from pathlib import Path

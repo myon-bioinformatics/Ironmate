@@ -33,6 +33,7 @@ One editor for phones and PCs, phone-first. The slide stays pinned at the top wh
 | 🗑️ | Delete the selection |
 | ⏪ ↩️ ↪️ ⏩ | Undo two steps, undo, redo, redo two steps (64 kept) |
 | 📥 📤 | Import and export. The formats open in the candidate row, in words, like 🔷's: 📥 どの形式から？ 画像 (a picture onto this page; カメラ takes a photo for it, on a phone; photos become PNG, at most 4 MP and 1920 px on the long side), クリップボード (a copied picture, or its Base64 / data URI text, onto this page; the same reader as Image Studio's, `StudioCore.clipboardImage`) or JSON (all slides, also those the PC studio saved); 📤 どの形式に？ PPTX (every slide, editable in PowerPoint), JSON, PNG or SVG (this page as it looks), or Base64 (this page's PNG as a data URI on the clipboard, for Flutter and the like; where the browser cannot copy, a `.base64.txt` file). A pick does it and the row hides again |
+| ▦ | The dot-art editor (the same one as Image Studio's), folded under the tools: make or draw the art, and its ➕ puts it on this page as a crisp (pixelated) picture and folds the editor away. ↩️ takes it back |
 | 🖼️ | Image Studio (its file row ends with 📽️, back here) |
 | 💻 ⇄ 📱 | 💻 To textual: short words in place of the emoji, as on a PC; 📱 To iconic: the emoji again (the default). The same page, no reload; remembered in this browser. On the site the switch is under ⋯ in the header. The rows are groups (make, ↩️, change, order, pages, file, detail), at most six buttons each so none wraps on a phone, with a light dashed line between them |
 

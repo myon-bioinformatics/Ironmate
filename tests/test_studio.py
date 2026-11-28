@@ -1543,7 +1543,7 @@ def test_studio_html_contains_unique_controls_used_by_initialization():
         pages.feed(html)
         required = set(re.findall(r'(?:\$|byId)\("([a-z][a-z0-9-]*)"\)', _page_ui(page)))  # studio/tools/slides use $(...)
         pixel_controls = {"pixel-editor", "pixel-status", "pixels"}
-        if page == "studio":
+        if page in ("studio", "slides"):       # ▦ the dot-art editor is on both editors (ONE-EDITOR P4)
             required.update(pixel_controls)
         elif page == "tools":
             # Tools shares the script with Studio but only exposes the digest and message fallback.

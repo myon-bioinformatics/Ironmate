@@ -131,7 +131,7 @@ let browser;
         };
         Object.defineProperty(navigator, "clipboard", { configurable: true, value: config.absent ? undefined : clipboard });
       }, config);
-      await page.evaluate(() => document.querySelector("#paste-image").onclick());
+      await page.evaluate(() => IronmateStudio.act("clipboard"));                      // 📥 クリップボード, awaited
       if (code) {
         assert.equal(await page.locator("#error").getAttribute("data-code"), code, name);
         assert.equal(await page.locator("#error").isVisible(), true, name);
@@ -219,32 +219,42 @@ let browser;
       await page.evaluate(() => document.querySelector("#error").close());
     }
     checks.push("drop-rejects-wrong-MIME-and-multiple-files");
-    // File and camera input paths still use the same strict import pipeline.
-    for (const id of ["image", "camera-image"]) {
+    // File and camera choosers (📥 画像 カメラ, PySaiyanWeBoo's toolbar holds them) still use the same strict import pipeline.
+    for (const [act, id] of [["image", "image"], ["camera", "camera-image"]]) {
+      const chooser = `#studio-toolbar [data-ui-file="${act}"]`;
       await reset();
-      await page.locator("#" + id).setInputFiles({ name: "rgba.png", mimeType: "image/png", buffer: Buffer.from(image, "base64") });
+      await page.locator(chooser).setInputFiles({ name: "rgba.png", mimeType: "image/png", buffer: Buffer.from(image, "base64") });
       await page.waitForFunction(() => IronmateStudio.scene.layers.length === 1);
       assert.deepEqual(await normalized(), { width: 3, height: 1, pixels });
       checks.push(id + "-file-input-RGBA-dimensions");
       const before = await snapshot();
-      await page.evaluate(id => {
-        Object.defineProperty(document.querySelector("#" + id), "files", { configurable: true, value: [] });
-      }, id);
-      await page.evaluate(id => document.querySelector("#" + id).onchange(), id);
+      await page.evaluate(sel => {
+        const input = document.querySelector(sel);
+        Object.defineProperty(input, "files", { configurable: true, value: [] });
+        input.dispatchEvent(new Event("change"));
+      }, chooser);
       assert.equal(await snapshot(), before);
       checks.push(id + "-cancel-keeps-scene");
-      await page.evaluate(id => delete document.querySelector("#" + id).files, id);
+      await page.evaluate(sel => delete document.querySelector(sel).files, chooser);
     }
     await reset();
-    await page.fill("#import-base64", uri);
-    await page.evaluate(() => document.querySelector("#import-base64-button").onclick());
+    // 🗂️ image text typed by hand: シェルフ's text box, then 取り込み (the same strict pipeline)
+    await page.evaluate(() => IronmateStudio.act("shelf"));
+    await page.fill("#shelf-input-text", uri);
+    await page.click("#shelf-add-text");
+    await page.locator("#shelf-items-container .shelf-card").last().locator("button", { hasText: "取り込み" }).click();
+    await page.waitForFunction(() => IronmateStudio.scene.layers.length === 1);
     assert.deepEqual(await normalized(), { width: 3, height: 1, pixels });
     checks.push("explicit-Base64-input-preserved");
     const retained = await snapshot();
-    await page.fill("#import-base64", "data:image/png;base64,!!!");
-    await page.evaluate(() => document.querySelector("#import-base64-button").onclick());
+    await page.evaluate(() => IronmateStudio.act("shelf"));
+    const cards = await page.locator("#shelf-items-container .shelf-card").count();
+    await page.fill("#shelf-input-text", "data:image/png;base64,!!!");
+    await page.click("#shelf-add-text");
     assert.equal(await page.locator("#error").isVisible(), true);
+    assert.equal(await page.locator("#shelf-items-container .shelf-card").count(), cards, "an invalid image text is not shelved");
     assert.equal(await snapshot(), retained, "invalid explicit input preserves an existing image");
+    await page.evaluate(() => { document.getElementById("error").close(); document.getElementById("shelf-dialog").close(); });
     checks.push("invalid-Base64-input-retains-existing-scene");
     // Browser-owned JPEG/WebP encoders -> real decoders, compare dimensions only.
     for (const mime of ["image/jpeg", "image/webp"]) {
@@ -263,8 +273,13 @@ let browser;
       return [img.width, img.height];
     });
     assert.deepEqual(dimensions, [2048, 2048]);
-    await scenario("over-4MP-rejected-without-scene-change", { items: [binary(png(2049, 2048).toString("base64"))] }, "clipboard-invalid-image");
-    assert.match(await page.locator("#error-text").textContent(), /4MP/);
+    // 🖼️ over 4 MP it is shrunk, not refused (StudioCore's picture(), as on the slide editor: a phone's photo comes in)
+    await scenario("over-4MP-shrunk-to-4MP", { items: [binary(png(4096, 3072).toString("base64"))] }, null, null);
+    const shrunk = await page.evaluate(async () => {
+      const img = new Image(); img.src = IronmateStudio.scene.layers.at(-1).src; await img.decode();
+      return [img.width, img.height];
+    });
+    assert(shrunk[0] * shrunk[1] <= 4194304 && Math.abs(shrunk[0] / shrunk[1] - 4 / 3) < 0.01, "shrunk to 4MP, aspect kept: " + shrunk);
     // Genuine OS Clipboard API integration, Chromium only; other engines use
     // deterministic boundary doubles above, not claims of native OS success.
     let nativeClipboard = "not exercised";
@@ -279,7 +294,8 @@ let browser;
           "image/png": new Blob([bytes], { type: "image/png" }),
         })]);
       }, { image });
-      await page.click("#paste-image");
+      await page.click('#studio-toolbar [data-act="import"]');                        // 📥 どの形式から？ → クリップボード
+      await page.click('#studio-candidates button:text-is("クリップボード")');
       await page.waitForFunction(() => IronmateStudio.scene.layers.length === 1 || document.querySelector("#error").open);
       assert.equal(await page.locator("#error").isVisible(), false);
       assert.deepEqual((await normalized()).pixels, pixels);

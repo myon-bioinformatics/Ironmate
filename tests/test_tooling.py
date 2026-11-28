@@ -23,8 +23,23 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 from scripts.configure_ci_apt import APT_CONFIG, ARCHIVES_CONFIG, CONFIG_NAME, configure, finish, main, prefer_existing_archive
-from vendor import ascii_artist, markdown, nvd_nist_known_vulns as nvd, xprobe
-from vendor.cli_args import run_cli
+
+
+def load_vendored(name, relpath):
+    """Load a vendored file by path under a repo-unique name (cli_args README: Loading a vendored copy)."""
+    if name not in sys.modules:
+        spec = importlib.util.spec_from_file_location(name, Path(__file__).resolve().parents[1] / relpath)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        spec.loader.exec_module(module)
+    return sys.modules[name]
+
+
+ascii_artist = load_vendored("ironmate_ascii_artist", "vendor/ascii_artist.py")
+markdown = load_vendored("ironmate_markdown", "vendor/markdown.py")
+nvd = load_vendored("ironmate_nvd_nist_known_vulns", "vendor/nvd_nist_known_vulns.py")
+xprobe = load_vendored("ironmate_xprobe", "vendor/xprobe.py")
+run_cli = load_vendored("ironmate_cli_args", "vendor/cli_args.py").run_cli
 
 
 # ═══ · ci apt setup ══════════════════════════════════════════════════════════════════════════════════════

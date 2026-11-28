@@ -19,16 +19,11 @@ const url =
   try {
     const errors = [],
       requests = [];
-    // 🖥️ slides/pc/ (the PC studio the one editor replaced) only sends on, like slides/phone/.
-    const old = await browser.newPage();
-    await old.goto(url + "pc/");
-    await old.waitForURL(url);
-    await old.close();
     // The shelf hands the canvas to the normal slide image importer and leaves the source open.
     const source = await browser.newPage();
     await source.goto(new URL("../", url).href);
-    await source.locator("#studio-import summary").click();
-    await source.locator("#shelf-button").click();
+    await source.locator('#studio-toolbar [data-act="import"]').click();                       // 📥 どの形式から？ → シェルフ
+    await source.locator('#studio-candidates button:text-is("シェルフ")').click();
     const popup = source.waitForEvent("popup");
     await source.getByRole("link", {name: "編集中の画像をスライド工房へ"}).click();
     const destination = await popup;
@@ -62,8 +57,7 @@ const url =
       const box = await mobile.locator("#phone-stage").boundingBox();
       return { x: box.x + box.width * fx, y: box.y + box.height * fy };
     };
-    await mobile.goto(url + "phone/"); // 🚪 the editor's old address only sends on to the one entrance
-    await mobile.waitForURL(url);
+    await mobile.goto(url);
     await mobile.waitForFunction(() => !!window.IronmatePhone);
     const stageBox = await mobile.locator("#phone-stage").boundingBox();
     assert.equal(Math.round(stageBox.y), 0); // 📌 pinned at the top, full width, 16:9
@@ -109,6 +103,19 @@ const url =
     await mobile.mouse.up();
     s = await state();
     assert.ok(Math.abs(s.deck.slides[0].layers[0].y - (before.y + 160)) < 8, JSON.stringify(s.deck.slides[0].layers[0]));
+    // A second finger on the empty stage must not take over an in-flight drag.
+    const touch = await mobile.context().newCDPSession(mobile);
+    const empty = await stageAt(0.95, 0.9);
+    const first = { ...to, id: 1 }, second = { ...empty, id: 2 };
+    const sendTouch = (type, touchPoints) => touch.send("Input.dispatchTouchEvent", { type, touchPoints });
+    await sendTouch("touchStart", [first]);
+    await sendTouch("touchStart", [first, second]);
+    await sendTouch("touchMove", [{ ...first, y: first.y + 20 }, second]);
+    await sendTouch("touchEnd", []);
+    await touch.detach();
+    assert.ok((await state()).deck.slides[0].layers[0].y > s.deck.slides[0].layers[0].y + 20);
+    await act("undo");
+    assert.deepEqual((await state()).deck, s.deck);
     // 🔼 🔄 🔽 every text box together
     await act("bigger");
     await act("bigger");
@@ -174,7 +181,7 @@ const url =
     assert.deepEqual(extra.map((l) => l.kind), ["text", "clock", "triangle", "text"]);
     assert.ok(extra[3].id === kao.id && extra[3].bold === true);
     await snap("candidates");
-    const rows = await mobile.$$eval(".phone-row", (nodes) => nodes.map((n) => new Set([...n.children].map((c) => c.offsetTop)).size));
+    const rows = await mobile.$$eval(".ui-toolbar-row:not([hidden])", (nodes) => nodes.map((n) => new Set([...n.children].map((c) => c.offsetTop)).size));
     assert.ok(rows.every((n) => n === 1), JSON.stringify(rows));                                // 📱 390 px: no row wraps
     await act("back");
     assert.deepEqual(await layerFaces(), ["(・∀", "🌱", "🕒", "△"]);
@@ -225,46 +232,14 @@ const url =
     await snap("page-back");
     assert.ok(await mobile.locator('[data-ui-pager-go="prev"]').isDisabled());
     await mobile.tap('[data-ui-pager-go="next"]');
-    // 🧭 one tap per shape, no reload: each fits the phone with nothing overlapping, and each turns the page its own way
-    const shapes = [];
-    const there = async (shape, tap) => {
-      await tap();
-      assert.equal(await pageNo(), "1/2", shape);
-      assert.equal((await state()).active, 0, shape);
-    };
-    for (let i = 0; i < 6; i++) {
-      await act("pager");
-      const shape = await mobile.evaluate(() => IronmatePhone.pager),
-        parts = await mobile.$$eval("#phone-pager > *", (cs) =>
-          cs.filter((c) => c.checkVisibility()).map((c) => [c.dataset.uiPagerPart, ...Object.values(c.getBoundingClientRect().toJSON()).slice(0, 4)]));
-      shapes.push(shape);
-      for (const [name, x, , w] of parts) assert.ok(x >= 0 && x + w <= 390, `${shape}: ${name} leaves the screen`);
-      for (let a = 0; a < parts.length; a++)
-        for (let b = 0; b < a; b++) {
-          const [n1, x1, y1, w1, h1] = parts[a], [n2, x2, y2, w2, h2] = parts[b];
-          assert.ok(!(x1 < x2 + w2 && x2 < x1 + w1 && y1 < y2 + h2 && y2 < y1 + h1), `${shape}: ${n1} overlaps ${n2}`);
-        }
-      if (shape === "dots") {
-        await there(shape, () => mobile.tap('[data-ui-pager-to="0"]'));
-        await mobile.tap('[data-ui-pager-to="1"]');
-      } else if (shape === "slider") {
-        await there(shape, () => mobile.fill('#phone-pager input[data-ui-pager-part="slider"]', "1"));
-        await mobile.fill('#phone-pager input[data-ui-pager-part="slider"]', "2");
-      } else if (shape === "dial") {
-        await mobile.focus("#phone-pager .ui-dial input");
-        await there(shape, () => mobile.keyboard.press("ArrowLeft"));
-        await mobile.keyboard.press("ArrowRight");
-        await mobile.evaluate(() => document.activeElement.blur());
-      } else if (shape === "dpad" || shape === "ends") {
-        await there(shape, () => mobile.tap(`[data-ui-pager-part="${shape === "dpad" ? "up" : "first"}"]`));
-        await mobile.tap(`[data-ui-pager-part="${shape === "dpad" ? "down" : "last"}"]`);
-      }
-      assert.equal(await pageNo(), "2/2", shape);
-      assert.equal((await state()).active, 1, shape);
-      await snap(`pager-${shape}`);
-    }
-    assert.deepEqual(shapes, ["dots", "slider", "dial", "dpad", "ends", "arrows"]); // 🧭 comes back to ⬅️ 1/N ➡️
-    await act("pager"); // ● dots, kept across the reload below
+    // ⬅️ ➡️ the one shape of the pager (🧭 is gone: 🗂️ shows every page); ← → keys too
+    assert.equal(await mobile.getAttribute("#phone-pager", "data-ui-pager"), "arrows");
+    assert.equal(await mobile.locator('[data-act="pager"]').count(), 0);
+    await mobile.tap('[data-ui-pager-part="prev"]');
+    assert.equal(await pageNo(), "1/2");
+    await mobile.tap('[data-ui-pager-part="next"]');
+    assert.equal(await pageNo(), "2/2");
+    await snap("pager");
     // ↩️ undo the last box, ↪️ redo it
     await act("undo");
     assert.deepEqual((await state()).deck.slides[1].layers.map((l) => l.kind), ["rect", "arrow"]);
@@ -288,13 +263,54 @@ const url =
     }), [1920, 1280]);
     await act("undo");
     assert.deepEqual((await state()).deck.slides[1].layers.map((l) => l.kind), ["rect", "arrow", "text"]);
+    // 🧰 IronmatePhone.act runs what the toolbar runs, awaitable (a host or Node needs no file input): a Blob is 📥's 画像 / カメラ
+    assert.deepEqual(await mobile.evaluate(async (b64) => {
+      const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+      const image = new Blob([bytes], { type: "image/png" });
+      const first = IronmatePhone.act("camera", image);
+      const busy = await IronmatePhone.act("image", image);
+      const imported = await first;
+      const before = IronmatePhone.deck;
+      const invalid = await IronmatePhone.act("image", new Blob(["invalid"], { type: "image/png" }));
+      const unchanged = JSON.stringify(IronmatePhone.deck) === JSON.stringify(before);
+      await IronmatePhone.act("undo");
+      return { imported, busy, invalid, unchanged };
+    }, photo), { imported: true, busy: false, invalid: false, unchanged: true });
+    assert.deepEqual((await state()).deck.slides[1].layers.map((l) => l.kind), ["rect", "arrow", "text"]);
+    const beforePageTurn = await state();
+    const importedAfterPageTurn = await mobile.evaluate((b64) => {
+      const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+      const pending = IronmatePhone.act("image", new Blob([bytes], { type: "image/png" }));
+      document.querySelector('[data-ui-pager-go="prev"]').click();
+      return pending;
+    }, photo);
+    assert.equal(importedAfterPageTurn, false);
+    assert.equal((await state()).active, 0);
+    assert.deepEqual((await state()).deck, beforePageTurn.deck);
+    await mobile.tap('[data-ui-pager-go="next"]');
+    assert.equal(await mobile.evaluate(() => IronmatePhone.act("redo").then(() => IronmatePhone.deck.slides[1].layers.at(-1).kind)), "image");
+    await mobile.evaluate(() => IronmatePhone.act("undo"));
+    // Undo an imported document at the page the user was viewing when it replaced the deck.
+    const beforeOpen = await state();
+    assert.equal(beforeOpen.active, 1);
+    const openedTitle = await mobile.evaluate(async () => {
+      const next = { ...IronmatePhone.deck, title: "Import while turning pages" };
+      const pending = IronmatePhone.act("open", new Blob([JSON.stringify(next)], { type: "application/json" }));
+      document.querySelector('[data-ui-pager-go="prev"]').click();
+      await pending;
+      return IronmatePhone.deck.title;
+    });
+    assert.equal(openedTitle, "Import while turning pages");
+    await act("undo");
+    assert.deepEqual((await state()).deck, beforeOpen.deck);
+    assert.equal((await state()).active, 0);
+    await mobile.tap('[data-ui-pager-go="next"]');
     // 💾 autosave survives a reload
     await mobile.reload();
     await mobile.waitForFunction(() => !!window.IronmatePhone);
     s = await state();
     assert.equal(s.deck.slides.length, 2);
     assert.equal(s.deck.slides[0].layers[0].text, "あとから編集した文字\n2 行目");
-    assert.equal(await mobile.evaluate(() => IronmatePhone.pager), "dots"); // 🧭 the shape survives the reload too
     // 📤 どの形式に？ the candidates, in words like 図形・顔文字's: PPTX, JSON (the same all-slide JSON the PC studio opens), PNG,
     // SVG; a pick does it and the row hides again.
     const saveAs = (format) => pick("export", format);
@@ -335,7 +351,7 @@ print('📱 phone: 2 slides, native text kept')
     fs.writeFileSync(path.join(out, "phone-frames.json"), JSON.stringify(shots.map((f) => path.basename(f)), null, 2));
     // The same multiplier is bounded by the largest font, then reversed across a reload.
     const openPhone = async (deck) => {
-      await mobile.setInputFiles('input[data-file="open"]', {
+      await mobile.setInputFiles('#phone-toolbar [data-ui-file="open"]', {
         name: "test.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(deck)),
       });
       await mobile.waitForFunction((title) => IronmatePhone.deck.title === title, deck.title);
@@ -399,7 +415,7 @@ print('📱 phone: 2 slides, native text kept')
       tools = await wide.locator(".phone-tools").boundingBox();
     assert.ok(tools.x >= stage.x + stage.width && stage.width >= 896, JSON.stringify({ stage, tools }));
     assert.ok(tools.y + tools.height <= 800 && (await wide.evaluate(() => document.documentElement.scrollHeight)) === 800);
-    const wideRows = await wide.$$eval(".phone-row", (nodes) => nodes.filter((n) => n.id !== "phone-candidates")
+    const wideRows = await wide.$$eval(".ui-toolbar-row:not([hidden])", (nodes) => nodes.filter((n) => n.id !== "phone-candidates")
       .map((n) => new Set([...n.children].map((c) => c.offsetTop)).size));
     assert.ok(wideRows.every((n) => n === 1), JSON.stringify(wideRows));
     await wide.screenshot({ path: path.join(out, "slides-wide.png") });
@@ -417,7 +433,7 @@ print('📱 phone: 2 slides, native text kept')
     const exportWord = await look('[data-act="export"]', "::after");
     assert.ok(exportWord.content === '"エクスポート"' && (await look('[data-act="export"]', null)).size === "0px", JSON.stringify(exportWord));
     assert.equal((await look("[data-ui-labels-switch]", "::after")).content, '"📱 To iconic"');   // the way back
-    assert.equal((await look('[data-act="home"]', null)).size, "0px");                          // a link button too: only its word
+    assert.equal((await look('[data-act="image-studio"]', null)).size, "0px");                          // a link button too: only its word
     await wide.click('[data-act="export"]');
     assert.equal((await look('#phone-candidates button[title^="PPTX"]', "::after")).content, '"PPTX"'); // the format's own word
     await wide.click('[data-act="export"]');                                                        // a second press hides them
@@ -437,7 +453,7 @@ print('📱 phone: 2 slides, native text kept')
         fontSize: 24, font: "sans", mono: false, bold: false, ...more }),
       legacy = { schema: "ironmate-slide-deck/1", title: "long", slides: [{ schema: "ironmate-image-studio/1", width: 1280, height: 720,
         background: "#FFFFFF", layers: [words("title", japanese, { bold: true, rotation: 12 }), words("body", english, { x: 400, w: 600, font: "mono" })] }] };
-    await wide.setInputFiles('input[data-file="open"]', { name: "legacy.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(legacy)) });
+    await wide.setInputFiles('#phone-toolbar [data-ui-file="open"]', { name: "legacy.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(legacy)) });
     await wide.waitForFunction(() => IronmatePhone.deck.title === "long");
     assert.deepEqual((await wide.evaluate(() => IronmatePhone.deck.slides[0].layers)).map((l) => [l.text, l.wrap]), [[japanese, true], [english, true]]);
     const manifest = await wide.evaluate(() => IronmatePhone.deck.slides[0].layers.map((l) => {
@@ -474,7 +490,7 @@ print('📱 phone: 2 slides, native text kept')
       scene([{ ...geometry, id: "photo", kind: "image", src: parity, cell: 1, levels: 256 }]),
       scene([]),
     ] };
-    await wide.setInputFiles('input[data-file="open"]', { name: "parity.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(deck)) });
+    await wide.setInputFiles('#phone-toolbar [data-ui-file="open"]', { name: "parity.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(deck)) });
     await wide.waitForFunction(() => IronmatePhone.deck.title === "PC controls");
     await wide.click('[data-act="grid"]');
     assert.equal(await wide.locator("#phone-grid > div").count(), 4);

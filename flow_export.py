@@ -5,12 +5,28 @@ This adapter only renders it; it never installs tools or contacts a service.
 """
 from __future__ import annotations
 
+import importlib.util
 import argparse, json, math, re, subprocess, sys, tempfile
 from pathlib import Path; from xml.etree import ElementTree as ET
 
-from vendor.ascii_artist import FLOW_MAX_INPUT as MAX_INPUT, flow_mermaid, validate_flow as validate
 from ironlib.mermaid_svg import render_mermaid
 from image_studio import raster_svg, _png_output
+
+
+def load_vendored(name, relpath):
+    """Load a vendored file by path under a repo-unique name (cli_args README: Loading a vendored copy)."""
+    if name not in sys.modules:
+        spec = importlib.util.spec_from_file_location(name, Path(__file__).resolve().parents[0] / relpath)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        spec.loader.exec_module(module)
+    return sys.modules[name]
+
+
+_ascii_artist = load_vendored("ironmate_ascii_artist", "vendor/ascii_artist.py")
+MAX_INPUT = _ascii_artist.FLOW_MAX_INPUT
+flow_mermaid = _ascii_artist.flow_mermaid
+validate = _ascii_artist.validate_flow
 
 FORMATS = ('mermaid', 'svg', 'png', 'base64', 'data-uri')
 MAX_SVG = 32 * 1024 * 1024

@@ -113,59 +113,14 @@ STUDIO_HTML = r"""<!doctype html>
     <script defer src="studio.js"></script>
   </head>
   <body class="ui-elements" data-ui-theme="green" data-page="studio">
-    <header>
-      <div class="brand"><img src="brand/heatmap.svg" width="48" height="48" alt="I’m — 🔰がアポストロフィのIronmateロゴ" /><div>IRONMATE <span>画像編集</span></div></div>
-      <div class="top-actions">
-        <details id="studios">
-          <summary data-ui-word="工房一覧" title="工房一覧" aria-label="工房一覧">🏭</summary>
-          <a href="slides/">スライド・PPTX作成 ↗</a>
-          <a href="tools/#composition">🎵 作曲 ↗</a>
-          <a href="tools/">画像一覧・素材 ↗</a>
-          <a href="https://myon-bioinformatics.github.io/#projects">🏠 ポートフォリオ ↗</a>
-          <a href="https://github.com/myon-bioinformatics/Ironmate">🐙 GitHub リポジトリ ↗</a>
-        </details>
-        <button id="undo-2" data-steps="2" data-ui-word="2つ戻す" title="2つ戻す" aria-label="2つ戻す">⏪</button>
-        <button id="undo" data-ui-word="戻す" title="戻す" aria-label="戻す">↩️</button>
-        <button id="redo" data-ui-word="やり直す" title="やり直す" aria-label="やり直す">↪️</button>
-        <button id="redo-2" data-steps="2" data-ui-word="2つやり直す" title="2つやり直す" aria-label="2つやり直す">⏩</button>
-        <details id="studio-import">
-          <summary data-ui-word="インポート" title="インポート" aria-label="インポート">📥</summary>
-          <button id="shelf-button" title="クリップボード・シェルフ" aria-label="クリップボード・シェルフ">シェルフ</button>
-          <label class="button" title="作業履歴を開く" aria-label="作業履歴を開く">作業履歴<input id="open-workspace" type="file" accept=".json,application/json" /></label>
-          <label class="button" title="JSONを開く" aria-label="JSONを開く">JSON<input id="open" type="file" accept=".json" /></label>
-        </details>
-        <details id="studio-export">
-          <summary data-ui-word="エクスポート" title="エクスポート" aria-label="エクスポート">📤</summary>
-          <button id="save" title="JSON（再編集用）" aria-label="JSON（再編集用）">JSON</button>
-          <button id="save-workspace" title="作業履歴を保存" aria-label="作業履歴を保存">作業履歴</button>
-          <button id="svg" title="SVG" aria-label="SVG">SVG</button><button id="base64" title="Base64 / 渡す" aria-label="Base64 / 渡す">Base64</button>
-          <select id="export-scale" aria-label="出力倍率">
-            <option value="1">1×</option>
-            <option value="2">2×</option>
-            <option value="4">4×</option>
-            <option value="8">8×</option>
-          </select>
-          <button id="png" class="primary" title="PNG" aria-label="PNG">PNG</button>
-        </details>
-      </div>
-    </header>
     <main>
       <aside class="tools">
         <h1>画像を編集</h1>
         <p class="hint">
           ツールを選び、キャンバスを押して配置します。
         </p>
-        <div id="tools" class="tool-grid">
-          <button data-tool="select" class="active" data-ui-word="選択" title="選択" aria-label="選択">👆</button
-          ><button data-tool="text" data-ui-word="文字列" title="文字列" aria-label="文字列">🔤</button
-          ><button data-tool="shape" data-label="図形" data-candidates="▭ ◯ △ →" data-ui-word="図形(▭)" title="図形(▭)" aria-label="図形(▭)">▭</button
-          ><button data-tool="stamp" data-ui-word="スタンプ" title="スタンプ" aria-label="スタンプ">✦</button
-          ><button data-tool="emoji" data-label="絵文字" data-candidates="❤️ 😊 🌱 📊 ✨ 📌 🔰" data-ui-word="絵文字(😊)" title="絵文字(😊)" aria-label="絵文字(😊)">😊</button
-          ><button data-tool="kaomoji" data-label="顔文字" data-candidates="(・∀・) (｡•̀ᴗ-)✧ ٩(๑❛ᴗ❛๑)۶" data-ui-word="顔文字(^^)" title="顔文字(^^)" aria-label="顔文字(^^)">(^^)</button
-          ><button data-tool="clock" data-ui-word="時計" title="時計" aria-label="時計">🕒</button>
-        </div>
+        <!-- 🧰 toolbar: studio_toolbar("image") -->
 """ + STUDIO_PIXEL_PANEL + r"""
-        <div id="candidates" class="emojis" role="group" aria-label="候補"></div>
         <div id="keyboard-input" hidden>
           <button id="keyboard-focus">⌨ ほかの文字を入力</button>
           <p class="hint">Windows は Win + .、Mac は Control + Command + Space。スマホはキーボードの絵文字キーから。顔文字の入力・貼り付けもできます。</p>
@@ -190,15 +145,6 @@ STUDIO_HTML = r"""<!doctype html>
         <label class="check"
           ><input id="outline" type="checkbox" />枠線だけにする</label
         >
-        <label class="button wide"
-          >＋ 写真・画像スタンプ<input
-            id="image"
-            type="file"
-            accept="image/png,image/jpeg,image/webp" /></label
-        ><label class="button wide">＋ カメラから写真<input id="camera-image" type="file" accept="image/png,image/jpeg,image/webp" capture="environment" /></label
-        ><button id="paste-image" class="wide">クリップボードの画像を取り込む</button>
-        <label>Base64 / PNG data URIを貼り付け<textarea id="import-base64" rows="3" aria-label="画像Base64入力"></textarea></label>
-        <button id="import-base64-button" class="wide">Base64画像を取り込む</button>
         <button id="custom" class="wide">選択したレイヤーをスタンプに</button>
         <p id="stamp-note" class="hint">
           選択したレイヤーを再利用できます。
@@ -261,10 +207,6 @@ STUDIO_HTML = r"""<!doctype html>
       <aside class="inspector">
         <p class="eyebrow">レイヤー</p>
         <div id="layers" class="layers"></div>
-        <div class="two">
-          <button id="duplicate" data-ui-word="複製" title="複製" aria-label="複製">📑</button><button id="delete" data-ui-word="削除" title="削除" aria-label="削除">🗑️</button
-          ><button id="front" data-ui-word="前へ" title="前へ" aria-label="前へ">⏫</button><button id="back" data-ui-word="後ろへ" title="後ろへ" aria-label="後ろへ">⏬</button>
-        </div>
         <div class="section">
           <h2 id="selection">レイヤーを選択</h2>
           <label
@@ -416,7 +358,7 @@ STUDIO_HTML = r"""<!doctype html>
 </html>
 """
 
-STYLE_CSS = r"""/* web-ui-bundle/1 commit=8046218ba409c4006cc11bf54ce00af8176290a3 sha256=03b8e081e65608ef5c04d143b42d2905c23b65c8ffe621bffa825bded0bcc245 scripts/build_studio_css.py*/
+STYLE_CSS = r"""/* web-ui-bundle/1 commit=e4bb709a3573ad22f0c27a447ccb59b762e2a8da sha256=4a8c15c1e6ef8c2d787a68d450e409f1fbc0f25086f8426ff6075e8f79476ac4 scripts/build_studio_css.py*/
 @layer base,components,theme;
 /* css/tokens.css */
 :root{--ui-bg:#0d1117;--ui-panel:#101820;--ui-fg:#d1f7c4;--ui-muted:#8b949e;--ui-border:#58a6ff;--ui-accent:#7ee787;--ui-danger:#cf222e;--ui-radius:0;--ui-text:16px;--ui-space:1rem;--ui-max:960px;--ui-font:Meiryo,メイリオ,sans-serif;--ui-font-mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
@@ -436,25 +378,18 @@ body[data-ui-labels=words] [data-ui-word]{font-size:0}[data-ui-labels=words] [da
 @layer components{.ui-stage{--ui-stage-w:16;--ui-stage-h:9;--ui-stage-room:64dvh;position:relative;flex:none;align-self:center;box-sizing:border-box;margin:0 auto;width:min(100%,calc(var(--ui-stage-room) * var(--ui-stage-w) / var(--ui-stage-h)));aspect-ratio:var(--ui-stage-w)/var(--ui-stage-h);overflow:hidden;background:var(--ui-panel);border:1px solid var(--ui-border)}.ui-stage[data-ui-stage=pinned]{position:sticky;top:0;z-index:1}.ui-stage>:is(svg,img,canvas,video,[data-ui-fill]){position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:contain}@media(orientation:landscape) and (max-height:560px){.ui-stage{--ui-stage-room:100dvh}}}
 @layer components{.ui-pager{display:inline-flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;max-width:100%}.ui-pager button{box-sizing:border-box;min-width:48px;min-height:48px;padding:0 8px;font-size:24px;line-height:1;color:var(--ui-fg);background:var(--ui-panel);border:1px solid var(--ui-border);border-radius:var(--ui-radius);cursor:pointer;touch-action:manipulation}.ui-pager button:disabled{opacity:.32;cursor:default}.ui-pager button:focus-visible{outline:2px solid var(--ui-accent);outline-offset:2px}.ui-pager output{min-width:48px;text-align:center;font-weight:700;font-variant-numeric:tabular-nums}.ui-pager>[data-ui-pager-part=dots]{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;max-width:100%}.ui-pager>[data-ui-pager-part=dots] button{min-width:32px;min-height:32px;padding:0;font-size:16px;color:var(--ui-accent)}.ui-pager>input[type=range]{width:160px;max-width:100%;min-height:48px;margin:0;accent-color:var(--ui-accent)}.ui-pager[data-ui-pager=dpad]{display:inline-grid;grid-template-columns:repeat(3,48px);grid-template-rows:repeat(3,48px)}[data-ui-pager=dpad]>[data-ui-pager-part=up]{grid-area:1/2}[data-ui-pager=dpad]>[data-ui-pager-part=prev]{grid-area:2/1}[data-ui-pager=dpad]>[data-ui-pager-part=page]{grid-area:2/2;place-self:center}[data-ui-pager=dpad]>[data-ui-pager-part=next]{grid-area:2/3}[data-ui-pager=dpad]>[data-ui-pager-part=down]{grid-area:3/2}.ui-pager[data-ui-pager=dpad]>:not([data-ui-pager-in~=dpad]),.ui-pager[data-ui-pager=ends]>:not([data-ui-pager-in~=ends]),.ui-pager[data-ui-pager=arrows]>:not([data-ui-pager-in~=arrows]),.ui-pager[data-ui-pager=dots]>:not([data-ui-pager-in~=dots]),.ui-pager[data-ui-pager=slider]>:not([data-ui-pager-in~=slider]),.ui-pager[data-ui-pager=dial]>:not([data-ui-pager-in~=dial]){display:none}}
 @layer components{.ui-dial{position:relative;display:inline-block;width:48px;height:48px;border-radius:50%;border:2px solid var(--ui-border);background:var(--ui-panel);box-sizing:border-box;touch-action:none;cursor:grab;vertical-align:middle}.ui-dial[data-ui-dial-drag]{cursor:grabbing}.ui-dial::after{content:"";position:absolute;left:50%;top:4px;width:4px;height:16px;border-radius:2px;background:var(--ui-accent);transform-origin:50% 18px;transform:translateX(-50%) rotate(var(--ui-dial-angle,-135deg))}.ui-dial>input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;pointer-events:none}.ui-dial:focus-within{outline:2px solid var(--ui-accent);outline-offset:2px}}
+@layer components{.ui-toolbar{display:flex;flex-direction:column;gap:8px}.ui-toolbar-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.ui-toolbar-row[hidden]{display:none}.ui-toolbar-row>button,.ui-toolbar-row>a{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;min-width:48px;min-height:48px;padding:0 8px;font-size:24px;line-height:1;text-decoration:none;touch-action:manipulation}.ui-toolbar-row>button:disabled{opacity:.32}}
+
 @layer components{.ui-current-items > [aria-current=step]{font-weight:700;text-decoration:underline;text-decoration-color:var(--ui-accent);text-decoration-thickness:.16em;text-underline-offset:.18em}}
 
 /* studio layout */
 body:where([data-page~="studio"]){font-size:13px;line-height:1.5;margin:0}
-:where([data-page~="studio"]) header{min-height:76px;background:var(--ui-panel);color:var(--ui-fg);box-shadow:inset 0 -1px var(--ui-border);padding:18px 26px;display:flex;align-items:center;justify-content:space-between;gap:20px}
-:where([data-page~="studio"]) .brand{display:flex;align-items:center;gap:12px;font-weight:800;letter-spacing:2px;font-size:19px;white-space:nowrap}
-:where([data-page~="studio"]) .brand span{font-weight:400;font-size:10px;display:block;letter-spacing:3px;margin:5px 0 0;color:var(--ui-muted)}
-:where([data-page~="studio"]) .brand img{flex:none;image-rendering:pixelated}
-:where([data-page~="studio"]) .top-actions{display:flex;flex-wrap:wrap;gap:7px}
-:where([data-page~="studio"]) .top-actions summary{cursor:pointer;padding:7px}
-:where([data-page~="studio"]) .top-actions details a{color:var(--ui-accent);align-self:center;padding:7px 3px;text-underline-offset:3px}
-:where([data-page~="studio"]) button,:where([data-page~="studio"]) .button{display:inline-flex;align-items:center;justify-content:center;gap:5px;text-decoration:none;min-height:38px;padding:10px 12px}
+:where([data-page~="studio"]) button:where(:not(.ui-toolbar-row>*)),:where([data-page~="studio"]) .button{display:inline-flex;align-items:center;justify-content:center;gap:5px;text-decoration:none;min-height:38px;padding:10px 12px}
 :where([data-page~="studio"]) .button{font:inherit;cursor:pointer;background:var(--ui-panel);color:var(--ui-fg);border:1px solid var(--ui-border);border-radius:var(--ui-radius)}
 :where([data-page~="studio"]) button:hover,:where([data-page~="studio"]) .button:hover{border-color:var(--ui-accent);background:color-mix(in srgb,var(--ui-accent) 12%,var(--ui-panel))}
 :where([data-page~="studio"]) .primary{background:var(--ui-accent);border-color:var(--ui-accent);color:var(--ui-bg);font-weight:700}
-:where([data-page~="studio"]) header button,:where([data-page~="studio"]) header .button,:where([data-page~="studio"]) header select{border-color:var(--ui-border);background:var(--ui-bg);color:var(--ui-fg)}
-:where([data-page~="studio"]) header .primary{background:var(--ui-accent);color:var(--ui-bg);border-color:var(--ui-accent)}
 :where([data-page~="studio"]) input[type=file]{display:none}
-:where([data-page~="studio"]) main{display:grid;grid-template-columns:250px minmax(0,1fr) 238px;min-height:calc(100vh - 76px)}
+:where([data-page~="studio"]) main{display:grid;grid-template-columns:250px minmax(0,1fr) 238px;min-height:100vh}
 :where([data-page~="studio"]) aside{padding:24px 20px;background:var(--ui-panel)}
 :where([data-page~="studio"]) aside.tools{border-right:1px solid var(--ui-border)}
 :where([data-page~="studio"]) aside.inspector{border-left:1px solid var(--ui-border)}
@@ -463,8 +398,8 @@ body:where([data-page~="studio"]){font-size:13px;line-height:1.5;margin:0}
 :where([data-page~="studio"]) .eyebrow{font-size:10px;letter-spacing:2px;font-weight:800;color:var(--ui-muted);margin:0 0 12px}
 :where([data-page~="studio"]) .hint,:where([data-page~="studio"]) .note{font-size:11px;color:var(--ui-muted);line-height:1.85}
 :where([data-page~="studio"]) .note{margin-top:18px}
-:where([data-page~="studio"]) .tool-grid,:where([data-page~="studio"]) .two{display:grid;grid-template-columns:1fr 1fr;gap:7px}
-:where([data-page~="studio"]) .tool-grid{margin:24px 0 18px}
+:where([data-page~="studio"]) .two{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+:where([data-page~="studio"]) .tools>.ui-toolbar{margin:24px 0 16px}
 :where([data-page~="studio"]) .active{background:color-mix(in srgb,var(--ui-accent) 22%,var(--ui-panel))!important;border-color:var(--ui-accent)!important;color:var(--ui-fg)!important;font-weight:700}
 :where([data-page~="studio"]) label{display:block;font-size:11px;margin:12px 0 7px}
 :where([data-page~="studio"]) input,:where([data-page~="studio"]) textarea,:where([data-page~="studio"]) select{display:block;width:100%;font-size:13px;padding:9px;margin-top:5px}
@@ -474,9 +409,6 @@ body:where([data-page~="studio"]){font-size:13px;line-height:1.5;margin:0}
 :where([data-page~="studio"]) input[type=checkbox]{display:inline;width:auto;margin:0 7px 0 0}
 :where([data-page~="studio"]) .check{display:flex;align-items:center}
 :where([data-page~="studio"]) .wide{width:100%;margin:6px 0}
-:where([data-page~="studio"]) .emojis{display:flex;flex-wrap:wrap;gap:4px}
-:where([data-page~="studio"]) .emojis button{font-size:21px;padding:5px 7px;border:none;background:transparent}
-:where([data-page~="studio"]) .kaomojis button{font-size:13px;padding:7px 4px}
 :where([data-page~="studio"]) .section{border-top:1px solid var(--ui-border);padding-top:20px;margin-top:22px}
 :where([data-page~="studio"]) .workspace{padding:30px;min-width:0}
 :where([data-page~="studio"]) .canvas-heading{display:flex;justify-content:space-between;align-items:end;gap:12px;margin:5px 0 24px}
@@ -517,7 +449,7 @@ body:where([data-page~="studio"]){font-size:13px;line-height:1.5;margin:0}
 :where([data-page~="studio"]) #base64-dialog p{font-size:12px;line-height:1.8}
 @media(min-width:1600px){:where([data-page~="studio"]) .workspace{padding:44px}}
 @media(max-width:1150px){:where([data-page~="studio"]) main{grid-template-columns:210px minmax(0,1fr)}:where([data-page~="studio"]) .inspector{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px}:where([data-page~="studio"]) .inspector>.eyebrow{display:none}:where([data-page~="studio"]) .inspector>.section{margin:0;border:0;padding:0}:where([data-page~="studio"]) .workspace{padding:22px}}
-@media(max-width:680px){:where([data-page~="studio"]) header{padding:14px;display:block}:where([data-page~="studio"]) .top-actions{margin-top:15px}:where([data-page~="studio"]) .top-actions button,:where([data-page~="studio"]) .top-actions .button{padding:7px;font-size:11px}:where([data-page~="studio"]) main{display:flex;flex-direction:column}:where([data-page~="studio"]) .workspace{order:-1;padding:18px}:where([data-page~="studio"]) .canvas-heading h2{font-size:17px}:where([data-page~="studio"]) .canvas-heading{margin-bottom:16px}:where([data-page~="studio"]) .canvas-footer{display:block}:where([data-page~="studio"]) .canvas-footer span{display:block;margin:5px 0}:where([data-page~="studio"]) .tools{display:block}:where([data-page~="studio"]) .tools h1,:where([data-page~="studio"]) .tools>.hint{display:none}:where([data-page~="studio"]) .tool-grid{margin:8px 0;grid-template-columns:repeat(3,1fr)}:where([data-page~="studio"]) .inspector{display:block}:where([data-page~="studio"]) .inspector>.section{margin-top:20px}:where([data-page~="studio"]) .canvas-settings{margin-top:20px;padding-top:15px}:where([data-page~="studio"]) .board{width:100%}:where([data-page~="studio"]) aside{padding:18px}:where([data-page~="studio"]) .tools>.section{margin-top:15px}}
+@media(max-width:680px){:where([data-page~="studio"]) main{display:flex;flex-direction:column}:where([data-page~="studio"]) .workspace{order:-1;padding:18px}:where([data-page~="studio"]) .canvas-heading h2{font-size:17px}:where([data-page~="studio"]) .canvas-heading{margin-bottom:16px}:where([data-page~="studio"]) .canvas-footer{display:block}:where([data-page~="studio"]) .canvas-footer span{display:block;margin:5px 0}:where([data-page~="studio"]) .tools{display:block}:where([data-page~="studio"]) .tools h1,:where([data-page~="studio"]) .tools>.hint{display:none}:where([data-page~="studio"]) .tools>.ui-toolbar{margin:8px 0}:where([data-page~="studio"]) .inspector{display:block}:where([data-page~="studio"]) .inspector>.section{margin-top:20px}:where([data-page~="studio"]) .canvas-settings{margin-top:20px;padding-top:15px}:where([data-page~="studio"]) .board{width:100%}:where([data-page~="studio"]) aside{padding:18px}:where([data-page~="studio"]) .tools>.section{margin-top:15px}}
 
 /* tools page layout */
 body:where([data-page~="tools"]){font-size:15px;line-height:1.65;margin:0}
@@ -569,8 +501,8 @@ body:where([data-page~="tools"]){font-size:15px;line-height:1.65;margin:0}
 :where([data-page~="tools"]) footer{padding:30px;text-align:center;color:var(--ui-muted);font-size:12px;border-top:1px solid var(--ui-border)}
 @media(max-width:760px){:where([data-page~="tools"]) main{padding:30px 16px}:where([data-page~="tools"]) .workspace{grid-template-columns:1fr}:where([data-page~="tools"]) .controls,:where([data-page~="tools"]) .preview{padding:18px}:where([data-page~="tools"]) header{padding:18px}:where([data-page~="tools"]) h2{font-size:25px}:where([data-page~="tools"]) .exports{gap:8px}}
 
-/* 💻 ⇄ 📱 an emoji face (a control with data-ui-word) is read at 20 px, not at the studio's small text size */
-:where([data-page~="studio"]) button[data-ui-word],:where([data-page~="studio"]) summary[data-ui-word],:where([data-page~="studio"]) label[data-ui-word]{font-size:20px;line-height:1}
+/* 💻 ⇄ 📱 an emoji face (a control with data-ui-word) is read at 20 px, not at the studio's small text size; a toolbar's are its own (toolbar.css) */
+:where([data-page~="studio"]) button[data-ui-word]:where(:not(.ui-toolbar-row>*)),:where([data-page~="studio"]) summary[data-ui-word],:where([data-page~="studio"]) label[data-ui-word]{font-size:20px;line-height:1}
 
 /* 📱 phone slides: the slide is pinned on top (PySaiyanWeBoo's .ui-stage) and the emoji controls scroll under it (landscape: beside it) */
 body:where([data-page~="phone"]){margin:0;background:var(--ui-bg)}
@@ -584,11 +516,7 @@ body:where([data-page~="phone"]){margin:0;background:var(--ui-bg)}
 :where([data-page~="phone"]) .phone-grip{position:absolute;right:-16px;bottom:-16px;width:32px;height:32px;display:grid;place-items:center;border-radius:50%;background:var(--ui-accent);color:var(--ui-bg);font-size:16px;pointer-events:auto;touch-action:none}
 :where([data-page~="phone"]) .phone-edit{flex:1 1 100%;box-sizing:border-box;margin:0;min-height:88px;padding:8px;font-size:16px;line-height:1.5;border:2px solid var(--ui-accent);resize:vertical}
 :where([data-page~="phone"]) .phone-deck{flex:1;min-height:0;overflow:auto;display:flex;flex-wrap:wrap;align-items:flex-start;align-content:flex-start;gap:16px;padding:16px}
-:where([data-page~="phone"]) .phone-tools{flex:1 1 328px;min-width:0;display:flex;flex-direction:column;gap:8px}
-:where([data-page~="phone"]) .phone-row{display:flex;flex-wrap:wrap;gap:8px}
-:where([data-page~="phone"]) .phone-tools button,:where([data-page~="phone"]) .phone-tools .button{min-width:48px;min-height:48px;padding:0 8px;font-size:24px;line-height:1;touch-action:manipulation}
-:where([data-page~="phone"]) .phone-tools select{min-height:48px;font-size:16px}
-:where([data-page~="phone"]) .phone-tools button:disabled{opacity:.32}
+:where([data-page~="phone"]) .phone-tools{flex:1 1 328px;min-width:0}
 :where([data-page~="phone"]) .phone-status{flex:1 1 128px;margin:0;align-self:center;min-height:24px;font-size:16px;overflow-wrap:anywhere}
 :where([data-page~="phone"]) .phone-status[data-error=true]{color:var(--ui-danger)}
 @media(orientation:landscape) and (max-height:560px),(min-width:960px){:where([data-page~="phone"]) .phone{flex-direction:row;max-width:none}:where([data-page~="phone"]) .ui-stage{max-width:72vw;--ui-stage-room:100dvh}:where([data-page~="phone"]) .phone-deck{flex-direction:column;flex-wrap:nowrap}:where([data-page~="phone"]) .phone-tools,:where([data-page~="phone"]) .phone-status{flex:none}}
@@ -632,7 +560,7 @@ const StudioCore = (function (root) {
   const fail = (message) => {
     throw new Error(message);
   };
-  /* PSWB heatmap-color.js @ 8046218ba409c4006cc11bf54ce00af8176290a3. Generated by scripts/build_studio_css.py. */
+  /* PSWB heatmap-color.js @ e4bb709a3573ad22f0c27a447ccb59b762e2a8da. Generated by scripts/build_studio_css.py. */
   const heatmapDefaultPalette=["#440154", "#3B528B", "#21918C", "#5EC962", "#FDE725"];
   function heatmapColor(v,lo,hi,levels=0,palette=heatmapDefaultPalette){
    if(!Array.isArray(palette)||palette.length<2||palette.length>256||
@@ -1128,9 +1056,22 @@ const StudioCore = (function (root) {
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 30000);
   }
-  // 🖼️ 画像ファイル → 長辺 longest までの PNG。4MP 超は断る（fit なら 4MP まで縮める: スマホの写真）
-  async function picture(file, longest = Infinity, fit = false, signal) {
+  // 🖼️ PNG / JPEG / WebP by their first bytes (what a file says it is does not decide)
+  function imageType(bytes) {
+    if ([137, 80, 78, 71, 13, 10, 26, 10].every((v, i) => bytes[i] === v)) return "image/png";
+    if (bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255) return "image/jpeg";
+    if (bytes.length >= 12 && [82, 73, 70, 70].every((v, i) => bytes[i] === v) && [87, 69, 66, 80].every((v, i) => bytes[i + 8] === v))
+      return "image/webp";
+    return null;
+  }
+  // 🖼️ The one way an image comes in, on every studio page (📥 画像 カメラ クリップボード, a drop, the shelf, the Tools page): a
+  // PNG / JPEG / WebP of at most 32 MiB whose bytes match its declared type, as a PNG shrunk to 4 MP and to `longest` px on its long
+  // side (a phone's photo fits; nothing is refused for its size in pixels).
+  async function picture(file, longest = Infinity, signal) {
     signal?.throwIfAborted();
+    if (!file.size || file.size > 33554432) fail("画像は32MiB以下にしてください");
+    const type = imageType(new Uint8Array(await file.slice(0, 12).arrayBuffer()));
+    if (!type || (file.type && file.type.toLowerCase() !== type)) fail("画像形式またはMIME宣言が実データと一致しません");
     const url = URL.createObjectURL(file),
       img = new Image();
     const abort = () => {
@@ -1148,13 +1089,12 @@ const StudioCore = (function (root) {
     }
     const w = img.naturalWidth,
       h = img.naturalHeight;
-    if (w * h > 4194304 && !fit) fail("1画像4MP以下です。");
     const k = Math.min(1, longest / Math.max(w, h), Math.sqrt(4194304 / (w * h))),
       canvas = document.createElement("canvas");
-    canvas.width = Math.max(1, Math.round(w * k));
-    canvas.height = Math.max(1, Math.round(h * k));
+    canvas.width = Math.max(1, Math.floor(w * k)); // floor: rounding never takes it past 4 MP
+    canvas.height = Math.max(1, Math.floor(h * k));
     canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
-    return { canvas, src: canvas.toDataURL("image/png"), w: canvas.width, h: canvas.height };
+    return { canvas, type, src: canvas.toDataURL("image/png"), w: canvas.width, h: canvas.height };
   }
   function mosaicSource(img, cell, levels) {
     const canvas = Object.assign(document.createElement("canvas"), { width: img.naturalWidth, height: img.naturalHeight });
@@ -1194,19 +1134,15 @@ const StudioCore = (function (root) {
     scenePng,
     mosaicSource,
     SCHEMA,
-    WORKSPACE_SCHEMA,
     WORKSPACE_MAX_BYTES,
     clone,
     escape,
     heatmapColor,
-    matrix,
+    matrix, // 🌡️ the heatmap parity test (Python ⇄ JS) reads it
     validate,
     mosaicRGBA,
     arrowGeometry,
-    outputSize,
     pngPayload,
-    textFont,
-    measureText,
     textLayout,
     layerSVG,
     svg,
@@ -1215,6 +1151,7 @@ const StudioCore = (function (root) {
     workspaceHistory,
     save,
     picture,
+    imageType,
   };
   return api;
 })(typeof globalThis !== "undefined" ? globalThis : this);
@@ -1222,7 +1159,7 @@ const StudioCore = (function (root) {
 /* Browser/Node shared operations. Pixel coordinates follow grid_tools.py. */
 const IronmateTools = (function (root) {
   "use strict";
-  /* PSWB pixel-grid.js @ 8046218ba409c4006cc11bf54ce00af8176290a3. Generated by scripts/build_studio_css.py. */
+  /* PSWB pixel-grid.js @ e4bb709a3573ad22f0c27a447ccb59b762e2a8da. Generated by scripts/build_studio_css.py. */
   /* web-ui pixel-grid: a dot-art grid checked, resized, drawn as SVG and described for a PNG; Base64 length; PNG chunks. pysaiyanweboo.py (pixel_grid_*, base64_length) is the reference; this must agree. */
   const PIXEL_GRID_SCHEMA="ironmate-pixel-grid/1";
   function pixelGridValidate(value){
@@ -1288,7 +1225,7 @@ const IronmateSlides = (function (root) {
   "use strict";
   const C = StudioCore;
   const shell = IronmateSlideShell;
-  /* PSWB slide-deck.js @ 8046218ba409c4006cc11bf54ce00af8176290a3. Generated by scripts/build_studio_css.py. */
+  /* PSWB slide-deck.js @ e4bb709a3573ad22f0c27a447ccb59b762e2a8da. Generated by scripts/build_studio_css.py. */
   /* web-ui slide-deck: several scenes of the image studio as one deck (checked, kept as JSON, pages added, copied, deleted and moved) and written as a PPTX in the page: text, rectangles, ellipses, triangles and arrows stay editable, anything else is a picture. slideDeck(core, shell): core is js/imagestudio.js (or the same functions), shell the empty package the slides go into (part name to text). pysaiyanweboo.py (slide_deck_*) is the reference; this must agree. */
   function slideDeck(C, shell) {
     const SCHEMA = "ironmate-slide-deck/1",
@@ -1784,8 +1721,12 @@ if (typeof document !== "undefined" && document.body && (document.body.dataset.p
 "use strict";
 const C = window.StudioCore,
   $ = (id) => document.getElementById(id),
+  control = (act) => document.querySelector(`#studio-toolbar [data-act="${act}"]`),
+  // 🧰 what each toolbar act and each key of a host's header (image_studio.host_rows) does: the same function either way
+  STUDIO_ACTS = {},
   copy = (value) => C.clone(value);
 let serial = 0,
+  toolbar = null, // PySaiyanWeBoo's bindToolbar on #studio-toolbar: { offer, close }
   tool = "select",
   shape = "rect", // 図形(▭ ◯ △ →): the candidate the 図形 tool places
   edited = { id: null, text: "" }, // what ✏️ 編集 last showed, so a repaint never undoes typing
@@ -1953,10 +1894,10 @@ function updateInspector() {
   $("value-labels").disabled = l?.kind !== "heatmap";
   $("value-labels").checked = l?.labels ?? true;
   $("continuous").disabled = l?.kind !== "heatmap";
-  for (const id of ["delete", "duplicate", "front", "back", "custom"])
-    $(id).disabled = !l;
-  $("undo").disabled = $("undo-2").disabled = history.index === 0;
-  $("redo").disabled = $("redo-2").disabled = history.index === history.items.length - 1;
+  for (const name of ["delete", "duplicate", "forward", "backward"]) control(name).disabled = !l;
+  $("custom").disabled = !l;
+  for (const name of ["undo", "undo-2"]) control(name).disabled = history.index === 0;
+  for (const name of ["redo", "redo-2"]) control(name).disabled = history.index === history.items.length - 1;
   $("size-note").textContent = `${scene.width} × ${scene.height}`;
   $("canvas-width").value = scene.width;
   $("canvas-height").value = scene.height;
@@ -2004,45 +1945,34 @@ function add(layer) {
   change((doc) => doc.layers.push(layer));
   message(`${layer.name || layer.kind}を追加しました`);
 }
-const SHAPES = { "▭": "rect", "◯": "ellipse", "△": "triangle", "→": "arrow" };
-function setTool(value) {
+const SHAPES = { rect: "▭", ellipse: "◯", triangle: "△", arrow: "→" }; // 🔷 a kind and the face it shows
+function setTool(value, opened = false) {
+  // 🧰 a mode of the toolbar's make row; 🔷 😊 (^^) show their candidates (PySaiyanWeBoo's bindToolbar opened them already when pressed)
   tool = value;
-  document
-    .querySelectorAll("[data-tool]")
-    .forEach((b) => b.classList.toggle("active", b.dataset.tool === value));
-  candidates();
-}
-function candidates() {
-  // One row for whichever tool has candidates (図形・絵文字・顔文字): a tap picks what the next press on the canvas places.
-  const button = document.querySelector(`[data-tool="${tool}"]`),
-    list = button?.dataset.candidates;
-  $("candidates").classList.toggle("kaomojis", tool === "kaomoji");
+  for (const b of document.querySelectorAll('#studio-toolbar [data-ui-group="create"] [data-act]')) {
+    b.classList.toggle("active", b.dataset.act === value);
+    b.setAttribute("aria-pressed", b.dataset.act === value);
+  }
   $("keyboard-input").hidden = !["emoji", "kaomoji"].includes(tool);
-  $("candidates").replaceChildren(
-    ...(list ? list.split(" ") : []).map((value) => {
-      const b = document.createElement("button");
-      b.type = "button";
-      b.textContent = value;
-      b.setAttribute(
-        "aria-pressed",
-        tool === "shape" ? SHAPES[value] === shape : $(tool + "-text").value === value,
-      );
-      b.onclick = () => {
-        if (tool === "shape") {
-          shape = SHAPES[value];
-          button.textContent = value; // 💻 の表示では「図形(◯)」（data-ui-word）
-          button.dataset.uiWord = button.title = `${button.dataset.label}(${value})`;
-          button.setAttribute("aria-label", button.title);
-        } else {
-          $(tool + "-text").value = value;
-          if (value === "🔰") $("fill").value = "#000000";
-        }
-        candidates();
-        $("stamp-note").textContent = `${value}をキャンバスに押せます`;
-      };
-      return b;
-    }),
-  );
+  const button = control(value), row = $("studio-candidates");
+  if (!button?.dataset.candidates) toolbar?.close();
+  else if (!opened && (row.hidden || row.dataset.tool !== value)) toolbar?.offer(button);
+}
+function pick(value, face) {
+  // A candidate: 図形 sets the shape the next press places (face is its kind: rect …), 絵文字・顔文字 the text.
+  setTool(value, true);
+  if (value === "shape") {
+    const button = control("shape");
+    shape = face;
+    face = SHAPES[shape];
+    button.textContent = face; // 💻 の表示では「図形(◯)」（data-ui-word）
+    button.dataset.uiWord = button.title = `図形(${face})`;
+    button.setAttribute("aria-label", button.title);
+  } else {
+    $(value + "-text").value = face;
+    if (face === "🔰") $("fill").value = "#000000";
+  }
+  $("stamp-note").textContent = `${face}をキャンバスに押せます`;
 }
 function toolText() {
   // 文字列・スタンプ・絵文字・顔文字 each keep an input of their own; an empty one places its example.
@@ -2190,22 +2120,16 @@ $("board").addEventListener("pointercancel", () => {
   }
 });
 $("keyboard-focus").onclick = () => $(tool + "-text").focus();
-for (const button of document.querySelectorAll("[data-tool]"))
-  button.onclick = () => setTool(button.dataset.tool);
-// 🧰 A host's header (PySaiyanWeBoo chrome rows, declared in #ui-chrome-rows by image_studio.host_rows) sends a key;
-// each presses this page's own control, so a save from the header and one from the page are the same save.
-const HOST_ACTIONS = { png: "png", svg: "svg", json: "save", workspace: "save-workspace", base64: "base64", shelf: "shelf-button",
-  "open-json": "open", "open-workspace": "open-workspace" };
-queueMicrotask(() => globalThis.PySaiyanWeBoo.bindLabels()); // 💻 To textual ⇄ 📱 To iconic（ページ内と ⋯ の行）
-for (const menu of [$("studio-import"), $("studio-export")]) {
-  // 📥 📤 選んだら中の候補は隠れる（図形・顔文字の候補と同じ）。倍率の選択では閉じない
-  menu.addEventListener("click", (e) => e.target.closest("button") && (menu.open = false));
-  menu.addEventListener("change", (e) => e.target.type === "file" && (menu.open = false));
-}
-document.addEventListener("ui-chrome-action", (e) => {
-  const [key, scale] = String(e.detail?.key).split(/-(?=\d+$)/);
-  if (key === "png" || key === "svg") $("export-scale").value = (key === "png" && scale) || "1"; // a size is a PNG row's own
-  document.getElementById(HOST_ACTIONS[key])?.click();
+const MODES = ["select", "text", "shape", "stamp", "emoji", "kaomoji", "clock"];
+queueMicrotask(() => {
+  // PySaiyanWeBoo's script comes later in studio.js: 💻 To textual ⇄ 📱 To iconic（ページ内と ⋯ の行）and the toolbar
+  globalThis.PySaiyanWeBoo.bindLabels();
+  toolbar = globalThis.PySaiyanWeBoo.bindToolbar($("studio-toolbar"), (name, face) => {
+    if (SHAPES[name]) return pick("shape", name); // 🔷 ▭ ◯ △ → run their kind
+    if (MODES.includes(name)) return face === undefined ? setTool(name, true) : pick(name, face);
+    STUDIO_ACTS[name]?.(face); // 📥 📤 the format picked (their rows hide after it; 📥's chosen File comes as face), ↩️ ↪️, ⧉ 🗑️ ⬆️ ⬇️
+  });
+  setTool(tool);
 });
 for (const [id, name] of [["text", "text"], ["stamp-text", "stamp"], ["emoji-text", "emoji"], ["kaomoji-text", "kaomoji"]])
   $(id).onfocus = () => setTool(name); // typing into an input means its tool
@@ -2222,31 +2146,31 @@ $("custom").onclick = () => {
   }
 };
 // ↶ ↷ move one state, ⏪ ⏩ two (data-steps); History clamps at both ends.
-for (const [id, move] of [["undo", "undo"], ["undo-2", "undo"], ["redo", "redo"], ["redo-2", "redo"]])
-  $(id).onclick = () => {
-    scene = history[move](Number($(id).dataset.steps || 1));
+for (const [act, move, steps] of [["undo", "undo", 1], ["undo-2", "undo", 2], ["redo", "redo", 1], ["redo-2", "redo", 2]])
+  STUDIO_ACTS[act] = () => {
+    scene = history[move](steps);
     dirty = true;
     selected = null;
     render().catch(error);
   };
-$("duplicate").onclick = guarded(() => {
+STUDIO_ACTS.duplicate = guarded(() => {
   const l = copy(selectedLayer());
   l.id = uid();
   l.x += 24;
   l.y += 24;
   add(l);
 });
-$("delete").onclick = () => {
+STUDIO_ACTS.delete = () => {
   if (selected)
     change((doc) => {
       doc.layers = doc.layers.filter((l) => l.id !== selected);
     });
 };
-for (const [id, delta] of [
-  ["front", 1],
-  ["back", -1],
+for (const [act, delta] of [
+  ["forward", 1],
+  ["backward", -1],
 ])
-  $(id).onclick = () =>
+  STUDIO_ACTS[act] = () =>
     change((doc) => {
       const i = doc.layers.findIndex((l) => l.id === selected),
         j = Math.max(0, Math.min(doc.layers.length - 1, i + delta));
@@ -2364,30 +2288,25 @@ function download(name, data, type) {
   C.save(name, data, type);
   message(`${name}を書き出しました`);
 }
-$("save-workspace").onclick = guarded(async () => {
+STUDIO_ACTS.workspace = guarded(async () => {
   const serialized = C.workspaceText(history);
   download("ironmate-workspace.json", serialized, "application/json");
   message("作業履歴を保存しました");
 });
-$("open-workspace").onchange = guarded(async () => {
-  const input = $("open-workspace");
-  const file = input.files?.[0];
-  if (!file) return;
-  try {
-    if (file.size > C.WORKSPACE_MAX_BYTES) throw new Error("作業履歴は32MiB以下にしてください");
-    const next = C.workspaceHistory(await file.text());
-    // Decode every state's images before replacing the editable workspace.
-    const sources = new Set(next.items.flatMap(state => state.layers
-      .filter(layer => layer.kind === "image").map(layer => layer.src)));
-    for (const src of sources) await decoded(src);
-    history = next;
-    scene = next.current;
-    selected = null;
-    dirty = true;
-    await render();
-    message("作業履歴を復元しました");
-  } finally { input.value = ""; }
-});
+async function openWorkspace(file) {
+  if (file.size > C.WORKSPACE_MAX_BYTES) throw new Error("作業履歴は32MiB以下にしてください");
+  const next = C.workspaceHistory(await file.text());
+  // Decode every state's images before replacing the editable workspace.
+  const sources = new Set(next.items.flatMap(state => state.layers
+    .filter(layer => layer.kind === "image").map(layer => layer.src)));
+  for (const src of sources) await decoded(src);
+  history = next;
+  scene = next.current;
+  selected = null;
+  dirty = true;
+  await render();
+  message("作業履歴を復元しました");
+}
 $("trim-history").onclick = guarded(async () => {
   if (!window.confirm("現在の状態だけ残して、過去の作業履歴を削除しますか？")) return;
   history = new C.History(scene);
@@ -2395,7 +2314,7 @@ $("trim-history").onclick = guarded(async () => {
   await render();
   message("現在の画像・レイヤーを残して履歴を整理しました");
 });
-$("save").onclick = () => {
+STUDIO_ACTS.json = () => {
   download(
     "ironmate-scene.json",
     JSON.stringify(C.validate(scene), null, 2),
@@ -2403,7 +2322,7 @@ $("save").onclick = () => {
   );
   dirty = false;
 };
-$("svg").onclick = guarded(async () => {
+STUDIO_ACTS.svg = guarded(async () => {
   const doc = copy(scene),
     imageSource = await prepare(doc);
   download(
@@ -2417,7 +2336,7 @@ async function pngBlob(scale = Number($("export-scale").value)) {
     imageSource = await prepare(doc);
   return C.scenePng(doc, imageSource, scale);
 }
-$("png").onclick = guarded(async () =>
+STUDIO_ACTS.png = guarded(async () =>
   download("ironmate-image.png", await pngBlob(), "image/png"),
 );
 let clipboardPayload = null;
@@ -2425,7 +2344,7 @@ function showBase64() {
   if (clipboardPayload)
     $("base64-text").value = clipboardPayload[$("base64-mode").value];
 }
-$("base64").onclick = guarded(async () => {
+STUDIO_ACTS.base64 = guarded(async () => {
   clipboardPayload = C.pngPayload(
     new Uint8Array(await (await pngBlob()).arrayBuffer()),
   );
@@ -2454,9 +2373,7 @@ $("copy-base64").onclick = () => copyDialogText(
 );
 $("download-base64").onclick = () =>
   download("ironmate-image.base64.txt", $("base64-text").value, "text/plain");
-$("open").onchange = guarded(async () => {
-  const file = $("open").files[0];
-  if (!file) return;
+async function openScene(file) {
   if (file.size > 20000000) throw new Error("JSONは20MB以下にしてください");
   const next = C.validate(JSON.parse(await file.text()));
   await prepare(next);
@@ -2467,42 +2384,19 @@ $("open").onchange = guarded(async () => {
   dirty = false;
   await render();
   message("JSONを読み込みました（戻すで前の編集へ戻れます）");
-  $("open").value = "";
-});
+}
 // Keep acquisition (picker, camera capture, clipboard) separate from normalization.
 async function importImageBytes(bytes, declaredMime, name = "取り込み画像") {
-  if (!(bytes instanceof Uint8Array) || !bytes.length || bytes.length > 32 * 1024 * 1024)
-    throw new Error("画像は32MiB以下にしてください");
-  const mime = sniffImageMime(bytes);
-  if (!mime || (declaredMime && declaredMime.toLowerCase() !== mime))
-    throw new Error("画像形式またはMIME宣言が実データと一致しません");
-  const blob = new Blob([bytes], { type: mime });
-  const url = URL.createObjectURL(blob);
-  try {
-    const img = await decoded(url);
-    const cv = document.createElement("canvas");
-    cv.width = img.naturalWidth;
-    cv.height = img.naturalHeight;
-    cv.getContext("2d").drawImage(img, 0, 0);
-    const w = Math.min(700, scene.width * 0.65);
-    add({
-      ...base("image", 80, 90, w, (w * img.naturalHeight) / img.naturalWidth),
-      name, src: cv.toDataURL("image/png"),
-      cell: 1, levels: 256, sampling: "pixelated", mono: false,
-    });
-    setTool("select");
-    message(mime + "を取り込みました");
-  } finally {
-    URL.revokeObjectURL(url);
-    images.delete(url);
-  }
-}
-function sniffImageMime(bytes) {
-  if ([137,80,78,71,13,10,26,10].every((v,i)=>bytes[i]===v)) return "image/png";
-  if (bytes[0]===255&&bytes[1]===216&&bytes[2]===255) return "image/jpeg";
-  if (bytes.length>=12&&[82,73,70,70].every((v,i)=>bytes[i]===v)
-      &&[87,69,66,80].every((v,i)=>bytes[i+8]===v)) return "image/webp";
-  return null;
+  // 🖼️ StudioCore's picture(): the same checks and the same 4 MP fit as the slide editor's 📥 画像
+  const p = await C.picture(new Blob([bytes], { type: declaredMime || "" }));
+  const w = Math.min(700, scene.width * 0.65);
+  add({
+    ...base("image", 80, 90, w, (w * p.h) / p.w),
+    name, src: p.src,
+    cell: 1, levels: 256, sampling: "pixelated", mono: false,
+  });
+  setTool("select");
+  message(p.type + "を取り込みました");
 }
 function imageBase64(text, maxBytes = 32 * 1024 * 1024) {
   let value = text.replace(/^\uFEFF/, "").trim();
@@ -2525,22 +2419,15 @@ function imageBase64(text, maxBytes = 32 * 1024 * 1024) {
   const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
   if (btoa(binary) !== compact)
     throw new Error("Base64のパディングまたは容量が不正です");
-  const actual = sniffImageMime(bytes);
+  const actual = C.imageType(bytes);
   if (!actual || (mime && mime !== actual))
     throw new Error("画像形式またはMIME宣言が実データと一致しません");
   return { bytes, mime: actual };
 }
 async function importImageFile(file) {
-  if (file.size > 32 * 1024 * 1024) throw new Error("画像は32MiB以下にしてください");
-  await importImageBytes(new Uint8Array(await file.arrayBuffer()), file.type || null, file.name);
+  await importImageBytes(new Uint8Array(await file.arrayBuffer()), file.type || null, file.name || "取り込み画像");
 }
-async function importPickedFile(input) {
-  const file = input.files?.[0];
-  if (!file) return;
-  try { await importImageFile(file); }
-  finally { input.value = ""; }
-}
-if (!document.body.dataset.page.split(" ").includes("slides")) {
+{
   const board = $("board");
   board.addEventListener("dragover", event => {
     if (event.dataTransfer?.types.includes("Files")) event.preventDefault();
@@ -2553,12 +2440,10 @@ if (!document.body.dataset.page.split(" ").includes("slides")) {
     await importImageFile(files[0]);
   }));
 }
-$("image").onchange = guarded(() => importPickedFile($("image")));
-$("camera-image").onchange = guarded(() => importPickedFile($("camera-image")));
-$("import-base64-button").onclick = guarded(async () => {
-  const { bytes, mime } = imageBase64($("import-base64").value);
-  await importImageBytes(bytes, mime, "Base64画像");
-});
+// 📥 画像 カメラ JSON 作業履歴: PySaiyanWeBoo's toolbar holds the choosers and runs the act with the chosen File; a File / Blob
+// given to IronmateStudio.act is opened the same way, and the act alone opens the chooser.
+for (const [act, open] of [["image", importImageFile], ["camera", importImageFile], ["open-json", openScene], ["open-workspace", openWorkspace]])
+  STUDIO_ACTS[act] = guarded(async (file) => (file instanceof Blob ? open(file) : toolbar.choose(act)));
 function clipboardError(code, message, cause) {
   return Object.assign(new Error(message), { code, cause });
 }
@@ -2570,7 +2455,7 @@ function clipboardImageText(text) {
   const rawImage = hasRawImageSignature(value);
   try {
     const payload = imageBase64(value);
-    if (sniffImageMime(payload.bytes)) return payload;
+    if (C.imageType(payload.bytes)) return payload;
     if (explicit) throw new Error("PNG・JPEG・WebP画像ではありません");
   } catch (e) {
     if (explicit || rawImage)
@@ -2578,7 +2463,8 @@ function clipboardImageText(text) {
   }
   return null; // Ordinary text, even if it happens to be valid Base64.
 }
-$("paste-image").onclick = guarded(async () => {
+STUDIO_ACTS.clipboard = guarded(async () => {
+  // 📥 クリップボード: an image, or image text (Base64 / data URI), from the clipboard
   const clipboard = navigator.clipboard;
   if (!clipboard || (typeof clipboard.readText !== "function" && typeof clipboard.read !== "function"))
     throw clipboardError("clipboard-unsupported", "このブラウザにはクリップボード読取APIがありません。ファイル選択またはBase64入力を利用してください");
@@ -2669,7 +2555,7 @@ function hasRawImageSignature(text) {
     if (prefix.length === 16) break;
   }
   if (prefix.startsWith("iVBORw0KGg") || prefix.startsWith("/9j/")) return true;
-  try { return !!sniffImageMime(Uint8Array.from(atob(prefix), c => c.charCodeAt(0))); }
+  try { return !!C.imageType(Uint8Array.from(atob(prefix), c => c.charCodeAt(0))); }
   catch { return false; }
 }
 function isImageText(text) {
@@ -2714,15 +2600,10 @@ async function shelfCopyText(item) {
 function releaseShelfItem(item) {
   if (item.dataUrl) URL.revokeObjectURL(item.dataUrl);
 }
-function updateShelfBadge() {
-  if ($("shelf-button")) $("shelf-button").textContent = `クリップボード・シェルフ (${shelfItems.length})`;
-}
 function renderShelf() {
   $("shelf-copy-text").hidden = true;
   $("shelf-copy-text").value = "";
-  updateShelfBadge();
   const container = $("shelf-items-container");
-  if (!container) return;
   container.replaceChildren();
   if (!shelfItems.length) {
     const empty = document.createElement("p");
@@ -2798,7 +2679,7 @@ function addShelfItem(bytes, mime, rawText, label = "シェルフ項目") {
   const size = bytes ? bytes.length : shelfTextSize(rawText || "");
   checkShelfCapacity(size);
   if (bytes) {
-    const actual = bytes instanceof Uint8Array && sniffImageMime(bytes);
+    const actual = bytes instanceof Uint8Array && C.imageType(bytes);
     if (!actual || (mime && mime.toLowerCase() !== actual))
       throw new Error("画像形式またはMIME宣言が実データと一致しません");
     mime = actual;
@@ -2824,70 +2705,63 @@ function addShelfItem(bytes, mime, rawText, label = "シェルフ項目") {
   });
   renderShelf();
 }
-if ($("shelf-button")) {
-  $("shelf-button").onclick = () => {
-    renderShelf();
-    $("shelf-dialog").showModal();
-  };
-}
-if ($("shelf-clear")) {
-  $("shelf-clear").onclick = () => {
-    shelfGeneration++;
-    shelfItems.forEach(releaseShelfItem);
-    shelfItems.length = 0;
-    renderShelf();
-    if ($("shelf-status")) $("shelf-status").textContent = "シェルフをクリアしました";
-  };
-}
-if ($("shelf-paste-clip")) {
-  $("shelf-paste-clip").onclick = guarded(async () => {
-    if (!navigator.clipboard) throw new Error("Clipboard APIが使用できません");
-    const generation = shelfGeneration;
-    checkShelfCapacity(0);
-    let text = "";
-    if (navigator.clipboard.readText) {
-      // A denied text permission may still allow a binary clipboard image.
-      try { text = await navigator.clipboard.readText(); } catch { /* try binary API */ }
-      checkShelfGeneration(generation);
-      if (text.trim() && isImageText(text.trim())) {
-        addShelfText(text, "クリップボードBase64");
-        if ($("shelf-status")) $("shelf-status").textContent = "クリップボードのBase64画像を追加しました";
+STUDIO_ACTS.shelf = () => {
+  renderShelf();
+  $("shelf-dialog").showModal();
+};
+$("shelf-clear").onclick = () => {
+  shelfGeneration++;
+  shelfItems.forEach(releaseShelfItem);
+  shelfItems.length = 0;
+  renderShelf();
+  $("shelf-status").textContent = "シェルフをクリアしました";
+};
+$("shelf-paste-clip").onclick = guarded(async () => {
+  if (!navigator.clipboard) throw new Error("Clipboard APIが使用できません");
+  const generation = shelfGeneration;
+  checkShelfCapacity(0);
+  let text = "";
+  if (navigator.clipboard.readText) {
+    // A denied text permission may still allow a binary clipboard image.
+    try { text = await navigator.clipboard.readText(); } catch { /* try binary API */ }
+    checkShelfGeneration(generation);
+    if (text.trim() && isImageText(text.trim())) {
+      addShelfText(text, "クリップボードBase64");
+      $("shelf-status").textContent = "クリップボードのBase64画像を追加しました";
+      return;
+    }
+  }
+  if (navigator.clipboard.read) {
+    let items = [];
+    try { items = await navigator.clipboard.read(); }
+    catch (e) { if (!text.trim()) throw e; }
+    checkShelfGeneration(generation);
+    for (const item of items) {
+      const type = item.types.find(t => ["image/png", "image/jpeg", "image/webp"].includes(t));
+      if (type) {
+        const blob = await item.getType(type);
+        await addShelfBlob(blob, type, generation);
+        $("shelf-status").textContent = "クリップボードの画像を追加しました";
         return;
       }
+      if (item.types.some(t => t.startsWith("image/")))
+        throw new Error("対応していない画像MIMEです");
     }
-    if (navigator.clipboard.read) {
-      let items = [];
-      try { items = await navigator.clipboard.read(); }
-      catch (e) { if (!text.trim()) throw e; }
-      checkShelfGeneration(generation);
-      for (const item of items) {
-        const type = item.types.find(t => ["image/png", "image/jpeg", "image/webp"].includes(t));
-        if (type) {
-          const blob = await item.getType(type);
-          await addShelfBlob(blob, type, generation);
-          if ($("shelf-status")) $("shelf-status").textContent = "クリップボードの画像を追加しました";
-          return;
-        }
-        if (item.types.some(t => t.startsWith("image/")))
-          throw new Error("対応していない画像MIMEです");
-      }
-    }
-    if (text.trim()) {
-      addShelfText(text, "クリップボードテキスト");
-      if ($("shelf-status")) $("shelf-status").textContent = "テキスト項目を追加しました";
-    } else {
-      throw new Error("クリップボードに画像またはテキストがありません");
-    }
-  });
-}
-if ($("shelf-add-text")) {
-  $("shelf-add-text").onclick = guarded(async () => {
-    const val = $("shelf-input-text").value;
-    addShelfText(val, "入力項目");
-    if ($("shelf-status")) $("shelf-status").textContent = "項目を追加しました";
-    $("shelf-input-text").value = "";
-  });
-}
+  }
+  if (text.trim()) {
+    addShelfText(text, "クリップボードテキスト");
+    $("shelf-status").textContent = "テキスト項目を追加しました";
+  } else {
+    throw new Error("クリップボードに画像またはテキストがありません");
+  }
+});
+
+$("shelf-add-text").onclick = guarded(async () => {
+  const val = $("shelf-input-text").value;
+  addShelfText(val, "入力項目");
+  $("shelf-status").textContent = "項目を追加しました";
+  $("shelf-input-text").value = "";
+});
 
 // Read-only snapshots and export entry point also make browser regression tests observable.
 window.IronmateStudio = {
@@ -2899,6 +2773,8 @@ window.IronmateStudio = {
   },
   pngBlob,
   importImageFile,
+  // 🧰 what a toolbar press runs, awaitable from Node or a host: act("clipboard"), act("png"), act("image", file) (a File or Blob)
+  act: (name, value) => STUDIO_ACTS[name]?.(value),
   get selectedId() { return selected; },
   async replaceScene(value) {
     const next = C.validate(value);
@@ -3263,9 +3139,7 @@ if (typeof document !== "undefined" && (document.getElementById("pixel-editor") 
         const thumbnails = [];
         for (const file of files) {
           signal.throwIfAborted();
-          if (!["image/png", "image/jpeg", "image/webp"].includes(file.type))
-            throw Error("PNG / JPEG / WebPを選んでください。");
-          const {src, canvas} = await picture(file, 512, false, signal);
+          const {src, canvas} = await picture(file, 512, signal); // checks the type from the bytes
           thumbnails.push({name: file.name, src, canvas});
         }
         return thumbnails;
@@ -3340,7 +3214,7 @@ if (typeof document !== "undefined" && (document.getElementById("pixel-editor") 
   });
 })();
 
-/* ⬇️ pysaiyanweboo 8046218b (stage, pager, labels-switch): written by scripts/build_studio_css.py from the pinned commit; --check fails when it drifts */
+/* ⬇️ pysaiyanweboo e4bb709a (stage, pager, labels-switch, toolbar): written by scripts/build_studio_css.py from the pinned commit; --check fails when it drifts */
 (() => {
 /* A rotary dial over a range input (dial_html): drag around its centre, turn the wheel, or use the range's own keys. Value and events stay the input's. */
 function dialAngle(value,min,max){const span=max-min;const t=span>0?(Number(value)-min)/span:0;return -135+270*Math.min(1,Math.max(0,t))}
@@ -3400,17 +3274,19 @@ function bindToggles(root=document){return[...root.querySelectorAll("[data-ui-to
 function bindTheme(root=document,{key="web-ui-theme"}={}){const body=document.body,controls=[...root.querySelectorAll("[data-ui-theme-switch],input[name=ui-theme]")];const known=name=>controls.some(c=>c.tagName==="SELECT"?[...c.options].some(o=>o.value===name):c.value===name);if(body.dataset.uiThemePage===undefined)body.dataset.uiThemePage=body.dataset.uiTheme||"";const sync=()=>{const chosen=body.dataset.uiThemeChosen;for(const c of controls){if(c.tagName==="SELECT")c.value=chosen===undefined&&[...c.options].some(o=>o.value==="")?"":body.dataset.uiTheme;else c.checked=c.value===body.dataset.uiTheme}};const choose=name=>{if(name){body.dataset.uiThemeChosen=name;body.dataset.uiTheme=name}else{delete body.dataset.uiThemeChosen;body.dataset.uiTheme=body.dataset.uiThemePage}};let saved=null;try{saved=localStorage.getItem(key)}catch{}if(saved&&known(saved))choose(saved);sync();for(const c of controls)c.addEventListener("change",()=>{if(!known(c.value))return;choose(c.value);sync();try{if(c.value)localStorage.setItem(key,c.value);else localStorage.removeItem(key)}catch{}});return body.dataset.uiTheme}
 /** Switch data-ui-labels on <body> with no reload: "emoji" (the default: icon faces) or "words" (as on a PC: every [data-ui-word] shows its short word instead of its face; CSS in components.css). Buttons with data-ui-labels-switch flip it (aria-pressed is true while words show), and so does a header row whose key is "labels" (the ui-chrome-action event). A flip is remembered (localStorage, best effort). Returns the labels in effect. */
 function bindLabels(root=document,{key="web-ui-labels"}={}){const body=document.body,buttons=[...root.querySelectorAll("[data-ui-labels-switch]")];const show=v=>{body.dataset.uiLabels=v==="words"?"words":"emoji";for(const b of buttons)b.setAttribute("aria-pressed",String(body.dataset.uiLabels==="words"));return body.dataset.uiLabels};let saved=null;try{saved=localStorage.getItem(key)}catch{}show(saved||body.dataset.uiLabels);const flip=()=>{const v=show(body.dataset.uiLabels==="words"?"emoji":"words");try{localStorage.setItem(key,v)}catch{}};for(const b of buttons)b.addEventListener("click",flip);document.addEventListener("ui-chrome-action",e=>{if(e.detail&&e.detail.key==="labels")flip()});return body.dataset.uiLabels}
+/** A toolbar from toolbar_html(): a click on a [data-act] control calls run(act), a button with candidates too (a mode such as 🔷 on a canvas becomes the tool as its row opens; a page with nothing to do for it ignores the name). A button with data-candidates opens its candidates in the toolbar's one candidate row ([data-ui-candidates]), right under its own row; pressing it again closes them. A candidate calls run(its data-acts entry) or, when it names no action, run(the button's act, the candidate's face), and data-close hides the row after the pick. Each candidate's words (data-words, "|"-separated) are its title, aria-label and, up to "（", its data-ui-word. Pressing a control keeps the focus where it was, so a text being typed stays open. A candidate whose act has a chooser ([data-ui-file], from a candidate with accept) opens it instead, and the chosen File runs run(act, file). Returns {offer(button), close(), choose(act)}: choose opens an act's chooser from the page (a host's key). */
+function bindToolbar(root,run){const row=root.querySelector("[data-ui-candidates]"),files={};for(const f of root.querySelectorAll("[data-ui-file]")){files[f.dataset.uiFile]=f;f.addEventListener("change",()=>{const x=f.files&&f.files[0];f.value="";if(x)run(f.dataset.uiFile,x)})}const close=()=>{if(!row)return;row.hidden=true;row.dataset.tool="";row.replaceChildren()};const offer=b=>{if(!row)return;if(row.dataset.tool===b.dataset.act&&!row.hidden)return close();const faces=b.dataset.candidates.split(" "),acts=(b.dataset.acts||"").split(" "),words=(b.dataset.words||"").split("|");row.dataset.tool=b.dataset.act;b.closest(".ui-toolbar-row").after(row);row.hidden=false;row.replaceChildren(...faces.map((face,i)=>{const c=document.createElement("button");c.type="button";c.textContent=face;const said=words[i]||face;c.title=said;c.setAttribute("aria-label",said);if(words[i])c.dataset.uiWord=said.split("（")[0];c.addEventListener("click",()=>{if(files[acts[i]])files[acts[i]].click();else if(acts[i])run(acts[i]);else run(b.dataset.act,face);if("close"in b.dataset)close()});return c}))};root.addEventListener("pointerdown",e=>{if(e.target.closest("button,a"))e.preventDefault()});root.addEventListener("click",e=>{const b=e.target.closest("[data-act]");if(!b||!root.contains(b)||b.disabled)return;if(b.dataset.candidates)offer(b);run(b.dataset.act)});return{offer,close,choose:a=>files[a]&&files[a].click()}}
 /** Tell bindTheme which theme is the page's own (a page whose own look changes, such as display modes): it shows unless the visitor chose one. Returns the theme in effect. */
 function pageTheme(name){const body=document.body;body.dataset.uiThemePage=name;if(body.dataset.uiThemeChosen===undefined)body.dataset.uiTheme=name;return body.dataset.uiTheme}
 /** Mark on-screen elements with data-lit (IntersectionObserver); CSS decides what lit looks like. Without IntersectionObserver every element counts as lit. Returns a stop function. */
 function observeLit(targets,{threshold=0.4,root=null}={}){const nodes=typeof targets==="string"?[...document.querySelectorAll(targets)]:[...targets];if(typeof IntersectionObserver==="undefined"){for(const n of nodes)n.dataset.lit="";return()=>{}}const io=new IntersectionObserver(entries=>{for(const e of entries){if(e.isIntersecting)e.target.dataset.lit="";else delete e.target.dataset.lit}},{threshold,root});for(const n of nodes)io.observe(n);return()=>io.disconnect()}
 /** Click-to-enlarge for <a href="full.png"><img alt="..."></a> items inside [data-ui-lightbox]: one <dialog>; Esc, the backdrop and the close button shut it, arrows, buttons and a 48px swipe step through. Returns {open, close, dialog}, or null without items or <dialog>. */
 function bindLightbox(root=document){const items=[...root.querySelectorAll("[data-ui-lightbox] a[href]")];if(!items.length||typeof HTMLDialogElement==="undefined")return null;const dialog=document.createElement("dialog");dialog.className="ui-lightbox";dialog.setAttribute("aria-label","Image viewer");dialog.innerHTML='<img alt=""><p class="ui-muted"></p><div class="ui-lightbox-bar"><button class="ui-button" type="button" data-step="-1" aria-label="Previous">\u2190</button><button class="ui-button" type="button" data-step="1" aria-label="Next">\u2192</button><button class="ui-button" type="button" data-step="0" aria-label="Close">\u00d7</button></div>';const img=dialog.querySelector("img"),note=dialog.querySelector("p");let at=0,x=null;const show=i=>{at=(i+items.length)%items.length;const a=items[at],t=a.querySelector("img");img.src=a.href;img.alt=note.textContent=t?t.alt:""};const open=i=>{show(i);if(!dialog.open)dialog.showModal()};items.forEach((a,i)=>a.addEventListener("click",e=>{e.preventDefault();open(i)}));dialog.addEventListener("click",e=>{const b=e.target.closest("[data-step]");if(b){const s=Number(b.dataset.step);if(s)show(at+s);else dialog.close()}else if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)dialog.close()}});dialog.addEventListener("keydown",e=>{if(e.key==="ArrowLeft")show(at-1);if(e.key==="ArrowRight")show(at+1)});dialog.addEventListener("pointerdown",e=>{x=e.clientX});dialog.addEventListener("pointerup",e=>{if(x!==null&&Math.abs(e.clientX-x)>=48)show(at+(e.clientX<x?1:-1));x=null});document.body.append(dialog);return{open,close:()=>dialog.close(),dialog}}
-globalThis.PySaiyanWeBoo = { pagerSet, pagerIndex, bindLabels };
+globalThis.PySaiyanWeBoo = { pagerSet, pagerIndex, bindLabels, bindToolbar };
 })();
 /* ⬆️ pysaiyanweboo */
 /* Phone slides UI (data-page~="phone"): browser only. The slide stays pinned on top (PySaiyanWeBoo's 🖼️ stage), every control is
-   an emoji (its words are in aria-label/title), PySaiyanWeBoo's 🧭 pager turns pages (🧭 switches its shape), and the deck is the same
+   an emoji (its words are in aria-label/title), PySaiyanWeBoo's pager (⬅️ 1/N ➡️) turns pages, and the deck is the same
    JSON / PPTX as Slide Studio. */
 if (typeof document !== "undefined" && document.body && (document.body.dataset.page || "").split(" ").includes("phone")) (function () {
 "use strict";
@@ -3419,8 +3295,7 @@ const C = window.StudioCore,
   $ = (id) => document.getElementById(id),
   stage = $("phone-stage"),
   edit = $("phone-edit"),
-  pages = $("phone-pager"), // 🧭 PySaiyanWeBoo's pager: every shape is in the markup, data-ui-pager picks one
-  shapes = [...new Set([...pages.children].flatMap((c) => c.dataset.uiPagerIn.split(" ")))],
+  pages = $("phone-pager"), // PySaiyanWeBoo's pager, as ⬅️ 1/N ➡️ (🗂️ shows every page)
   STORE = "ironmate-phone-deck",
   textSize = Number(document.body.dataset.textSize),
   scales = document.body.dataset.textScale.split(" ").map(Number),
@@ -3566,7 +3441,6 @@ function pageList() {
   if (row.dataset.key === String(key)) return;
   row.dataset.key = key;
   row.hidden = !pagesOpen;
-  row.classList.toggle("phone-row", pagesOpen);
   row.replaceChildren(...(pagesOpen ? deck.slides : []).map((s, i) => {
     const b = document.createElement("button");
     b.type = "button";
@@ -3676,7 +3550,6 @@ function layerList(s) {
   if (row.dataset.key === key) return;
   row.dataset.key = key;
   row.hidden = s.layers.length < 2;
-  row.classList.toggle("phone-row", !row.hidden);
   row.replaceChildren(...(row.hidden ? [] : s.layers).map((l, i) => {
     const b = document.createElement("button");
     b.type = "button";
@@ -3758,7 +3631,7 @@ function hit(p) {
   return null;
 }
 stage.addEventListener("pointerdown", (e) => {
-  if (e.target === edit) return;
+  if (drag || !e.isPrimary || e.button !== 0 || e.target === edit) return;
   const p = point(e),
     grip = !!e.target.closest("[data-grip]"),
     l = grip ? picked() : hit(p),
@@ -3767,15 +3640,16 @@ stage.addEventListener("pointerdown", (e) => {
   finishEdit();
   selected = l ? l.id : null;
   if (l) {
-    drag = { id: l.id, grip, again, before, start: p, x: l.x, y: l.y, w: l.w, h: l.h, moved: false };
+    drag = { pointerId: e.pointerId, id: l.id, grip, again, before, start: p, x: l.x, y: l.y, w: l.w, h: l.h, moved: false };
     stage.setPointerCapture(e.pointerId);
     e.preventDefault();
   }
   render();
 });
 stage.addEventListener("pointermove", (e) => {
-  const l = drag && picked();
-  if (!l) return;
+  if (drag?.pointerId !== e.pointerId) return;
+  const l = picked();
+  if (l?.id !== drag.id) return;
   const p = point(e),
     dx = p.x - drag.start.x,
     dy = p.y - drag.start.y;
@@ -3791,16 +3665,17 @@ stage.addEventListener("pointermove", (e) => {
   }
   later();
 });
-stage.addEventListener("pointerup", () => {
-  if (!drag) return;
+stage.addEventListener("pointerup", (e) => {
+  if (drag?.pointerId !== e.pointerId) return;
   const d = drag;
   drag = null;
   if (d.moved) record(d.before);
   else if (d.again && ["text", "clock"].includes(picked()?.kind)) startEdit();
   render();
 });
-stage.addEventListener("pointercancel", () => {
-  if (drag?.moved) record(drag.before);
+stage.addEventListener("pointercancel", (e) => {
+  if (drag?.pointerId !== e.pointerId) return;
+  if (drag.moved) record(drag.before);
   drag = null;
 });
 
@@ -3830,34 +3705,6 @@ function stamp(text) {
     l.y = (s.height - l.h) / 2;
     return l;
   });
-}
-function offer(tool) {
-  // 候補の列は 1 つ。同じ道具をもう一度押すと閉じる（閉じた列は場所を取らない: .phone-row は開いている間だけ）
-  const row = $("phone-candidates"),
-    again = row.dataset.tool === tool && !row.hidden;
-  row.dataset.tool = again ? "" : tool;
-  row.hidden = again;
-  row.classList.toggle("phone-row", !again);
-  const button = document.querySelector(`[data-act="${tool}"]`),
-    { candidates, acts: named = "", words = "" } = button.dataset,
-    actions = named.split(" "),
-    said = words.split("|");
-  if (!again) button.closest(".phone-row").after(row); // 候補は押したボタンの列のすぐ下に開く
-  row.replaceChildren(...(again ? [] : candidates.split(" ")).map((value, i) => {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.textContent = value;
-    b.setAttribute("aria-label", said[i] || value);
-    b.title = said[i] || value;
-    if (said[i]) b.dataset.uiWord = said[i].split("（")[0]; // 💻 文字の表示では短い言葉（😊 (^^) は文字そのものなので顔のまま）
-    b.addEventListener("pointerdown", (e) => e.preventDefault());
-    b.addEventListener("click", () => {
-      finishEdit();
-      run(() => (actions[i] ? acts[actions[i]]() : record(stamp(value)))); // 🔷 💾 name an action (data-acts); 😊 (^^) stamp the text
-      if (button.dataset.close !== undefined) offer(tool); // 📥 📤 選んだら候補は隠れる
-    });
-    return b;
-  }));
 }
 const COLORS = ["#000000", "#18A7A1", "#D7263D", "#1B6EF3", "#F5B700", "#FFFFFF"], // 🎨 🖌 黒・青緑・赤・青・黄・白
   nextColor = (c) => COLORS[(COLORS.indexOf(String(c).toUpperCase()) + 1) % COLORS.length];
@@ -3904,9 +3751,6 @@ const acts = {
   arrow: () => record(place((s) => ({ id: uid("arrow"), kind: "arrow", name: "arrow", x: s.width * 0.25, y: s.height * 0.45,
     w: s.width * 0.5, h: s.height * 0.1, rotation: 0, opacity: 1, fill: "#000000", stroke: "#000000", strokeWidth: 4,
     headSize: 28, headPlacement: "tip", headStyle: "triangle" }))),
-  shape: () => offer("shape"),
-  emoji: () => offer("emoji"),
-  kaomoji: () => offer("kaomoji"),
   clock() {
     const now = new Date();
     record(place((s) => ({ id: uid("clock"), kind: "clock", name: "clock", x: s.width * 0.5 - s.height * 0.15, y: s.height * 0.35,
@@ -3914,8 +3758,6 @@ const acts = {
       fill: "#FFFFFF", stroke: "#183C42", strokeWidth: 4 })));
   },
   edit: () => startEdit(),
-  look: () => offer("look"), // 🎨 ↻ 候補から（選んだものに効かない候補は何もしない）
-  turn: () => offer("turn"),
   fill: () => restyle((l) => {
     l.fill = nextColor(l.fill);
     if (l.kind === "arrow") l.stroke = l.fill;
@@ -3994,17 +3836,9 @@ const acts = {
     textFactor = 1;
     selected = null;
   }),
-  pager() {
-    // 🧭 the next shape of the pager (⬅️➡️ → ● → 🎚️ → 🎛️ → ✚ → ⏮️⏭️); a view setting, so not in ↩️ and not in the deck
-    pages.dataset.uiPager = shapes[(shapes.indexOf(pages.dataset.uiPager) + 1) % shapes.length];
-    try {
-      localStorage.setItem(STORE + ":pager", pages.dataset.uiPager);
-    } catch {}
-  },
-  import: () => offer("import"), // 📥 どの形式から？ 📤 どの形式に？ 候補から選ぶと列は隠れる
-  export: () => offer("export"),
-  open: () => document.querySelector('input[data-file="open"]').click(),
-  image: () => document.querySelector('input[data-file="image"]').click(),
+  open: () => toolbar.choose("open"), // 📥 a host or IronmatePhone.act without a file: the toolbar's chooser
+  image: () => toolbar.choose("image"),
+  camera: () => toolbar.choose("camera"),
   json: () => C.save("ironmate-slides.json", D.deckText(deck), "application/json"),
   async svg() {
     const s = slide();
@@ -4028,18 +3862,19 @@ const acts = {
   },
 };
 const files = {
-  async image(file) {
-    const p = await C.picture(file, 1920, true), // 🖼️ 写真は 4MP・長辺 1920 まで縮めて PNG に
-      before = place((s) => {
-        const k = Math.min((s.width * 0.6) / p.w, (s.height * 0.6) / p.h);
-        return { id: uid("image"), kind: "image", name: "image", x: (s.width - p.w * k) / 2, y: (s.height - p.h * k) / 2,
-          w: p.w * k, h: p.h * k, rotation: 0, opacity: 1, src: p.src, cell: 1, levels: 256, sampling: "smooth" };
-      });
+  async image(file, destination = slide()) {
+    const p = await C.picture(file, 1920); // 🖼️ 写真は 4MP・長辺 1920 まで縮めて PNG に（画像工房と同じ取り込み）
+    if (slide() !== destination) throw Error("スライドが切り替わりました。追加したいページで画像を選び直してください。");
+    const before = place((s) => {
+      const k = Math.min((s.width * 0.6) / p.w, (s.height * 0.6) / p.h);
+      return { id: uid("image"), kind: "image", name: "image", x: (s.width - p.w * k) / 2, y: (s.height - p.h * k) / 2,
+        w: p.w * k, h: p.h * k, rotation: 0, opacity: 1, src: p.src, cell: 1, levels: 256, sampling: "smooth" };
+    });
     record(before);
   },
   async open(file) {
-    const before = state(),
-      next = D.parse(await file.text()); // Slide Studio の「全スライドJSON」もそのまま開ける
+    const next = D.parse(await file.text()); // Slide Studio の「全スライドJSON」もそのまま開ける
+    const before = state();
     deck = next;
     active = 0;
     level = plain;
@@ -4050,33 +3885,29 @@ const files = {
 };
 let busy = false;
 async function run(fn) {
-  if (busy) return;
+  if (busy) return false;
   busy = true;
   try {
     await fn();
     if (!/^📤/.test(status)) note("");
+    return true;
   } catch (e) {
     note(e.message, true);
+    return false;
   } finally {
     busy = false;
     render();
   }
 }
-for (const b of document.querySelectorAll("button[data-act]"))
-  b.addEventListener("pointerdown", (e) => e.preventDefault()); // 編集中に押しても入力欄が先に閉じない（閉じて並びがずれ、押し外さない）
-for (const b of document.querySelectorAll("button[data-act]"))
-  b.addEventListener("click", () => {
-    const act = acts[b.dataset.act];
-    if (b.dataset.act !== "edit") finishEdit();
-    run(act);
-  });
-for (const input of document.querySelectorAll("input[data-file]"))
-  input.addEventListener("change", () => {
-    const file = input.files[0];
-    input.value = "";
-    finishEdit();
-    if (file) run(() => files[input.dataset.file](file));
-  });
+function press(name, value) {
+  // 🧰 the one way in: a toolbar press (PySaiyanWeBoo's bindToolbar; 🔷 🎨 ↻ 📥 📤 open their candidates themselves), a picked
+  // 😊 (^^) (its face), a file 📥's chooser (the toolbar's) chose (its File: 画像 カメラ JSON) and IronmatePhone.act — the same act
+  if (name !== "edit") finishEdit();
+  if (value instanceof Blob) return run(() => files[name === "camera" ? "image" : name](value)); // 📷 a photo is an image
+  if (value !== undefined) return run(() => record(stamp(value)));
+  if (acts[name]) return run(acts[name]);
+}
+const toolbar = PySaiyanWeBoo.bindToolbar($("phone-toolbar"), press);
 document.addEventListener("keydown", (e) => {
   if (editing || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return; // ← → Home End: the pager's own keys
   if ((e.key === "Delete" || e.key === "Backspace") && selected) run(acts.delete);
@@ -4088,10 +3919,6 @@ try {
 } catch {
   deck = { schema: D.SCHEMA, title: "Ironmate", slides: [blank()] };
 }
-try {
-  const shape = localStorage.getItem(STORE + ":pager"); // 🧭 the shape picked last time
-  if (shapes.includes(shape)) pages.dataset.uiPager = shape;
-} catch {}
 // The same-origin editor opens this tab from its shelf. Keep the original scene editable.
 if (location.hash === "#from-image-studio") {
   const source = window.opener;
@@ -4100,7 +3927,8 @@ if (location.hash === "#from-image-studio") {
   run(async () => {
     if (!source || source.closed || source.location.origin !== location.origin || !source.IronmateStudio)
       throw Error("画像工房のシェルフから開き直してください。");
-    await files.image(await source.IronmateStudio.pngBlob(1));
+    const destination = slide();
+    await files.image(await source.IronmateStudio.pngBlob(1), destination);
   });
 }
 stage.style.setProperty("--k", stage.clientWidth / slide().width);
@@ -4119,41 +3947,18 @@ window.IronmatePhone = {
   get level() {
     return level;
   },
-  get pager() {
-    return pages.dataset.uiPager;
-  },
+  // 🧰 what a toolbar press runs, awaitable from Node or a host: act("undo"), act("emoji", "🌱"), act("image", file) (a File or Blob)
+  act: (name, value) => press(name, value),
 };
 })();
 """
 
 
-# 📱 Phone slides (slides/phone/): the slide stays pinned on top and every control is an emoji; the words live in
-# aria-label / title only. Each row is (data-act, emoji, words); the browser script binds data-act by name.
-# 🧰 (group, controls): each control is (act, emoji face, short word, words). The face shows by default; 💻 swaps every face
-# for its short word, as on a PC (PySaiyanWeBoo's bindLabels), and 📱 swaps back. Groups (make / adjust / change / pages / file,
-# CRUD-like) are rows with a light dashed line between them.
-PHONE_TOOLS = (
-    ("create", (("text", "🔤", "文字", "テキストボックスを追加"), ("shape", "🔷", "図形", "図形（四角・丸・三角・矢印）を候補から追加"),
-                ("emoji", "😊", "絵文字", "絵文字を候補から追加"), ("kaomoji", "(^^)", "顔文字", "顔文字を候補から追加"),
-                ("clock", "🕒", "時計", "いまの時刻の時計を追加"))),
-    ("adjust", (("smaller", "🔽", "小さく", "文字をすべて小さく"), ("reset", "🔄", "元の大きさ", "文字をすべて元の大きさに"),
-                ("bigger", "🔼", "大きく", "文字をすべて大きく"), ("undo", "↩️", "戻す", "戻す"), ("redo", "↪️", "やり直す", "やり直す"))),
-    ("update", (("edit", "✏️", "編集", "選んだ文字・時計を編集（選んだものをもう一度タップしても編集。時計は 14:30 のように）"),
-                ("look", "🎨", "見た目", "選んだものの見た目（塗り・線の色・不透明度・太字・等幅）"), ("turn", "↻", "回転", "選んだものを回す"),
-                ("front", "⏫", "手前へ", "選んだものをいちばん手前へ"), ("back", "⏬", "奥へ", "選んだものをいちばん奥へ"),
-                ("delete", "🗑️", "削除", "選んだものを削除"))),
-    ("pages", (("slide-add", "➕📄", "ページ追加", "白紙のページを追加"), ("slide-copy", "📑", "複製", "ページを複製"),
-               ("slide-delete", "✖️📄", "ページ削除", "ページを削除"), ("pages", "🗂️", "一覧", "ページの一覧（タップでそのページへ）"),
-               ("pager", "🧭", "ページ送り", "ページ移動の形を切り替え（矢印・十字キー・端まで・点・スライダー・ダイヤル）"))),
-    ("file", (("new", "🆕", "新規", "最初から（白紙 1 枚）"), ("import", "📥", "インポート", "インポート（どの形式から？ 候補から選ぶ）"),
-              ("export", "📤", "エクスポート", "エクスポート（どの形式に？ 候補から選ぶ）"), ("home", "🏠", "Image Studio", "Image Studio"))),
-    ("detail", (("inspect", "🎛️", "詳細", "選んだものの詳細（位置・大きさ・種類別の設定）"), ("grid", "⊞", "4枚表示", "4枚表示（その場で編集）"))),
-)
 # 🔽 🔄 🔼 multiply every text box by the next / plain / previous step; new boxes are 32 px on the 1280×720 slide.
 PHONE_TEXT = {"size": 32, "scale": (0.5, 0.75, 1, 1.25, 1.5, 2, 2.5)}
 # 🖼️ the stage and 🧭 the pager (⬅️ 1/N ➡️ by default; ← → Home End too) are PySaiyanWeBoo's, written below from the pinned commit.
-# ⬇️ pysaiyanweboo: scripts/build_studio_css.py writes PSWB_PHONE from the pinned commit (--check fails when it drifts)
-PSWB_PHONE = {
+# ⬇️ pysaiyanweboo: scripts/build_studio_css.py writes PSWB_PARTS from the pinned commit (--check fails when it drifts)
+PSWB_PARTS = {
     "stage": (
         '<div class="ui-stage" role="region" aria-label="スライド" data-ui-stage="pinned" id="phone-stage">{slide}</div>'),
     "pager": (
@@ -4175,38 +3980,213 @@ PSWB_PHONE = {
         '<button type="button" data-ui-pager-part="last" data-ui-pager-in="ends" data-ui-pager-go="last" aria-label="最後のページ" title="最後のページ" disabled>⏭️</button>'
         '<button type="button" data-ui-pager-part="down" data-ui-pager-in="dpad" data-ui-pager-go="last" aria-label="最後のページ" title="最後のページ" disabled>⬇️</button>'
         '</div>'),
-    "labels": (
-        '<button type="button" class="ui-button" id="labels-switch" data-ui-labels-switch data-ui-word="📱 To iconic" aria-pressed="false" aria-label="💻 To textual ⇄ 📱 To iconic" title="💻 To textual ⇄ 📱 To iconic">💻</button>'),
+    "slides-toolbar": (
+        '<div class="ui-toolbar" id="phone-toolbar" role="toolbar" aria-label="道具">'
+        '<div class="ui-toolbar-row" data-ui-group="create">'
+        '<button type="button" data-act="text" data-ui-word="文字" aria-label="文字を置く" title="文字を置く">🔤</button>'
+        '<button type="button" data-acts="rect ellipse triangle arrow" data-words="四角|丸|三角|矢印" data-candidates="▭ ◯ △ →" data-act="shape" data-ui-word="図形" aria-label="図形（四角・丸・三角・矢印）" title="図形（四角・丸・三角・矢印）">🔷</button>'
+        '<button type="button" data-candidates="❤️ 😊 🌱 📊 ✨ 📌 🔰" data-act="emoji" data-ui-word="絵文字" aria-label="絵文字" title="絵文字">😊</button>'
+        '<button type="button" data-candidates="(・∀・) (｡•̀ᴗ-)✧ ٩(๑❛ᴗ❛๑)۶" data-act="kaomoji" data-ui-word="顔文字" aria-label="顔文字" title="顔文字">(^^)</button>'
+        '<button type="button" data-act="clock" data-ui-word="時計" aria-label="いまの時刻の時計" title="いまの時刻の時計">🕒</button>'
+        '</div>'
+        '<div class="ui-toolbar-row" data-ui-candidates id="phone-candidates" role="group" aria-label="候補" hidden>'
+        '</div>'
+        '<div class="ui-toolbar-row" data-ui-group="adjust">'
+        '<button type="button" data-act="smaller" data-ui-word="小さく" aria-label="文字をすべて小さく" title="文字をすべて小さく">🔽</button>'
+        '<button type="button" data-act="reset" data-ui-word="元の大きさ" aria-label="文字をすべて元の大きさに" title="文字をすべて元の大きさに">🔄</button>'
+        '<button type="button" data-act="bigger" data-ui-word="大きく" aria-label="文字をすべて大きく" title="文字をすべて大きく">🔼</button>'
+        '<button type="button" data-act="undo" data-ui-word="戻す" aria-label="戻す" title="戻す">↩️</button>'
+        '<button type="button" data-act="redo" data-ui-word="やり直す" aria-label="やり直す" title="やり直す">↪️</button>'
+        '</div>'
+        '<div id="phone-layers" class="ui-toolbar-row ui-current-items" role="group" aria-label="レイヤー（奥から手前）" hidden>'
+        '</div>'
+        '<div class="ui-toolbar-row" data-ui-group="update">'
+        '<button type="button" data-act="edit" data-ui-word="編集" aria-label="選んだ文字・時計を編集（選んだものをもう一度タップしても編集。時計は 14:30 のように）" title="選んだ文字・時計を編集（選んだものをもう一度タップしても編集。時計は 14:30 のように）">✏️</button>'
+        '<button type="button" data-acts="fill stroke fade bold font" data-words="塗りを次の色へ|線を次の色へ|不透明度（1 → ¾ → ½ → ¼）|太字|等幅 ⇄ ふつう" data-candidates="🎨 🖌 🌗 🅱️ 🔠" data-act="look" data-ui-word="見た目" aria-label="選んだものの見た目（塗り・線の色・不透明度・太字・等幅）" title="選んだものの見た目（塗り・線の色・不透明度・太字・等幅）">🎨</button>'
+        '<button type="button" data-acts="cw ccw upright" data-words="右へ 15°|左へ 15°|まっすぐに戻す" data-candidates="↻ ↺ ⏹" data-act="turn" data-ui-word="回転" aria-label="選んだものを回す" title="選んだものを回す">↻</button>'
+        '<button type="button" data-act="front" data-ui-word="手前へ" aria-label="選んだものをいちばん手前へ" title="選んだものをいちばん手前へ">⏫</button>'
+        '<button type="button" data-act="back" data-ui-word="奥へ" aria-label="選んだものをいちばん奥へ" title="選んだものをいちばん奥へ">⏬</button>'
+        '<button type="button" data-act="delete" data-ui-word="削除" aria-label="選んだものを削除" title="選んだものを削除">🗑️</button>'
+        '</div>'
+        '<div class="ui-toolbar-row" data-ui-group="pages">'
+        '<button type="button" data-act="slide-add" data-ui-word="ページ追加" aria-label="白紙のページを追加" title="白紙のページを追加">➕📄</button>'
+        '<button type="button" data-act="slide-copy" data-ui-word="ページ複製" aria-label="ページを複製" title="ページを複製">📑</button>'
+        '<button type="button" data-act="slide-delete" data-ui-word="ページ削除" aria-label="ページを削除" title="ページを削除">✖️📄</button>'
+        '<button type="button" data-act="pages" data-ui-word="一覧" aria-label="ページの一覧（タップでそのページへ）" title="ページの一覧（タップでそのページへ）">🗂️</button>'
+        '</div>'
+        '<div id="phone-pages" class="ui-toolbar-row ui-current-items" role="group" aria-label="ページの一覧" hidden>'
+        '</div>'
+        '<div class="ui-toolbar-row" data-ui-group="file">'
+        '<button type="button" data-act="new" data-ui-word="新規" aria-label="最初から（白紙 1 枚）" title="最初から（白紙 1 枚）">🆕</button>'
+        '<button type="button" data-close data-acts="image camera open" data-words="画像（PNG・JPEG・WebP をこのページに）|カメラ（撮った写真をこのページに）|JSON（全スライド）" data-candidates="画像 カメラ JSON" data-act="import" data-ui-word="インポート" aria-label="インポート（どの形式から？ 候補から選ぶ）" title="インポート（どの形式から？ 候補から選ぶ）">📥</button>'
+        '<button type="button" data-close data-acts="pptx json png svg" data-words="PPTX（全スライド、PowerPoint で編集できる）|JSON（全スライド、また開ける）|PNG（このページ）|SVG（このページ）" data-candidates="PPTX JSON PNG SVG" data-act="export" data-ui-word="エクスポート" aria-label="エクスポート（どの形式に？ 候補から選ぶ）" title="エクスポート（どの形式に？ 候補から選ぶ）">📤</button>'
+        '<a class="ui-button" href="../" data-act="image-studio" data-ui-word="画像工房" aria-label="画像工房へ" title="画像工房へ">🖼️</a>'
+        '<button type="button" class="ui-button" id="labels-switch" data-ui-labels-switch data-ui-word="📱 To iconic" aria-pressed="false" aria-label="💻 To textual ⇄ 📱 To iconic" title="💻 To textual ⇄ 📱 To iconic">💻</button>'
+        '</div>'
+        '<div class="ui-toolbar-row" data-ui-group="detail">'
+        '<button type="button" data-act="inspect" data-ui-word="詳細" aria-label="選んだものの詳細（位置・大きさ・種類別の設定）" title="選んだものの詳細（位置・大きさ・種類別の設定）">🎛️</button>'
+        '<button type="button" data-act="grid" data-ui-word="4枚表示" aria-label="4枚表示（その場で編集）" title="4枚表示（その場で編集）">⊞</button>'
+        '</div>'
+        '<fieldset id="phone-inspector" hidden>'
+        '<legend>詳細設定</legend>'
+        '<label>横の位置<input type="number" data-property="x" data-kinds="" min="-8192" max="8192" step="any">'
+        '</label>'
+        '<label>縦の位置<input type="number" data-property="y" data-kinds="" min="-8192" max="8192" step="any">'
+        '</label>'
+        '<label>幅<input type="number" data-property="w" data-kinds="" min="1" max="8192" step="any">'
+        '</label>'
+        '<label>高さ<input type="number" data-property="h" data-kinds="" min="1" max="8192" step="any">'
+        '</label>'
+        '<label>線幅<input type="number" data-property="strokeWidth" data-kinds="rect ellipse triangle arrow clock" min="0" max="64" step="any">'
+        '</label>'
+        '<label>モザイクの幅<input type="number" data-property="cell" data-kinds="image" min="1" max="512" step="1">'
+        '</label>'
+        '<label>色の段階<input type="number" data-property="levels" data-kinds="image" min="2" max="256" step="1">'
+        '</label>'
+        '<label>'
+        '<input type="checkbox" data-property="italic" data-kinds="text">斜体</label>'
+        '<label>矢印の先端<select data-property="headPlacement" data-kinds="arrow">'
+        '<option value="tip">端</option>'
+        '<option value="middle">中央</option>'
+        '</select>'
+        '</label>'
+        '</fieldset>'
+        '<input type="file" hidden data-ui-file="image" accept="image/png,image/jpeg,image/webp" aria-label="画像（PNG・JPEG・WebP をこのページに）" />'
+        '<input type="file" hidden data-ui-file="camera" accept="image/png,image/jpeg,image/webp" capture="environment" aria-label="カメラ（撮った写真をこのページに）" />'
+        '<input type="file" hidden data-ui-file="open" accept=".json,application/json" aria-label="JSON（全スライド）" />'
+        '</div>'),
+    "image-toolbar": (
+        '        <div class="ui-toolbar" id="studio-toolbar" role="toolbar" aria-label="道具">'
+        '<div class="ui-toolbar-row" data-ui-group="create">'
+        '<button type="button" data-act="select" data-ui-word="選択" aria-label="選んで動かす" title="選んで動かす">👆</button>'
+        '<button type="button" data-act="text" data-ui-word="文字" aria-label="文字を置く" title="文字を置く">🔤</button>'
+        '<button type="button" data-acts="rect ellipse triangle arrow" data-words="四角|丸|三角|矢印" data-candidates="▭ ◯ △ →" data-act="shape" data-ui-word="図形" aria-label="図形（四角・丸・三角・矢印）" title="図形（四角・丸・三角・矢印）">🔷</button>'
+        '<button type="button" data-act="stamp" data-ui-word="スタンプ" aria-label="スタンプを押す" title="スタンプを押す">✦</button>'
+        '<button type="button" data-candidates="❤️ 😊 🌱 📊 ✨ 📌 🔰" data-act="emoji" data-ui-word="絵文字" aria-label="絵文字" title="絵文字">😊</button>'
+        '<button type="button" data-candidates="(・∀・) (｡•̀ᴗ-)✧ ٩(๑❛ᴗ❛๑)۶" data-act="kaomoji" data-ui-word="顔文字" aria-label="顔文字" title="顔文字">(^^)</button>'
+        '<button type="button" data-act="clock" data-ui-word="時計" aria-label="いまの時刻の時計" title="いまの時刻の時計">🕒</button>'
+        '</div>'
+        '<div class="ui-toolbar-row" data-ui-candidates id="studio-candidates" role="group" aria-label="候補" hidden>'
+        '</div>'
+        '<div class="ui-toolbar-row" data-ui-group="adjust">'
+        '<button type="button" data-act="undo-2" data-ui-word="2つ戻す" aria-label="2つ戻す" title="2つ戻す">⏪</button>'
+        '<button type="button" data-act="undo" data-ui-word="戻す" aria-label="戻す" title="戻す">↩️</button>'
+        '<button type="button" data-act="redo" data-ui-word="やり直す" aria-label="やり直す" title="やり直す">↪️</button>'
+        '<button type="button" data-act="redo-2" data-ui-word="2つやり直す" aria-label="2つやり直す" title="2つやり直す">⏩</button>'
+        '</div>'
+        '<div class="ui-toolbar-row" data-ui-group="update">'
+        '<button type="button" data-act="duplicate" data-ui-word="複製" aria-label="選んだものを複製" title="選んだものを複製">⧉</button>'
+        '<button type="button" data-act="forward" data-ui-word="前へ" aria-label="選んだものをひとつ手前へ" title="選んだものをひとつ手前へ">⬆️</button>'
+        '<button type="button" data-act="backward" data-ui-word="後ろへ" aria-label="選んだものをひとつ奥へ" title="選んだものをひとつ奥へ">⬇️</button>'
+        '<button type="button" data-act="delete" data-ui-word="削除" aria-label="選んだものを削除" title="選んだものを削除">🗑️</button>'
+        '</div>'
+        '<div class="ui-toolbar-row" data-ui-group="file">'
+        '<button type="button" data-close data-acts="image camera clipboard open-json open-workspace shelf" data-words="画像（PNG・JPEG・WebP をキャンバスに）|カメラ（撮った写真をキャンバスに）|クリップボード（コピーした画像・Base64）|JSON（再編集用のシーン）|作業履歴（最大40状態）|シェルフ（クリップボード・シェルフ）" data-candidates="画像 カメラ クリップボード JSON 作業履歴 シェルフ" data-act="import" data-ui-word="インポート" aria-label="インポート（どの形式から？ 候補から選ぶ）" title="インポート（どの形式から？ 候補から選ぶ）">📥</button>'
+        '<button type="button" data-close data-acts="png svg json workspace base64" data-words="PNG（出力倍率で）|SVG（出力倍率で）|JSON（再編集用）|作業履歴（最大40状態）|Base64（Flutter などへ渡す）" data-candidates="PNG SVG JSON 作業履歴 Base64" data-act="export" data-ui-word="エクスポート" aria-label="エクスポート（どの形式に？ 候補から選ぶ）" title="エクスポート（どの形式に？ 候補から選ぶ）">📤</button>'
+        '<a class="ui-button" href="slides/" data-act="slide-studio" data-ui-word="スライド工房" aria-label="スライド工房へ" title="スライド工房へ">📽️</a>'
+        '<select id="export-scale" title="出力倍率" aria-label="出力倍率">'
+        '<option value="1">1×</option>'
+        '<option value="2">2×</option>'
+        '<option value="4">4×</option>'
+        '<option value="8">8×</option>'
+        '</select>'
+        '<button type="button" class="ui-button" id="labels-switch" data-ui-labels-switch data-ui-word="📱 To iconic" aria-pressed="false" aria-label="💻 To textual ⇄ 📱 To iconic" title="💻 To textual ⇄ 📱 To iconic">💻</button>'
+        '</div>'
+        '<input type="file" hidden data-ui-file="image" accept="image/png,image/jpeg,image/webp" aria-label="画像（PNG・JPEG・WebP をキャンバスに）" />'
+        '<input type="file" hidden data-ui-file="camera" accept="image/png,image/jpeg,image/webp" capture="environment" aria-label="カメラ（撮った写真をキャンバスに）" />'
+        '<input type="file" hidden data-ui-file="open-json" accept=".json" aria-label="JSON（再編集用のシーン）" />'
+        '<input type="file" hidden data-ui-file="open-workspace" accept=".json,application/json" aria-label="作業履歴（最大40状態）" />'
+        '</div>\n'),
 }
 # ⬆️ pysaiyanweboo
 
 
-def _phone_html() -> str:
+def studio_toolbar(page: str) -> tuple[list, dict[str, str], dict[str, str]]:
+    """🧰 Both studios' toolbars as PySaiyanWeBoo's ``toolbar_html`` data, ``(groups, inside, after)``, from one table: an act has one
+    face, one word (💻 To textual) and one tip wherever it is listed, so a face never means two things (⬆️ ⬇️ one step, ⏫ ⏬ all the way;
+    ⧉ a copy of the selected, 📑 of the page). ``page`` is "slides" (the one slide editor) or "image" (Image Studio) and picks the rows:
+    make / adjust / change (/ pages) / file (/ detail). 🔷 😊 (^^) 🎨 ↻ open candidates under their row; 📥 どの形式から？ 📤 どの形式に？
+    name each page's formats in words and hide after a pick (Image Studio's are the keys a host's header sends, ``image_studio.host_rows``).
+    A format read from a file (📥 画像 カメラ JSON, and Image Studio's 作業履歴) has ``accept``: the toolbar holds its chooser.
+    ``inside`` and ``after`` place each page's own pieces: Image Studio's output scale beside 📤 (💻 ⇄ 📱 ends both pages' file rows,
+    scripts/build_studio_css.py adds it); the slide editor's 📚 layers, 🗂️ pages and inspector. scripts/build_studio_css.py writes the markup into PSWB_PARTS ("slides-toolbar",
+    "image-toolbar"); --check fails when this table and that markup drift."""
     from html import escape
 
-    def control(act: str, emoji: str, word: str, words: str) -> str:
-        label = f'data-ui-word="{escape(word)}" aria-label="{escape(words)}" title="{escape(words)}"'
-        if act == "home":
-            return f'<a class="button" href="../" data-act="{act}" {label}>{emoji}</a>'
-        if act in candidates:                       # 🔷 😊 (^^): the same candidates as Image Studio's tools, read from its markup
-            acts, said = choices.get(act, ("", ""))   # 🔷 📥 📤: a candidate that is an action names it; 😊 (^^) ones are stamped as text
-            more = f' data-acts="{acts}" data-words="{escape(said)}"' if acts else ""
-            more += " data-close" if act in ("import", "export") else ""
-            return f'<button type="button" data-act="{act}" data-candidates="{escape(candidates[act])}"{more} {label}>{emoji}</button>'
-        return f'<button type="button" data-act="{act}" {label}>{emoji}</button>'
+    # act: (face, word, tip[, candidate faces, their acts, their words "|"]); a candidate without acts passes its face
+    tools = {
+        "select": ("👆", "選択", "選んで動かす"),
+        "text": ("🔤", "文字", "文字を置く"),
+        "shape": ("🔷", "図形", "図形（四角・丸・三角・矢印）", "▭ ◯ △ →", "rect ellipse triangle arrow", "四角|丸|三角|矢印"),
+        "stamp": ("✦", "スタンプ", "スタンプを押す"),
+        "emoji": ("😊", "絵文字", "絵文字", "❤️ 😊 🌱 📊 ✨ 📌 🔰"),
+        "kaomoji": ("(^^)", "顔文字", "顔文字", "(・∀・) (｡•̀ᴗ-)✧ ٩(๑❛ᴗ❛๑)۶"),
+        "clock": ("🕒", "時計", "いまの時刻の時計"),
+        "smaller": ("🔽", "小さく", "文字をすべて小さく"),
+        "reset": ("🔄", "元の大きさ", "文字をすべて元の大きさに"),
+        "bigger": ("🔼", "大きく", "文字をすべて大きく"),
+        "undo-2": ("⏪", "2つ戻す", "2つ戻す"),
+        "undo": ("↩️", "戻す", "戻す"),
+        "redo": ("↪️", "やり直す", "やり直す"),
+        "redo-2": ("⏩", "2つやり直す", "2つやり直す"),
+        "edit": ("✏️", "編集", "選んだ文字・時計を編集（選んだものをもう一度タップしても編集。時計は 14:30 のように）"),
+        "look": ("🎨", "見た目", "選んだものの見た目（塗り・線の色・不透明度・太字・等幅）", "🎨 🖌 🌗 🅱️ 🔠", "fill stroke fade bold font",
+                 "塗りを次の色へ|線を次の色へ|不透明度（1 → ¾ → ½ → ¼）|太字|等幅 ⇄ ふつう"),
+        "turn": ("↻", "回転", "選んだものを回す", "↻ ↺ ⏹", "cw ccw upright", "右へ 15°|左へ 15°|まっすぐに戻す"),
+        "duplicate": ("⧉", "複製", "選んだものを複製"),
+        "forward": ("⬆️", "前へ", "選んだものをひとつ手前へ"),
+        "backward": ("⬇️", "後ろへ", "選んだものをひとつ奥へ"),
+        "front": ("⏫", "手前へ", "選んだものをいちばん手前へ"),
+        "back": ("⏬", "奥へ", "選んだものをいちばん奥へ"),
+        "delete": ("🗑️", "削除", "選んだものを削除"),
+        "slide-add": ("➕📄", "ページ追加", "白紙のページを追加"),
+        "slide-copy": ("📑", "ページ複製", "ページを複製"),
+        "slide-delete": ("✖️📄", "ページ削除", "ページを削除"),
+        "pages": ("🗂️", "一覧", "ページの一覧（タップでそのページへ）"),
+        "new": ("🆕", "新規", "最初から（白紙 1 枚）"),
+        "import": ("📥", "インポート", "インポート（どの形式から？ 候補から選ぶ）"),
+        "export": ("📤", "エクスポート", "エクスポート（どの形式に？ 候補から選ぶ）"),
+        "image-studio": ("🖼️", "画像工房", "画像工房へ"),
+        "slide-studio": ("📽️", "スライド工房", "スライド工房へ"),
+        "inspect": ("🎛️", "詳細", "選んだものの詳細（位置・大きさ・種類別の設定）"),
+        "grid": ("⊞", "4枚表示", "4枚表示（その場で編集）"),
+    }
+    formats = {  # 📥 📤 the same act, each page's own formats
+        "slides": {"import": ("画像 カメラ JSON", "image camera open",
+                              "画像（PNG・JPEG・WebP をこのページに）|カメラ（撮った写真をこのページに）|JSON（全スライド）"),
+                   "export": ("PPTX JSON PNG SVG", "pptx json png svg",
+                              "PPTX（全スライド、PowerPoint で編集できる）|JSON（全スライド、また開ける）|PNG（このページ）|SVG（このページ）")},
+        "image": {"import": ("画像 カメラ クリップボード JSON 作業履歴 シェルフ", "image camera clipboard open-json open-workspace shelf",
+                             "画像（PNG・JPEG・WebP をキャンバスに）|カメラ（撮った写真をキャンバスに）|クリップボード（コピーした画像・Base64）"
+                             "|JSON（再編集用のシーン）|作業履歴（最大40状態）|シェルフ（クリップボード・シェルフ）"),
+                  "export": ("PNG SVG JSON 作業履歴 Base64", "png svg json workspace base64",
+                             "PNG（出力倍率で）|SVG（出力倍率で）|JSON（再編集用）|作業履歴（最大40状態）|Base64（Flutter などへ渡す）")}}[page]
+    # 📥 a format read from a file: the toolbar holds its chooser (PySaiyanWeBoo's accept / capture) on both pages
+    picture = {"image": "image/png,image/jpeg,image/webp", "camera": "image/png,image/jpeg,image/webp environment"}
+    choosers = {"image": {**picture, "open-json": ".json", "open-workspace": ".json,application/json"},
+                "slides": {**picture, "open": ".json,application/json"}}[page]
+    rows = {"slides": (("create", "text shape emoji kaomoji clock"), ("adjust", "smaller reset bigger undo redo"),
+                       ("update", "edit look turn front back delete"), ("pages", "slide-add slide-copy slide-delete pages"),
+                       ("file", "new import export image-studio"), ("detail", "inspect grid")),
+            "image": (("create", "select text shape stamp emoji kaomoji clock"), ("adjust", "undo-2 undo redo redo-2"),
+                      ("update", "duplicate forward backward delete"), ("file", "import export slide-studio"))}[page]
 
-    import re
-    candidates = dict(re.findall(r'data-tool="(shape|emoji|kaomoji)"[^>]*data-candidates="([^"]*)"', STUDIO_HTML)) | {
-        "look": "🎨 🖌 🌗 🅱️ 🔠", "turn": "↻ ↺ ⏹", "import": "JSON 画像", "export": "PPTX JSON PNG SVG"}
-    choices = {"shape": ("rect ellipse triangle arrow", "四角|丸|三角|矢印"),
-               "look": ("fill stroke fade bold font", "塗りを次の色へ|線を次の色へ|不透明度（1 → ¾ → ½ → ¼）|太字|等幅 ⇄ ふつう"),
-               "turn": ("cw ccw upright", "右へ 15°|左へ 15°|まっすぐに戻す"),
-               # 📥 どの形式から？ 📤 どの形式に？ the formats in words; a pick hides the row (data-close)
-               "import": ("open image", "JSON（全スライド。PC 版で保存したものも）|画像（PNG・JPEG・WebP をこのページに）"),
-               "export": ("pptx json png svg", "PPTX（全スライド、PowerPoint で編集できる）|JSON（全スライド、また開ける）|PNG（このページ）|SVG（このページ）"),
-               }
-    files = ('<input type="file" data-file="open" accept=".json,application/json" aria-label="全スライドJSON" />'
-             '<input type="file" data-file="image" accept="image/png,image/jpeg,image/webp" aria-label="画像" />')
+    links = {"image-studio": "../", "slide-studio": "slides/"}   # 🖼️ ⇄ 📽️ each studio links the other at the end of its file row
+
+    def control(act: str) -> dict:
+        face, word, tip, *offered = tools[act]
+        faces, acts, said = (*formats.get(act, offered), "", "", "")[:3]
+        named, picks = said.split("|") if said else [], acts.split()
+        return {"act": act, "face": face, "word": word, "words": tip, **({"href": links[act]} if act in links else {}),
+                "candidates": [{"face": f, **({"act": picks[i]} if picks else {}), **({"words": named[i]} if named else {}),
+                                **(dict(zip(("accept", "capture"), choosers[picks[i]].split())) if picks and picks[i] in choosers else {})}
+                               for i, f in enumerate(faces.split())], "close": act in formats}
+
+    groups = [(group, [control(act) for act in listed.split()]) for group, listed in rows]
+    if page == "image":
+        scale = ('<select id="export-scale" title="出力倍率" aria-label="出力倍率">'
+                 + "".join(f'<option value="{n}">{n}×</option>' for n in (1, 2, 4, 8)) + '</select>')
+        return groups, {"file": scale}, {}
     numbers = (
         ("x", "横の位置", -8192, 8192, "any", ""), ("y", "縦の位置", -8192, 8192, "any", ""),
         ("w", "幅", 1, 8192, "any", ""), ("h", "高さ", 1, 8192, "any", ""),
@@ -4214,21 +4194,18 @@ def _phone_html() -> str:
         ("cell", "モザイクの幅", 1, 512, 1, "image"), ("levels", "色の段階", 2, 256, 1, "image"),
     )
     inspector = ('<fieldset id="phone-inspector" hidden><legend>詳細設定</legend>' + "".join(
-        f'<label>{label}<input type="number" data-property="{key}" data-kinds="{kinds}" min="{lo}" max="{hi}" step="{step}"></label>'
+        f'<label>{escape(label)}<input type="number" data-property="{key}" data-kinds="{kinds}" min="{lo}" max="{hi}" step="{step}"></label>'
         for key, label, lo, hi, step, kinds in numbers)
         + '<label><input type="checkbox" data-property="italic" data-kinds="text">斜体</label>'
         + '<label>矢印の先端<select data-property="headPlacement" data-kinds="arrow">'
           '<option value="tip">端</option><option value="middle">中央</option></select></label></fieldset>')
-    rows = [f'<div class="phone-row" data-ui-group="{group}">' + "".join(control(*tool) for tool in row) + "</div>"
-            for group, row in PHONE_TOOLS]
-    at = [group for group, _row in PHONE_TOOLS].index("file")
-    rows[at] = rows[at].replace("</div>", PSWB_PHONE["labels"] + "</div>")   # 💻 ⇄ 📱 PySaiyanWeBoo's switch, at the end of the more row
-    rows[-1] += inspector
-    rows[-1] += files                                            # 📥's file choosers: no face of their own, and no place in a row
-    # 📚 the page's layers, back to front, sit right above the row that acts on the selected one (PySaiyanWeBoo's current-item mark)
-    rows[3] += '<div id="phone-pages" class="ui-current-items" role="group" aria-label="ページの一覧" hidden></div>'   # 🗂️
-    rows = (rows[0] + '<div id="phone-candidates" role="group" aria-label="候補" hidden></div>' + rows[1]
-            + '<div id="phone-layers" class="ui-current-items" role="group" aria-label="レイヤー（奥から手前）" hidden></div>' + "".join(rows[2:]))
+    after = {"adjust": '<div id="phone-layers" class="ui-toolbar-row ui-current-items" role="group" aria-label="レイヤー（奥から手前）" hidden></div>',
+             "pages": '<div id="phone-pages" class="ui-toolbar-row ui-current-items" role="group" aria-label="ページの一覧" hidden></div>',
+             "detail": inspector}
+    return groups, {}, after
+
+
+def _phone_html() -> str:
     slide = ('<div id="phone-svg" class="phone-svg" data-ui-fill></div>'
              '<div id="phone-pick" class="phone-pick" hidden><span class="phone-grip" data-grip aria-hidden="true">↘</span></div>')
     head = STUDIO_HTML[:STUDIO_HTML.index("</head>")]
@@ -4240,16 +4217,17 @@ def _phone_html() -> str:
     return (head + "</head>\n"
             f'  <body class="ui-elements" data-ui-theme="green" data-page="phone" data-text-size="{PHONE_TEXT["size"]}" data-text-scale="{scale}">\n'
             '    <main class="phone">\n'
-            f'      {PSWB_PHONE["stage"].replace("{slide}", slide)}\n'
+            f'      {PSWB_PARTS["stage"].replace("{slide}", slide)}\n'
             '      <div id="phone-grid" role="group" aria-label="4枚表示" hidden></div>\n'
             '      <div class="phone-deck"><textarea id="phone-edit" class="phone-edit" hidden aria-label="文字" rows="3" spellcheck="false"></textarea>'
-            f'{PSWB_PHONE["pager"]}'
+            f'{PSWB_PARTS["pager"]}'
             '<p id="phone-status" class="phone-status" role="status"></p>'
-            f'<div class="phone-tools" role="toolbar" aria-label="道具">{rows}</div></div>\n'
+            f'<div class="phone-tools">{PSWB_PARTS.get("slides-toolbar", "")}</div></div>\n'
             "    </main>\n  </body>\n</html>\n")
 
 
 PHONE_HTML = _phone_html()
+STUDIO_HTML = STUDIO_HTML.replace('        <!-- 🧰 toolbar: studio_toolbar("image") -->\n', PSWB_PARTS.get("image-toolbar", ""), 1)   # 🧰 Image Studio's tools
 
 BROWSER_TASK_JS = r"""/* PSWB async-task.js */
 /**
@@ -4493,8 +4471,3 @@ TOOLS_HTML = r"""<!doctype html>
 </html>
 """
 
-BRAND_HTML = """<!doctype html>
-<html lang="ja"><meta charset="utf-8"><title>Ironmate ロゴ素材</title>
-<meta http-equiv="refresh" content="0;url=../tools/#brand">
-<a href="../tools/#brand">ロゴ素材を開く</a></html>
-"""

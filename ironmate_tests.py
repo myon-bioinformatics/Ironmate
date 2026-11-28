@@ -10,10 +10,24 @@ a failure into success.
 """
 from __future__ import annotations
 
+import importlib.util
+from pathlib import Path
 import json, shutil, subprocess, sys
 
 from ironlib.ironmate_cli import ToolParser, guard
-from vendor.cli_args import pytest_command
+
+
+def load_vendored(name, relpath):
+    """Load a vendored file by path under a repo-unique name (cli_args README: Loading a vendored copy)."""
+    if name not in sys.modules:
+        spec = importlib.util.spec_from_file_location(name, Path(__file__).resolve().parents[0] / relpath)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        spec.loader.exec_module(module)
+    return sys.modules[name]
+
+
+pytest_command = load_vendored("ironmate_cli_args", "vendor/cli_args.py").pytest_command
 
 PYTHON_MARK = 'not heavy and not network'
 NODE = (

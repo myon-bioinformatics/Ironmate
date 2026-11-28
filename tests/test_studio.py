@@ -1059,8 +1059,10 @@ def test_studios_declare_the_rows_a_hosts_header_shows_and_carry_no_header_of_th
     assert 'data-ui-chrome' not in html and html.count('id="ui-chrome-rows"') == 1                      # the header is the host's
     spec = json.loads(re.search(r'<script type="application/json" id="ui-chrome-rows">(.*?)</script>', html, re.S)[1])
     assert spec == {'screen': [{'label': '📋 クリップボード・シェルフ', 'key': 'shelf'}, {'label': '💻 To textual ⇄ 📱 To iconic', 'key': 'labels'}],
-                    'replaces': '#studios,#labels-switch'}
+                    'replaces': '#studio-head,#labels-switch'}
     assert 'id="labels-switch" data-ui-labels-switch' in html and 'PySaiyanWeBoo.bindLabels()' in b.STUDIO_JS   # 💻 ⇄ 📱 bindLabels answers it
+    head = re.search(r'<header id="studio-head">.*?</header>', html, re.S)[0]
+    assert 'labels-switch' not in head and html.index('id="labels-switch"') > html.index('data-ui-group="file"')   # 💻 ends the file row, as on the slide editor
     assert {'shelf', 'png', 'svg', 'json', 'workspace', 'base64', 'open-json', 'open-workspace'} <= acts, acts
     assert re.fullmatch(r'#[a-z-]+(,#[a-z-]+)*', spec['replaces']) and all(f'id="{i[1:]}"' in html for i in spec['replaces'].split(','))
     slides = json.loads(re.search(r'id="ui-chrome-rows">(.*?)</script>', assets['slides/index.html'].decode('utf-8'), re.S)[1])
@@ -1162,8 +1164,7 @@ def test_phone_page_is_emoji_only_and_every_control_is_bound():
     parts = b.PSWB_PARTS['slides-toolbar']
     assert parts in html and 'id="phone-toolbar"' in parts and 'id="phone-candidates"' in parts and set(after) == {'adjust', 'pages', 'detail'}
     assert 'PySaiyanWeBoo.bindToolbar($("phone-toolbar")' in b.STUDIO_JS and 'function offer(' not in b.STUDIO_JS
-    assert b.PSWB_PARTS['labels'] in html and html.index(b.PSWB_PARTS['labels']) > html.index('data-ui-group="file"')
-    assert 'id="labels-switch" data-ui-labels-switch' in b.PSWB_PARTS['labels']
+    assert html.count('id="labels-switch" data-ui-labels-switch') == 1 and html.index('id="labels-switch"') > html.index('data-ui-group="file"')
     assert "PySaiyanWeBoo.bindLabels();" in b.STUDIO_JS
     words = re.compile(r'[\u3040-\u30ff\u4e00-\u9fffA-Za-z0-9]')
     for item in parser.items:

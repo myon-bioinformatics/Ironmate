@@ -113,7 +113,7 @@ STUDIO_HTML = r"""<!doctype html>
     <script defer src="studio.js"></script>
   </head>
   <body class="ui-elements" data-ui-theme="green" data-page="studio">
-    <header>
+    <header id="studio-head">
       <div class="brand"><img src="brand/heatmap.svg" width="48" height="48" alt="I’m — 🔰がアポストロフィのIronmateロゴ" /><div>IRONMATE <span>画像編集</span></div></div>
       <div class="top-actions">
         <details id="studios">
@@ -4047,8 +4047,6 @@ PSWB_PARTS = {
         '<button type="button" data-ui-pager-part="last" data-ui-pager-in="ends" data-ui-pager-go="last" aria-label="最後のページ" title="最後のページ" disabled>⏭️</button>'
         '<button type="button" data-ui-pager-part="down" data-ui-pager-in="dpad" data-ui-pager-go="last" aria-label="最後のページ" title="最後のページ" disabled>⬇️</button>'
         '</div>'),
-    "labels": (
-        '<button type="button" class="ui-button" id="labels-switch" data-ui-labels-switch data-ui-word="📱 To iconic" aria-pressed="false" aria-label="💻 To textual ⇄ 📱 To iconic" title="💻 To textual ⇄ 📱 To iconic">💻</button>'),
     "slides-toolbar": (
         '<div class="ui-toolbar" id="phone-toolbar" role="toolbar" aria-label="道具">'
         '<div class="ui-toolbar-row" data-ui-group="create">'
@@ -4158,6 +4156,7 @@ PSWB_PARTS = {
         '<option value="4">4×</option>'
         '<option value="8">8×</option>'
         '</select>'
+        '<button type="button" class="ui-button" id="labels-switch" data-ui-labels-switch data-ui-word="📱 To iconic" aria-pressed="false" aria-label="💻 To textual ⇄ 📱 To iconic" title="💻 To textual ⇄ 📱 To iconic">💻</button>'
         '</div>'
         '<input id="open" type="file" accept=".json" aria-label="JSONを開く" hidden />'
         '<input id="open-workspace" type="file" accept=".json,application/json" aria-label="作業履歴を開く" hidden />'
@@ -4174,7 +4173,8 @@ def studio_toolbar(page: str) -> tuple[list, dict[str, str], dict[str, str]]:
     ⧉ a copy of the selected, 📑 of the page). ``page`` is "slides" (the one slide editor) or "image" (Image Studio) and picks the rows:
     make / adjust / change (/ pages) / file (/ detail). 🔷 😊 (^^) 🎨 ↻ open candidates under their row; 📥 どの形式から？ 📤 どの形式に？
     name each page's formats in words and hide after a pick (Image Studio's are the keys a host's header sends, ``image_studio.host_rows``).
-    ``inside`` and ``after`` place each page's own pieces: Image Studio's output scale beside 📤 and its file choosers; the slide editor's
+    ``inside`` and ``after`` place each page's own pieces: Image Studio's output scale beside 📤 and its file choosers (💻 ⇄ 📱 ends both
+    pages' file rows, scripts/build_studio_css.py adds it); the slide editor's
     📚 layers, 🗂️ pages, inspector and file choosers. scripts/build_studio_css.py writes the markup into PSWB_PARTS ("slides-toolbar",
     "image-toolbar"); --check fails when this table and that markup drift."""
     from html import escape

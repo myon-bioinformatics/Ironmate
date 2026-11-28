@@ -54,7 +54,7 @@ def bundles() -> dict[Path, dict]:
     return {STUDIO / "style.css": {"theme": THEME, "extra_css": "\n".join([*map(pysaiyanweboo.css_source, sheets), SLIDE_EDITOR_CSS])}}
 
 
-PSWB = ("stage", "pager", "labels-switch", "toolbar")  # 🧩 the PySaiyanWeBoo components the 📱 page uses
+PSWB = ("stage", "pager", "labels-switch", "toolbar")  # 🧩 the PySaiyanWeBoo components the studios use
 
 
 def classic_script(modules: str) -> str:
@@ -64,14 +64,14 @@ def classic_script(modules: str) -> str:
 
 
 def toolbar(pysaiyanweboo, page: str) -> str:
-    """🧰 A studio's toolbar (``studio_bundle.studio_toolbar(page)``: "slides" or "image") as PySaiyanWeBoo's ``toolbar_html``; the
-    slide editor's file row ends with 💻 ⇄ 📱 (Image Studio's is in its top bar)."""
+    """🧰 A studio's toolbar (``studio_bundle.studio_toolbar(page)``: "slides" or "image") as PySaiyanWeBoo's ``toolbar_html``; both
+    pages' file rows end with 💻 ⇄ 📱 (``labels_switch_html``, the one each page has; a host's ⋯ row stands in for it)."""
     sys.path.insert(0, str(ROOT))
     from ironlib import studio_bundle
     groups, inside, after = studio_bundle.studio_toolbar(page)
+    inside = {**inside, "file": inside.get("file", "") + pysaiyanweboo.labels_switch_html(id="labels-switch")}
     if page == "slides":
-        return pysaiyanweboo.toolbar_html(groups, label="道具", id="phone-toolbar", candidates_id="phone-candidates",
-                                          inside={"file": pysaiyanweboo.labels_switch_html(id="labels-switch")}, after=after)
+        return pysaiyanweboo.toolbar_html(groups, label="道具", id="phone-toolbar", candidates_id="phone-candidates", inside=inside, after=after)
     return "        " + pysaiyanweboo.toolbar_html(groups, label="道具", id="studio-toolbar", candidates_id="studio-candidates",
                                                  inside=inside, after=after) + "\n"
 
@@ -87,7 +87,6 @@ def pswb_parts() -> dict[str, str]:
     commit = pysaiyanweboo.source_commit() or "unknown"
     return {"stage": pysaiyanweboo.stage_html("{slide}", label="スライド", id="phone-stage"),
             "pager": pysaiyanweboo.pager_html(1, label="ページ移動", words=words, keys=True, id="phone-pager"),
-            "labels": pysaiyanweboo.labels_switch_html(id="labels-switch"),
             "slides-toolbar": toolbar(pysaiyanweboo, "slides"),
             "image-toolbar": toolbar(pysaiyanweboo, "image"),
             "js": (f"/* ⬇️ pysaiyanweboo {commit[:8]} ({', '.join(PSWB)}): written by {NOTE} from the pinned commit; --check fails when it drifts */\n"
@@ -120,7 +119,7 @@ def with_parts(src: str) -> str:
     lines = lambda html: "".join(f"\n        {part!r}" for part in re.split(r"(?<=>)(?=<)", html))
     block = (f"# ⬇️ pysaiyanweboo: {NOTE} writes PSWB_PARTS from the pinned commit (--check fails when it drifts)\n"
              f"PSWB_PARTS = {{\n    \"stage\": ({lines(parts['stage'])}),\n    \"pager\": ({lines(parts['pager'])}),\n"
-             f"    \"labels\": ({lines(parts['labels'])}),\n    \"slides-toolbar\": ({lines(parts['slides-toolbar'])}),\n    \"image-toolbar\": ({lines(parts['image-toolbar'])}),\n}}\n# ⬆️ pysaiyanweboo\n")
+             f"    \"slides-toolbar\": ({lines(parts['slides-toolbar'])}),\n    \"image-toolbar\": ({lines(parts['image-toolbar'])}),\n}}\n# ⬆️ pysaiyanweboo\n")
     src = replace_region(src, "# ⬇️ pysaiyanweboo", "# ⬆️ pysaiyanweboo\n", block)
     src = replace_region(src, "/* ⬇️ pysaiyanweboo", "/* ⬆️ pysaiyanweboo */\n", parts["js"])
     begin, end = "  /* PSWB heatmap-color.js", "  /* End PSWB heatmap-color.js */\n"

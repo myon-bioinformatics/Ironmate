@@ -3550,7 +3550,7 @@ function renderInspector() {
       if (key === "transparent") input.checked = s.background === "none";
       else input.value = key === "background" ? (s.background === "none" ? "#ffffff" : s.background.toLowerCase()) : s[key];
     } else if (input.type === "checkbox") input.checked = Boolean(l[key]);
-    else input.value = l[key] ?? (key === "headPlacement" ? "tip" : "");
+    else input.value = l[key] ?? (input.tagName === "SELECT" ? input.options[0].value : "");
   }
 }
 function setPage(key, input) {
@@ -3571,7 +3571,8 @@ inspector.addEventListener("change", (e) => {
   run(() => change(() => {
     if (!l) return setPage(key, input);
     l[key] = input.type === "number" ? input.valueAsNumber : input.type === "checkbox" ? input.checked : input.value;
-    if (l.kind === "text" && (key === "italic" || key === "w")) fit(l);
+    if (key === "mono" && l.mono && !/^#/.test(l.fill ?? "")) l.fill = "#000000"; // 単色は 🎨 の塗りで（画像はまず黒）
+    if (l.kind === "text" && ["italic", "w", "fontSize"].includes(key)) fit(l);
   }));
 });
 function layerList(s) {
@@ -4099,6 +4100,12 @@ PSWB_PARTS = {
         '</label>'
         '<label>高さ<input type="number" data-property="h" data-kinds="" min="1" max="8192" step="any">'
         '</label>'
+        '<label>角度<input type="number" data-property="rotation" data-kinds="" min="-360" max="360" step="any">'
+        '</label>'
+        '<label>不透明度<input type="number" data-property="opacity" data-kinds="" min="0" max="1" step="any">'
+        '</label>'
+        '<label>文字の大きさ<input type="number" data-property="fontSize" data-kinds="text" min="4" max="512" step="any">'
+        '</label>'
         '<label>線幅<input type="number" data-property="strokeWidth" data-kinds="rect ellipse triangle arrow clock" min="0" max="64" step="any">'
         '</label>'
         '<label>モザイクの幅<input type="number" data-property="cell" data-kinds="image" min="1" max="512" step="1">'
@@ -4111,9 +4118,21 @@ PSWB_PARTS = {
         '<input type="checkbox" data-property="transparent" data-kinds="page">透明</label>'
         '<label>'
         '<input type="checkbox" data-property="italic" data-kinds="text">斜体</label>'
+        '<label>'
+        '<input type="checkbox" data-property="mono" data-kinds="text image">単色（🎨 の色）</label>'
         '<label>矢印の先端<select data-property="headPlacement" data-kinds="arrow">'
         '<option value="tip">端</option>'
         '<option value="middle">中央</option>'
+        '</select>'
+        '</label>'
+        '<label>矢印の形<select data-property="headStyle" data-kinds="arrow">'
+        '<option value="triangle">三角</option>'
+        '<option value="beginner">初心者マーク</option>'
+        '</select>'
+        '</label>'
+        '<label>拡大<select data-property="sampling" data-kinds="image">'
+        '<option value="pixelated">くっきり</option>'
+        '<option value="smooth">なめらか</option>'
         '</select>'
         '</label>'
         '</fieldset>'
@@ -4274,8 +4293,15 @@ def studio_toolbar(page: str) -> tuple[list, dict[str, str], dict[str, str]]:
         ("width", "📄 幅", 64, 4096, 1, "page"), ("height", "📄 高さ", 64, 4096, 1, "page"),
         ("x", "横の位置", -8192, 8192, "any", ""), ("y", "縦の位置", -8192, 8192, "any", ""),
         ("w", "幅", 1, 8192, "any", ""), ("h", "高さ", 1, 8192, "any", ""),
+        ("rotation", "角度", -360, 360, "any", ""), ("opacity", "不透明度", 0, 1, "any", ""),
+        ("fontSize", "文字の大きさ", 4, 512, "any", "text"),
         ("strokeWidth", "線幅", 0, 64, "any", "rect ellipse triangle arrow clock"),
         ("cell", "モザイクの幅", 1, 512, 1, "image"), ("levels", "色の段階", 2, 256, 1, "image"),
+    )
+    choices = (  # a select's first option is what a layer without the field draws
+        ("headPlacement", "矢印の先端", "arrow", (("tip", "端"), ("middle", "中央"))),
+        ("headStyle", "矢印の形", "arrow", (("triangle", "三角"), ("beginner", "初心者マーク"))),
+        ("sampling", "拡大", "image", (("pixelated", "くっきり"), ("smooth", "なめらか"))),
     )
     inspector = ('<fieldset id="slides-inspector" hidden><legend>詳細設定</legend>' + "".join(
         f'<label>{escape(label)}<input type="number" data-property="{key}" data-kinds="{kinds}" min="{lo}" max="{hi}" step="{step}"></label>'
@@ -4283,8 +4309,10 @@ def studio_toolbar(page: str) -> tuple[list, dict[str, str], dict[str, str]]:
         + '<label>📄 背景<input type="color" data-property="background" data-kinds="page"></label>'
         + '<label><input type="checkbox" data-property="transparent" data-kinds="page">透明</label>'
         + '<label><input type="checkbox" data-property="italic" data-kinds="text">斜体</label>'
-        + '<label>矢印の先端<select data-property="headPlacement" data-kinds="arrow">'
-          '<option value="tip">端</option><option value="middle">中央</option></select></label></fieldset>')
+        + '<label><input type="checkbox" data-property="mono" data-kinds="text image">単色（🎨 の色）</label>'
+        + "".join(f'<label>{escape(label)}<select data-property="{key}" data-kinds="{kinds}">'
+                  + "".join(f'<option value="{value}">{escape(word)}</option>' for value, word in options) + '</select></label>'
+                  for key, label, kinds, options in choices) + '</fieldset>')
     after = {"order": '<div id="slides-layers" class="ui-toolbar-row ui-current-items" role="group" aria-label="レイヤー（奥から手前）" hidden></div>',
              "pages": '<div id="slides-pages" class="ui-toolbar-row ui-current-items" role="group" aria-label="ページの一覧" hidden></div>',
              "detail": inspector}

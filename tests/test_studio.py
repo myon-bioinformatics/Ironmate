@@ -1123,6 +1123,9 @@ def test_phone_page_is_emoji_only_and_every_control_is_bound():
     assert b.PSWB_PHONE['pager'] in html and 'data-ui-pager="arrows"' in html and 'data-ui-pager-keys' in html   # ⬅️ 1/N ➡️ first, ← → too
     assert b.PSWB_PHONE['stage'].split('{slide}')[0] + '<div id="phone-svg" class="phone-svg" data-ui-fill>' in html
     assert ' style="' not in html                                                                 # the CSP allows no inline style
+    region = b.STUDIO_JS[b.STUDIO_JS.index('/* ⬇️ pysaiyanweboo'):b.STUDIO_JS.index('/* ⬆️ pysaiyanweboo */')]
+    declared = re.findall(r'^(?:async )?function (\w+)\(', region, re.M)
+    assert declared and len(declared) == len(set(declared)), sorted(n for n in declared if declared.count(n) > 1)   # each PSWB file once
     assert "globalThis.PySaiyanWeBoo = { pagerSet, pagerIndex, bindLabels, bindToolbar }" in b.STUDIO_JS and not re.search(r"^\s*(import|export) ", b.STUDIO_JS, re.M)  # a classic script
     script = b.STUDIO_JS[b.STUDIO_JS.index('/* Phone slides UI'):]
     opens = set(re.findall(r'data-candidates="[^"]*" data-act="([a-z-]+)"', html))       # bindToolbar opens these itself

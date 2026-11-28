@@ -79,7 +79,7 @@ def pswb_parts() -> dict[str, str]:
     files and no inline module: ``export`` dropped, wrapped, and ``pagerSet`` / ``pagerIndex`` left on ``globalThis.PySaiyanWeBoo``."""
     import pysaiyanweboo
     words = {"first": "最初のページ", "prev": "前のページ", "next": "次のページ", "last": "最後のページ", "page": "ページ"}
-    modules = "".join(pysaiyanweboo.js_source(m) for name in PSWB for m in pysaiyanweboo.COMPONENTS[name]["js"])
+    modules = "".join(map(pysaiyanweboo.js_source, dict.fromkeys(m for name in PSWB for m in pysaiyanweboo.COMPONENTS[name]["js"])))  # each file once
     classic = classic_script(modules)
     commit = pysaiyanweboo.source_commit() or "unknown"
     return {"stage": pysaiyanweboo.stage_html("{slide}", label="スライド", id="phone-stage"),

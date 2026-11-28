@@ -9,7 +9,7 @@ No installation, external CDN or server processing is needed. Input images and i
 
 <img src="assets/phone-slides.gif" width="240" alt="Phone slides in a 390×844 browser: blank slide, text box, editing later, bigger text, 🔷 😊 (^^) 🕒 placed from candidates, page 2, ⬅️ back to page 1, the slide saved">
 
-One editor for phones and PCs, phone-first. The slide stays pinned at the top while you work, and every control is an emoji (its words are only in the tooltip / screen-reader label). A phone held sideways and a PC window (960 px and wider) put the controls beside the slide, every row on one line. `/tools/slide-studio/phone/`, its address before it became the entrance, sends on to it. The pinned slide, the page controls and the toolbar are PySaiyanWeBoo's `stage`, `pager` and `toolbar` components (`scripts/build_studio_css.py` writes them from the pinned commit; the toolbar's rows, faces, words and candidates are data in `studio_toolbar("slides")`, the same table as Image Studio's, and `bindToolbar` opens a candidate row under the row of the button that asked).
+One editor for phones and PCs, phone-first. The slide stays pinned at the top while you work, and every control is an emoji (its words are only in the tooltip / screen-reader label). A phone held sideways and a PC window (960 px and wider) put the controls beside the slide, every row on one line. The pinned slide, the page controls and the toolbar are PySaiyanWeBoo's `stage`, `pager` and `toolbar` components (`scripts/build_studio_css.py` writes them from the pinned commit; the toolbar's rows, faces, words and candidates are data in `studio_toolbar("slides")`, the same table as Image Studio's, and `bindToolbar` opens a candidate row under the row of the button that asked; 📥's file choosers are the toolbar's own, and `IronmatePhone.act(name, value)` runs what a press runs, a File included).
 
 | | |
 | --- | --- |
@@ -31,7 +31,7 @@ One editor for phones and PCs, phone-first. The slide stays pinned at the top wh
 | 🆕 | Start over (one blank page) |
 | 🗑️ ↩️ ↪️ | Delete the selection, undo, redo (64 steps) |
 | 📥 📤 | Import and export. The formats open in the candidate row, in words, like 🔷's: 📥 どの形式から？ 画像 (a picture onto this page; カメラ takes a photo for it, on a phone; photos become PNG, at most 4 MP and 1920 px on the long side) or JSON (all slides, also those the PC studio saved); 📤 どの形式に？ PPTX (every slide, editable in PowerPoint), JSON, PNG or SVG (this page as it looks). A pick does it and the row hides again |
-| 🏠 | Image Studio |
+| 🖼️ | Image Studio (its file row ends with 📽️, back here) |
 | 💻 ⇄ 📱 | 💻 To textual: short words in place of the emoji, as on a PC; 📱 To iconic: the emoji again (the default). The same page, no reload; remembered in this browser. On the site the switch is under ⋯ in the header. The rows are groups (make, adjust, change, pages, file) with a light dashed line between them |
 
 The GIF is the frames `tests/slides_browser.cjs` saves (`build/pages-evidence/phone-*.png`, 390×844; `phone-frames.json` lists them) at 1.4 s each.
@@ -50,7 +50,7 @@ pipe it to `python -S pptx_inspect.py -` and read the slide report as JSON.
 
 ## 🖥️ The PC studio, retired
 
-The PC studio that the editor above replaced is gone, so that phones and PCs are built once. Its old address, `/tools/slide-studio/pc/`, sends on to the editor, and its all-slide JSON opens there (📥 📦). Precision controls and four-up editing are available in the same editor. The mosaic preview and slide exports use the same processed image; the deck JSON keeps the original picture and its editable settings. Heatmaps and the other image tools stay in Image Studio.
+The PC studio that the editor above replaced is gone, so that phones and PCs are built once. Its old address is gone too; its all-slide JSON opens in the editor (📥 → JSON). Precision controls and four-up editing are available in the same editor. The mosaic preview and slide exports use the same processed image; the deck JSON keeps the original picture and its editable settings. Heatmaps and the other image tools stay in Image Studio.
 
 ## What is editable in PowerPoint
 

@@ -26,7 +26,7 @@ The heatmap inside 🔰 uses discrete cells, with no gradients. Famicom/GameBoy 
 - Hero: `.brand-hero` in `TOOLS_HTML` (`ironlib/studio_bundle.py`).
 - README: the image link at the top.
 - Home screen: `manifest.webmanifest` and `apple-touch-icon.png` (180 px). Provides 192 px and 512 px for Android, plus an opaque 512 px PNG for masking.
-- Gallery: `/tools/#brand` (old bookmarks at `/brand/` redirect). Browse and save all six concepts; the mono version is shown when printing.
+- Gallery: `/tools/#brand`. Browse and save all six concepts; the mono version is shown when printing.
 
 Run `python -S scripts/build_brand.py` at the repository root. It uses only the Python standard library and the existing `ironlib/grid_output.py`.
 

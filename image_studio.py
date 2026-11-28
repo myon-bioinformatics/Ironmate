@@ -54,25 +54,9 @@ def mosaic(artifact, cell=8, levels=256):
     return {'schema': 'ironmate-pixel-grid/1', 'width': width, 'height': height, 'colors': palette, 'pixels': pixels}
 
 
-def host_rows(page: str = 'studio') -> str:
-    """🧰 What a host's header shows for a studio, as a JSON data block in the page (PySaiyanWeBoo chrome rows): under ⋯ only
-    💻 To textual ⇄ 📱 To iconic (PySaiyanWeBoo's ``labels`` key, which stands in for the page's own switch) and, for Image Studio, the
-    temporary shelf. Both studios' own 📥 📤 already ask the format (どの形式から？ どの形式に？), so the header lists none. The page
-    answers each key (``ui-chrome-action`` in studio.js) with the act its toolbar runs; png-2 … png-8, svg, json, workspace, base64,
-    open-json and open-workspace still work from a host that sends them. ``replaces`` names what a host that shows these rows hides:
-    each studio's 💻 at the end of its file row, and Image Studio's own top bar (the logo and 🏭), so inside a host both studios are
-    just their work under the host's one header; without a host (the local server) they stay."""
-    rows = lambda pairs: [{'label': label, 'key': key} for label, key in pairs]
-    labels = ('💻 To textual ⇄ 📱 To iconic', 'labels')
-    spec = ({'screen': rows([labels]), 'replaces': '#labels-switch'} if page == 'slides' else
-            {'screen': rows([('📋 クリップボード・シェルフ', 'shelf'), labels]), 'replaces': '#studio-head,#labels-switch'})
-    return '<script type="application/json" id="ui-chrome-rows">' + json.dumps(spec, ensure_ascii=False).replace('<', '\\u003c') + '</script>'
-
-
-
 def public_assets():
     """Explicit publication allowlist; no user scenes, globbing, or local images."""
-    from ironlib.studio_bundle import BRAND_HTML, BROWSER_TASK_JS, PHONE_HTML, RECORDS_JS, STUDIO_HTML, STUDIO_JS, STYLE_CSS, TOOLS_HTML
+    from ironlib.studio_bundle import BROWSER_TASK_JS, PHONE_HTML, RECORDS_JS, STUDIO_HTML, STUDIO_JS, STYLE_CSS, TOOLS_HTML
     names = ('brand/mono.svg', 'brand/dark-green.svg',
              'brand/famicom.svg', 'brand/gameboy.svg', 'brand/pixel-3d.svg',
              'brand/manifest.webmanifest', 'brand/apple-touch-icon.png', 'brand/app-192.png',
@@ -80,21 +64,15 @@ def public_assets():
              'brand/icon.svg', 'brand/heatmap.svg', 'brand/hero.svg', 'brand/favicon.ico', 'brand/favicon-16.png',
              'brand/favicon-32.png', 'brand/favicon-48.png', 'brand/icon-192.png')
     assets = {name: (ROOT / 'studio' / name).read_bytes() for name in names}
-    assets['index.html'] = STUDIO_HTML.replace('<header id="studio-head">', host_rows() + '<header id="studio-head">', 1).encode('utf-8')
+    assets['index.html'] = STUDIO_HTML.encode('utf-8')
     assets['style.css'] = STYLE_CSS.encode('utf-8')
     from scripts.pages_catalog import catalog_script
     assets['studio.js'] = STUDIO_JS.encode('utf-8') + b'\n' + catalog_script()
     assets['tools/index.html'] = TOOLS_HTML.encode('utf-8')
     assets['tools/async-task.js'] = BROWSER_TASK_JS.encode('utf-8')
     assets['tools/records.js'] = RECORDS_JS.encode('utf-8')
-    assets['brand/index.html'] = BRAND_HTML.encode('utf-8')
-    # 📽️ slides/ is the one slide editor (phone-first, the same page on a PC). slides/phone/ (its address before) and slides/pc/
-    # (the PC studio it replaced) only send on to it, so old links and bookmarks keep working.
-    assets['slides/index.html'] = PHONE_HTML.replace('<main class="phone">', host_rows('slides') + '<main class="phone">', 1).encode('utf-8')
-    for old in ('slides/phone/index.html', 'slides/pc/index.html'):
-        assets[old] = ('<!doctype html>\n<html lang="ja"><head><meta charset="utf-8" /><meta http-equiv="refresh" content="0; url=../" />'
-                       '<link rel="canonical" href="../" /><title>Ironmate — Slides</title></head>'
-                       '<body><a href="../">📽️</a></body></html>\n').encode('utf-8')
+    # 📽️ slides/ is the one slide editor (phone-first, the same page on a PC)
+    assets['slides/index.html'] = PHONE_HTML.encode('utf-8')
     return assets
 
 
@@ -227,7 +205,7 @@ class StudioHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         assets = cached_public_assets()
         route = self.path.split('?', 1)[0]
-        filename = {'/': 'index.html', '/tools/': 'tools/index.html', '/slides/': 'slides/index.html', '/slides/pc/': 'slides/pc/index.html', '/slides/phone/': 'slides/phone/index.html', '/brand/': 'brand/index.html'}.get(route, route.lstrip('/'))
+        filename = {'/': 'index.html', '/tools/': 'tools/index.html', '/slides/': 'slides/index.html'}.get(route, route.lstrip('/'))
         if filename not in assets:
             self.send_error(404)
             return

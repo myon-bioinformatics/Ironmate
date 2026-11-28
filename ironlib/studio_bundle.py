@@ -93,272 +93,8 @@ STUDIO_PIXEL_PANEL = r"""        <details id="pixel-editor">
           <p id="pixel-status" role="status"></p>
         </details>"""
 
-STUDIO_HTML = r"""<!doctype html>
-<html lang="ja">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <meta
-      http-equiv="Content-Security-Policy"
-      content="default-src 'none'; manifest-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'"
-    />
-    <link rel="manifest" href="brand/manifest.webmanifest" />
-    <link rel="apple-touch-icon" sizes="180x180" href="brand/apple-touch-icon.png" />
-    <meta name="theme-color" content="#003D32" />
-    <meta name="apple-mobile-web-app-title" content="Ironmate" />
-    <title>Ironmate — Image Studio</title>
-    <link rel="icon" href="brand/favicon.ico" sizes="16x16 32x32 48x48" />
-    <link rel="icon" type="image/svg+xml" href="brand/icon.svg" sizes="any" />
-    <link rel="stylesheet" href="style.css" />
-    <script defer src="studio.js"></script>
-  </head>
-  <body class="ui-elements" data-ui-theme="green" data-page="studio">
-    <main>
-      <aside class="tools">
-        <h1>画像を編集</h1>
-        <p class="hint">
-          ツールを選び、キャンバスを押して配置します。
-        </p>
-        <!-- 🧰 toolbar: studio_toolbar("image") -->
-""" + STUDIO_PIXEL_PANEL + r"""
-        <div id="keyboard-input" hidden>
-          <button id="keyboard-focus">⌨ ほかの文字を入力</button>
-          <p class="hint">Windows は Win + .、Mac は Control + Command + Space。スマホはキーボードの絵文字キーから。顔文字の入力・貼り付けもできます。</p>
-        </div>
-        <label
-          >T 文字列<textarea id="text" rows="2" placeholder="文字列 😊 (・∀・)"></textarea
-        ></label>
-        <label
-          >✦ スタンプ<textarea id="stamp-text" rows="1" placeholder="済 ✨ (｡•̀ᴗ-)✧"></textarea
-        ></label>
-        <div class="two">
-          <label>絵文字<input id="emoji-text" placeholder="😊" /></label
-          ><label>顔文字<input id="kaomoji-text" placeholder="(・∀・)" /></label>
-        </div>
-        <label
-          >◷ 時計の時刻<input id="clock-time" type="time" value="10:10"
-        /></label>
-        <div class="two">
-          <label>塗り<input id="fill" type="color" value="#18a7a1" /></label
-          ><label>線<input id="stroke" type="color" value="#183c42" /></label>
-        </div>
-        <label class="check"
-          ><input id="outline" type="checkbox" />枠線だけにする</label
-        >
-        <button id="custom" class="wide">選択したレイヤーをスタンプに</button>
-        <p id="stamp-note" class="hint">
-          選択したレイヤーを再利用できます。
-        </p>
-        <div class="section">
-          <a href="https://myon-bioinformatics.github.io/tools/heatmap/">ヒートマップを作成（DRAgoWing）</a>
-          <p class="hint">作成したシーンJSONは「開く」で読み込めます。</p>
-        </div>
-      </aside>
-      <section class="workspace">
-        <div class="canvas-heading">
-          <div>
-            <h2>キャンバス</h2>
-          </div>
-          <span id="size-note">1280 × 720</span>
-        </div>
-        <div
-          id="board"
-          class="board"
-          tabindex="0"
-          aria-label="画像編集キャンバス"
-        ></div>
-        <div class="canvas-footer">
-          <span id="status" role="status">準備できました。</span
-          ><span>ドラッグで移動 / 右下の点で拡縮</span>
-        </div>
-        <div class="canvas-settings">
-          <button id="blank">＋ 新しいキャンバス</button
-          ><label
-            >背景<input id="background" type="color" value="#f8f7f2" /></label
-          ><label class="check"
-            ><input id="transparent" type="checkbox" />透明</label
-          ><label
-            >幅<input
-              id="canvas-width"
-              type="number"
-              value="1280"
-              min="64"
-              max="4096" /></label
-          ><label
-            >高さ<input
-              id="canvas-height"
-              type="number"
-              value="720"
-              min="64"
-              max="4096" /></label
-          ><button id="canvas-size">適用</button>
-        </div>
-        <div class="note">
-          再編集用にはJSONを保存してください。
-        </div>
-        <details id="workspace-history">
-          <summary>作業履歴（最大40状態）</summary>
-          <ol id="history-list" aria-label="作業履歴"></ol>
-          <button id="trim-history">現在の状態だけ残す</button>
-          <p class="hint">履歴を整理すると過去の状態へ戻せなくなります。現在の画像・レイヤーは保持します。</p>
-          <p class="hint">履歴JSONは画像データを含む場合があります。共有時は内容を確認してください。</p>
-        </details>
-      </section>
-      <aside class="inspector">
-        <p class="eyebrow">レイヤー</p>
-        <div id="layers" class="layers"></div>
-        <div class="section">
-          <h2 id="selection">レイヤーを選択</h2>
-          <label
-            >✏️ 編集<textarea id="edit-text" rows="2" placeholder="選んだ文字を後から変更"></textarea
-          ></label>
-          <div class="two">
-            <label class="check"><input id="bold" type="checkbox" />太字</label
-            ><label class="check"><input id="italic" type="checkbox" />斜体</label
-            ><label>塗り<input id="edit-fill" type="color" /></label
-            ><label>線<input id="edit-stroke" type="color" /></label
-            ><label
-              >図形<select id="edit-shape">
-                <option value="rect">▭ 四角</option>
-                <option value="ellipse">◯ 丸</option>
-                <option value="triangle">△ 三角</option>
-              </select></label
-            ><label>時刻<input id="edit-time" type="time" /></label>
-          </div>
-          <button id="apply-text" class="wide" data-ui-word="編集を適用" title="編集を適用" aria-label="編集を適用">✏️</button>
-          <div class="two">
-            <label>X<input id="x" type="number" /></label
-            ><label>Y<input id="y" type="number" /></label
-            ><label>幅<input id="w" type="number" min="1" /></label
-            ><label>高さ<input id="h" type="number" min="1" /></label>
-          </div>
-          <label
-            >角度<input
-              id="rotation"
-              type="range"
-              min="-180"
-              max="180"
-              value="0" /></label
-          ><label
-            >不透明度<input
-              id="opacity"
-              type="range"
-              min="0"
-              max="1"
-              step="0.05"
-              value="1" /></label
-          ><label
-            >文字サイズ<input
-              id="font-size"
-              type="number"
-              min="4"
-              max="512"
-              value="48" /></label
-          ><label
-            >文字の配置<select id="font-family">
-              <option value="sans">標準</option>
-              <option value="mono">等幅（ASCIIアート・顔文字）</option>
-            </select></label
-          >
-          <label class="check"
-            ><input
-              id="monochrome"
-              type="checkbox"
-              checked
-            />文字・絵文字・画像を単色で描く</label
-          >
-          <label
-            >矢羽根の形<select id="arrow-style">
-              <option value="beginner">🔰を黒にする</option>
-              <option value="triangle">三角形</option>
-            </select></label
-          >
-          <label
-            >矢羽根の位置<select id="arrow-placement">
-              <option value="tip">先端</option>
-              <option value="middle">中央（PPTXと同じ）</option>
-            </select></label
-          >
-          <label
-            >画像の拡大<select id="sampling">
-              <option value="pixelated">ドットを保持</option>
-              <option value="smooth">なめらかに補間</option>
-            </select></label
-          >
-        </div>
-        <div class="section">
-          <p class="eyebrow">解像度</p>
-          <label
-            >モザイクのセル幅 <output id="cell-value">1 px</output
-            ><input id="cell" type="range" min="1" max="128" value="1" /></label
-          ><label
-            >色の段階 <output id="levels-value">256</output
-            ><input
-              id="levels"
-              type="range"
-              min="2"
-              max="256"
-              value="256" /></label
-          ><button id="continuous" class="wide">ヒートマップを連続色に</button
-          ><label class="check"
-            ><input
-              id="value-labels"
-              type="checkbox"
-              checked
-            />数値ラベル</label
-          >
-          <p class="hint">
-            セル幅を変えると元画像から再計算します。
-          </p>
-        </div>
-      </aside>
-    </main>
-    <dialog id="shelf-dialog">
-      <h2>クリップボード・シェルフ</h2>
-      <p>画像・Base64・テキストを一時保存できます。</p>
-      <div class="shelf-actions">
-        <button id="shelf-paste-clip" class="primary">クリップボードから追加 ＋</button>
-        <button id="shelf-clear">シェルフをクリア</button>
-        <a class="button" href="slides/#from-image-studio" target="_blank" rel="opener">編集中の画像をスライド工房へ</a>
-      </div>
-      <label>Base64 / data URI / テキストを入力して追加
-        <textarea id="shelf-input-text" rows="2" placeholder="data:image/png;base64,... または Raw Base64"></textarea>
-      </label>
-      <button id="shelf-add-text" class="wide">テキストを追加</button>
-      <p id="shelf-status" role="status"></p>
-      <textarea id="shelf-copy-text" aria-label="手動コピー用テキスト" readonly hidden></textarea>
-      <div id="shelf-items-container" class="shelf-list"></div>
-      <form method="dialog"><button>閉じる</button></form>
-    </dialog>
-    <dialog id="base64-dialog">
-      <h2>Flutterなどへ画像を渡す</h2>
-      <p>PNGの標準Base64です。画像や元のシーンをサーバーへ送信しません。</p>
-      <label
-        >形式<select id="base64-mode">
-          <option value="dataUri">PNG data URI</option>
-          <option value="base64">Base64のみ</option>
-        </select></label
-      ><textarea
-        id="base64-text"
-        rows="7"
-        readonly
-        aria-label="Base64画像"
-      ></textarea>
-      <p id="base64-status" role="status"></p>
-      <button id="copy-base64">コピー</button
-      ><button id="download-base64">テキスト保存</button>
-      <form method="dialog"><button>閉じる</button></form>
-    </dialog>
-    <dialog id="error">
-      <h2>操作を完了できませんでした</h2>
-      <p id="error-text"></p>
-      <form method="dialog"><button>閉じる</button></form>
-    </dialog>
-  </body>
-</html>
-"""
 
-STYLE_CSS = r"""/* web-ui-bundle/1 commit=7825ec40f81d800349f2763da0cc1b27d9927d5a sha256=b06a0d1e551002b33d74f3783450e0163a44148726927ee03ac14cf064560548 scripts/build_studio_css.py*/
+STYLE_CSS = r"""/* web-ui-bundle/1 commit=7825ec40f81d800349f2763da0cc1b27d9927d5a sha256=6d3845ce3842646d49c67658e5d339a617830a4db4da16b99702f01060f8f924 scripts/build_studio_css.py*/
 @layer base,components,theme;
 /* css/tokens.css */
 :root{--ui-bg:#0d1117;--ui-panel:#101820;--ui-fg:#d1f7c4;--ui-muted:#8b949e;--ui-border:#58a6ff;--ui-accent:#7ee787;--ui-danger:#cf222e;--ui-radius:0;--ui-text:16px;--ui-space:1rem;--ui-max:960px;--ui-font:Meiryo,メイリオ,sans-serif;--ui-font-mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
@@ -522,6 +258,8 @@ body:where([data-page~="slides"]){margin:0;background:var(--ui-bg)}
 @media(orientation:landscape) and (max-height:560px),(min-width:960px){:where([data-page~="slides"]) .slides{flex-direction:row;max-width:none}:where([data-page~="slides"]) .ui-stage{max-width:72vw;--ui-stage-room:100dvh}:where([data-page~="slides"]) .slides-deck{flex-direction:column;flex-wrap:nowrap}:where([data-page~="slides"]) .slides-tools,:where([data-page~="slides"]) .slides-status{flex:none}}
 @media(min-width:960px){:where([data-page~="slides"]) .ui-stage{max-width:calc(100vw - 376px)}}
 
+#pixel-editor .workspace{display:block;padding:0}
+#pixel-editor #grid{width:min(100%,320px);height:auto;image-rendering:pixelated;cursor:crosshair}
 #slides-inspector:not([hidden]){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;min-width:0}
 #slides-inspector label:not([hidden]){display:flex;align-items:center;gap:6px}
 #slides-inspector input:not([type=checkbox]),#slides-inspector select{min-width:0;width:100%;font-size:16px}
@@ -532,7 +270,7 @@ body:where([data-page~="slides"]){margin:0;background:var(--ui-bg)}
 #slides-grid button{padding:0;display:block}
 @media(min-width:960px){#slides-grid:not([hidden]){width:calc(100vw - 376px);max-height:100dvh;overflow:auto}}"""
 
-STUDIO_JS = r"""/* Ironmate studio: the one browser script for every page (studio, tools, slides; brand needs none).
+STUDIO_JS = r"""/* Ironmate studio: the one browser script for every page (the editor, data-page="slides", and tools; brand needs none).
    Models first (composition, pixel-grid tools, slide shell, Open XML writer), then each page's UI. */
 /* Composition model. Optional browser canvas metrics; no network/framework dependency. */
 const StudioCore = (function (root) {
@@ -1096,6 +834,112 @@ const StudioCore = (function (root) {
     canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
     return { canvas, type, src: canvas.toDataURL("image/png"), w: canvas.width, h: canvas.height };
   }
+  // 📋 Image text: a data URI or raw Base64 of a PNG / JPEG / WebP of at most `maxBytes`, as { bytes, mime } (the clipboard, the shelf)
+  function imageText(text, maxBytes = 32 * 1024 * 1024) {
+    let value = text.replace(/^\uFEFF/, "").trim();
+    const header = /^data:([a-z0-9.+-]+\/[a-z0-9.+-]+)?(?:;[a-z0-9.+-]+=[a-z0-9.+-]+)*;base64,/i.exec(value);
+    let mime = null;
+    if (header) {
+      mime = header[1]?.toLowerCase() || null;
+      if (mime === "image/jpg") mime = "image/jpeg";
+      value = value.slice(header[0].length);
+    } else if (/^data:/i.test(value)) throw new Error("data URIが不正です");
+    if (mime && !["image/png", "image/jpeg", "image/webp"].includes(mime))
+      throw new Error("対応していない画像MIMEです");
+    const compact = value.replace(/\s+/g, "");
+    if (!compact || compact.length > 4 * Math.ceil(maxBytes / 3)
+        || compact.length % 4 || !/^[A-Za-z0-9+/]*={0,2}$/.test(compact))
+      throw new Error("Base64形式または容量が不正です");
+    const size = compact.length / 4 * 3 - (compact.endsWith("==") ? 2 : compact.endsWith("=") ? 1 : 0);
+    if (size > maxBytes) throw new Error("画像は残り容量以下にしてください");
+    const binary = atob(compact);
+    const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
+    if (btoa(binary) !== compact)
+      throw new Error("Base64のパディングまたは容量が不正です");
+    const actual = imageType(bytes);
+    if (!actual || (mime && mime !== actual))
+      throw new Error("画像形式またはMIME宣言が実データと一致しません");
+    return { bytes, mime: actual };
+  }
+  function rawImageText(text) {
+    // Bound the amount decoded regardless of the original clipboard size.
+    let prefix = "";
+    for (const char of text) {
+      if (!/\s/.test(char)) prefix += char;
+      if (prefix.length === 16) break;
+    }
+    if (prefix.startsWith("iVBORw0KGg") || prefix.startsWith("/9j/")) return true;
+    try { return !!imageType(Uint8Array.from(atob(prefix), c => c.charCodeAt(0))); }
+    catch { return false; }
+  }
+  function clipboardError(code, message, cause) {
+    return Object.assign(new Error(message), { code, cause });
+  }
+  function clipboardImageText(text) {
+    const value = text.replace(/^\uFEFF/, "").trim();
+    const explicit = /^data:image(?:\/|[;,]|$)/i.test(value);
+    // Once text has an image signature, a malformed decode must not fall back
+    // to a different binary clipboard image.
+    const rawImage = rawImageText(value);
+    try {
+      const payload = imageText(value);
+      if (imageType(payload.bytes)) return payload;
+      if (explicit) throw new Error("PNG・JPEG・WebP画像ではありません");
+    } catch (e) {
+      if (explicit || rawImage)
+        throw clipboardError("clipboard-invalid-image", "クリップボードの画像テキストが不正です: " + e.message, e);
+    }
+    return null; // Ordinary text, even if it happens to be valid Base64.
+  }
+  // 📥 クリップボード: image text (Base64 / data URI) first, then an image; take(bytes, mime, name) brings it in, and when it fails
+  // on one image the clipboard's next one is tried. Errors carry a code: clipboard-unsupported / -denied / -invalid-image /
+  // -read-failed / -no-image.
+  async function clipboardImage(take, clipboard = root.navigator?.clipboard) {
+    if (!clipboard || (typeof clipboard.readText !== "function" && typeof clipboard.read !== "function"))
+      throw clipboardError("clipboard-unsupported", "このブラウザにはクリップボード読取APIがありません。ファイル選択またはBase64入力を利用してください");
+    const failures = [];
+    if (typeof clipboard.readText === "function") {
+      let text = "";
+      try { text = await clipboard.readText(); }
+      catch (e) { failures.push(e); }
+      const payload = clipboardImageText(text);
+      if (payload) {
+        // Explicit/recognized image text wins over a possibly stale binary image.
+        // Validation/decode failures must not silently import different content.
+        try { return await take(payload.bytes, payload.mime, "クリップボードBase64"); }
+        catch (e) { throw clipboardError("clipboard-invalid-image", e.message, e); }
+      }
+    }
+    if (typeof clipboard.read === "function") {
+      let items = [];
+      try { items = await clipboard.read(); }
+      catch (e) { failures.push(e); }
+      for (const item of items) {
+        for (const type of item.types.filter(t => ["image/png", "image/jpeg", "image/webp"].includes(t))) {
+          try {
+            const blob = await item.getType(type);
+            if (blob.size > 32 * 1024 * 1024) throw new Error("画像は32MiB以下にしてください");
+            return await take(new Uint8Array(await blob.arrayBuffer()), type, "クリップボード画像");
+          } catch (e) {
+            // Other representations/items may still contain a usable image.
+            failures.push(e.name === "NotAllowedError" || e.name === "SecurityError" || e.name === "NotSupportedError"
+              ? e : clipboardError("clipboard-invalid-image", e.message, e));
+          }
+        }
+      }
+    }
+    const denied = failures.find(e => ["NotAllowedError", "SecurityError"].includes(e.name));
+    if (denied)
+      throw clipboardError("clipboard-denied", "クリップボードの読み取りが許可されていません。権限を確認するか、ファイル選択またはBase64入力を利用してください", denied);
+    const invalid = failures.find(e => e.code === "clipboard-invalid-image");
+    if (invalid) throw invalid;
+    if (failures.length) {
+      const unsupported = failures.every(e => e.name === "NotSupportedError");
+      throw clipboardError(unsupported ? "clipboard-unsupported" : "clipboard-read-failed",
+        unsupported ? "このブラウザではクリップボードの読み取りに対応していません" : "クリップボードの取得に失敗しました。再試行するかファイル選択を利用してください", failures[0]);
+    }
+    throw clipboardError("clipboard-no-image", "クリップボードにPNG・JPEG・WebP画像または画像Base64テキストがありません");
+  }
   function mosaicSource(img, cell, levels) {
     const canvas = Object.assign(document.createElement("canvas"), { width: img.naturalWidth, height: img.naturalHeight });
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
@@ -1152,6 +996,9 @@ const StudioCore = (function (root) {
     save,
     picture,
     imageType,
+    imageText,
+    rawImageText,
+    clipboardImage,
   };
   return api;
 })(typeof globalThis !== "undefined" ? globalThis : this);
@@ -1715,1086 +1562,6 @@ if (typeof module === "object" && module.exports)
   module.exports = Object.assign({}, StudioCore, {tools: IronmateTools, slides: IronmateSlides, slideShell: IronmateSlideShell, composition: IronmateComposition});
 else Object.assign(globalThis, {StudioCore, IronmateTools, IronmateSlides, IronmateSlideShell});
 
-/* Image Studio UI (data-page~="studio"): browser only. */
-if (typeof document !== "undefined" && document.body && (document.body.dataset.page || "").split(" ").includes("studio")) (function () {
-/* Local-only UI; all output passes through the same SVG composition function. */
-"use strict";
-const C = window.StudioCore,
-  $ = (id) => document.getElementById(id),
-  control = (act) => document.querySelector(`#studio-toolbar [data-act="${act}"]`),
-  // 🧰 what each toolbar act and each key of a host's header (image_studio.host_rows) does: the same function either way
-  STUDIO_ACTS = {},
-  copy = (value) => C.clone(value);
-let serial = 0,
-  toolbar = null, // PySaiyanWeBoo's bindToolbar on #studio-toolbar: { offer, close }
-  tool = "select",
-  shape = "rect", // 図形(▭ ◯ △ →): the candidate the 図形 tool places
-  edited = { id: null, text: "" }, // what ✏️ 編集 last showed, so a repaint never undoes typing
-  selected = null,
-  template = null,
-  dirty = false,
-  drag = null,
-  paintSerial = 0;
-const blank = () => ({
-  schema: C.SCHEMA,
-  width: 1280,
-  height: 720,
-  background: "#F8F7F2",
-  layers: [],
-});
-let scene = blank(),
-  history = new C.History(scene);
-const images = new Map(),
-  processed = new Map();
-const uid = () => `layer-${Date.now()}-${++serial}`;
-const selectedLayer = () => scene.layers.find((l) => l.id === selected);
-const message = (text) => {
-  $("status").textContent = text;
-};
-function error(e) {
-  $("error-text").textContent = e.message || String(e);
-  $("error").dataset.code = e.code || "";
-  $("error").showModal();
-}
-function guarded(fn) {
-  return async (...args) => {
-    try {
-      await fn(...args);
-    } catch (e) {
-      error(e);
-    }
-  };
-}
-function base(kind, x = 80, y = 80, w = 180, h = 120) {
-  return { id: uid(), kind, name: kind, x, y, w, h, rotation: 0, opacity: 1 };
-}
-async function decoded(src) {
-  if (!images.has(src))
-    images.set(
-      src,
-      new Promise((resolve, reject) => {
-        const img = new Image();
-        img.onload = () => {
-          if (img.naturalWidth * img.naturalHeight > 4194304) {
-            reject(new Error("画像は4MP以下にしてください"));
-            return;
-          }
-          resolve(img);
-        };
-        img.onerror = () => reject(new Error("画像を読み込めません"));
-        img.src = src;
-      }),
-    );
-  return images.get(src);
-}
-async function prepare(doc) {
-  const sources = new Map();
-  for (const l of doc.layers.filter((l) => l.kind === "image")) {
-    const key = l.src + ":" + l.cell + ":" + l.levels;
-    if (processed.has(key)) {
-      sources.set(key, processed.get(key));
-      continue;
-    }
-    const img = await decoded(l.src);
-    if (l.cell === 1 && l.levels === 256) {
-      processed.set(key, l.src);
-      sources.set(key, l.src);
-      continue;
-    }
-    processed.set(key, C.mosaicSource(img, l.cell, l.levels));
-    sources.set(key, processed.get(key));
-    // Processed previews are disposable; the immutable source always remains in JSON.
-    if (processed.size > 16) processed.delete(processed.keys().next().value);
-  }
-  return (l) => sources.get(l.src + ":" + l.cell + ":" + l.levels) || l.src;
-}
-function selectionSVG(l) {
-  return `<g class="selection" transform="translate(${l.x} ${l.y}) rotate(${l.rotation} ${l.w / 2} ${l.h / 2})"><rect width="${l.w}" height="${l.h}" fill="none" stroke="#126fef" stroke-width="2" stroke-dasharray="8 5"/><rect class="handle" data-handle="resize" x="${l.w - 9}" y="${l.h - 9}" width="18" height="18" rx="3" fill="#126fef" stroke="white" stroke-width="2"/></g>`;
-}
-function updateHistoryTimeline() {
-  const list = $("history-list");
-  list.replaceChildren();
-  history.items.forEach((state, index) => {
-    const row = document.createElement("li");
-    const button = document.createElement("button");
-    button.type = "button";
-    button.textContent = (index === history.index ? "● " : "○ ") +
-      "状態 " + (index + 1) + " / " + state.layers.length + "レイヤー";
-    button.setAttribute("aria-current", index === history.index ? "step" : "false");
-    button.onclick = () => {
-      history.index = index;
-      scene = history.current;
-      selected = null;
-      dirty = true;
-      render().catch(error);
-    };
-    row.append(button);
-    list.append(row);
-  });
-}
-// ✏️ 編集: the control, the layers it changes, and the change (each applies as soon as it is set)
-const SHAPE_NAMES = { rect: "四角", ellipse: "丸", triangle: "三角" },
-  clockText = (l) => String(l.hour).padStart(2, "0") + ":" + String(l.minute).padStart(2, "0"),
-  EDITS = [
-    ["bold", ["text"], (l, input) => { l.bold = input.checked; }],
-    ["italic", ["text"], (l, input) => { l.italic = input.checked; }],
-    ["edit-fill", ["text", "image", "rect", "ellipse", "triangle", "arrow", "clock"], (l, input) => { l.fill = input.value; }],
-    ["edit-stroke", ["rect", "ellipse", "triangle", "arrow", "clock"], (l, input) => { l.stroke = input.value; }],
-    ["edit-shape", ["rect", "ellipse", "triangle"], (l, input) => {
-      if (l.name === SHAPE_NAMES[l.kind]) l.name = SHAPE_NAMES[input.value];
-      l.kind = input.value;
-    }],
-    ["edit-time", ["clock"], (l, input) => {
-      const [hour, minute] = input.value.split(":").map(Number);
-      if (l.name === "時計 " + clockText(l)) l.name = "時計 " + input.value;
-      l.hour = hour;
-      l.minute = minute;
-    }],
-  ];
-function updateInspector() {
-  const l = selectedLayer();
-  $("selection").textContent = l ? `${l.name || l.kind}` : "レイヤーを選択";
-  for (const f of ["x", "y", "w", "h", "rotation", "opacity"]) {
-    $(f).disabled = !l;
-    $(f).value = l?.[f] ?? "";
-  }
-  $("monochrome").disabled = !["text", "image"].includes(l?.kind);
-  $("monochrome").checked = l?.mono ?? false;
-  $("sampling").disabled = l?.kind !== "image";
-  $("sampling").value = l?.sampling ?? "pixelated";
-  $("arrow-placement").disabled = l?.kind !== "arrow";
-  $("arrow-placement").value = l?.headPlacement ?? "tip";
-  $("arrow-style").disabled = l?.kind !== "arrow";
-  $("arrow-style").value =
-    l?.kind === "arrow" ? (l.headStyle ?? "triangle") : "beginner";
-  const text = l?.kind === "text" ? l.text : "";
-  if (edited.id !== (l?.id ?? null) || edited.text !== text) {
-    $("edit-text").value = text;
-    edited = { id: l?.id ?? null, text };
-  }
-  $("edit-text").disabled = l?.kind !== "text";
-  for (const [id, kinds] of EDITS) $(id).disabled = !kinds.includes(l?.kind);
-  $("bold").checked = !!l?.bold;
-  $("italic").checked = !!l?.italic;
-  if (/^#[0-9a-f]{6}$/i.test(l?.fill ?? "")) $("edit-fill").value = l.fill.toLowerCase();
-  if (/^#[0-9a-f]{6}$/i.test(l?.stroke ?? "")) $("edit-stroke").value = l.stroke.toLowerCase();
-  if (!$("edit-shape").disabled) $("edit-shape").value = l.kind;
-  $("edit-time").value = l?.kind === "clock" ? clockText(l) : "";
-  $("font-family").disabled = l?.kind !== "text";
-  $("font-family").value = l?.font ?? "sans";
-  $("font-size").disabled = l?.kind !== "text";
-  $("font-size").value = l?.fontSize ?? 48;
-  $("cell").disabled = l?.kind !== "image";
-  $("cell").value = l?.cell ?? 1;
-  $("cell-value").textContent = `${l?.cell ?? 1} px`;
-  $("levels").disabled = !["image", "heatmap"].includes(l?.kind);
-  $("levels").value = l?.levels || 256;
-  $("levels-value").textContent =
-    l?.kind === "heatmap" && !l.levels ? "連続" : (l?.levels ?? 256);
-  $("value-labels").disabled = l?.kind !== "heatmap";
-  $("value-labels").checked = l?.labels ?? true;
-  $("continuous").disabled = l?.kind !== "heatmap";
-  for (const name of ["delete", "duplicate", "forward", "backward"]) control(name).disabled = !l;
-  $("custom").disabled = !l;
-  for (const name of ["undo", "undo-2"]) control(name).disabled = history.index === 0;
-  for (const name of ["redo", "redo-2"]) control(name).disabled = history.index === history.items.length - 1;
-  $("size-note").textContent = `${scene.width} × ${scene.height}`;
-  $("canvas-width").value = scene.width;
-  $("canvas-height").value = scene.height;
-  $("transparent").checked = scene.background === "none";
-  if (scene.background !== "none") $("background").value = scene.background;
-  updateHistoryTimeline();
-  $("layers").replaceChildren();
-  for (const layer of [...scene.layers].reverse()) {
-    const button = document.createElement("button");
-    button.textContent = layer.name || layer.kind;
-    button.dataset.layerId = layer.id;
-    if (layer.id === selected) button.classList.add("active");
-    button.onclick = () => {
-      selected = layer.id;
-      render();
-    };
-    $("layers").append(button);
-  }
-}
-async function render() {
-  const n = ++paintSerial;
-  const doc = copy(scene);
-  const imageSource = await prepare(doc);
-  if (n !== paintSerial) return;
-  let svg = C.svg(doc, imageSource);
-  const l = doc.layers.find((l) => l.id === selected);
-  if (l) svg = svg.replace("</svg>", selectionSVG(l) + "</svg>");
-  $("board").innerHTML = svg;
-  $("board").style.aspectRatio = `${doc.width} / ${doc.height}`;
-  updateInspector();
-}
-function change(fn) {
-  const next = copy(scene);
-  fn(next);
-  C.validate(next);
-  history.commit(next);
-  scene = next;
-  dirty = true;
-  if (!selectedLayer()) selected = null;
-  render().catch(error);
-}
-function add(layer) {
-  if (scene.layers.length >= 100) throw new Error("レイヤーは100件までです");
-  selected = layer.id;
-  change((doc) => doc.layers.push(layer));
-  message(`${layer.name || layer.kind}を追加しました`);
-}
-const SHAPES = { rect: "▭", ellipse: "◯", triangle: "△", arrow: "→" }; // 🔷 a kind and the face it shows
-function setTool(value, opened = false) {
-  // 🧰 a mode of the toolbar's make row; 🔷 😊 (^^) show their candidates (PySaiyanWeBoo's bindToolbar opened them already when pressed)
-  tool = value;
-  for (const b of document.querySelectorAll('#studio-toolbar [data-ui-group="create"] [data-act]')) {
-    b.classList.toggle("active", b.dataset.act === value);
-    b.setAttribute("aria-pressed", b.dataset.act === value);
-  }
-  $("keyboard-input").hidden = !["emoji", "kaomoji"].includes(tool);
-  const button = control(value), row = $("studio-candidates");
-  if (!button?.dataset.candidates) toolbar?.close();
-  else if (!opened && (row.hidden || row.dataset.tool !== value)) toolbar?.offer(button);
-}
-function pick(value, face) {
-  // A candidate: 図形 sets the shape the next press places (face is its kind: rect …), 絵文字・顔文字 the text.
-  setTool(value, true);
-  if (value === "shape") {
-    const button = control("shape");
-    shape = face;
-    face = SHAPES[shape];
-    button.textContent = face; // 💻 の表示では「図形(◯)」（data-ui-word）
-    button.dataset.uiWord = button.title = `図形(${face})`;
-    button.setAttribute("aria-label", button.title);
-  } else {
-    $(value + "-text").value = face;
-    if (face === "🔰") $("fill").value = "#000000";
-  }
-  $("stamp-note").textContent = `${face}をキャンバスに押せます`;
-}
-function toolText() {
-  // 文字列・スタンプ・絵文字・顔文字 each keep an input of their own; an empty one places its example.
-  const input = $(tool === "text" ? "text" : tool + "-text");
-  return input.value || input.placeholder;
-}
-function textLayer(text, x, y) {
-  const size = 48,
-    lines = text.split("\n");
-  return {
-    ...base(
-      "text",
-      x,
-      y,
-      Math.min(
-        700,
-        Math.max(
-          120,
-          Math.max(...lines.map((s) => Array.from(s).length)) * size,
-        ),
-      ),
-      Math.max(70, lines.length * size * 1.3),
-    ),
-    name: "文字 / " + text.slice(0, 12),
-    text,
-    fill: $("fill").value,
-    fontSize: size,
-    font: $("font-family").value,
-    mono: true,
-    wrap: false,
-  };
-}
-function place(x, y) {
-  const kind = tool === "shape" ? shape : tool;
-  if (kind === "stamp" && template) {
-    const l = copy(template);
-    l.id = uid();
-    l.x = x - l.w / 2;
-    l.y = y - l.h / 2;
-    add(l);
-  } else if (["text", "stamp", "emoji", "kaomoji"].includes(kind))
-    add(textLayer(toolText(), x, y));
-  else if (kind === "arrow")
-    add({
-      ...base("arrow", x, y, 200, 80),
-      name: "直線＋矢羽根",
-      fill: $("fill").value,
-      stroke: $("stroke").value,
-      strokeWidth: 4,
-      headSize: 28,
-      headPlacement: $("arrow-placement").value,
-      headStyle: $("arrow-style").value,
-    });
-  else if (kind === "clock") {
-    const [hour, minute] = $("clock-time").value.split(":").map(Number);
-    add({
-      ...base("clock", x, y, 160, 160),
-      name: "時計 " + $("clock-time").value,
-      hour,
-      minute,
-      fill: $("fill").value,
-      stroke: $("stroke").value,
-      strokeWidth: 3,
-    });
-  } else
-    add({
-      ...base(kind, x, y),
-      name: { rect: "四角", ellipse: "丸", triangle: "三角" }[kind],
-      fill: $("outline").checked ? "none" : $("fill").value,
-      stroke: $("stroke").value,
-      strokeWidth: 3,
-    });
-}
-function point(e) {
-  const svg = $("board").querySelector("svg");
-  return new DOMPoint(e.clientX, e.clientY).matrixTransform(
-    svg.getScreenCTM().inverse(),
-  );
-}
-$("board").addEventListener(
-  "pointerdown",
-  guarded(async (e) => {
-    if (e.button !== 0) return;
-    const p = point(e),
-      handle = e.target.closest("[data-handle]"),
-      node = e.target.closest("[data-layer]");
-    if (tool !== "select") {
-      place(p.x, p.y);
-      return;
-    }
-    if (!handle) selected = node?.dataset.layer ?? null;
-    const l = selectedLayer();
-    if (l) {
-      drag = { point: p, layer: copy(l), resize: !!handle, changed: false };
-      $("board").setPointerCapture(e.pointerId);
-    }
-    await render();
-  }),
-);
-$("board").addEventListener("pointermove", (e) => {
-  if (!drag) return;
-  const p = point(e),
-    dx = p.x - drag.point.x,
-    dy = p.y - drag.point.y,
-    l = selectedLayer();
-  if (!l) return;
-  const old = drag.layer;
-  if (drag.resize) {
-    const a = (old.rotation * Math.PI) / 180,
-      c = Math.cos(a),
-      s = Math.sin(a);
-    l.w = Math.max(8, Math.min(8192, old.w + c * dx + s * dy));
-    l.h = Math.max(8, Math.min(8192, old.h - s * dx + c * dy));
-    const dw = l.w - old.w,
-      dh = l.h - old.h;
-    l.x = old.x + ((c - 1) * dw) / 2 - (s * dh) / 2;
-    l.y = old.y + (s * dw) / 2 + ((c - 1) * dh) / 2;
-    if (l.kind === "text")
-      l.fontSize = Math.max(
-        4,
-        Math.min(512, old.fontSize * Math.min(l.w / old.w, l.h / old.h)),
-      );
-  } else {
-    l.x = Math.max(-8192, Math.min(8192, old.x + dx));
-    l.y = Math.max(-8192, Math.min(8192, old.y + dy));
-  }
-  drag.changed = drag.changed || Math.abs(dx) + Math.abs(dy) > 1;
-  render().catch(error);
-});
-function finishDrag() {
-  if (drag?.changed) {
-    history.commit(scene);
-    dirty = true;
-    message("位置・サイズを変更しました");
-  }
-  drag = null;
-  updateInspector();
-}
-$("board").addEventListener("pointerup", finishDrag);
-$("board").addEventListener("pointercancel", () => {
-  if (drag) {
-    Object.assign(selectedLayer(), drag.layer);
-    drag = null;
-    render().catch(error);
-  }
-});
-$("keyboard-focus").onclick = () => $(tool + "-text").focus();
-const MODES = ["select", "text", "shape", "stamp", "emoji", "kaomoji", "clock"];
-queueMicrotask(() => {
-  // PySaiyanWeBoo's script comes later in studio.js: 💻 To textual ⇄ 📱 To iconic（ページ内と ⋯ の行）and the toolbar
-  globalThis.PySaiyanWeBoo.bindLabels();
-  toolbar = globalThis.PySaiyanWeBoo.bindToolbar($("studio-toolbar"), (name, face) => {
-    if (SHAPES[name]) return pick("shape", name); // 🔷 ▭ ◯ △ → run their kind
-    if (MODES.includes(name)) return face === undefined ? setTool(name, true) : pick(name, face);
-    STUDIO_ACTS[name]?.(face); // 📥 📤 the format picked (their rows hide after it; 📥's chosen File comes as face), ↩️ ↪️, ⧉ 🗑️ ⬆️ ⬇️
-  });
-  setTool(tool);
-});
-// 🧰 a row of a host's header (studio_rows: 📋 the shelf) sends the key of an act: the same act the toolbar runs
-document.addEventListener("ui-chrome-action", (e) => STUDIO_ACTS[e.detail?.key]?.());
-for (const [id, name] of [["text", "text"], ["stamp-text", "stamp"], ["emoji-text", "emoji"], ["kaomoji-text", "kaomoji"]])
-  $(id).onfocus = () => setTool(name); // typing into an input means its tool
-$("stamp-text").oninput = () => {
-  template = null;
-};
-$("clock-time").value = new Date().toTimeString().slice(0, 5); // ◷ starts at the time now
-$("custom").onclick = () => {
-  const l = selectedLayer();
-  if (l) {
-    template = copy(l);
-    setTool("stamp");
-    $("stamp-note").textContent = `「${l.name || l.kind}」を繰り返し押せます`;
-  }
-};
-// ↶ ↷ move one state, ⏪ ⏩ two (data-steps); History clamps at both ends.
-for (const [act, move, steps] of [["undo", "undo", 1], ["undo-2", "undo", 2], ["redo", "redo", 1], ["redo-2", "redo", 2]])
-  STUDIO_ACTS[act] = () => {
-    scene = history[move](steps);
-    dirty = true;
-    selected = null;
-    render().catch(error);
-  };
-STUDIO_ACTS.duplicate = guarded(() => {
-  const l = copy(selectedLayer());
-  l.id = uid();
-  l.x += 24;
-  l.y += 24;
-  add(l);
-});
-STUDIO_ACTS.delete = () => {
-  if (selected)
-    change((doc) => {
-      doc.layers = doc.layers.filter((l) => l.id !== selected);
-    });
-};
-for (const [act, delta] of [
-  ["forward", 1],
-  ["backward", -1],
-])
-  STUDIO_ACTS[act] = () =>
-    change((doc) => {
-      const i = doc.layers.findIndex((l) => l.id === selected),
-        j = Math.max(0, Math.min(doc.layers.length - 1, i + delta));
-      if (i >= 0)
-        [doc.layers[i], doc.layers[j]] = [doc.layers[j], doc.layers[i]];
-    });
-for (const f of ["x", "y", "w", "h", "rotation", "opacity"])
-  $(f).onchange = guarded(() => {
-    if (selectedLayer())
-      change((doc) => {
-        doc.layers.find((l) => l.id === selected)[f] = Number($(f).value);
-      });
-  });
-$("font-size").onchange = guarded(() => {
-  if (selectedLayer()?.kind === "text")
-    change((doc) => {
-      doc.layers.find((l) => l.id === selected).fontSize = Number(
-        $("font-size").value,
-      );
-    });
-});
-$("apply-text").onclick = guarded(() => {
-  if (!selectedLayer()) return;
-  change((doc) => {
-    const l = doc.layers.find((l) => l.id === selected);
-    if (l.kind === "text") {
-      if (l.name === "文字 / " + l.text.slice(0, 12))
-        l.name = "文字 / " + $("edit-text").value.slice(0, 12); // the layer list follows the new words
-      l.text = $("edit-text").value;
-      l.font = $("font-family").value;
-    }
-    if (["text", "image"].includes(l.kind)) l.mono = $("monochrome").checked;
-    for (const [id, kinds] of EDITS.filter(([id]) => id === "edit-fill" || id === "edit-stroke"))
-      if (kinds.includes(l.kind)) l[id.slice(5)] = $(id).value;
-    if (l.kind in SHAPE_NAMES && $("outline").checked) l.fill = "none"; // 枠線だけにする still empties a placed shape
-  });
-});
-for (const [id, kinds, set] of EDITS)
-  $(id).onchange = guarded(() => {
-    if (kinds.includes(selectedLayer()?.kind))
-      change((doc) => set(doc.layers.find((l) => l.id === selected), $(id)));
-  });
-$("font-family").onchange = () => {
-  if (selectedLayer()?.kind === "text")
-    change((doc) => {
-      doc.layers.find((l) => l.id === selected).font = $("font-family").value;
-    });
-};
-$("monochrome").onchange = () => {
-  if (["text", "image"].includes(selectedLayer()?.kind))
-    change((doc) => {
-      const l = doc.layers.find((l) => l.id === selected);
-      l.mono = $("monochrome").checked;
-      l.fill = $("fill").value;
-    });
-};
-$("sampling").onchange = () => {
-  if (selectedLayer()?.kind === "image")
-    change((doc) => {
-      doc.layers.find((l) => l.id === selected).sampling = $("sampling").value;
-    });
-};
-$("arrow-style").onchange = () => {
-  if (selectedLayer()?.kind === "arrow")
-    change((doc) => {
-      doc.layers.find((l) => l.id === selected).headStyle =
-        $("arrow-style").value;
-    });
-};
-$("arrow-placement").onchange = () => {
-  if (selectedLayer()?.kind === "arrow")
-    change((doc) => {
-      doc.layers.find((l) => l.id === selected).headPlacement =
-        $("arrow-placement").value;
-    });
-};
-for (const [id, field] of [
-  ["cell", "cell"],
-  ["levels", "levels"],
-])
-  $(id).onchange = guarded(() => {
-    if (selectedLayer())
-      change((doc) => {
-        doc.layers.find((l) => l.id === selected)[field] = Number($(id).value);
-      });
-  });
-$("value-labels").onchange = () => {
-  if (selectedLayer()?.kind === "heatmap")
-    change((doc) => {
-      doc.layers.find((l) => l.id === selected).labels =
-        $("value-labels").checked;
-    });
-};
-$("continuous").onclick = () => {
-  if (selectedLayer()?.kind === "heatmap")
-    change((doc) => {
-      doc.layers.find((l) => l.id === selected).levels = 0;
-    });
-};
-$("background").onchange = () =>
-  change((doc) => {
-    doc.background = $("background").value;
-  });
-$("transparent").onchange = () =>
-  change((doc) => {
-    doc.background = $("transparent").checked ? "none" : $("background").value;
-  });
-$("canvas-size").onclick = guarded(() =>
-  change((doc) => {
-    doc.width = Number($("canvas-width").value);
-    doc.height = Number($("canvas-height").value);
-  }),
-);
-function download(name, data, type) {
-  C.save(name, data, type);
-  message(`${name}を書き出しました`);
-}
-STUDIO_ACTS.workspace = guarded(async () => {
-  const serialized = C.workspaceText(history);
-  download("ironmate-workspace.json", serialized, "application/json");
-  message("作業履歴を保存しました");
-});
-async function openWorkspace(file) {
-  if (file.size > C.WORKSPACE_MAX_BYTES) throw new Error("作業履歴は32MiB以下にしてください");
-  const next = C.workspaceHistory(await file.text());
-  // Decode every state's images before replacing the editable workspace.
-  const sources = new Set(next.items.flatMap(state => state.layers
-    .filter(layer => layer.kind === "image").map(layer => layer.src)));
-  for (const src of sources) await decoded(src);
-  history = next;
-  scene = next.current;
-  selected = null;
-  dirty = true;
-  await render();
-  message("作業履歴を復元しました");
-}
-$("trim-history").onclick = guarded(async () => {
-  if (!window.confirm("現在の状態だけ残して、過去の作業履歴を削除しますか？")) return;
-  history = new C.History(scene);
-  dirty = true;
-  await render();
-  message("現在の画像・レイヤーを残して履歴を整理しました");
-});
-STUDIO_ACTS.json = () => {
-  download(
-    "ironmate-scene.json",
-    JSON.stringify(C.validate(scene), null, 2),
-    "application/json",
-  );
-  dirty = false;
-};
-STUDIO_ACTS.svg = guarded(async () => {
-  const doc = copy(scene),
-    imageSource = await prepare(doc);
-  download(
-    "ironmate-image.svg",
-    C.svg(doc, imageSource, Number($("export-scale").value)),
-    "image/svg+xml",
-  );
-});
-async function pngBlob(scale = Number($("export-scale").value)) {
-  const doc = copy(scene),
-    imageSource = await prepare(doc);
-  return C.scenePng(doc, imageSource, scale);
-}
-STUDIO_ACTS.png = guarded(async () =>
-  download("ironmate-image.png", await pngBlob(), "image/png"),
-);
-let clipboardPayload = null;
-function showBase64() {
-  if (clipboardPayload)
-    $("base64-text").value = clipboardPayload[$("base64-mode").value];
-}
-STUDIO_ACTS.base64 = guarded(async () => {
-  clipboardPayload = C.pngPayload(
-    new Uint8Array(await (await pngBlob()).arrayBuffer()),
-  );
-  showBase64();
-  $("base64-status").textContent =
-    `PNG ${clipboardPayload.bytes.toLocaleString()} bytes ・ 32MiB以下`;
-  $("base64-dialog").showModal();
-});
-$("base64-mode").onchange = showBase64;
-async function copyDialogText(text, field, status, success, failure) {
-  try {
-    await navigator.clipboard.writeText(text);
-    status.textContent = success;
-  } catch {
-    field.value = text;
-    field.hidden = false;
-    field.focus();
-    field.select();
-    status.textContent = failure;
-  }
-}
-$("copy-base64").onclick = () => copyDialogText(
-  $("base64-text").value, $("base64-text"), $("base64-status"),
-  "コピーしました。Flutterのクリップボード欄へ貼り付けられます。",
-  "自動コピーが使えません。選択した文字をコピーするか、テキスト保存を使ってください。",
-);
-$("download-base64").onclick = () =>
-  download("ironmate-image.base64.txt", $("base64-text").value, "text/plain");
-async function openScene(file) {
-  if (file.size > 20000000) throw new Error("JSONは20MB以下にしてください");
-  const next = C.validate(JSON.parse(await file.text()));
-  await prepare(next);
-  // Loading is an undoable edit; an existing composition is never silently lost.
-  history.commit(next);
-  scene = next;
-  selected = null;
-  dirty = false;
-  await render();
-  message("JSONを読み込みました（戻すで前の編集へ戻れます）");
-}
-// Keep acquisition (picker, camera capture, clipboard) separate from normalization.
-async function importImageBytes(bytes, declaredMime, name = "取り込み画像") {
-  // 🖼️ StudioCore's picture(): the same checks and the same 4 MP fit as the slide editor's 📥 画像
-  const p = await C.picture(new Blob([bytes], { type: declaredMime || "" }));
-  const w = Math.min(700, scene.width * 0.65);
-  add({
-    ...base("image", 80, 90, w, (w * p.h) / p.w),
-    name, src: p.src,
-    cell: 1, levels: 256, sampling: "pixelated", mono: false,
-  });
-  setTool("select");
-  message(p.type + "を取り込みました");
-}
-function imageBase64(text, maxBytes = 32 * 1024 * 1024) {
-  let value = text.replace(/^\uFEFF/, "").trim();
-  const header = /^data:([a-z0-9.+-]+\/[a-z0-9.+-]+)?(?:;[a-z0-9.+-]+=[a-z0-9.+-]+)*;base64,/i.exec(value);
-  let mime = null;
-  if (header) {
-    mime = header[1]?.toLowerCase() || null;
-    if (mime === "image/jpg") mime = "image/jpeg";
-    value = value.slice(header[0].length);
-  } else if (/^data:/i.test(value)) throw new Error("data URIが不正です");
-  if (mime && !["image/png", "image/jpeg", "image/webp"].includes(mime))
-    throw new Error("対応していない画像MIMEです");
-  const compact = value.replace(/\s+/g, "");
-  if (!compact || compact.length > 4 * Math.ceil(maxBytes / 3)
-      || compact.length % 4 || !/^[A-Za-z0-9+/]*={0,2}$/.test(compact))
-    throw new Error("Base64形式または容量が不正です");
-  const size = compact.length / 4 * 3 - (compact.endsWith("==") ? 2 : compact.endsWith("=") ? 1 : 0);
-  if (size > maxBytes) throw new Error("画像は残り容量以下にしてください");
-  const binary = atob(compact);
-  const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
-  if (btoa(binary) !== compact)
-    throw new Error("Base64のパディングまたは容量が不正です");
-  const actual = C.imageType(bytes);
-  if (!actual || (mime && mime !== actual))
-    throw new Error("画像形式またはMIME宣言が実データと一致しません");
-  return { bytes, mime: actual };
-}
-async function importImageFile(file) {
-  await importImageBytes(new Uint8Array(await file.arrayBuffer()), file.type || null, file.name || "取り込み画像");
-}
-{
-  const board = $("board");
-  board.addEventListener("dragover", event => {
-    if (event.dataTransfer?.types.includes("Files")) event.preventDefault();
-  });
-  board.addEventListener("drop", guarded(async event => {
-    if (!event.dataTransfer?.types.includes("Files")) return;
-    event.preventDefault();
-    const files = event.dataTransfer.files;
-    if (files.length !== 1) throw new Error("画像ファイルを1枚ずつドロップしてください");
-    await importImageFile(files[0]);
-  }));
-}
-// 📥 画像 カメラ JSON 作業履歴: PySaiyanWeBoo's toolbar holds the choosers and runs the act with the chosen File; a File / Blob
-// given to IronmateStudio.act is opened the same way, and the act alone opens the chooser.
-for (const [act, open] of [["image", importImageFile], ["camera", importImageFile], ["open-json", openScene], ["open-workspace", openWorkspace]])
-  STUDIO_ACTS[act] = guarded(async (file) => (file instanceof Blob ? open(file) : toolbar.choose(act)));
-function clipboardError(code, message, cause) {
-  return Object.assign(new Error(message), { code, cause });
-}
-function clipboardImageText(text) {
-  const value = text.replace(/^\uFEFF/, "").trim();
-  const explicit = /^data:image(?:\/|[;,]|$)/i.test(value);
-  // Once text has an image signature, a malformed decode must not fall back
-  // to a different binary clipboard image.
-  const rawImage = hasRawImageSignature(value);
-  try {
-    const payload = imageBase64(value);
-    if (C.imageType(payload.bytes)) return payload;
-    if (explicit) throw new Error("PNG・JPEG・WebP画像ではありません");
-  } catch (e) {
-    if (explicit || rawImage)
-      throw clipboardError("clipboard-invalid-image", "クリップボードの画像テキストが不正です: " + e.message, e);
-  }
-  return null; // Ordinary text, even if it happens to be valid Base64.
-}
-STUDIO_ACTS.clipboard = guarded(async () => {
-  // 📥 クリップボード: an image, or image text (Base64 / data URI), from the clipboard
-  const clipboard = navigator.clipboard;
-  if (!clipboard || (typeof clipboard.readText !== "function" && typeof clipboard.read !== "function"))
-    throw clipboardError("clipboard-unsupported", "このブラウザにはクリップボード読取APIがありません。ファイル選択またはBase64入力を利用してください");
-  const failures = [];
-  if (typeof clipboard.readText === "function") {
-    let text = "";
-    try { text = await clipboard.readText(); }
-    catch (e) { failures.push(e); }
-    const payload = clipboardImageText(text);
-    if (payload) {
-      // Explicit/recognized image text wins over a possibly stale binary image.
-      // Validation/decode failures must not silently import different content.
-      try { return await importImageBytes(payload.bytes, payload.mime, "クリップボードBase64"); }
-      catch (e) { throw clipboardError("clipboard-invalid-image", e.message, e); }
-    }
-  }
-  if (typeof clipboard.read === "function") {
-    let items = [];
-    try { items = await clipboard.read(); }
-    catch (e) { failures.push(e); }
-    for (const item of items) {
-      for (const type of item.types.filter(t => ["image/png", "image/jpeg", "image/webp"].includes(t))) {
-        try {
-          const blob = await item.getType(type);
-          if (blob.size > 32 * 1024 * 1024) throw new Error("画像は32MiB以下にしてください");
-          return await importImageBytes(new Uint8Array(await blob.arrayBuffer()), type, "クリップボード画像");
-        } catch (e) {
-          // Other representations/items may still contain a usable image.
-          failures.push(e.name === "NotAllowedError" || e.name === "SecurityError" || e.name === "NotSupportedError"
-            ? e : clipboardError("clipboard-invalid-image", e.message, e));
-        }
-      }
-    }
-  }
-  const denied = failures.find(e => ["NotAllowedError", "SecurityError"].includes(e.name));
-  if (denied)
-    throw clipboardError("clipboard-denied", "クリップボードの読み取りが許可されていません。権限を確認するか、ファイル選択またはBase64入力を利用してください", denied);
-  const invalid = failures.find(e => e.code === "clipboard-invalid-image");
-  if (invalid) throw invalid;
-  if (failures.length) {
-    const unsupported = failures.every(e => e.name === "NotSupportedError");
-    throw clipboardError(unsupported ? "clipboard-unsupported" : "clipboard-read-failed",
-      unsupported ? "このブラウザではクリップボードの読み取りに対応していません" : "クリップボードの取得に失敗しました。再試行するかファイル選択を利用してください", failures[0]);
-  }
-  throw clipboardError("clipboard-no-image", "クリップボードにPNG・JPEG・WebP画像または画像Base64テキストがありません");
-});
-$("blank").onclick = () => {
-  change((doc) => {
-    doc.layers = [];
-  });
-  selected = null;
-  message("新しいキャンバス（戻すで復帰できます）");
-};
-window.addEventListener("beforeunload", (e) => {
-  if (dirty) {
-    e.preventDefault();
-    e.returnValue = "";
-  }
-});
-// --- Clipboard Shelf ---
-const shelfItems = [];
-const SHELF_MAX_BYTES = 32 * 1024 * 1024;
-let shelfReservedBytes = 0, shelfReservedCount = 0, shelfGeneration = 0;
-function shelfRemaining() {
-  return SHELF_MAX_BYTES - shelfReservedBytes - shelfItems.reduce((sum, item) => sum + item.size, 0);
-}
-function checkShelfCapacity(size) {
-  if (shelfItems.length + shelfReservedCount >= 20)
-    throw new Error("シェルフの項目は最大20件までです");
-  if (size > shelfRemaining()) throw new Error("シェルフ全体は32MiB以下にしてください");
-}
-function shelfTextSize(text) {
-  const remaining = shelfRemaining();
-  if (text.length > remaining) throw new Error("シェルフ全体は32MiB以下にしてください");
-  let size = 0;
-  for (const char of text) {
-    const code = char.codePointAt(0);
-    size += code <= 0x7f ? 1 : code <= 0x7ff ? 2 : code <= 0xffff ? 3 : 4;
-    if (size > remaining) throw new Error("シェルフ全体は32MiB以下にしてください");
-  }
-  return size;
-}
-function hasRawImageSignature(text) {
-  // Bound the amount decoded regardless of the original clipboard size.
-  let prefix = "";
-  for (const char of text) {
-    if (!/\s/.test(char)) prefix += char;
-    if (prefix.length === 16) break;
-  }
-  if (prefix.startsWith("iVBORw0KGg") || prefix.startsWith("/9j/")) return true;
-  try { return !!C.imageType(Uint8Array.from(atob(prefix), c => c.charCodeAt(0))); }
-  catch { return false; }
-}
-function isImageText(text) {
-  return /^data:/i.test(text) || hasRawImageSignature(text);
-}
-function addShelfText(text, label) {
-  const value = text.replace(/^\uFEFF/, "").trim();
-  if (!value) throw new Error("テキストを入力してください");
-  checkShelfCapacity(0);
-  if (isImageText(value)) {
-    const { bytes, mime } = imageBase64(value, shelfRemaining());
-    addShelfItem(bytes, mime, null, label);
-  } else addShelfItem(null, null, text, label);
-}
-function checkShelfGeneration(generation) {
-  if (generation !== shelfGeneration) throw new Error("シェルフはクリアされました");
-}
-async function addShelfBlob(blob, mime, generation) {
-  checkShelfGeneration(generation);
-  if (blob.type && blob.type.toLowerCase() !== mime)
-    throw new Error("画像MIMEが一致しません");
-  if (!blob.size) throw new Error("画像が空です");
-  checkShelfCapacity(blob.size); // Must precede arrayBuffer(), including in-flight additions.
-  shelfReservedBytes += blob.size;
-  shelfReservedCount++;
-  let bytes;
-  try { bytes = new Uint8Array(await blob.arrayBuffer()); }
-  finally { shelfReservedBytes -= blob.size; shelfReservedCount--; }
-  checkShelfGeneration(generation);
-  addShelfItem(bytes, mime, null, "クリップボード画像");
-}
-async function shelfCopyText(item) {
-  if (!item.bytes) return item.rawText;
-  // FileReader produces a portable data URI, never the preview's transient blob URL.
-  return await new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(new Blob([item.bytes], { type: item.mime }));
-  });
-}
-function releaseShelfItem(item) {
-  if (item.dataUrl) URL.revokeObjectURL(item.dataUrl);
-}
-function renderShelf() {
-  $("shelf-copy-text").hidden = true;
-  $("shelf-copy-text").value = "";
-  const container = $("shelf-items-container");
-  container.replaceChildren();
-  if (!shelfItems.length) {
-    const empty = document.createElement("p");
-    empty.className = "hint";
-    empty.textContent = "シェルフは空です。「クリップボードから追加」またはテキスト入力からデータを追加できます。";
-    container.append(empty);
-    return;
-  }
-  shelfItems.forEach((item, index) => {
-    const card = document.createElement("div");
-    card.className = "shelf-card";
-
-    const info = document.createElement("div");
-    info.className = "shelf-card-info";
-
-    if (item.dataUrl) {
-      const img = document.createElement("img");
-      img.className = "shelf-thumb";
-      img.src = item.dataUrl;
-      img.alt = item.label;
-      info.append(img);
-    }
-
-    const details = document.createElement("div");
-    details.className = "shelf-details";
-    const title = document.createElement("strong");
-    title.textContent = `${index + 1}. ${item.label}`;
-    const sub = document.createElement("span");
-    sub.textContent = `${item.mime || "text"} ・ ${item.sizeText}`;
-    details.append(title, sub);
-    info.append(details);
-
-    const actions = document.createElement("div");
-    actions.className = "shelf-card-actions";
-
-    if (item.bytes) {
-      const btnImport = document.createElement("button");
-      btnImport.textContent = "取り込み";
-      btnImport.onclick = guarded(async () => {
-        await importImageBytes(item.bytes, item.mime, item.label);
-        $("shelf-dialog").close();
-      });
-      actions.append(btnImport);
-    }
-
-    const btnCopy = document.createElement("button");
-    btnCopy.textContent = item.bytes ? "データURLをコピー" : "コピー";
-    btnCopy.onclick = guarded(async () => {
-      const field = $("shelf-copy-text");
-      field.hidden = true;
-      field.value = "";
-      await copyDialogText(await shelfCopyText(item), field, $("shelf-status"),
-        `「${item.label}」をクリップボードにコピーしました`,
-        "自動コピーが使えません。選択した文字をコピーしてください。");
-    });
-    actions.append(btnCopy);
-
-    const btnDel = document.createElement("button");
-    btnDel.textContent = "削除";
-    btnDel.onclick = () => {
-      const current = shelfItems.indexOf(item);
-      if (current !== -1) releaseShelfItem(shelfItems.splice(current, 1)[0]);
-      renderShelf();
-    };
-    actions.append(btnDel);
-
-    card.append(info, actions);
-    container.append(card);
-  });
-}
-function addShelfItem(bytes, mime, rawText, label = "シェルフ項目") {
-  // This is also the final gate for binary callers and rechecks after async reads.
-  const size = bytes ? bytes.length : shelfTextSize(rawText || "");
-  checkShelfCapacity(size);
-  if (bytes) {
-    const actual = bytes instanceof Uint8Array && C.imageType(bytes);
-    if (!actual || (mime && mime.toLowerCase() !== actual))
-      throw new Error("画像形式またはMIME宣言が実データと一致しません");
-    mime = actual;
-    rawText = null; // Avoid retaining another full Base64 copy of an image.
-  } else if (mime || isImageText((rawText || "").trim())) {
-    throw new Error("画像入力には検証済みデータが必要です");
-  }
-  let dataUrl = null;
-  if (bytes && mime) {
-    const blob = new Blob([bytes], { type: mime });
-    dataUrl = URL.createObjectURL(blob);
-  }
-  const sizeText = bytes ? `${bytes.length.toLocaleString()} bytes` : `${(rawText || "").length} chars`;
-  shelfItems.unshift({
-    id: uid(),
-    bytes,
-    mime,
-    rawText,
-    dataUrl,
-    label,
-    sizeText,
-    size,
-  });
-  renderShelf();
-}
-STUDIO_ACTS.shelf = () => {
-  renderShelf();
-  $("shelf-dialog").showModal();
-};
-$("shelf-clear").onclick = () => {
-  shelfGeneration++;
-  shelfItems.forEach(releaseShelfItem);
-  shelfItems.length = 0;
-  renderShelf();
-  $("shelf-status").textContent = "シェルフをクリアしました";
-};
-$("shelf-paste-clip").onclick = guarded(async () => {
-  if (!navigator.clipboard) throw new Error("Clipboard APIが使用できません");
-  const generation = shelfGeneration;
-  checkShelfCapacity(0);
-  let text = "";
-  if (navigator.clipboard.readText) {
-    // A denied text permission may still allow a binary clipboard image.
-    try { text = await navigator.clipboard.readText(); } catch { /* try binary API */ }
-    checkShelfGeneration(generation);
-    if (text.trim() && isImageText(text.trim())) {
-      addShelfText(text, "クリップボードBase64");
-      $("shelf-status").textContent = "クリップボードのBase64画像を追加しました";
-      return;
-    }
-  }
-  if (navigator.clipboard.read) {
-    let items = [];
-    try { items = await navigator.clipboard.read(); }
-    catch (e) { if (!text.trim()) throw e; }
-    checkShelfGeneration(generation);
-    for (const item of items) {
-      const type = item.types.find(t => ["image/png", "image/jpeg", "image/webp"].includes(t));
-      if (type) {
-        const blob = await item.getType(type);
-        await addShelfBlob(blob, type, generation);
-        $("shelf-status").textContent = "クリップボードの画像を追加しました";
-        return;
-      }
-      if (item.types.some(t => t.startsWith("image/")))
-        throw new Error("対応していない画像MIMEです");
-    }
-  }
-  if (text.trim()) {
-    addShelfText(text, "クリップボードテキスト");
-    $("shelf-status").textContent = "テキスト項目を追加しました";
-  } else {
-    throw new Error("クリップボードに画像またはテキストがありません");
-  }
-});
-
-$("shelf-add-text").onclick = guarded(async () => {
-  const val = $("shelf-input-text").value;
-  addShelfText(val, "入力項目");
-  $("shelf-status").textContent = "項目を追加しました";
-  $("shelf-input-text").value = "";
-});
-
-// Read-only snapshots and export entry point also make browser regression tests observable.
-window.IronmateStudio = {
-  get scene() {
-    return copy(scene);
-  },
-  get ready() {
-    return render();
-  },
-  pngBlob,
-  importImageFile,
-  // 🧰 what a toolbar press runs, awaitable from Node or a host: act("clipboard"), act("png"), act("image", file) (a File or Blob)
-  act: (name, value) => STUDIO_ACTS[name]?.(value),
-  get selectedId() { return selected; },
-  async replaceScene(value) {
-    const next = C.validate(value);
-    await prepare(next);
-    scene = next; history = new C.History(next); selected = null; dirty = true;
-    await render();
-  },
-  async imageSource(value) { return prepare(C.validate(value)); },
-  patchSelected(properties) {
-    if (!selectedLayer()) throw new Error("先にレイヤーを選択してください");
-    change(doc => Object.assign(doc.layers.find(l => l.id === selected), properties));
-  },
-  get shelfItems() { return shelfItems.map(item => ({ ...item })); },
-  addShelfItem,
-};
-render().catch(error);
-})();
-
 /* PSWB pixel-editor.js */
 function bindPixelEditor({ root, catalog, gridTools: C, save, pngPayload, status }) {
   const $ = id => root.querySelector("#" + id);
@@ -3036,7 +1803,7 @@ function setCurrentItem(list, index) {
 }
 /* End PSWB current-item.js */
 
-/* Tools page UI (data-page~="tools"): browser only. */
+/* ▦ the dot-art editor (the editor's page) and the Tools page (data-page~="tools"): browser only. */
 if (typeof document !== "undefined" && (document.getElementById("pixel-editor") || document.getElementById("digest"))) (function () {
 "use strict";
   const $ = (id) => document.getElementById(id);
@@ -3064,8 +1831,8 @@ if (typeof document !== "undefined" && (document.getElementById("pixel-editor") 
       });
       window.IronmateWorkbench = workbench;
       action("place-grid", async () => {
-        await window.IronmateStudio.importImageFile(new File([await workbench.png()], "ドット絵.png", { type: "image/png" }));
-        editor.open = false;
+        const art = new File([await workbench.png()], "ドット絵.png", { type: "image/png" });
+        if (await window.IronmateSlideStudio.act("pixels", art)) editor.open = false; // ▦ → this page, crisp
       });
     });
     return;
@@ -3320,13 +2087,15 @@ const slide = () => deck.slides[active],
   uid = (kind) => `${kind}-${Date.now().toString(36)}-${++serial}`,
   pct = (v, of) => `${(v / of) * 100}%`,
   state = () => JSON.stringify({ deck, active, level, textFactor });
-let status = "", statusError = false, saveFailed = false;
-function note(text = status, error = statusError) {
-  status = text;
-  statusError = error;
+let status = { text: "", error: false, code: "" }, saveFailed = false;
+function note(text, error = false, code = "") {
+  // 💬 one line under the slide: a new text replaces the last (not an error unless said so; an error keeps its code, e.g.
+  // clipboard-denied), note() alone redraws it with ⚠️ 💾 when the device could not keep the deck
+  if (text !== undefined) status = { text, error, code: error ? code || "" : "" };
   const s = $("slides-status");
-  s.textContent = [text, saveFailed && "⚠️ 💾"].filter(Boolean).join(" ");
-  s.dataset.error = error || saveFailed;
+  s.textContent = [status.text, saveFailed && "⚠️ 💾"].filter(Boolean).join(" ");
+  s.dataset.error = status.error || saveFailed;
+  s.dataset.code = status.code;
 }
 function restore(text) {
   const saved = JSON.parse(text);
@@ -3400,6 +2169,7 @@ async function slideSource(s) {
   await Promise.all(pending.map((e) => e.ready));
   return source;
 }
+const pagePng = async (s = slide()) => C.scenePng(s, await slideSource(s)); // 🖼️ このページ（📤 PNG・Base64）
 const paintVersions = new WeakMap();
 function paint(node, s, format = () => {}) {
   const token = {};
@@ -3417,6 +2187,9 @@ function paint(node, s, format = () => {}) {
 }
 function render() {
   const s = slide();
+  stage.style.setProperty("--ui-stage-w", s.width); // 🖼️ PySaiyanWeBoo's stage takes the page's own shape
+  stage.style.setProperty("--ui-stage-h", s.height);
+  $("slides-svg").style.background = s.background === "none" ? "repeating-conic-gradient(#e4e9e2 0 25%,#f7f9f4 0 50%) 0 0/16px 16px" : "";
   paint($("slides-svg"), s); // 👀 打っている文字もそのままスライドに出る
   renderGrid();
   renderInspector();
@@ -3429,9 +2202,10 @@ function render() {
       transform: `rotate(${l.rotation}deg)` });
   layerList(s);
   pageList();
-  const off = { edit: !["text", "clock"].includes(l?.kind), look: !l, turn: !l, inspect: !l,
-    front: !l || s.layers.at(-1) === l, back: !l || s.layers[0] === l,
-    delete: !l, undo: !past.length, redo: !future.length,
+  const top = !l || s.layers.at(-1) === l, bottom = !l || s.layers[0] === l,
+    off = { edit: !["text", "clock"].includes(l?.kind), look: !l, turn: !l, duplicate: !l || s.layers.length >= 100,
+    forward: top, front: top, backward: bottom, back: bottom,
+    delete: !l, undo: !past.length, "undo-2": !past.length, redo: !future.length, "redo-2": !future.length,
     "slide-delete": deck.slides.length < 2, smaller: level === 0, bigger: level === scales.length - 1, reset: level === plain };
   for (const [act, disabled] of Object.entries(off)) document.querySelector(`[data-act="${act}"]`).disabled = disabled;
 }
@@ -3519,28 +2293,43 @@ function renderGrid() {
     grid.replaceChildren(...slots);
   }
 }
+// 🎛️ a field belongs to a kind of layer (data-kinds; none: every layer) or to the page ("page": nothing is selected)
+const fieldFor = (input, l) => (input.dataset.kinds ? input.dataset.kinds.split(" ").includes(l ? l.kind : "page") : !!l);
 function renderInspector() {
-  const l = picked();
-  inspector.hidden = !inspectorOpen || !l;
+  const l = picked(), s = slide();
+  inspector.hidden = !inspectorOpen;
   document.querySelector('[data-act="inspect"]').setAttribute("aria-expanded", String(!inspector.hidden));
   for (const input of inspector.querySelectorAll("[data-property]")) {
     const key = input.dataset.property;
-    input.closest("label").hidden = !l || (input.dataset.kinds && !input.dataset.kinds.split(" ").includes(l.kind));
-    if (!l || input.closest("label").hidden || document.activeElement === input) continue;
-    if (input.type === "checkbox") input.checked = Boolean(l[key]);
-    else input.value = l[key] ?? (key === "headPlacement" ? "tip" : "");
+    input.closest("label").hidden = !fieldFor(input, l);
+    if (input.closest("label").hidden || document.activeElement === input) continue;
+    if (!l) {
+      if (key === "transparent") input.checked = s.background === "none";
+      else input.value = key === "background" ? (s.background === "none" ? "#ffffff" : s.background.toLowerCase()) : s[key];
+    } else if (input.type === "checkbox") input.checked = Boolean(l[key]);
+    else input.value = l[key] ?? (input.tagName === "SELECT" ? input.options[0].value : "");
   }
+}
+function setPage(key, input) {
+  // 🖼️ 幅・高さはすべてのページ（PNG・PPTX もこの大きさ。置いたものはそのまま）、背景・透明はこのページ
+  const s = slide();
+  if (key === "width" || key === "height") for (const x of deck.slides) x[key] = input.valueAsNumber;
+  else if (key === "transparent")
+    s.background = input.checked ? "none" : inspector.querySelector('[data-property="background"]').value.toUpperCase();
+  else s.background = input.value.toUpperCase();
 }
 inspector.addEventListener("change", (e) => {
   const input = e.target, key = input.dataset.property, l = picked();
-  if (!key || !l || (input.dataset.kinds && !input.dataset.kinds.split(" ").includes(l.kind))) return;
+  if (!key || !fieldFor(input, l)) return;
   if (input.type === "number" && (!input.value || !input.checkValidity())) {
-    input.value = l[key];
+    input.value = (l || slide())[key];
     return;
   }
   run(() => change(() => {
+    if (!l) return setPage(key, input);
     l[key] = input.type === "number" ? input.valueAsNumber : input.type === "checkbox" ? input.checked : input.value;
-    if (l.kind === "text" && (key === "italic" || key === "w")) fit(l);
+    if (key === "mono" && l.mono && !/^#/.test(l.fill ?? "")) l.fill = "#000000"; // 単色は 🎨 の塗りで（画像はまず黒）
+    if (l.kind === "text" && ["italic", "w", "fontSize"].includes(key)) fit(l);
   }));
 });
 function layerList(s) {
@@ -3714,6 +2503,25 @@ function restyle(fn) {
   const l = picked();
   if (l) change(() => fn(l));
 }
+function order(to) {
+  // ⬆️ ⬇️ ひとつ、⏫ ⏬ いちばん端まで: 選んだものを 📚 の to(今の位置, 手前の端) へ（奥が 0）
+  const l = picked();
+  if (l) change(() => {
+    const s = slide(), rest = s.layers.filter((x) => x !== l), i = s.layers.indexOf(l);
+    rest.splice(Math.max(0, Math.min(rest.length, to(i, rest.length))), 0, l);
+    s.layers = rest;
+  });
+}
+function travel(from, to, steps) {
+  // ↩️ ↪️ ひとつ、⏪ ⏩ ふたつ（端で止まる）
+  if (!from.length) return;
+  for (let n = 0; n < steps && from.length; n++) {
+    to.push(state());
+    restore(from.pop());
+  }
+  selected = null;
+  keep();
+}
 function scaleText(next) {
   // 🔽 🔄 🔼 すべてのページの文字を同じ倍率で（タイトルと本文の比は保つ）
   if (!scales[next] || next === level) return;
@@ -3783,34 +2591,22 @@ const acts = {
   pages() {
     pagesOpen = !pagesOpen; // 🗂️ 見るためのもの: ↩️ にも資料にも入らない
   },
-  front: () => change(() => {
-    const s = slide(),
-      l = picked();
-    s.layers = [...s.layers.filter((x) => x !== l), l];
-  }),
-  back: () => change(() => {
-    const s = slide(),
-      l = picked();
-    s.layers = [l, ...s.layers.filter((x) => x !== l)];
-  }),
+  duplicate: () => record(place((s) => {
+    const l = C.clone(picked()), step = s.width / 40; // ⧉ 少しずらして手前に（1280 なら 32）
+    return Object.assign(l, { id: uid(l.kind), x: l.x + step, y: l.y + step });
+  })),
+  forward: () => order((i) => i + 1),
+  backward: () => order((i) => i - 1),
+  front: () => order((i, last) => last),
+  back: () => order(() => 0),
   delete: () => change(() => {
     slide().layers = slide().layers.filter((l) => l.id !== selected);
     selected = null;
   }),
-  undo() {
-    if (!past.length) return;
-    future.push(state());
-    restore(past.pop());
-    selected = null;
-    keep();
-  },
-  redo() {
-    if (!future.length) return;
-    past.push(state());
-    restore(future.pop());
-    selected = null;
-    keep();
-  },
+  undo: () => travel(past, future, 1),
+  "undo-2": () => travel(past, future, 2),
+  redo: () => travel(future, past, 1),
+  "redo-2": () => travel(future, past, 2),
   smaller: () => scaleText(level - 1),
   reset: () => scaleText(plain),
   bigger: () => scaleText(level + 1),
@@ -3841,15 +2637,25 @@ const acts = {
   open: () => toolbar.choose("open"), // 📥 a host or IronmateSlideStudio.act without a file: the toolbar's chooser
   image: () => toolbar.choose("image"),
   camera: () => toolbar.choose("camera"),
+  clipboard: () => C.clipboardImage((bytes, mime) => files.image(new Blob([bytes], { type: mime }))), // 📋 画像も Base64 の文字も
   json: () => C.save("ironmate-slides.json", D.deckText(deck), "application/json"),
   async svg() {
     const s = slide();
     C.save(`ironmate-slide-${active + 1}.svg`, C.svg(s, await slideSource(s)), "image/svg+xml");
   },
   async png() {
-    const s = slide();
-    const blob = await C.scenePng(s, await slideSource(s));
-    C.save(`ironmate-slide-${active + 1}.png`, blob, "image/png");
+    C.save(`ironmate-slide-${active + 1}.png`, await pagePng(), "image/png");
+  },
+  async base64() {
+    // 📋 このページの PNG を data URI で（Flutter など、📥 クリップボードにも）。コピーできない端末では .txt に保存
+    const { dataUri } = C.pngPayload(new Uint8Array(await (await pagePng()).arrayBuffer()));
+    try {
+      await navigator.clipboard.writeText(dataUri);
+      note("📤 ✅ 📋");
+    } catch {
+      C.save(`ironmate-slide-${active + 1}.base64.txt`, dataUri, "text/plain");
+      note("📤 ✅ 💾");
+    }
   },
   async pptx() {
     note("📤 …");
@@ -3864,18 +2670,22 @@ const acts = {
   },
 };
 const files = {
-  async image(file, destination = slide()) {
+  async image(file, destination = slide(), sampling = "smooth") {
     const p = await C.picture(file, 1920); // 🖼️ 写真は 4MP・長辺 1920 まで縮めて PNG に（画像工房と同じ取り込み）
     if (slide() !== destination) throw Error("スライドが切り替わりました。追加したいページで画像を選び直してください。");
     const before = place((s) => {
       const k = Math.min((s.width * 0.6) / p.w, (s.height * 0.6) / p.h);
       return { id: uid("image"), kind: "image", name: "image", x: (s.width - p.w * k) / 2, y: (s.height - p.h * k) / 2,
-        w: p.w * k, h: p.h * k, rotation: 0, opacity: 1, src: p.src, cell: 1, levels: 256, sampling: "smooth" };
+        w: p.w * k, h: p.h * k, rotation: 0, opacity: 1, src: p.src, cell: 1, levels: 256, sampling };
     });
     record(before);
   },
+  pixels: (file) => files.image(file, slide(), "pixelated"), // ▦ ドット絵はくっきり拡大
   async open(file) {
-    const next = D.parse(await file.text()); // Slide Studio の「全スライドJSON」もそのまま開ける
+    // 📥 JSON: 全スライド、またはシーン 1 枚（画像工房・DRAgoWing のヒートマップ）を 1 ページの資料として。↩️ で前の資料へ
+    if (file.size > 32 * 1024 * 1024) throw Error("全スライドJSONは32MiB以下です。");
+    const data = JSON.parse(await file.text()),
+      next = D.validate(data?.schema === C.SCHEMA ? { schema: D.SCHEMA, title: "Ironmate", slides: [data] } : data);
     const before = state();
     deck = next;
     active = 0;
@@ -3891,10 +2701,10 @@ async function run(fn) {
   busy = true;
   try {
     await fn();
-    if (!/^📤/.test(status)) note("");
+    if (!/^📤/.test(status.text)) note("");
     return true;
   } catch (e) {
-    note(e.message, true);
+    note(e.message, true, e.code);
     return false;
   } finally {
     busy = false;
@@ -3910,6 +2720,14 @@ function press(name, value) {
   if (acts[name]) return run(acts[name]);
 }
 const toolbar = PySaiyanWeBoo.bindToolbar($("slides-toolbar"), press);
+// 🖱️ ファイルをスライドに落とす: JSON は 📥 JSON、ほかは 📥 画像（1 つ目だけ）
+stage.addEventListener("dragover", (e) => e.dataTransfer?.types.includes("Files") && e.preventDefault());
+stage.addEventListener("drop", (e) => {
+  const [file] = e.dataTransfer?.files ?? [];
+  if (!file) return;
+  e.preventDefault();
+  press(/json/i.test(file.type) || /\.json$/i.test(file.name) ? "open" : "image", file);
+});
 document.addEventListener("keydown", (e) => {
   if (editing || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return; // ← → Home End: the pager's own keys
   if ((e.key === "Delete" || e.key === "Backspace") && selected) run(acts.delete);
@@ -3920,18 +2738,6 @@ try {
   if (saved) restore(saved);
 } catch {
   deck = { schema: D.SCHEMA, title: "Ironmate", slides: [blank()] };
-}
-// The same-origin editor opens this tab from its shelf. Keep the original scene editable.
-if (location.hash === "#from-image-studio") {
-  const source = window.opener;
-  window.opener = null;
-  history.replaceState(history.state, "", location.pathname + location.search);
-  run(async () => {
-    if (!source || source.closed || source.location.origin !== location.origin || !source.IronmateStudio)
-      throw Error("画像工房のシェルフから開き直してください。");
-    const destination = slide();
-    await files.image(await source.IronmateStudio.pngBlob(1), destination);
-  });
 }
 stage.style.setProperty("--k", stage.clientWidth / slide().width);
 PySaiyanWeBoo.bindLabels(); // 💻 To textual ⇄ 📱 To iconic: 絵文字（既定）と短い言葉を、同じページで切り替え（覚えておく）
@@ -3994,21 +2800,25 @@ PSWB_PARTS = {
         '<div class="ui-toolbar-row" data-ui-candidates id="slides-candidates" role="group" aria-label="候補" hidden>'
         '</div>'
         '<div class="ui-toolbar-row" data-ui-group="adjust">'
-        '<button type="button" data-act="smaller" data-ui-word="小さく" aria-label="文字をすべて小さく" title="文字をすべて小さく">🔽</button>'
-        '<button type="button" data-act="reset" data-ui-word="元の大きさ" aria-label="文字をすべて元の大きさに" title="文字をすべて元の大きさに">🔄</button>'
-        '<button type="button" data-act="bigger" data-ui-word="大きく" aria-label="文字をすべて大きく" title="文字をすべて大きく">🔼</button>'
+        '<button type="button" data-act="undo-2" data-ui-word="2つ戻す" aria-label="2つ戻す" title="2つ戻す">⏪</button>'
         '<button type="button" data-act="undo" data-ui-word="戻す" aria-label="戻す" title="戻す">↩️</button>'
         '<button type="button" data-act="redo" data-ui-word="やり直す" aria-label="やり直す" title="やり直す">↪️</button>'
-        '</div>'
-        '<div id="slides-layers" class="ui-toolbar-row ui-current-items" role="group" aria-label="レイヤー（奥から手前）" hidden>'
+        '<button type="button" data-act="redo-2" data-ui-word="2つやり直す" aria-label="2つやり直す" title="2つやり直す">⏩</button>'
         '</div>'
         '<div class="ui-toolbar-row" data-ui-group="update">'
         '<button type="button" data-act="edit" data-ui-word="編集" aria-label="選んだ文字・時計を編集（選んだものをもう一度タップしても編集。時計は 14:30 のように）" title="選んだ文字・時計を編集（選んだものをもう一度タップしても編集。時計は 14:30 のように）">✏️</button>'
         '<button type="button" data-acts="fill stroke fade bold font" data-words="塗りを次の色へ|線を次の色へ|不透明度（1 → ¾ → ½ → ¼）|太字|等幅 ⇄ ふつう" data-candidates="🎨 🖌 🌗 🅱️ 🔠" data-act="look" data-ui-word="見た目" aria-label="選んだものの見た目（塗り・線の色・不透明度・太字・等幅）" title="選んだものの見た目（塗り・線の色・不透明度・太字・等幅）">🎨</button>'
         '<button type="button" data-acts="cw ccw upright" data-words="右へ 15°|左へ 15°|まっすぐに戻す" data-candidates="↻ ↺ ⏹" data-act="turn" data-ui-word="回転" aria-label="選んだものを回す" title="選んだものを回す">↻</button>'
+        '<button type="button" data-act="duplicate" data-ui-word="複製" aria-label="選んだものを複製" title="選んだものを複製">⧉</button>'
+        '<button type="button" data-act="delete" data-ui-word="削除" aria-label="選んだものを削除" title="選んだものを削除">🗑️</button>'
+        '</div>'
+        '<div class="ui-toolbar-row" data-ui-group="order">'
+        '<button type="button" data-act="forward" data-ui-word="前へ" aria-label="選んだものをひとつ手前へ" title="選んだものをひとつ手前へ">⬆️</button>'
+        '<button type="button" data-act="backward" data-ui-word="後ろへ" aria-label="選んだものをひとつ奥へ" title="選んだものをひとつ奥へ">⬇️</button>'
         '<button type="button" data-act="front" data-ui-word="手前へ" aria-label="選んだものをいちばん手前へ" title="選んだものをいちばん手前へ">⏫</button>'
         '<button type="button" data-act="back" data-ui-word="奥へ" aria-label="選んだものをいちばん奥へ" title="選んだものをいちばん奥へ">⏬</button>'
-        '<button type="button" data-act="delete" data-ui-word="削除" aria-label="選んだものを削除" title="選んだものを削除">🗑️</button>'
+        '</div>'
+        '<div id="slides-layers" class="ui-toolbar-row ui-current-items" role="group" aria-label="レイヤー（奥から手前）" hidden>'
         '</div>'
         '<div class="ui-toolbar-row" data-ui-group="pages">'
         '<button type="button" data-act="slide-add" data-ui-word="ページ追加" aria-label="白紙のページを追加" title="白紙のページを追加">➕📄</button>'
@@ -4020,17 +2830,23 @@ PSWB_PARTS = {
         '</div>'
         '<div class="ui-toolbar-row" data-ui-group="file">'
         '<button type="button" data-act="new" data-ui-word="新規" aria-label="最初から（白紙 1 枚）" title="最初から（白紙 1 枚）">🆕</button>'
-        '<button type="button" data-close data-acts="image camera open" data-words="画像（PNG・JPEG・WebP をこのページに）|カメラ（撮った写真をこのページに）|JSON（全スライド）" data-candidates="画像 カメラ JSON" data-act="import" data-ui-word="インポート" aria-label="インポート（どの形式から？ 候補から選ぶ）" title="インポート（どの形式から？ 候補から選ぶ）">📥</button>'
-        '<button type="button" data-close data-acts="pptx json png svg" data-words="PPTX（全スライド、PowerPoint で編集できる）|JSON（全スライド、また開ける）|PNG（このページ）|SVG（このページ）" data-candidates="PPTX JSON PNG SVG" data-act="export" data-ui-word="エクスポート" aria-label="エクスポート（どの形式に？ 候補から選ぶ）" title="エクスポート（どの形式に？ 候補から選ぶ）">📤</button>'
-        '<a class="ui-button" href="../" data-act="image-studio" data-ui-word="画像工房" aria-label="画像工房へ" title="画像工房へ">🖼️</a>'
+        '<button type="button" data-close data-acts="image camera clipboard open" data-words="画像（PNG・JPEG・WebP をこのページに）|カメラ（撮った写真をこのページに）|クリップボード（コピーした画像・Base64 をこのページに）|JSON（全スライド、またはシーン 1 枚：画像工房・DRAgoWing のヒートマップ）" data-candidates="画像 カメラ クリップボード JSON" data-act="import" data-ui-word="インポート" aria-label="インポート（どの形式から？ 候補から選ぶ）" title="インポート（どの形式から？ 候補から選ぶ）">📥</button>'
+        '<button type="button" data-close data-acts="pptx json png svg base64" data-words="PPTX（全スライド、PowerPoint で編集できる）|JSON（全スライド、また開ける）|PNG（このページ）|SVG（このページ）|Base64（このページの PNG を data URI でコピー、Flutter などへ）" data-candidates="PPTX JSON PNG SVG Base64" data-act="export" data-ui-word="エクスポート" aria-label="エクスポート（どの形式に？ 候補から選ぶ）" title="エクスポート（どの形式に？ 候補から選ぶ）">📤</button>'
         '<button type="button" class="ui-button" id="labels-switch" data-ui-labels-switch data-ui-word="📱 To iconic" aria-pressed="false" aria-label="💻 To textual ⇄ 📱 To iconic" title="💻 To textual ⇄ 📱 To iconic">💻</button>'
         '</div>'
         '<div class="ui-toolbar-row" data-ui-group="detail">'
-        '<button type="button" data-act="inspect" data-ui-word="詳細" aria-label="選んだものの詳細（位置・大きさ・種類別の設定）" title="選んだものの詳細（位置・大きさ・種類別の設定）">🎛️</button>'
+        '<button type="button" data-act="smaller" data-ui-word="小さく" aria-label="文字をすべて小さく" title="文字をすべて小さく">🔽</button>'
+        '<button type="button" data-act="reset" data-ui-word="元の大きさ" aria-label="文字をすべて元の大きさに" title="文字をすべて元の大きさに">🔄</button>'
+        '<button type="button" data-act="bigger" data-ui-word="大きく" aria-label="文字をすべて大きく" title="文字をすべて大きく">🔼</button>'
+        '<button type="button" data-act="inspect" data-ui-word="詳細" aria-label="詳細（選んだものの位置・大きさ・種類別の設定。何も選んでいなければページの大きさ・背景）" title="詳細（選んだものの位置・大きさ・種類別の設定。何も選んでいなければページの大きさ・背景）">🎛️</button>'
         '<button type="button" data-act="grid" data-ui-word="4枚表示" aria-label="4枚表示（その場で編集）" title="4枚表示（その場で編集）">⊞</button>'
         '</div>'
         '<fieldset id="slides-inspector" hidden>'
         '<legend>詳細設定</legend>'
+        '<label>📄 幅<input type="number" data-property="width" data-kinds="page" min="64" max="4096" step="1">'
+        '</label>'
+        '<label>📄 高さ<input type="number" data-property="height" data-kinds="page" min="64" max="4096" step="1">'
+        '</label>'
         '<label>横の位置<input type="number" data-property="x" data-kinds="" min="-8192" max="8192" step="any">'
         '</label>'
         '<label>縦の位置<input type="number" data-property="y" data-kinds="" min="-8192" max="8192" step="any">'
@@ -4039,101 +2855,77 @@ PSWB_PARTS = {
         '</label>'
         '<label>高さ<input type="number" data-property="h" data-kinds="" min="1" max="8192" step="any">'
         '</label>'
+        '<label>角度<input type="number" data-property="rotation" data-kinds="" min="-360" max="360" step="any">'
+        '</label>'
+        '<label>不透明度<input type="number" data-property="opacity" data-kinds="" min="0" max="1" step="any">'
+        '</label>'
+        '<label>文字の大きさ<input type="number" data-property="fontSize" data-kinds="text" min="4" max="512" step="any">'
+        '</label>'
         '<label>線幅<input type="number" data-property="strokeWidth" data-kinds="rect ellipse triangle arrow clock" min="0" max="64" step="any">'
         '</label>'
         '<label>モザイクの幅<input type="number" data-property="cell" data-kinds="image" min="1" max="512" step="1">'
         '</label>'
         '<label>色の段階<input type="number" data-property="levels" data-kinds="image" min="2" max="256" step="1">'
         '</label>'
+        '<label>色の段階（0 で連続）<input type="number" data-property="levels" data-kinds="heatmap" min="0" max="256" step="1">'
+        '</label>'
+        '<label>📄 背景<input type="color" data-property="background" data-kinds="page">'
+        '</label>'
+        '<label>'
+        '<input type="checkbox" data-property="transparent" data-kinds="page">透明</label>'
         '<label>'
         '<input type="checkbox" data-property="italic" data-kinds="text">斜体</label>'
+        '<label>'
+        '<input type="checkbox" data-property="mono" data-kinds="text image">単色（🎨 の色）</label>'
+        '<label>'
+        '<input type="checkbox" data-property="labels" data-kinds="heatmap">値を表示</label>'
         '<label>矢印の先端<select data-property="headPlacement" data-kinds="arrow">'
         '<option value="tip">端</option>'
         '<option value="middle">中央</option>'
         '</select>'
         '</label>'
+        '<label>矢印の形<select data-property="headStyle" data-kinds="arrow">'
+        '<option value="triangle">三角</option>'
+        '<option value="beginner">初心者マーク</option>'
+        '</select>'
+        '</label>'
+        '<label>拡大<select data-property="sampling" data-kinds="image">'
+        '<option value="pixelated">くっきり</option>'
+        '<option value="smooth">なめらか</option>'
+        '</select>'
+        '</label>'
         '</fieldset>'
         '<input type="file" hidden data-ui-file="image" accept="image/png,image/jpeg,image/webp" aria-label="画像（PNG・JPEG・WebP をこのページに）" />'
         '<input type="file" hidden data-ui-file="camera" accept="image/png,image/jpeg,image/webp" capture="environment" aria-label="カメラ（撮った写真をこのページに）" />'
-        '<input type="file" hidden data-ui-file="open" accept=".json,application/json" aria-label="JSON（全スライド）" />'
+        '<input type="file" hidden data-ui-file="open" accept=".json,application/json" aria-label="JSON（全スライド、またはシーン 1 枚：画像工房・DRAgoWing のヒートマップ）" />'
         '</div>'),
-    "image-toolbar": (
-        '        <div class="ui-toolbar" id="studio-toolbar" role="toolbar" aria-label="道具">'
-        '<div class="ui-toolbar-row" data-ui-group="create">'
-        '<button type="button" data-act="select" data-ui-word="選択" aria-label="選んで動かす" title="選んで動かす">👆</button>'
-        '<button type="button" data-act="text" data-ui-word="文字" aria-label="文字を置く" title="文字を置く">🔤</button>'
-        '<button type="button" data-acts="rect ellipse triangle arrow" data-words="四角|丸|三角|矢印" data-candidates="▭ ◯ △ →" data-act="shape" data-ui-word="図形" aria-label="図形（四角・丸・三角・矢印）" title="図形（四角・丸・三角・矢印）">🔷</button>'
-        '<button type="button" data-act="stamp" data-ui-word="スタンプ" aria-label="スタンプを押す" title="スタンプを押す">✦</button>'
-        '<button type="button" data-candidates="❤️ 😊 🌱 📊 ✨ 📌 🔰" data-act="emoji" data-ui-word="絵文字" aria-label="絵文字" title="絵文字">😊</button>'
-        '<button type="button" data-candidates="(・∀・) (｡•̀ᴗ-)✧ ٩(๑❛ᴗ❛๑)۶" data-act="kaomoji" data-ui-word="顔文字" aria-label="顔文字" title="顔文字">(^^)</button>'
-        '<button type="button" data-act="clock" data-ui-word="時計" aria-label="いまの時刻の時計" title="いまの時刻の時計">🕒</button>'
-        '</div>'
-        '<div class="ui-toolbar-row" data-ui-candidates id="studio-candidates" role="group" aria-label="候補" hidden>'
-        '</div>'
-        '<div class="ui-toolbar-row" data-ui-group="adjust">'
-        '<button type="button" data-act="undo-2" data-ui-word="2つ戻す" aria-label="2つ戻す" title="2つ戻す">⏪</button>'
-        '<button type="button" data-act="undo" data-ui-word="戻す" aria-label="戻す" title="戻す">↩️</button>'
-        '<button type="button" data-act="redo" data-ui-word="やり直す" aria-label="やり直す" title="やり直す">↪️</button>'
-        '<button type="button" data-act="redo-2" data-ui-word="2つやり直す" aria-label="2つやり直す" title="2つやり直す">⏩</button>'
-        '</div>'
-        '<div class="ui-toolbar-row" data-ui-group="update">'
-        '<button type="button" data-act="duplicate" data-ui-word="複製" aria-label="選んだものを複製" title="選んだものを複製">⧉</button>'
-        '<button type="button" data-act="forward" data-ui-word="前へ" aria-label="選んだものをひとつ手前へ" title="選んだものをひとつ手前へ">⬆️</button>'
-        '<button type="button" data-act="backward" data-ui-word="後ろへ" aria-label="選んだものをひとつ奥へ" title="選んだものをひとつ奥へ">⬇️</button>'
-        '<button type="button" data-act="delete" data-ui-word="削除" aria-label="選んだものを削除" title="選んだものを削除">🗑️</button>'
-        '</div>'
-        '<div class="ui-toolbar-row" data-ui-group="file">'
-        '<button type="button" data-close data-acts="image camera clipboard open-json open-workspace shelf" data-words="画像（PNG・JPEG・WebP をキャンバスに）|カメラ（撮った写真をキャンバスに）|クリップボード（コピーした画像・Base64）|JSON（再編集用のシーン）|作業履歴（最大40状態）|シェルフ（クリップボード・シェルフ）" data-candidates="画像 カメラ クリップボード JSON 作業履歴 シェルフ" data-act="import" data-ui-word="インポート" aria-label="インポート（どの形式から？ 候補から選ぶ）" title="インポート（どの形式から？ 候補から選ぶ）">📥</button>'
-        '<button type="button" data-close data-acts="png svg json workspace base64" data-words="PNG（出力倍率で）|SVG（出力倍率で）|JSON（再編集用）|作業履歴（最大40状態）|Base64（Flutter などへ渡す）" data-candidates="PNG SVG JSON 作業履歴 Base64" data-act="export" data-ui-word="エクスポート" aria-label="エクスポート（どの形式に？ 候補から選ぶ）" title="エクスポート（どの形式に？ 候補から選ぶ）">📤</button>'
-        '<a class="ui-button" href="slides/" data-act="slide-studio" data-ui-word="スライド工房" aria-label="スライド工房へ" title="スライド工房へ">📽️</a>'
-        '<select id="export-scale" title="出力倍率" aria-label="出力倍率">'
-        '<option value="1">1×</option>'
-        '<option value="2">2×</option>'
-        '<option value="4">4×</option>'
-        '<option value="8">8×</option>'
-        '</select>'
-        '<button type="button" class="ui-button" id="labels-switch" data-ui-labels-switch data-ui-word="📱 To iconic" aria-pressed="false" aria-label="💻 To textual ⇄ 📱 To iconic" title="💻 To textual ⇄ 📱 To iconic">💻</button>'
-        '</div>'
-        '<input type="file" hidden data-ui-file="image" accept="image/png,image/jpeg,image/webp" aria-label="画像（PNG・JPEG・WebP をキャンバスに）" />'
-        '<input type="file" hidden data-ui-file="camera" accept="image/png,image/jpeg,image/webp" capture="environment" aria-label="カメラ（撮った写真をキャンバスに）" />'
-        '<input type="file" hidden data-ui-file="open-json" accept=".json" aria-label="JSON（再編集用のシーン）" />'
-        '<input type="file" hidden data-ui-file="open-workspace" accept=".json,application/json" aria-label="作業履歴（最大40状態）" />'
-        '</div>\n'),
     "slides-rows": (
         '<script type="application/json" id="ui-chrome-rows">{"screen":[{"label":"💻 To textual ⇄ 📱 To iconic","key":"labels"}],"replaces":"#labels-switch"}</script>'),
-    "image-rows": (
-        '<script type="application/json" id="ui-chrome-rows">{"screen":[{"label":"📋 クリップボード・シェルフ","key":"shelf"},{"label":"💻 To textual ⇄ 📱 To iconic","key":"labels"}],"replaces":"#labels-switch"}</script>'),
 }
 # ⬆️ pysaiyanweboo
 
 
-def studio_rows(page: str) -> dict:
-    """🧰 What a studio declares for a host's header (PySaiyanWeBoo's ``chrome_rows_script``; the portfolio's screen places it while the
-    studio's panel is open): ⋯ 💻 To textual ⇄ 📱 To iconic on both (``labels``, answered by ``bindLabels``), and on Image Studio 📋 the
-    shelf (``shelf``, an act of its toolbar, answered by ``ui-chrome-action``). The host hides what they replace: the page's own 💻."""
-    labels = {"label": "💻 To textual ⇄ 📱 To iconic", "key": "labels"}
-    shelf = [{"label": "📋 クリップボード・シェルフ", "key": "shelf"}] if page == "image" else []
-    return {"screen": [*shelf, labels], "replaces": "#labels-switch"}
+def studio_rows() -> dict:
+    """🧰 What the editor declares for a host's header (PySaiyanWeBoo's ``chrome_rows_script``; the portfolio's screen places it while the
+    editor's panel is open): ⋯ 💻 To textual ⇄ 📱 To iconic (``labels``, answered by ``bindLabels``). The host hides what it replaces:
+    the page's own 💻."""
+    return {"screen": [{"label": "💻 To textual ⇄ 📱 To iconic", "key": "labels"}], "replaces": "#labels-switch"}
 
 
-def studio_toolbar(page: str) -> tuple[list, dict[str, str], dict[str, str]]:
-    """🧰 Both studios' toolbars as PySaiyanWeBoo's ``toolbar_html`` data, ``(groups, inside, after)``, from one table: an act has one
-    face, one word (💻 To textual) and one tip wherever it is listed, so a face never means two things (⬆️ ⬇️ one step, ⏫ ⏬ all the way;
-    ⧉ a copy of the selected, 📑 of the page). ``page`` is "slides" (the one slide editor) or "image" (Image Studio) and picks the rows:
-    make / adjust / change (/ pages) / file (/ detail). 🔷 😊 (^^) 🎨 ↻ open candidates under their row; 📥 どの形式から？ 📤 どの形式に？
-    name each page's formats in words and hide after a pick (Image Studio's are the keys a host's header sends, ``image_studio.host_rows``).
-    A format read from a file (📥 画像 カメラ JSON, and Image Studio's 作業履歴) has ``accept``: the toolbar holds its chooser.
-    ``inside`` and ``after`` place each page's own pieces: Image Studio's output scale beside 📤 (💻 ⇄ 📱 ends both pages' file rows,
-    scripts/build_studio_css.py adds it); the slide editor's 📚 layers, 🗂️ pages and inspector. scripts/build_studio_css.py writes the markup into PSWB_PARTS ("slides-toolbar",
-    "image-toolbar"); --check fails when this table and that markup drift."""
+def studio_toolbar() -> tuple[list, dict[str, str], dict[str, str]]:
+    """🧰 The editor's toolbar as PySaiyanWeBoo's ``toolbar_html`` data, ``(groups, inside, after)``, from one table: an act has one
+    face, one word (💻 To textual) and one tip, so a face never means two things (⬆️ ⬇️ one step, ⏫ ⏬ all the way; ⧉ a copy of the
+    selected, 📑 of the page). The rows: make / ↩️ / change / order / pages / file / detail, at most 6 a row (390 px: 6 × 48 + 5 × 8 =
+    328 of 358) so none wraps on a phone. 🔷 😊 (^^) 🎨 ↻ open candidates under their row; 📥 どの形式から？ 📤 どの形式に？ name the
+    formats in words and hide after a pick (a host's header rows are ``studio_rows``). A format read from a file (📥 画像 カメラ JSON) has
+    ``accept``: the toolbar holds its chooser. ``after`` places the 📚 layers, 🗂️ pages and the 🎛️ inspector; 💻 ⇄ 📱 ends the file row
+    (scripts/build_studio_css.py adds it and writes the markup into PSWB_PARTS["slides-toolbar"]; --check fails when they drift)."""
     from html import escape
 
     # act: (face, word, tip[, candidate faces, their acts, their words "|"]); a candidate without acts passes its face
     tools = {
-        "select": ("👆", "選択", "選んで動かす"),
         "text": ("🔤", "文字", "文字を置く"),
         "shape": ("🔷", "図形", "図形（四角・丸・三角・矢印）", "▭ ◯ △ →", "rect ellipse triangle arrow", "四角|丸|三角|矢印"),
-        "stamp": ("✦", "スタンプ", "スタンプを押す"),
         "emoji": ("😊", "絵文字", "絵文字", "❤️ 😊 🌱 📊 ✨ 📌 🔰"),
         "kaomoji": ("(^^)", "顔文字", "顔文字", "(・∀・) (｡•̀ᴗ-)✧ ٩(๑❛ᴗ❛๑)۶"),
         "clock": ("🕒", "時計", "いまの時刻の時計"),
@@ -4159,62 +2951,59 @@ def studio_toolbar(page: str) -> tuple[list, dict[str, str], dict[str, str]]:
         "slide-delete": ("✖️📄", "ページ削除", "ページを削除"),
         "pages": ("🗂️", "一覧", "ページの一覧（タップでそのページへ）"),
         "new": ("🆕", "新規", "最初から（白紙 1 枚）"),
-        "import": ("📥", "インポート", "インポート（どの形式から？ 候補から選ぶ）"),
-        "export": ("📤", "エクスポート", "エクスポート（どの形式に？ 候補から選ぶ）"),
-        "image-studio": ("🖼️", "画像工房", "画像工房へ"),
-        "slide-studio": ("📽️", "スライド工房", "スライド工房へ"),
-        "inspect": ("🎛️", "詳細", "選んだものの詳細（位置・大きさ・種類別の設定）"),
+        # 📥 📤 then the format, in words (a file one has its chooser: PySaiyanWeBoo's accept / capture)
+        "import": ("📥", "インポート", "インポート（どの形式から？ 候補から選ぶ）", "画像 カメラ クリップボード JSON", "image camera clipboard open",
+                   "画像（PNG・JPEG・WebP をこのページに）|カメラ（撮った写真をこのページに）|クリップボード（コピーした画像・Base64 をこのページに）"
+                   "|JSON（全スライド、またはシーン 1 枚：画像工房・DRAgoWing のヒートマップ）"),
+        "export": ("📤", "エクスポート", "エクスポート（どの形式に？ 候補から選ぶ）", "PPTX JSON PNG SVG Base64", "pptx json png svg base64",
+                   "PPTX（全スライド、PowerPoint で編集できる）|JSON（全スライド、また開ける）|PNG（このページ）|SVG（このページ）"
+                   "|Base64（このページの PNG を data URI でコピー、Flutter などへ）"),
+        "inspect": ("🎛️", "詳細", "詳細（選んだものの位置・大きさ・種類別の設定。何も選んでいなければページの大きさ・背景）"),
         "grid": ("⊞", "4枚表示", "4枚表示（その場で編集）"),
     }
-    formats = {  # 📥 📤 the same act, each page's own formats
-        "slides": {"import": ("画像 カメラ JSON", "image camera open",
-                              "画像（PNG・JPEG・WebP をこのページに）|カメラ（撮った写真をこのページに）|JSON（全スライド）"),
-                   "export": ("PPTX JSON PNG SVG", "pptx json png svg",
-                              "PPTX（全スライド、PowerPoint で編集できる）|JSON（全スライド、また開ける）|PNG（このページ）|SVG（このページ）")},
-        "image": {"import": ("画像 カメラ クリップボード JSON 作業履歴 シェルフ", "image camera clipboard open-json open-workspace shelf",
-                             "画像（PNG・JPEG・WebP をキャンバスに）|カメラ（撮った写真をキャンバスに）|クリップボード（コピーした画像・Base64）"
-                             "|JSON（再編集用のシーン）|作業履歴（最大40状態）|シェルフ（クリップボード・シェルフ）"),
-                  "export": ("PNG SVG JSON 作業履歴 Base64", "png svg json workspace base64",
-                             "PNG（出力倍率で）|SVG（出力倍率で）|JSON（再編集用）|作業履歴（最大40状態）|Base64（Flutter などへ渡す）")}}[page]
-    # 📥 a format read from a file: the toolbar holds its chooser (PySaiyanWeBoo's accept / capture) on both pages
-    picture = {"image": "image/png,image/jpeg,image/webp", "camera": "image/png,image/jpeg,image/webp environment"}
-    choosers = {"image": {**picture, "open-json": ".json", "open-workspace": ".json,application/json"},
-                "slides": {**picture, "open": ".json,application/json"}}[page]
-    rows = {"slides": (("create", "text shape emoji kaomoji clock"), ("adjust", "smaller reset bigger undo redo"),
-                       ("update", "edit look turn front back delete"), ("pages", "slide-add slide-copy slide-delete pages"),
-                       ("file", "new import export image-studio"), ("detail", "inspect grid")),
-            "image": (("create", "select text shape stamp emoji kaomoji clock"), ("adjust", "undo-2 undo redo redo-2"),
-                      ("update", "duplicate forward backward delete"), ("file", "import export slide-studio"))}[page]
-
-    links = {"image-studio": "../", "slide-studio": "slides/"}   # 🖼️ ⇄ 📽️ each studio links the other at the end of its file row
+    picture = "image/png,image/jpeg,image/webp"
+    choosers = {"image": picture, "camera": picture + " environment", "open": ".json,application/json"}
+    rows = (("create", "text shape emoji kaomoji clock"), ("adjust", "undo-2 undo redo redo-2"),
+            ("update", "edit look turn duplicate delete"), ("order", "forward backward front back"),
+            ("pages", "slide-add slide-copy slide-delete pages"), ("file", "new import export"),
+            ("detail", "smaller reset bigger inspect grid"))
 
     def control(act: str) -> dict:
-        face, word, tip, *offered = tools[act]
-        faces, acts, said = (*formats.get(act, offered), "", "", "")[:3]
+        face, word, tip, faces, acts, said = (*tools[act], "", "", "")[:6]
         named, picks = said.split("|") if said else [], acts.split()
-        return {"act": act, "face": face, "word": word, "words": tip, **({"href": links[act]} if act in links else {}),
+        return {"act": act, "face": face, "word": word, "words": tip,
                 "candidates": [{"face": f, **({"act": picks[i]} if picks else {}), **({"words": named[i]} if named else {}),
                                 **(dict(zip(("accept", "capture"), choosers[picks[i]].split())) if picks and picks[i] in choosers else {})}
-                               for i, f in enumerate(faces.split())], "close": act in formats}
+                               for i, f in enumerate(faces.split())], "close": act in ("import", "export")}
 
     groups = [(group, [control(act) for act in listed.split()]) for group, listed in rows]
-    if page == "image":
-        scale = ('<select id="export-scale" title="出力倍率" aria-label="出力倍率">'
-                 + "".join(f'<option value="{n}">{n}×</option>' for n in (1, 2, 4, 8)) + '</select>')
-        return groups, {"file": scale}, {}
-    numbers = (
+    numbers = (  # 🎛️ with nothing selected, the page: 幅・高さ for every page (the deck has one size), 背景 for this one
+        ("width", "📄 幅", 64, 4096, 1, "page"), ("height", "📄 高さ", 64, 4096, 1, "page"),
         ("x", "横の位置", -8192, 8192, "any", ""), ("y", "縦の位置", -8192, 8192, "any", ""),
         ("w", "幅", 1, 8192, "any", ""), ("h", "高さ", 1, 8192, "any", ""),
+        ("rotation", "角度", -360, 360, "any", ""), ("opacity", "不透明度", 0, 1, "any", ""),
+        ("fontSize", "文字の大きさ", 4, 512, "any", "text"),
         ("strokeWidth", "線幅", 0, 64, "any", "rect ellipse triangle arrow clock"),
         ("cell", "モザイクの幅", 1, 512, 1, "image"), ("levels", "色の段階", 2, 256, 1, "image"),
+        ("levels", "色の段階（0 で連続）", 0, 256, 1, "heatmap"),
+    )
+    choices = (  # a select's first option is what a layer without the field draws
+        ("headPlacement", "矢印の先端", "arrow", (("tip", "端"), ("middle", "中央"))),
+        ("headStyle", "矢印の形", "arrow", (("triangle", "三角"), ("beginner", "初心者マーク"))),
+        ("sampling", "拡大", "image", (("pixelated", "くっきり"), ("smooth", "なめらか"))),
     )
     inspector = ('<fieldset id="slides-inspector" hidden><legend>詳細設定</legend>' + "".join(
         f'<label>{escape(label)}<input type="number" data-property="{key}" data-kinds="{kinds}" min="{lo}" max="{hi}" step="{step}"></label>'
         for key, label, lo, hi, step, kinds in numbers)
+        + '<label>📄 背景<input type="color" data-property="background" data-kinds="page"></label>'
+        + '<label><input type="checkbox" data-property="transparent" data-kinds="page">透明</label>'
         + '<label><input type="checkbox" data-property="italic" data-kinds="text">斜体</label>'
-        + '<label>矢印の先端<select data-property="headPlacement" data-kinds="arrow">'
-          '<option value="tip">端</option><option value="middle">中央</option></select></label></fieldset>')
-    after = {"adjust": '<div id="slides-layers" class="ui-toolbar-row ui-current-items" role="group" aria-label="レイヤー（奥から手前）" hidden></div>',
+        + '<label><input type="checkbox" data-property="mono" data-kinds="text image">単色（🎨 の色）</label>'
+        + '<label><input type="checkbox" data-property="labels" data-kinds="heatmap">値を表示</label>'
+        + "".join(f'<label>{escape(label)}<select data-property="{key}" data-kinds="{kinds}">'
+                  + "".join(f'<option value="{value}">{escape(word)}</option>' for value, word in options) + '</select></label>'
+                  for key, label, kinds, options in choices) + '</fieldset>')
+    after = {"order": '<div id="slides-layers" class="ui-toolbar-row ui-current-items" role="group" aria-label="レイヤー（奥から手前）" hidden></div>',
              "pages": '<div id="slides-pages" class="ui-toolbar-row ui-current-items" role="group" aria-label="ページの一覧" hidden></div>',
              "detail": inspector}
     return groups, {}, after
@@ -4223,11 +3012,25 @@ def studio_toolbar(page: str) -> tuple[list, dict[str, str], dict[str, str]]:
 def _slides_html() -> str:
     slide = ('<div id="slides-svg" class="slides-svg" data-ui-fill></div>'
              '<div id="slides-pick" class="slides-pick" hidden><span class="slides-grip" data-grip aria-hidden="true">↘</span></div>')
-    head = STUDIO_HTML[:STUDIO_HTML.index("</head>")]
-    for name in ("style.css", "studio.js", "brand/manifest.webmanifest", "brand/apple-touch-icon.png", "brand/favicon.ico",
-                 "brand/icon.svg"):
-        head = head.replace(f'"{name}"', f'"../{name}"')
-    head = head.replace("Ironmate — Image Studio", "Ironmate — Slides")
+    head = r'''<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; manifest-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'"
+    />
+    <link rel="manifest" href="brand/manifest.webmanifest" />
+    <link rel="apple-touch-icon" sizes="180x180" href="brand/apple-touch-icon.png" />
+    <meta name="theme-color" content="#003D32" />
+    <meta name="apple-mobile-web-app-title" content="Ironmate" />
+    <title>Ironmate</title>
+    <link rel="icon" href="brand/favicon.ico" sizes="16x16 32x32 48x48" />
+    <link rel="icon" type="image/svg+xml" href="brand/icon.svg" sizes="any" />
+    <link rel="stylesheet" href="style.css" />
+    <script defer src="studio.js"></script>
+  '''
     scale = " ".join(f"{v:g}" for v in SLIDES_TEXT["scale"])
     return (head + "</head>\n"
             f'  <body class="ui-elements" data-ui-theme="green" data-page="slides" data-text-size="{SLIDES_TEXT["size"]}" data-text-scale="{scale}">\n'
@@ -4238,13 +3041,12 @@ def _slides_html() -> str:
             '      <div class="slides-deck"><textarea id="slides-edit" class="slides-edit" hidden aria-label="文字" rows="3" spellcheck="false"></textarea>'
             f'{PSWB_PARTS["pager"]}'
             '<p id="slides-status" class="slides-status" role="status"></p>'
-            f'<div class="slides-tools">{PSWB_PARTS.get("slides-toolbar", "")}</div></div>\n'
+            f'<div class="slides-tools">{PSWB_PARTS.get("slides-toolbar", "")}</div>\n'
+            f'{STUDIO_PIXEL_PANEL}</div>\n'                                       # ▦ the dot-art editor; its ➕ puts the art on this page
             "    </main>\n  </body>\n</html>\n")
 
 
 SLIDES_HTML = _slides_html()
-STUDIO_HTML = STUDIO_HTML.replace('        <!-- 🧰 toolbar: studio_toolbar("image") -->\n', PSWB_PARTS.get("image-toolbar", ""), 1)   # 🧰 Image Studio's tools
-STUDIO_HTML = STUDIO_HTML.replace("    <main>", "    " + PSWB_PARTS.get("image-rows", "") + "\n    <main>", 1)                 # 🧰 its rows for a host's header
 
 BROWSER_TASK_JS = r"""/* PSWB async-task.js */
 /**

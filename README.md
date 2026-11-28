@@ -27,9 +27,9 @@ This is an additional concept diagram supplementing the processing flow above. T
 not a guarantee of faithfully reproducing edited PPTX in HTML.
 [Difference between previews and PPTX verification](docs/pptx-cli-prototype.md) / [crop information for the additional diagram](docs/assets/repository-concept-v2.json).
 
-## Image Studio: stamp shapes, text and emoji into an image
+## The editor: slides and pictures in one page
 
-`python -S image_studio.py` opens a local editor. Layer shapes, images and custom stamps, change heatmap color steps and mosaic granularity, and output PNG, SVG, Base64 and re-editable JSON. Clock, arrow, emoticon and monochrome stamps and CLI rendering are also supported.
+`python -S image_studio.py` opens the local editor (one page for slides and pictures; Image Studio joined it, ONE-EDITOR #301). Layer text, shapes, emoji, clocks and pictures, draw dot art, set a page's size and background, change heatmap color steps and mosaic granularity, and output PPTX, PNG, SVG, Base64 and re-editable JSON. CLI rendering of a scene is also supported.
 
 [Open Image Studio in the browser](https://myon-bioinformatics.github.io/tools/#image-studio) / [Open the pixel art and image list](https://myon-bioinformatics.github.io/tools/#browser-tools) / [Docker startup and Pages version scope](docs/browser-tools.md)
 
@@ -285,8 +285,8 @@ To turn CSV into xlsx, use the [Excel workbook](docs/xlsx-exceljs.md). Encoding 
 | --- | --- |
 | `tests/pages_browser.cjs` · `slides_browser.cjs` (against the built `/Ironmate/` site) | ✅ |
 | `tests/studio_clipboard.cjs` (Chromium) | ✅ 44 checks |
-| `tests/image_studio_browser.cjs` · `flow_export_browser.cjs` | ✅ |
-| `studio_quality` · `studio_scale` · `studio_shelf` · `studio_tradeoff` browser checks | ✅ |
+| `tests/slides_browser.cjs` · `studio_clipboard.cjs` · `flow_export_browser.cjs` | ✅ |
+| `studio_quality` · `studio_tradeoff` browser checks | ✅ |
 | pytest flow / Marp / UNO / browser slides / PPTX preview + pipeline / CDN pypdf | ✅ 82 · ⏭️ 4 (review lane, run next row) |
 | pytest review lane (`IRONMATE_RUN_REVIEW=1`) | ✅ 60 |
 | 🎞️ evidence GIF shots | ✅ 6 |

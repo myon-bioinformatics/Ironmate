@@ -251,12 +251,30 @@ const url =
     await act("undo");
     assert.deepEqual((await state()).deck.slides[1].layers.map((l) => l.kind), ["rect", "arrow", "text"]);
     // 🧰 IronmatePhone.act runs what the toolbar runs, awaitable (a host or Node needs no file input): a Blob is 📥's 画像 / カメラ
-    await mobile.evaluate(async (b64) => {
+    assert.deepEqual(await mobile.evaluate(async (b64) => {
       const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-      await IronmatePhone.act("camera", new Blob([bytes], { type: "image/png" }));
+      const image = new Blob([bytes], { type: "image/png" });
+      const first = IronmatePhone.act("camera", image);
+      const busy = await IronmatePhone.act("image", image);
+      const imported = await first;
+      const before = IronmatePhone.deck;
+      const invalid = await IronmatePhone.act("image", new Blob(["invalid"], { type: "image/png" }));
+      const unchanged = JSON.stringify(IronmatePhone.deck) === JSON.stringify(before);
       await IronmatePhone.act("undo");
-    }, photo);
+      return { imported, busy, invalid, unchanged };
+    }, photo), { imported: true, busy: false, invalid: false, unchanged: true });
     assert.deepEqual((await state()).deck.slides[1].layers.map((l) => l.kind), ["rect", "arrow", "text"]);
+    const beforePageTurn = await state();
+    const importedAfterPageTurn = await mobile.evaluate((b64) => {
+      const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+      const pending = IronmatePhone.act("image", new Blob([bytes], { type: "image/png" }));
+      document.querySelector('[data-ui-pager-go="prev"]').click();
+      return pending;
+    }, photo);
+    assert.equal(importedAfterPageTurn, false);
+    assert.equal((await state()).active, 0);
+    assert.deepEqual((await state()).deck, beforePageTurn.deck);
+    await mobile.tap('[data-ui-pager-go="next"]');
     assert.equal(await mobile.evaluate(() => IronmatePhone.act("redo").then(() => IronmatePhone.deck.slides[1].layers.at(-1).kind)), "image");
     await mobile.evaluate(() => IronmatePhone.act("undo"));
     // 💾 autosave survives a reload

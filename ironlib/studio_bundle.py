@@ -3912,13 +3912,14 @@ const acts = {
   },
 };
 const files = {
-  async image(file) {
-    const p = await C.picture(file, 1920, true), // 🖼️ 写真は 4MP・長辺 1920 まで縮めて PNG に
-      before = place((s) => {
-        const k = Math.min((s.width * 0.6) / p.w, (s.height * 0.6) / p.h);
-        return { id: uid("image"), kind: "image", name: "image", x: (s.width - p.w * k) / 2, y: (s.height - p.h * k) / 2,
-          w: p.w * k, h: p.h * k, rotation: 0, opacity: 1, src: p.src, cell: 1, levels: 256, sampling: "smooth" };
-      });
+  async image(file, destination = slide()) {
+    const p = await C.picture(file, 1920, true); // 🖼️ 写真は 4MP・長辺 1920 まで縮めて PNG に
+    if (slide() !== destination) throw Error("スライドが切り替わりました。追加したいページで画像を選び直してください。");
+    const before = place((s) => {
+      const k = Math.min((s.width * 0.6) / p.w, (s.height * 0.6) / p.h);
+      return { id: uid("image"), kind: "image", name: "image", x: (s.width - p.w * k) / 2, y: (s.height - p.h * k) / 2,
+        w: p.w * k, h: p.h * k, rotation: 0, opacity: 1, src: p.src, cell: 1, levels: 256, sampling: "smooth" };
+    });
     record(before);
   },
   async open(file) {
@@ -3934,13 +3935,15 @@ const files = {
 };
 let busy = false;
 async function run(fn) {
-  if (busy) return;
+  if (busy) return false;
   busy = true;
   try {
     await fn();
     if (!/^📤/.test(status)) note("");
+    return true;
   } catch (e) {
     note(e.message, true);
+    return false;
   } finally {
     busy = false;
     render();
@@ -3974,7 +3977,8 @@ if (location.hash === "#from-image-studio") {
   run(async () => {
     if (!source || source.closed || source.location.origin !== location.origin || !source.IronmateStudio)
       throw Error("画像工房のシェルフから開き直してください。");
-    await files.image(await source.IronmateStudio.pngBlob(1));
+    const destination = slide();
+    await files.image(await source.IronmateStudio.pngBlob(1), destination);
   });
 }
 stage.style.setProperty("--k", stage.clientWidth / slide().width);

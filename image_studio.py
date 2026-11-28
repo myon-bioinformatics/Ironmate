@@ -55,27 +55,24 @@ def mosaic(artifact, cell=8, levels=256):
 
 
 def host_rows(page: str = 'studio') -> str:
-    """🧰 What a host's header shows for a studio, as a JSON data block in the page (PySaiyanWeBoo chrome rows): one 💾 whose panel
-    lists every format, one 📂, the temporary shelf under ⋯ (``page='slides'``: only ⋯ 💻 To textual ⇄ 📱 To iconic, PySaiyanWeBoo's ``labels`` key,
-    which stands in for the page's own switch; its 📥 📤 already ask the format). The page carries no header of its own: it
-    answers each key (``ui-chrome-action`` in studio.js) by pressing its own control. ``replaces`` names the page's own menus, which
-    a host that shows these rows hides; without a host (the local server) they stay."""
+    """🧰 What a host's header shows for a studio, as a JSON data block in the page (PySaiyanWeBoo chrome rows): under ⋯ only
+    💻 To textual ⇄ 📱 To iconic (PySaiyanWeBoo's ``labels`` key, which stands in for the page's own switch) and, for Image Studio, the
+    temporary shelf. Both studios' own 📥 📤 already ask the format (どの形式から？ どの形式に？), so the header lists none. The page
+    answers each key (``ui-chrome-action`` in studio.js) with the act its toolbar runs; png-2 … png-8, svg, json, workspace, base64,
+    open-json and open-workspace still work from a host that sends them. ``replaces`` names what a host that shows these rows hides:
+    each studio's 💻 at the end of its file row, and Image Studio's own top bar (the logo and 🏭), so inside a host both studios are
+    just their work under the host's one header; without a host (the local server) they stay."""
     rows = lambda pairs: [{'label': label, 'key': key} for label, key in pairs]
-    if page == 'slides':
-        spec = {'screen': rows([('💻 To textual ⇄ 📱 To iconic', 'labels')]), 'replaces': '#labels-switch'}
-        return '<script type="application/json" id="ui-chrome-rows">' + json.dumps(spec, ensure_ascii=False).replace('<', '\\u003c') + '</script>'
-    save = [('🖼 PNG', 'png'), ('🖼 PNG ×2', 'png-2'), ('🖼 PNG ×4', 'png-4'), ('🖼 PNG ×8', 'png-8'), ('📐 SVG', 'svg'),
-            ('📦 JSON（再編集用）', 'json'), ('🕘 作業履歴', 'workspace'), ('🔤 Base64 / 渡す', 'base64')]
-    opened = [('📦 JSON', 'open-json'), ('🕘 作業履歴', 'open-workspace')]
-    spec = {'tools': {'💾': {'label': '保存', 'label_en': 'Save', 'links': rows(save)}, '📂': {'label': '開く', 'label_en': 'Open', 'links': rows(opened)}},
-            'screen': rows([('📋 クリップボード・シェルフ', 'shelf'), ('💻 To textual ⇄ 📱 To iconic', 'labels')]),
-            'replaces': '#studios,#studio-import,#studio-export,#labels-switch'}
+    labels = ('💻 To textual ⇄ 📱 To iconic', 'labels')
+    spec = ({'screen': rows([labels]), 'replaces': '#labels-switch'} if page == 'slides' else
+            {'screen': rows([('📋 クリップボード・シェルフ', 'shelf'), labels]), 'replaces': '#studio-head,#labels-switch'})
     return '<script type="application/json" id="ui-chrome-rows">' + json.dumps(spec, ensure_ascii=False).replace('<', '\\u003c') + '</script>'
+
 
 
 def public_assets():
     """Explicit publication allowlist; no user scenes, globbing, or local images."""
-    from ironlib.studio_bundle import BRAND_HTML, BROWSER_TASK_JS, PHONE_HTML, PSWB_PHONE, RECORDS_JS, STUDIO_HTML, STUDIO_JS, STYLE_CSS, TOOLS_HTML
+    from ironlib.studio_bundle import BRAND_HTML, BROWSER_TASK_JS, PHONE_HTML, RECORDS_JS, STUDIO_HTML, STUDIO_JS, STYLE_CSS, TOOLS_HTML
     names = ('brand/mono.svg', 'brand/dark-green.svg',
              'brand/famicom.svg', 'brand/gameboy.svg', 'brand/pixel-3d.svg',
              'brand/manifest.webmanifest', 'brand/apple-touch-icon.png', 'brand/app-192.png',
@@ -83,10 +80,7 @@ def public_assets():
              'brand/icon.svg', 'brand/heatmap.svg', 'brand/hero.svg', 'brand/favicon.ico', 'brand/favicon-16.png',
              'brand/favicon-32.png', 'brand/favicon-48.png', 'brand/icon-192.png')
     assets = {name: (ROOT / 'studio' / name).read_bytes() for name in names}
-    # 💻 ⇄ 📱 the same switch as the slide editor's, at the end of the top actions (a host's ⋯ row stands in for it)
-    page = STUDIO_HTML.replace('<header>', host_rows() + '<header>', 1)
-    page = page.replace('      </div>\n    </header>', '        ' + PSWB_PHONE['labels'] + '\n      </div>\n    </header>', 1)
-    assets['index.html'] = page.encode('utf-8')
+    assets['index.html'] = STUDIO_HTML.replace('<header id="studio-head">', host_rows() + '<header id="studio-head">', 1).encode('utf-8')
     assets['style.css'] = STYLE_CSS.encode('utf-8')
     from scripts.pages_catalog import catalog_script
     assets['studio.js'] = STUDIO_JS.encode('utf-8') + b'\n' + catalog_script()

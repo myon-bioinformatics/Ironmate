@@ -4,19 +4,7 @@ Importing this module performs no I/O. Probes execute only caller-supplied
 callables, and are not a sandbox or a timeout mechanism.
 """
 
-import ast
-import codecs
-import fnmatch
-import importlib
-import importlib.util
-import errno
-import json
-import os
-import random
-import re
-import stat
-import unicodedata
-import xml.etree.ElementTree as ET
+import ast, codecs, errno, fnmatch, importlib, importlib.util, json, os, random, re, stat, unicodedata, xml.etree.ElementTree as ET
 from pathlib import Path
 
 __version__ = "0.4.0"
@@ -1132,6 +1120,10 @@ def case_factor_matrix():
             'rows': rows, 'uncovered_pairs': uncovered}
 
 
+# Python 3.9 retains the original exact fallback; 3.10+ avoids binary strings.
+_factor_popcount = getattr(int, 'bit_count', lambda value: bin(value).count('1'))
+
+
 def _greedy_factor_cases(candidates, pairs, count):
     """Maximum marginal pair gain; stable ID ties, then fill to the budget."""
     remaining = sorted(candidates, key=lambda case: case['id'])
@@ -1141,7 +1133,7 @@ def _greedy_factor_cases(candidates, pairs, count):
     selected, covered = [], 0
     while remaining and len(selected) < count:
         best = max(range(len(remaining)),
-                   key=lambda index: bin(masks[remaining[index]['id']] & ~covered).count('1'))
+                   key=lambda index: _factor_popcount(masks[remaining[index]['id']] & ~covered))
         case = remaining.pop(best)
         selected.append(case)
         covered |= masks[case['id']]
@@ -1415,7 +1407,7 @@ def cases_from_junit(text, *, max_cases=1000, max_bytes=1_000_000,
 # --- structured config loading (TOML / YAML) -------------------------------
 # tomllib when the interpreter has it (3.11+); otherwise, and always for YAML,
 # Node 26+ with smol-toml / js-yaml resolved through NODE_PATH or the current
-# directory. A sibling ``vendor/node_launch.py`` is used when that file is
+# directory. A sibling ``vendor/njs_launch.py`` is used when that file is
 # present; a copied ``xprobe.py`` falls back to the stdlib launcher below.
 # Text goes through stdin; the script is fixed; no input is evaluated.
 _NODE_LOADER = r"""
@@ -1478,44 +1470,44 @@ def _from_node_toml(value):
     return value
 
 
-_NODE_LAUNCH = None
+_NJS_LAUNCH = None
 _MIN_NODE_MAJOR = 26
 
 
-def _sibling_node_launch_path():
-    return Path(__file__).resolve().parent / "vendor" / "node_launch.py"
+def _sibling_njs_launch_path():
+    return Path(__file__).resolve().parent / "vendor" / "njs_launch.py"
 
 
-def _node_launch_module():
+def _njs_launch_module():
     """Vendored launcher when it sits beside this file; otherwise stdlib.
 
     Import and non-Node commands never call this. Only TOML-without-tomllib
     and YAML need a launcher, and only those fail when Node itself is missing.
     """
-    global _NODE_LAUNCH
-    if _NODE_LAUNCH is None:
-        path = _sibling_node_launch_path()
+    global _NJS_LAUNCH
+    if _NJS_LAUNCH is None:
+        path = _sibling_njs_launch_path()
         if path.is_file():
-            spec = importlib.util.spec_from_file_location("_vendored_node_launch", path)
+            spec = importlib.util.spec_from_file_location("_vendored_njs_launch", path)
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
             # The vendored copy still floors at its parent's older default.
             # xprobe's product floor is _MIN_NODE_MAJOR; enforce it here so
             # the vendored path cannot run on a Node version below it.
             module.MIN_NODE_MAJOR = max(module.MIN_NODE_MAJOR, _MIN_NODE_MAJOR)
-            _NODE_LAUNCH = module
+            _NJS_LAUNCH = module
         else:
-            _NODE_LAUNCH = _stdlib_node_launch()
-    return _NODE_LAUNCH
+            _NJS_LAUNCH = _stdlib_njs_launch()
+    return _NJS_LAUNCH
 
 
-def _stdlib_node_launch():
-    """Minimal Node 26+ spawn used when ``vendor/node_launch.py`` is absent.
+def _stdlib_njs_launch():
+    """Minimal Node 26+ spawn used when ``vendor/njs_launch.py`` is absent.
 
     Resolves like the vendored helper with ``env_var=None`` (PATH via
     ``shutil.which``, not the ``NODE`` environment variable). Version misses
     and launch failures use the same ``NodeNotFoundError`` / ``LaunchError``
-    shape ``_node_backend_error`` and ``_map_node_launch_error`` already map.
+    shape ``_node_backend_error`` and ``_map_njs_launch_error`` already map.
     """
     import shutil
     import subprocess
@@ -1543,7 +1535,7 @@ def _stdlib_node_launch():
         lowered = path.lower()
         if lowered.endswith(".cmd") or lowered.endswith(".bat"):
             raise NodeNotFoundError(
-                "node_launch: node batch wrappers (.cmd/.bat) are not supported: " + path
+                "njs_launch: node batch wrappers (.cmd/.bat) are not supported: " + path
             )
 
     def _probe(path, probe_timeout):
@@ -1560,19 +1552,19 @@ def _stdlib_node_launch():
                 check=False,
             )
         except FileNotFoundError as exc:
-            raise NodeNotFoundError("node_launch: node executable not found: " + path) from exc
+            raise NodeNotFoundError("njs_launch: node executable not found: " + path) from exc
         except subprocess.TimeoutExpired as exc:
-            raise NodeNotFoundError("node_launch: node version probe timed out: " + path) from exc
+            raise NodeNotFoundError("njs_launch: node version probe timed out: " + path) from exc
         except OSError as exc:
-            raise NodeNotFoundError("node_launch: node version probe failed: " + path) from exc
+            raise NodeNotFoundError("njs_launch: node version probe failed: " + path) from exc
         output = _decode_node_process_bytes(completed.stdout) + _decode_node_process_bytes(completed.stderr)
         match = version_re.search(output)
         if completed.returncode != 0 or match is None:
-            raise NodeNotFoundError("node_launch: node version probe failed: " + path)
+            raise NodeNotFoundError("njs_launch: node version probe failed: " + path)
         major = int(match.group("major"))
         if major < _MIN_NODE_MAJOR:
             raise NodeNotFoundError(
-                f"node_launch: node version must be {_MIN_NODE_MAJOR} or newer (found {major}): " + path
+                f"njs_launch: node version must be {_MIN_NODE_MAJOR} or newer (found {major}): " + path
             )
         probed[path] = path
         return path
@@ -1586,7 +1578,7 @@ def _stdlib_node_launch():
             return _probe(path, probe_timeout) if probe else path
         discovered = shutil.which("node")
         if not discovered:
-            raise NodeNotFoundError("node_launch: node executable not found")
+            raise NodeNotFoundError("njs_launch: node executable not found")
         _reject_batch(discovered)
         return _probe(discovered, probe_timeout) if probe else discovered
 
@@ -1611,7 +1603,7 @@ def _stdlib_node_launch():
                 shell=False,
             )
         except OSError as exc:
-            raise LaunchError(f"node_launch: Node process failed: {exc}", code="ELAUNCHFAILURE") from exc
+            raise LaunchError(f"njs_launch: Node process failed: {exc}", code="ELAUNCHFAILURE") from exc
 
         stdout_chunks = []
         stderr_chunks = []
@@ -1684,21 +1676,21 @@ def _stdlib_node_launch():
             returncode = -1
         if stdin_error:
             raise LaunchError(
-                f"node_launch: Node process failed: {stdin_error[0]}",
+                f"njs_launch: Node process failed: {stdin_error[0]}",
                 code="ELAUNCHFAILURE",
                 stdout=stdout,
                 stderr=stderr,
             ) from stdin_error[0]
         if timed_out:
             raise LaunchError(
-                "node_launch: Node process timed out",
+                "njs_launch: Node process timed out",
                 code="ELAUNCHFAILURE",
                 stdout=stdout,
                 stderr=stderr,
             )
         if stdin_closed:
             raise LaunchError(
-                "node_launch: Node stdin pipe closed unexpectedly",
+                "njs_launch: Node stdin pipe closed unexpectedly",
                 code="ELAUNCHSTDINCLOSED",
                 status=returncode,
                 stdout=stdout,
@@ -1741,7 +1733,7 @@ def _node_backend_error(exc, package, node):
         import shutil
         discovered = shutil.which("node")
         if discovered:
-            launcher = _node_launch_module()
+            launcher = _njs_launch_module()
             try:
                 launcher.resolve_node(node=discovered, env_var=None)
             except launcher.NodeNotFoundError as probe_exc:
@@ -1757,7 +1749,7 @@ def _node_backend_error(exc, package, node):
     ) from exc
 
 
-def _map_node_launch_error(exc, command, timeout):
+def _map_njs_launch_error(exc, command, timeout):
     """Map vendored ``LaunchError`` to legacy ``load_*`` subprocess shapes."""
     import subprocess
 
@@ -1775,17 +1767,17 @@ def _map_node_launch_error(exc, command, timeout):
 
 
 def _xprobe_node_run(target, *args, timeout=30, **kwargs):
-    node_launch = _node_launch_module()
+    njs_launch = _njs_launch_module()
     run_kwargs = dict(kwargs)
     node = run_kwargs.pop("node", None)
     env_var = run_kwargs.pop("env_var", None)
     run_kwargs.pop("probe", None)
-    executable = node_launch.resolve_node(node=node, env_var=env_var)
-    command = node_launch.node_command(
+    executable = njs_launch.resolve_node(node=node, env_var=env_var)
+    command = njs_launch.node_command(
         target, *args, node=executable, probe=False, env_var=env_var
     )
     try:
-        return node_launch.run(
+        return njs_launch.run(
             target,
             *args,
             timeout=timeout,
@@ -1794,20 +1786,20 @@ def _xprobe_node_run(target, *args, timeout=30, **kwargs):
             env_var=env_var,
             **run_kwargs,
         )
-    except node_launch.LaunchError as exc:
-        return _map_node_launch_error(exc, command, timeout)
+    except njs_launch.LaunchError as exc:
+        return _map_njs_launch_error(exc, command, timeout)
 
 
 def _node_load(kind, text, node, timeout):
     if not isinstance(text, str):
         raise TypeError("text must be a string")
     package = "smol-toml" if kind == "toml" else "js-yaml"
-    node_launch = _node_launch_module()
+    njs_launch = _njs_launch_module()
     try:
         done = _xprobe_node_run(
             "-e", _NODE_LOADER, kind, input=text, node=node, timeout=timeout, check=False
         )
-    except node_launch.NodeNotFoundError as exc:
+    except njs_launch.NodeNotFoundError as exc:
         _node_backend_error(exc, package, node)
     if done.returncode:
         reason = _decode_node_process_bytes(done.stderr).strip()
@@ -2711,14 +2703,56 @@ def hidden_text_scan(roots=(".",), *, kinds=None, min_severity="medium", max_fil
             "skipped": skipped, "truncated": truncated, "counts": counts, "findings": findings}
 
 
+def _junit_cli(path, *, max_bytes, max_cases, repository, commit_sha, report_id):
+    """Import a local JUnit file and preserve the JSON/exit contract in both CLIs."""
+    import sys
+
+    def failure(code, error, status, message=None):
+        payload = {"ok": False, "code": code, "error": error, "exit": status}
+        if message is not None:
+            payload["message"] = message
+        print(json.dumps(payload, ensure_ascii=True, sort_keys=True), file=sys.stderr)
+        return status
+
+    try:
+        _limit(max_bytes, "max_bytes")
+        with Path(path).open("rb") as stream:
+            data = stream.read(max_bytes + 1)
+        if len(data) > max_bytes:
+            raise ValueError("JUnit exceeds byte limit")
+        report = cases_from_junit(data.decode("utf-8"), max_bytes=max_bytes,
+                                  max_cases=max_cases, repository=repository,
+                                  commit_sha=commit_sha, report_id=report_id)
+    except OSError as error:
+        return failure("io_error", type(error).__name__, 2)
+    except (ValueError, LookupError) as error:
+        return failure("invalid_input" if isinstance(error, ValueError) else "lookup",
+                       type(error).__name__, 2)
+    print(json.dumps(report, ensure_ascii=True, sort_keys=True, indent=2))
+    if report["truncated"]:
+        return failure("truncated", "truncated", 3,
+                       "JUnit case limit reached; partial report is on stdout")
+    return 0
+
+
+def _print_cli_report(report, format):
+    if format == "text":
+        for key, value in report.items():
+            print(key + ": " + json.dumps(value, ensure_ascii=True, sort_keys=True))
+    else:
+        print(json.dumps(report, ensure_ascii=True, sort_keys=True,
+                         indent=None if format == "jsonl" else 2))
+
+
 def main(argv=None):
     """Thin standalone entry point over the existing discovery/search APIs."""
     import argparse
     import sys
     parser = argparse.ArgumentParser(description="Standalone read-only source/configuration inspection")
+    parser.suggest_on_error = True  # 🤔 argparse 3.14+: "maybe you meant" for --symbol-kind / --min-severity; older Pythons ignore it
     parser.add_argument("--root", action="append", help="Directory or file; repeat --root to search several repositories")
-    parser.add_argument("--max-bytes", type=int, default=1_000_000)
-    parser.add_argument("--max-matches", type=int, default=1000)
+    parser.add_argument("--max-bytes", type=int, default=1_000_000,help="Skip a file larger than this many bytes (default: %(default)s)")
+    parser.add_argument("--max-matches", type=int, default=1000,help="Stop after this many matches (default: %(default)s)")
     modes = parser.add_mutually_exclusive_group()
     modes.add_argument("--search", metavar="TEXT", help="Literal search; prints raw matching lines")
     modes.add_argument("--preset", metavar="NAME", help="Search with a named built-in regex (--presets lists them)")
@@ -2727,16 +2761,30 @@ def main(argv=None):
     modes.add_argument("--discover", action="store_true", help="Discover files under --root using --include conventions")
     parser.add_argument("--symbol-pattern", action="append", metavar="GLOB",
                         help="--symbols: short or lexical dotted name; repeat for OR, default '*'")
-    parser.add_argument("--symbol-kind", action="append", choices=("class", "function", "async_function"))
+    parser.add_argument("--symbol-kind", action="append", choices=("class", "function", "async_function"),help="--symbols: only this kind; repeat for OR")
     parser.add_argument("--include", action="append", metavar="GLOB", help="Discovery filename/path rule; repeat for OR")
     parser.add_argument("--exclude-dir", action="append", metavar="GLOB", help="Additional directory exclusion")
-    parser.add_argument("--include-hidden", action="store_true")
-    parser.add_argument("--max-files", type=int, default=5000)
+    parser.add_argument("--include-hidden", action="store_true",help="Also look in hidden files and directories")
+    parser.add_argument("--max-files", type=int, default=5000,help="Stop after this many files and report truncated (default: %(default)s)")
     parser.add_argument("--regex", action="store_true", help="--search TEXT is a regular expression")
     parser.add_argument("--normalize", metavar="STEPS", default="",
                         help="Comma list of " + ",".join(NORMALIZE_STEPS) + "; coordinates stay original")
     parser.add_argument("--brief", action="store_true", help="One 'path:line:column: match' line per match")
+    modes.add_argument("--scan-config", action="store_true", help="Discover configuration keys under --root")
+    modes.add_argument("--env-report", action="store_true", help="Report recognized environment names without values")
+    modes.add_argument("--factor-cases", action="store_true", help="Emit seeded factor-generation cases")
+    parser.add_argument("--ignore-case", action="store_true", help="Search without case sensitivity")
+    parser.add_argument("--category", help="Corpus category filter, such as git or json")
+    parser.add_argument("--seed", type=int, default=0, help="Seed for corpus or factor generation")
+    parser.add_argument("--count", type=int, help="Number of generated corpus or factor cases")
+    parser.add_argument("--format", choices=("json", "jsonl", "text"), default="json",
+                        help="Output format for search, configuration, environment or factor reports")
     modes.add_argument("--corpus", action="store_true", help="Show existing explained regression inputs")
+    modes.add_argument("--junit", metavar="FILE",
+                       help="Read JUnit failure identities as JSON; 0 complete, 2 invalid, 3 partial")
+    parser.add_argument("--repository", help="Explicit owner/name for --junit provenance")
+    parser.add_argument("--commit-sha", help="Full commit SHA for --junit provenance")
+    parser.add_argument("--report-id", help="Unique job/report identity for --junit (default: junit)")
     modes.add_argument("--annotate-junit", metavar="FILE", help="Print ::error workflow commands for failed JUnit testcases")
     modes.add_argument("--emoji", action="store_true", help="Emoji used under --root: counts, spellings, files")
     modes.add_argument("--emoji-find", metavar="WORDS", help="Emoji whose Unicode name has these words (e.g. 'house', 'flag jp')")
@@ -2755,7 +2803,7 @@ def main(argv=None):
     parser.add_argument("--kinds", metavar="K1,K2", help="Only these --hidden-text/--strip-hidden rules")
     modes.add_argument("--portability", action="store_true", help="Sources that break on --min-python/--max-python or a cp1252 locale")
     parser.add_argument("--min-python", metavar="X.Y", help="Default: requires-python in ROOT/pyproject.toml, else 3.10")
-    parser.add_argument("--max-python", default="3.14", metavar="X.Y")
+    parser.add_argument("--max-python", default="3.14", metavar="X.Y",help="Newest Python for --portability (default: %(default)s)")
     parser.add_argument("--windows-locale", action="store_true",
                         help="With --portability, also list I/O without encoding= and non-cp1252 bytes (hints; exit unaffected)")
     modes.add_argument("--load", nargs=2, metavar=("KIND", "FILE"),
@@ -2765,10 +2813,16 @@ def main(argv=None):
     parser.add_argument("--target-differs", metavar="A,B", help="Outcome for --explain: fields A and B differ")
     parser.add_argument("--id", dest="id_field", help="Record field naming counterexamples")
     parser.add_argument("--skip", action="append", default=[], help="Field not used as a condition")
-    parser.add_argument("--top", type=int, default=5)
+    parser.add_argument("--top", type=int, default=5,help="--explain: conditions ranked (default: %(default)s)")
     args = parser.parse_args(argv)
     if args.text_report and args.restore_mojibake is None:
         parser.error("--text-report requires --read-text or --restore-mojibake")
+    if args.junit is not None:
+        return _junit_cli(args.junit, max_bytes=args.max_bytes, max_cases=args.max_matches,
+                          repository=args.repository, commit_sha=args.commit_sha,
+                          report_id=args.report_id if args.report_id is not None else "junit")
+    if any(v is not None for v in (args.repository, args.commit_sha, args.report_id)):
+        parser.error("--repository, --commit-sha and --report-id require --junit")
     roots = args.root or ["."]
     try:
         if args.discover or (args.symbols is not None and Path(args.symbols).is_dir()):
@@ -2925,8 +2979,17 @@ def main(argv=None):
                 return 2
             print(json.dumps(value, ensure_ascii=False, indent=2, default=str))
             return 0
+        if args.env_report:
+            _print_cli_report({"environment": inspect_environment(os.environ)}, args.format)
+            return 0
+        if args.factor_cases:
+            _print_cli_report(generate_factor_cases(seed=args.seed,
+                                                    count=20 if args.count is None else args.count), args.format)
+            return 0
         if args.corpus:
-            print(corpus_to_json(known_bad_cases()), end="")
+            cases = (known_bad_cases(args.category) if args.count is None else
+                     generate_cases(seed=args.seed, count=args.count, category=args.category))
+            print(corpus_to_json(cases, jsonl=args.format == "jsonl"), end="")
             return 0
         if args.presets:
             for name, item in pattern_presets().items():
@@ -2943,7 +3006,10 @@ def main(argv=None):
                 part = search_files(root, args.search, regex=args.regex, preset=args.preset,
                                     normalize=[s for s in args.normalize.split(",") if s],
                                     max_bytes=args.max_bytes,
-                                    max_matches=remaining, exclude_dirs=_DEFAULT_EXCLUDE)
+                                    max_matches=remaining, ignore_case=args.ignore_case,
+                                    include_hidden=args.include_hidden,
+                                    include=args.include if args.include is not None else ("*",),
+                                    exclude_dirs=_DEFAULT_EXCLUDE + tuple(args.exclude_dir or ()))
                 for key in ("matches", "skipped", "errors"):
                     for row in part[key]:
                         if len(roots) > 1:
@@ -2955,9 +3021,14 @@ def main(argv=None):
                     report.setdefault("decodings", []).append(row)
                 report["truncated"] = report["truncated"] or part["truncated"]
         else:
+            options = {}
+            if args.exclude_dir:
+                options["exclude_dirs"] = _DEFAULT_EXCLUDE + tuple(args.exclude_dir)
+            if args.include is not None:
+                options["include"] = args.include
             report = scan_config(roots[0], max_bytes=args.max_bytes,
-                                 max_findings=args.max_matches)
-    except (OSError, ValueError, LookupError, RuntimeError, SyntaxError) as error:
+                                 max_findings=args.max_matches, **options)
+    except (OSError, ValueError, LookupError, RuntimeError, SyntaxError, re.error) as error:
         print(type(error).__name__, file=sys.stderr)
         return 2
     if args.brief and searching:
@@ -2973,7 +3044,7 @@ def main(argv=None):
         if report["truncated"]:
             print("truncated: raise --max-matches")
     else:
-        print(json.dumps(report, ensure_ascii=True, sort_keys=True, indent=2))
+        _print_cli_report(report, args.format)
     if report["errors"] or report["truncated"] or report["skipped"]:
         return 2
     return (0 if report["matches"] else 1) if searching else 0

@@ -252,7 +252,7 @@ Any other keys or free-form strings are discarded both when writing and when rea
 - For shared GitHub operations and vendor management, see the [parent repository](https://github.com/myon-bioinformatics/myon-bioinformatics) and [gh_identity](https://github.com/myon-bioinformatics/gh_identity).
 - The old GitHub catalog, MCP server, repository metadata/diagnostics and artifact provenance generation prototypes have been retired. This does not mean every old API has a compatible implementation at its destination.
 - The source/niconico implementation and tests moved to [mcp-toolcall-lab PR #108](https://github.com/myon-bioinformatics/mcp-toolcall-lab/pull/108), which is merged. This repository's `vendor/niconico_search_api_template.py` still remains for now. The design for absorbing API/MCP differences was handled in that repo's #107 (closed).
-- `vendor/` and `vendor.lock.json` are the consumer's pinned copies. 58 shared tool files (from 24 repositories, including LICENSE) are registered with the parent's management scheme and verified against pinned hashes. `vendor.lock.json` is the only provenance.
+- `vendor/` and `vendor.lock.json` are the consumer's copies; 🔁 own `myon-bioinformatics/*` sources follow main (the lock records the main commit last placed), refreshed by the `follow-main` job. 58 shared tool files (from 24 repositories, including LICENSE) are registered with the parent's management scheme and verified against recorded hashes. `vendor.lock.json` is the only provenance.
 
 Introduction and metadata are consolidated in the [portfolio](https://myon-bioinformatics.github.io/#projects). Ironmate's dedicated metadata stub Pages has been retired. [Image Studio](https://myon-bioinformatics.github.io/tools/#image-studio) and the other browser tools are built from this repository and published by the portfolio's 🧭 Tools & Demos (`image_studio.py --build-site`); images and scenes are handled only in the browser. This repository's own Pages is the [usage guide](https://myon-bioinformatics.github.io/Ironmate/) (🎞 GIF demos / 🧩 features, `docs/guide.page.json`).
 
@@ -261,8 +261,7 @@ For details, see [cleanup and vendor survey](docs/cleanup-stage-two.md) and [ven
 ## Local tests
 
 ```sh
-git clone https://github.com/myon-bioinformatics/xprobe.git build/shared
-git -C build/shared checkout 7e7015b2df69ad446b968f6fa49711b5b1dbdd3f
+git clone --depth 1 https://github.com/myon-bioinformatics/xprobe.git build/shared
 git clone --depth 1 https://github.com/myon-bioinformatics/myon-bioinformatics.git .vendor-sync-tools
 python -S .vendor-sync-tools/vendor_sync.py check --manifest vendor.lock.json
 uv run --locked pytest -q -m 'not heavy'

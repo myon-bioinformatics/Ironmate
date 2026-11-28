@@ -17,14 +17,11 @@ In the normal lane, `junit-controlled-py3.15` holds `junit.xml`,
 `child-exit.json` and locally checked `failures.jsonl`. Raw XML contains synthetic
 message, setup, stdout/stderr and parameter sentinels. Compact identity retains
 only test/class and failure/error; pass/skip and sentinels are absent.
-The test and collector use xprobe commit
-`7e7015b2df69ad446b968f6fa49711b5b1dbdd3f`, verified against blob
-`dbc5b7d55005d6288c072a7612584d6170c216f4` before import. The checkout is
+The test and collector use xprobe 🔁 main. The checkout is
 under ignored `build/shared`, a test-only dependency outside the vendor lock.
 
-The canonical reusable collector is pinned to
-`myon-bioinformatics/myon-bioinformatics/.github/workflows/reusable-junit-identity.yml@27c46411c0a07d9b4d0f1ad5751ed1bb9e869b5c`
-(a `uses:` reference cannot take an expression, so unlike the vendor tool checkout it is not resolved from `main`).
+The canonical reusable collector is
+`myon-bioinformatics/myon-bioinformatics/.github/workflows/reusable-junit-identity.yml@main` (🔁 own sources follow main, 2026-11-28).
 The `failure-identity` job passes `commit-sha: ${{ github.event.pull_request.head.sha || github.sha }}`
 so the collector receipt records the workflow run's head commit.
 Its exact expected report list is the two paths above from the same run;
@@ -37,10 +34,7 @@ Collector success does not change a failed test job's conclusion.
 Install the locked test tools, then from the checkout:
 
 ```sh
-git clone https://github.com/myon-bioinformatics/xprobe.git build/xprobe-source
-git -C build/xprobe-source show 7e7015b2df69ad446b968f6fa49711b5b1dbdd3f:xprobe.py > build/xprobe.py
-mkdir -p build/shared
-cp build/xprobe.py build/shared/xprobe.py
+git clone --depth 1 https://github.com/myon-bioinformatics/xprobe.git build/shared
 uv run --locked pytest -q tests/test_ironmate_junit_failure_identity.py
 ```
 

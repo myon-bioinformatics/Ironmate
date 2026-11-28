@@ -7,12 +7,11 @@ ROOT = Path(__file__).resolve().parents[1]
 _spec = importlib.util.spec_from_file_location("ironmate_fleet_check", ROOT / "vendor/fleet_check.py")
 fleet = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(fleet)
-ACCEPTED = {"vendor/fleet_check.py": "20de01921e50e9339aa9271b0547a5be7649b3b3"}
 
 
 class VendorLock(unittest.TestCase):
-    def test_fleet_check_is_the_accepted_parent_commit(self):
-        fleet.check_lock(ROOT, commits=ACCEPTED)
+    def test_vendor_lock_matches_placed_bytes(self):
+        fleet.check_lock(ROOT)  # 🔁 own rows follow main: no accepted commit to pin
 
 
 # 🧰 Scripts: 📝 each one describes itself and ⌨️ one that reads sys.argv declares its arguments (argparse /

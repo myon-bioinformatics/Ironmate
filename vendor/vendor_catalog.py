@@ -1,15 +1,8 @@
 """Read-only recommended baselines; consumer locks remain independent."""
 from __future__ import annotations
 
-import argparse
-import copy
-import datetime
-import json
-import keyword
+import argparse, copy, datetime, json, keyword, re, sys, warnings
 from pathlib import Path
-import re
-import sys
-import warnings
 
 import vendor_sync
 
@@ -151,10 +144,10 @@ def verify(catalog):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("mode", choices=("validate", "compare", "verify"))
-    parser.add_argument("--catalog", default="vendor-catalog.json")
-    parser.add_argument("--lock")
-    parser.add_argument("--consumer")
+    parser.add_argument("mode", choices=("validate", "compare", "verify"),help="validate the catalog, compare it with --lock, or verify each pinned source")
+    parser.add_argument("--catalog", default="vendor-catalog.json",help="vendor catalog JSON (default: %(default)s)")
+    parser.add_argument("--lock",help="consumer vendor lock to compare (compare)")
+    parser.add_argument("--consumer",help="consumer repository, OWNER/REPO (compare)")
     parser.add_argument(
         "--allow-legacy-implicit-source",
         action="store_true",

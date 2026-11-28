@@ -114,8 +114,8 @@ JSON to 256KiB, and patch documents including the working spec to 320KiB.
 
 Editing runs the byte-identical `vendor/ascii_artist.py flow-patch` in an isolated
 Python process (`-I -S -X utf8`). The Node workspace API wraps this same Python path;
-there is no second (Node) patcher or validator. The module and the sample are pinned
-together to merged ascii_artist `001de63c23396e3ea6333867a169df2c60a50244`, and the
+there is no second (Node) patcher or validator. The module and the sample follow
+ascii_artist 🔁 main together (one commit), and the
 child lock records commit, Git blob and SHA-256 for each. Do not edit these vendor bytes.
 
 ```sh

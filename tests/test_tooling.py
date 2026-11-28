@@ -647,7 +647,7 @@ def test_ci_status_help_exposes_opt_in_options():
 # Local rollout contract; adopted vendor locks are deliberately independent.
 
 PARENT = "myon-bioinformatics/myon-bioinformatics"
-PARENT_WORKFLOW_PIN = "27c46411c0a07d9b4d0f1ad5751ed1bb9e869b5c"
+PARENT_WORKFLOW_PIN = "main"  # 🔁 own sources follow main (2026-11-28)
 
 
 def test_parent_workflow_references_use_reviewed_rollout_commit():
@@ -801,7 +801,7 @@ class RepositoryHygieneTest(unittest.TestCase):
 WORKFLOW = ".github/workflows/mcp-tests.yml"
 CI_WORKFLOW = ".github/workflows/ci.yml"
 WORKFLOWS = (WORKFLOW, CI_WORKFLOW)
-PIN = "26c442bc51b8a2837fe2556782b2937f396932af"
+PIN = "main"  # 🔁 ci.yml checks out parent main
 
 
 def _workflow(workflow=WORKFLOW):
@@ -865,8 +865,7 @@ def test_canonical_vendor_evidence_membership_is_derived_from_lock():
 
 
 def test_parent_vendor_sync_checkout_resolves_parent_main_at_runtime():
-    # `uses:` cannot take an expression, so the reusable-workflow references keep the reviewed
-    # rollout pin (see test_parent_workflow_pins.py). Only the vendor_sync checkout follows main.
+    # mcp-tests resolves parent main to one SHA first, so the whole run uses one parent commit.
     text = (ROOT / WORKFLOW).read_text(encoding="utf-8")
     steps = _workflow()["jobs"]["test"]["steps"]
     resolve = next(i for i, s in enumerate(steps) if s.get("id") == "parent-vendor-tools")
@@ -883,9 +882,10 @@ def test_parent_vendor_sync_checkout_resolves_parent_main_at_runtime():
     assert "14ef53c8316015d1350e62ff9cce3301103e65a7" not in text
 
 
-def test_parent_vendor_sync_checkout_is_pinned():
+def test_parent_vendor_sync_checkout_follows_main():
     text = (ROOT / CI_WORKFLOW).read_text(encoding="utf-8")
-    assert PIN in text
+    assert "repository: myon-bioinformatics/myon-bioinformatics\n          ref: main\n" in text
+    assert "26c442bc51b8a2837fe2556782b2937f396932af" not in text
     assert "974da5eb9593df652b132e4b0f1a679f67422566" not in text
     assert "14ef53c8316015d1350e62ff9cce3301103e65a7" not in text
 
@@ -893,7 +893,7 @@ def test_parent_vendor_sync_checkout_is_pinned():
 def test_vendor_catalog_audit_resolves_parent_main_at_runtime():
     path = ROOT / ".github/workflows/vendor-catalog-audit.yml"
     text = path.read_text(encoding="utf-8")
-    assert PIN not in text
+    assert "26c442bc51b8a2837fe2556782b2937f396932af" not in text
     assert "parent_vendor_tools_resolve.py" in text
     assert "GITHUB_TOKEN" in text
     assert "steps.parent-vendor-tools.outputs.sha" in text
@@ -996,8 +996,10 @@ def test_vendor_lock_matches_checked_in_bytes() -> None:
     lock = json.loads((ROOT / "vendor.lock.json").read_text(encoding="utf-8"))
     assert lock["schema"] == "vendor-lock/1"
     for entry in lock["files"]:
-        assert re.fullmatch(r"[0-9a-f]{40}", entry["ref"]), entry["destination"]
-        assert entry["ref"] == entry["commit"], entry["destination"]
+        # 🔁 own rows follow main (commit = the main last placed); any other row pins ref == commit
+        assert re.fullmatch(r"[0-9a-f]{40}", entry["commit"]), entry["destination"]
+        own = entry["repository"].startswith("myon-bioinformatics/")
+        assert entry["ref"] == entry["commit"] or (own and entry["ref"] == "main"), entry["destination"]
         data = (ROOT / entry["destination"]).read_bytes()
         blob = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
         assert blob == entry["blob_sha"], entry["destination"]
@@ -1111,20 +1113,19 @@ def test_old_node_reports_found_version_without_running_backend(monkeypatch, maj
     monkeypatch.setattr(shutil, "which", lambda name: path if name == "node" else None)
     monkeypatch.setattr(subprocess, "run", version_probe)
     monkeypatch.setattr(subprocess, "Popen", unexpected_backend)
-    monkeypatch.setattr(xprobe, "_NODE_LAUNCH", xprobe._stdlib_node_launch())
+    monkeypatch.setattr(xprobe, "_NJS_LAUNCH", xprobe._stdlib_njs_launch())
     with pytest.raises(RuntimeError, match=rf"Node 26\+.*found Node {major}"):
         xprobe._node_load("yaml-failsafe", "a: 1\n", path if explicit else None, 30)
     assert len(probes) == 1
 
 
-def test_xprobe_lock_uses_accepted_canonical_source():
+def test_xprobe_lock_follows_canonical_source_main():
     import json
     from pathlib import Path
 
     lock = json.loads((Path(__file__).resolve().parents[1] / "vendor.lock.json").read_text())
     entry = next(item for item in lock["files"] if item["destination"] == "vendor/xprobe.py")
-    assert entry["ref"] == entry["commit"] == "1ffbb7b984075c683690bbe4e9deb06199cdfe94"
-    assert entry["blob_sha"] == "7595fe5eb7fd2e375b82e7c702079f6496a3276d"
+    assert (entry["repository"], entry["source"], entry["ref"]) == ("myon-bioinformatics/xprobe", "xprobe.py", "main")
 
 
 if __name__ == "__main__":

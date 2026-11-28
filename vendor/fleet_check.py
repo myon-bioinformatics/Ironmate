@@ -12,7 +12,7 @@ from __future__ import annotations
 import ast, functools, hashlib, json, os, re, shlex, shutil, signal, subprocess, sys, tempfile
 from pathlib import Path
 
-__all__ = ["check_actions", "check_imports", "check_lock", "check_scripts", "launcher_contract", "node", "node_parity", "parent_refs", "python_floor", "repo_root", "run_main", "script_facts", "vendor_staging", "workflow_job"]
+__all__ = ["check_actions", "check_imports", "check_lock", "check_no_vendor_package_imports", "check_scripts", "launcher_contract", "node", "node_parity", "parent_refs", "python_floor", "repo_root", "run_main", "script_catalog", "script_facts", "vendor_staging", "workflow_job"]
 PARENT = "myon-bioinformatics/myon-bioinformatics"
 
 
@@ -51,11 +51,36 @@ def script_facts(path) -> dict:
             "argparse": bool(names & {"argparse", "cli_args"})}
 
 
+
+def script_catalog(root, patterns, *, timeout: float = 20) -> list[dict]:
+    """📜 ``{path, summary, usage}`` for every file the globs match under ``root``, sorted and once each: a scripts table that
+    follows the code instead of being written by hand (the portfolio's project pages, a repository's Pages).
+
+    ``summary`` is ``script_facts``'. Only a .py that imports argparse or cli_args is asked for ``--help`` (``python3 -S``,
+    an empty HOME and only PATH and LANG of this machine's variables); ``usage`` is the first line of that and its indented
+    continuations (≤ 300 characters). Nothing else is run. Best effort, never raises."""
+    root, items = Path(root), []
+    for path in sorted({p for pattern in patterns for p in root.glob(pattern) if p.is_file()}):
+        relative, facts, lines = path.relative_to(root).as_posix(), script_facts(path), []
+        if facts["argparse"] and path.suffix == ".py":
+            try:
+                with tempfile.TemporaryDirectory() as home:   # 🔒 PATH only: no names or values of this machine's other variables
+                    done = subprocess.run(["python3", "-S", relative, "--help"], cwd=root, capture_output=True, text=True, timeout=timeout,
+                                          stdin=subprocess.DEVNULL, env={"PATH": os.environ.get("PATH", ""), "HOME": home, "LANG": "C.UTF-8"})
+                lines = done.stdout.strip().splitlines() if done.returncode == 0 else []
+            except (OSError, subprocess.TimeoutExpired):
+                pass
+        lines = lines if lines and lines[0].lower().startswith("usage") else []
+        end = next((i for i, line in enumerate(lines[1:], 1) if not line[:1].isspace() or not line.strip()), len(lines))
+        usage = " ".join(" ".join(line.split()) for line in lines[:end])   # the first line and its indented continuations
+        items.append({"path": relative, "summary": facts["summary"], "usage": usage[:300] + ("…" if len(usage) > 300 else "")})
+    return items
+
 def check_scripts(root, patterns=("*.py", "*.mjs", "*.cjs", "scripts/*", "tools/*", "examples/*"), passthrough=()) -> dict:
     """📝 Every script the globs match (.py / .mjs / .cjs) describes itself, and ⌨️ one that reads ``sys.argv``
     declares its arguments with argparse or cli_args, except ``passthrough`` launchers that hand argv on untouched.
 
-    That is what the portfolio's script catalog reads instead of running anything. Returns ``script_facts`` by path.
+    ``script_catalog`` turns the same facts into a table. Returns ``script_facts`` by path.
     """
     root = Path(root)
     found = {p.relative_to(root).as_posix(): script_facts(p) for pattern in patterns for p in sorted(root.glob(pattern))
@@ -144,11 +169,42 @@ def check_imports(root, entry, allow=(), paths=(".",)) -> dict:
     return found
 
 
+def check_no_vendor_package_imports(root, skip=()) -> list:
+    """📦 Every ``import vendor``, ``import vendor.x``, ``from vendor import …`` and ``from vendor.x import …`` of the ``.py`` files
+    under ``root``, as ``"file:line: statement"`` rows (``[]`` when there are none); a child asserts the list is empty.
+
+    A top-level ``vendor`` package collides when several repositories run in one process, so vendored modules are loaded
+    by path under a repository-unique name instead (cli_args README: Loading a vendored copy). Read without running.
+    Left out: any ``vendor/`` directory (the vendored files themselves), ``.git``, virtual environments, ``node_modules``,
+    ``build``/``dist`` output and caches, plus the directory names in ``skip``. Relative imports and files that do not
+    parse are not counted.
+    """
+    root = Path(root).resolve()
+    left_out = {"vendor", ".git", ".venv", "venv", ".tox", ".vendor-sync-tools", "node_modules", "__pycache__", "build", "dist", "site-packages", *skip}
+    found = []
+    for path in sorted(root.rglob("*.py")):
+        rel = path.relative_to(root)
+        if left_out & set(rel.parts[:-1]) or not path.is_file():
+            continue
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"), filename=rel.as_posix())
+        except (SyntaxError, ValueError, UnicodeDecodeError):
+            continue
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                hit = any(a.name.split(".")[0] == "vendor" for a in node.names)
+            else:
+                hit = isinstance(node, ast.ImportFrom) and node.level == 0 and (node.module or "").split(".")[0] == "vendor"
+            if hit:
+                found.append((rel.as_posix(), node.lineno, ast.unparse(node)))
+    return [f"{where}:{line}: {statement}" for where, line, statement in sorted(found)]
+
+
 def check_lock(root, lock="vendor.lock.json", commits=None, sources=None) -> dict:
     """Verify every vendor-lock/1 row against its placed bytes; return rows by destination.
 
-    Each row needs a full-SHA ``ref`` equal to ``commit`` and bytes matching
-    ``blob_sha`` and ``sha256``. ``commits`` maps chosen destinations to the
+    Each row needs a full-SHA ``ref`` equal to ``commit`` (🔁 or, for the owner's own repositories,
+    ``ref: "main"`` with the full-SHA ``commit`` last placed) and bytes matching ``blob_sha`` and ``sha256``. ``commits`` maps chosen destinations to the
     accepted upstream commit they must stay on. ``sources`` maps destinations
     to their ``(repository, source)``; a repository named there has no other
     locked row, so listing every row pins the whole lock's provenance.
@@ -159,7 +215,9 @@ def check_lock(root, lock="vendor.lock.json", commits=None, sources=None) -> dic
     rows = {}
     for row in data["files"]:
         where = row["destination"]
-        assert re.fullmatch(r"[0-9a-f]{40}", row["ref"]) and row["ref"] == row["commit"], where
+        own = row.get("repository", "").split("/")[0].casefold() == PARENT.split("/")[0].casefold()
+        assert re.fullmatch(r"[0-9a-f]{40}", row["commit"]) and (
+            row["ref"] == row["commit"] or (own and row["ref"] == "main")), where
         body = (root / where).read_bytes()
         blob = hashlib.sha1(b"blob %d\0" % len(body) + body).hexdigest()
         assert (blob, hashlib.sha256(body).hexdigest()) == (row["blob_sha"], row["sha256"]), where
@@ -206,11 +264,12 @@ def parent_refs(root, skip=(), only=()) -> list:
 
 
 def check_actions(root, pins=None, workflow="*.y*ml") -> list:
-    """Verify every ``uses: owner/repo[/path]@ref`` of the workflows; return ``(action, sha, version)`` rows.
+    """Verify every ``uses: owner/repo[/path]@ref`` of the workflows; return ``(action, ref, version)`` rows.
 
     Each ref is a full 40-hex SHA followed by a ``# vN[.N[.N]]`` version
     comment; only the parent's reusable workflows (no release tags) pass on
-    the SHA alone, with version ``None``. ``pins`` maps every action in use to
+    the SHA alone, with version ``None``. 🔁 The owner's own repositories may use ``@main`` (version
+    ``None``, no pin to review). ``pins`` maps every action in use to
     its reviewed ``"<sha>"`` or ``"<sha> # <version>"``. Local ``./`` and
     ``docker://`` steps are not refs to pin and are left out.
     """
@@ -222,9 +281,10 @@ def check_actions(root, pins=None, workflow="*.y*ml") -> list:
                 continue
             where = f"{path.name}: {line.strip()}"
             action, _, ref = use[1].partition("@")
-            assert re.fullmatch(r"[0-9a-f]{40}", ref), f"{where}: not a full SHA"
+            following = ref == "main" and action.split("/")[0].casefold() == PARENT.split("/")[0].casefold()
+            assert following or re.fullmatch(r"[0-9a-f]{40}", ref), f"{where}: not a full SHA"
             version = use[2] if re.fullmatch(r"v\d+(?:\.\d+){0,2}", use[2] or "") else None
-            if not action.startswith(PARENT + "/.github/workflows/"):
+            if not action.startswith(PARENT + "/.github/workflows/") and not following:
                 assert version, f"{where}: no version comment"
                 if pins is not None:
                     assert pins.get(action) in (ref, f"{ref} # {version}"), f"{where}: not the reviewed pin"

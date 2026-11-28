@@ -1000,7 +1000,7 @@ def test_studio_stylesheets_match_the_generator():
     text = STYLE_CSS
     assert '/* css/components.css */' in text and 'body[data-ui-theme="green"]{' in text  # PySaiyanWeBoo's theme
     assert '.ui-elements button,' in text and 'cdn.' not in text
-    for page in ('studio', 'tools', 'phone'):          # 🖥️ the PC slide studio's 'slides' rules are retired in PySaiyanWeBoo too
+    for page in ('studio', 'tools', 'slides'):         # 📽️ 'slides' is the one slide editor (phone-first, the same page on a PC)
         assert f':where([data-page~="{page}"])' in text, page  # page layout is scoped, with zero added specificity
     for page, html in (('studio', STUDIO_HTML), ('tools', TOOLS_HTML)):
         assert f'data-page="{page}"' in html, page
@@ -1016,7 +1016,7 @@ def test_studio_pages_opt_into_the_components_and_palette():
         assert ('href="style.css"' if page == 'studio' else 'href="../style.css"') in html, name  # one sheet for every page
     import image_studio
     slides = image_studio.public_assets()['slides/index.html'].decode('utf-8')       # 📽️ the one slide editor
-    assert '<body class="ui-elements" data-ui-theme="green" data-page="phone"' in slides
+    assert '<body class="ui-elements" data-ui-theme="green" data-page="slides"' in slides
     assert 'href="../style.css"' in slides and 'slides.css' not in slides
 
 
@@ -1064,31 +1064,39 @@ def studio_acts(js):
             | {name for loop in loops for name in re.findall(r'\["([a-z0-9-]+)"', loop)})
 
 
-def test_studios_carry_no_header_and_link_each_other_from_their_file_rows():
-    """🧰 The portfolio frames both studios as built, under its one header, so neither carries a header, rows for a host's header or a
-    switch of its own there: 💻 ⇄ 📱 ends each file row, and 🖼️ ⇄ 📽️ link the two studios (the portfolio sends them to its panels)."""
+def test_studios_carry_no_header_declare_their_rows_and_link_each_other():
+    """🧰 The portfolio frames both studios under its one header, so neither carries a header of its own: each declares its rows for that
+    header (studio_rows, written by PySaiyanWeBoo's chrome_rows_script and read back by its chrome_rows_of: 💻 ⇄ 📱 on both, 📋 the shelf
+    on Image Studio), which hides the page's own 💻 at the end of its file row; 🖼️ ⇄ 📽️ link the two studios."""
     import image_studio
+    import pysaiyanweboo
     from ironlib import studio_bundle as b
     assets = image_studio.public_assets()
-    for name, link in (('index.html', ('slides/', 'slide-studio')), ('slides/index.html', ('../', 'image-studio'))):
+    for name, page, link in (('index.html', 'image', ('slides/', 'slide-studio')), ('slides/index.html', 'slides', ('../', 'image-studio'))):
         html = assets[name].decode('utf-8')
-        assert '<header' not in html and 'ui-chrome-rows' not in html and 'data-ui-chrome' not in html, name
+        assert '<header' not in html and 'data-ui-chrome' not in html and html.count('id="ui-chrome-rows"') == 1, name
+        declared = pysaiyanweboo.chrome_rows_of(html)
+        assert {k: v for k, v in declared.items() if v} == b.studio_rows(page), name
+        assert all(f'id="{i[1:]}"' in html for i in declared['replaces'].split(',')), name   # what the host hides is there
         assert html.count('id="labels-switch" data-ui-labels-switch') == 1 and 'PySaiyanWeBoo.bindLabels()' in b.STUDIO_JS
         file_row = re.search(r'data-ui-group="file">(.*?)</div>', html, re.S)[1]
         assert f'href="{link[0]}" data-act="{link[1]}"' in file_row and file_row.rstrip().endswith('</button>'), name
-    assert 'ui-chrome-action' not in b.STUDIO_JS[b.STUDIO_JS.index('/* Image Studio UI'):b.STUDIO_JS.index('/* Tools page UI')]
+    keys = {row['key'] for row in b.studio_rows('image')['screen']} - {'labels'}               # labels: bindLabels
+    assert keys <= studio_acts(b.STUDIO_JS) and 'document.addEventListener("ui-chrome-action", (e) => STUDIO_ACTS[e.detail?.key]?.());' in b.STUDIO_JS
     assert not hasattr(image_studio, 'host_rows')
 
 
 def test_one_studio_toolbar_table_gives_each_act_one_face_and_one_meaning():
     """🧰 studio_toolbar(page) is both studios' toolbars from one table: an act listed on both pages has the same face, word and tip
     there (and the same candidates, but for 📥 📤, whose formats are each page's), no face stands for two acts, every word is short
-    enough to replace its face, and the rows are make / adjust / change (/ pages) / file (/ detail)."""
+    enough to replace its face, and the rows are make / ↩️ / change (/ order / pages) / file (/ detail), at most 6 a row (a phone's 390 px).
+    The slide editor has every layer act Image Studio has (ONE-EDITOR, #301)."""
     from ironlib import studio_bundle as b
     seen, faces = {}, {}
-    for page, rows in (('slides', ['create', 'adjust', 'update', 'pages', 'file', 'detail']), ('image', ['create', 'adjust', 'update', 'file'])):
+    for page, rows in (('slides', ['create', 'adjust', 'update', 'order', 'pages', 'file', 'detail']), ('image', ['create', 'adjust', 'update', 'file'])):
         groups, _inside, _after = b.studio_toolbar(page)
         assert [g for g, _ in groups] == rows
+        assert page == 'image' or all(len(row) <= 6 for _g, row in groups), [(g, len(row)) for g, row in groups]
         for _g, row in groups:
             for c in row:
                 same = {k: c[k] for k in ('face', 'word', 'words')} | ({} if c['act'] in ('import', 'export') else {'candidates': c['candidates']})
@@ -1096,9 +1104,11 @@ def test_one_studio_toolbar_table_gives_each_act_one_face_and_one_meaning():
                 assert faces.setdefault(c['face'], c['act']) == c['act'], (c['face'], c['act'], faces[c['face']])
                 assert 0 < len(c['word']) <= 12 and c['close'] == (c['act'] in ('import', 'export')), c
     assert {'forward', 'backward', 'front', 'back', 'duplicate', 'slide-copy'} <= set(seen)          # ⬆️ ⬇️ one step, ⏫ ⏬ all the way; ⧉ 📑
+    on = lambda page: {c['act'] for _g, row in b.studio_toolbar(page)[0] for c in row}
+    assert {'undo-2', 'undo', 'redo', 'redo-2', 'duplicate', 'forward', 'backward', 'delete'} <= on('slides')   # ONE-EDITOR P1
     assert not hasattr(b, 'PHONE_TOOLS') and not hasattr(b, 'phone_toolbar') and not hasattr(b, 'image_toolbar')
     shared = lambda page: [k['face'] for _g, row in b.studio_toolbar(page)[0] for c in row if c['act'] == 'import' for k in c['candidates']]
-    assert [f for f in shared('image') if f in shared('slides')] == shared('slides') == ['画像', 'カメラ', 'JSON']   # 📥 the same order on both
+    assert [f for f in shared('image') if f in shared('slides')] == shared('slides') == ['画像', 'カメラ', 'クリップボード', 'JSON']   # 📥 the same order on both
 
 
 def test_image_studio_tools_are_the_pswb_toolbar_and_every_act_is_answered():
@@ -1131,7 +1141,7 @@ def test_image_studio_tools_are_the_pswb_toolbar_and_every_act_is_answered():
 
 
 
-def test_phone_page_is_emoji_only_and_every_control_is_bound():
+def test_slides_page_is_emoji_only_and_every_control_is_bound():
     """📽️ slides/ (the one slide editor, phone-first): the slide is pinned on top (PySaiyanWeBoo's 🖼️ stage); each control shows only its emoji (the words are
     aria-label/title), PySaiyanWeBoo's 🧭 pager turns pages, and the one browser script handles every data-act."""
     import re
@@ -1139,14 +1149,14 @@ def test_phone_page_is_emoji_only_and_every_control_is_bound():
     from ironlib import studio_bundle as b
     assets = image_studio.public_assets()
     html = assets['slides/index.html'].decode('utf-8')
-    assert html == b.PHONE_HTML
-    assert 'data-page="phone"' in html and "connect-src 'none'" in html
+    assert html == b.SLIDES_HTML
+    assert 'data-page="slides"' in html and "connect-src 'none'" in html
     assert '"../style.css"' in html and '"../studio.js"' in html and 'src="/' not in html and 'href="/' not in html
     # 🚪 one entrance: Image Studio links to it, and the old addresses (the phone page, the PC studio) are gone
     assert 'href="slides/"' in b.STUDIO_HTML and 'phone/' not in b.STUDIO_HTML
     assert not {'slides/phone/index.html', 'slides/pc/index.html'} & set(assets)
     assert 'data-act="studio"' not in html and 'href="../" data-act="image-studio"' in html
-    assert 'data-mode="slides"' not in b.STUDIO_JS + b.STUDIO_HTML and 'data-page~="slides"' not in b.STUDIO_JS    # no PC slide code left
+    assert 'data-mode="slides"' not in b.STUDIO_JS + b.STUDIO_HTML and 'studio slides' not in b.STUDIO_JS + b.SLIDES_HTML   # no PC slide code left
 
     class Controls(HTMLParser):
         def __init__(self):
@@ -1169,11 +1179,11 @@ def test_phone_page_is_emoji_only_and_every_control_is_bound():
     short = {i['data-act']: i.get('data-ui-word') for i in parser.items if 'data-act' in i}
     assert short == {c['act']: c['word'] for _group, row in groups for c in row} and all(short.values()), short
     assert all(len(word) <= 12 for word in short.values()), short                                # short: it replaces a face
-    assert re.findall(r'class="ui-toolbar-row" data-ui-group="(\w+)"', html) == ['create', 'adjust', 'update', 'pages', 'file', 'detail']
+    assert re.findall(r'class="ui-toolbar-row" data-ui-group="(\w+)"', html) == ['create', 'adjust', 'update', 'order', 'pages', 'file', 'detail']
     # 🧰 the toolbar is PySaiyanWeBoo's (toolbar_html from studio_toolbar("slides")), and bindToolbar runs it
     parts = b.PSWB_PARTS['slides-toolbar']
-    assert parts in html and 'id="phone-toolbar"' in parts and 'id="phone-candidates"' in parts and set(after) == {'adjust', 'pages', 'detail'}
-    assert 'PySaiyanWeBoo.bindToolbar($("phone-toolbar"), press)' in b.STUDIO_JS and 'function offer(' not in b.STUDIO_JS
+    assert parts in html and 'id="slides-toolbar"' in parts and 'id="slides-candidates"' in parts and set(after) == {'order', 'pages', 'detail'}
+    assert 'PySaiyanWeBoo.bindToolbar($("slides-toolbar"), press)' in b.STUDIO_JS and 'function offer(' not in b.STUDIO_JS
     assert 'act: (name, value) => press(name, value)' in b.STUDIO_JS and 'act: (name, value) => STUDIO_ACTS[name]?.(value)' in b.STUDIO_JS   # 🧰 both pages' hook
     assert html.count('id="labels-switch" data-ui-labels-switch') == 1 and html.index('id="labels-switch"') > html.index('data-ui-group="file"')
     assert "PySaiyanWeBoo.bindLabels();" in b.STUDIO_JS
@@ -1184,33 +1194,41 @@ def test_phone_page_is_emoji_only_and_every_control_is_bound():
     assert [(i['data-ui-pager-go'], i['face']) for i in parser.items if 'data-ui-pager-go' in i] == [
         ('first', '⬆️'), ('first', '⏮️'), ('prev', '⬅️'), ('next', '➡️'), ('last', '⏭️'), ('last', '⬇️')]   # every shape is in the markup
     assert b.PSWB_PARTS['pager'] in html and 'data-ui-pager="arrows"' in html and 'data-ui-pager-keys' in html   # ⬅️ 1/N ➡️ first, ← → too
-    assert b.PSWB_PARTS['stage'].split('{slide}')[0] + '<div id="phone-svg" class="phone-svg" data-ui-fill>' in html
+    assert b.PSWB_PARTS['stage'].split('{slide}')[0] + '<div id="slides-svg" class="slides-svg" data-ui-fill>' in html
     assert ' style="' not in html                                                                 # the CSP allows no inline style
     region = b.STUDIO_JS[b.STUDIO_JS.index('/* ⬇️ pysaiyanweboo'):b.STUDIO_JS.index('/* ⬆️ pysaiyanweboo */')]
     declared = re.findall(r'^(?:async )?function (\w+)\(', region, re.M)
     assert declared and len(declared) == len(set(declared)), sorted(n for n in declared if declared.count(n) > 1)   # each PSWB file once
     assert "globalThis.PySaiyanWeBoo = { pagerSet, pagerIndex, bindLabels, bindToolbar }" in b.STUDIO_JS and not re.search(r"^\s*(import|export) ", b.STUDIO_JS, re.M)  # a classic script
-    script = b.STUDIO_JS[b.STUDIO_JS.index('/* Phone slides UI'):]
+    script = b.STUDIO_JS[b.STUDIO_JS.index('/* Slides UI'):]
     opens = set(re.findall(r'data-candidates="[^"]*" data-act="([a-z-]+)"', html))       # bindToolbar opens these itself
     assert opens == {'shape', 'emoji', 'kaomoji', 'look', 'turn', 'import', 'export'}, opens
     for act in acts:
         if act in ('image-studio', 'slide-studio') or act in opens:
             continue  # plain links, and buttons whose candidates the toolbar opens
         assert re.search(rf'(^|[\s{{,])("{re.escape(act)}"|{re.escape(act)})(\(|:)', script, re.M), act  # acts.x / files.x
-    assert 1 in b.PHONE_TEXT['scale'] and b.PHONE_TEXT['size'] % 8 == 0
+    assert 1 in b.SLIDES_TEXT['scale'] and b.SLIDES_TEXT['size'] % 8 == 0
     # 🔷 💾: a candidate that is an action names it in the markup, and the script has it; 😊 (^^) candidates are only stamped
-    named = dict((act, acts_) for acts_, act in re.findall(r'data-acts="([a-z ]+)" data-words="[^"]*" data-candidates="[^"]*" data-act="([a-z]+)"', html))
+    named = dict((act, acts_) for acts_, act in re.findall(r'data-acts="([a-z0-9 ]+)" data-words="[^"]*" data-candidates="[^"]*" data-act="([a-z]+)"', html))
     assert named == {'shape': 'rect ellipse triangle arrow', 'look': 'fill stroke fade bold font', 'turn': 'cw ccw upright',
-                     'import': 'image camera open', 'export': 'pptx json png svg'}, named
+                     'import': 'image camera clipboard open', 'export': 'pptx json png svg base64'}, named
     # 📥 どの形式から？ 📤 どの形式に？ the formats are candidates in words, and a pick hides the row (data-close)
     assert [(a, c) for c, a in re.findall(r'data-close data-acts="[^"]*" data-words="[^"]*" data-candidates="([^"]*)" data-act="(\w+)"', html)] == [
-        ('import', '画像 カメラ JSON'), ('export', 'PPTX JSON PNG SVG')]
+        ('import', '画像 カメラ クリップボード JSON'), ('export', 'PPTX JSON PNG SVG Base64')]
     assert '<select data-format' not in html
     for act in ' '.join(named.values()).split():
         assert re.search(rf'(^|[\s{{,])("{act}"|{act})(\(|:)', script, re.M), act
     assert not re.search(r'data-act="(pptx|save|open|image|bold|color)"', html)                   # 📥 📤 🎨 then the choice: no button each
     assert re.findall(r'<input type="file" hidden data-ui-file="([a-z]+)"', html) == ['image', 'camera', 'open'] and 'data-file=' not in html   # 📥 the toolbar's choosers
-    assert f'data-text-scale="{" ".join(f"{v:g}" for v in b.PHONE_TEXT["scale"])}"' in html
+    assert f'data-text-scale="{" ".join(f"{v:g}" for v in b.SLIDES_TEXT["scale"])}"' in html
+    # 🎛️ with nothing selected the inspector is the page's: 幅・高さ (every page, 64–4096), 背景・透明 (this page); ONE-EDITOR P3
+    assert re.findall(r'data-property="(\w+)" data-kinds="page"', html) == ['width', 'height', 'background', 'transparent']
+    assert 'data-property="width" data-kinds="page" min="64" max="4096" step="1"' in html and 'function setPage(' in script
+    # 🎛️ Image Studio's detail settings, as fields of the one inspector (ONE-EDITOR P5); a select's first option is the default
+    fields = dict(re.findall(r'data-property="(\w+)" data-kinds="([a-z ]*)"', html))
+    assert {k: fields[k] for k in ('rotation', 'opacity', 'fontSize', 'mono', 'headStyle', 'sampling')} == {
+        'rotation': '', 'opacity': '', 'fontSize': 'text', 'mono': 'text image', 'headStyle': 'arrow', 'sampling': 'image'}
+    assert '<select data-property="sampling" data-kinds="image"><option value="pixelated">' in html
 
 
 def test_base64_payload_is_standard_padded_png_and_existing_decoder_accepts_it():
@@ -1515,7 +1533,7 @@ def _page_ui(page):
     from ironlib.studio_bundle import STUDIO_JS
     script = STUDIO_JS
     start = script.index(f'(data-page~="{page}")')
-    following = [i for p in ("studio", "tools", "phone") if (i := script.find(f'(data-page~="{p}")')) > start]
+    following = [i for p in ("studio", "tools", "slides") if (i := script.find(f'(data-page~="{p}")')) > start]
     return script[start:min(following, default=len(script))]
 
 
@@ -1525,12 +1543,12 @@ def test_studio_html_contains_unique_controls_used_by_initialization():
     assets = image_studio.public_assets()
     for page, html in (("studio", STUDIO_HTML),
                        ("tools", TOOLS_HTML),
-                       ("phone", assets["slides/index.html"].decode("utf-8"))):
+                       ("slides", assets["slides/index.html"].decode("utf-8"))):
         pages = _Controls()
         pages.feed(html)
-        required = set(re.findall(r'(?:\$|byId)\("([a-z][a-z0-9-]*)"\)', _page_ui(page)))  # studio/tools/phone use $(...)
+        required = set(re.findall(r'(?:\$|byId)\("([a-z][a-z0-9-]*)"\)', _page_ui(page)))  # studio/tools/slides use $(...)
         pixel_controls = {"pixel-editor", "pixel-status", "pixels"}
-        if page == "studio":
+        if page in ("studio", "slides"):       # ▦ the dot-art editor is on both editors (ONE-EDITOR P4)
             required.update(pixel_controls)
         elif page == "tools":
             # Tools shares the script with Studio but only exposes the digest and message fallback.

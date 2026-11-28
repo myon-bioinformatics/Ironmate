@@ -3683,7 +3683,7 @@ function hit(p) {
   return null;
 }
 stage.addEventListener("pointerdown", (e) => {
-  if (e.target === edit) return;
+  if (drag || !e.isPrimary || e.button !== 0 || e.target === edit) return;
   const p = point(e),
     grip = !!e.target.closest("[data-grip]"),
     l = grip ? picked() : hit(p),
@@ -3692,15 +3692,16 @@ stage.addEventListener("pointerdown", (e) => {
   finishEdit();
   selected = l ? l.id : null;
   if (l) {
-    drag = { id: l.id, grip, again, before, start: p, x: l.x, y: l.y, w: l.w, h: l.h, moved: false };
+    drag = { pointerId: e.pointerId, id: l.id, grip, again, before, start: p, x: l.x, y: l.y, w: l.w, h: l.h, moved: false };
     stage.setPointerCapture(e.pointerId);
     e.preventDefault();
   }
   render();
 });
 stage.addEventListener("pointermove", (e) => {
-  const l = drag && picked();
-  if (!l) return;
+  if (drag?.pointerId !== e.pointerId) return;
+  const l = picked();
+  if (l?.id !== drag.id) return;
   const p = point(e),
     dx = p.x - drag.start.x,
     dy = p.y - drag.start.y;
@@ -3716,16 +3717,17 @@ stage.addEventListener("pointermove", (e) => {
   }
   later();
 });
-stage.addEventListener("pointerup", () => {
-  if (!drag) return;
+stage.addEventListener("pointerup", (e) => {
+  if (drag?.pointerId !== e.pointerId) return;
   const d = drag;
   drag = null;
   if (d.moved) record(d.before);
   else if (d.again && ["text", "clock"].includes(picked()?.kind)) startEdit();
   render();
 });
-stage.addEventListener("pointercancel", () => {
-  if (drag?.moved) record(drag.before);
+stage.addEventListener("pointercancel", (e) => {
+  if (drag?.pointerId !== e.pointerId) return;
+  if (drag.moved) record(drag.before);
   drag = null;
 });
 

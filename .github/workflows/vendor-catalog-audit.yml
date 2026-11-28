@@ -10,7 +10,6 @@ on:
       - .github/workflows/vendor-catalog-audit.yml
   schedule:
     - cron: "17 21 * * *"  # 🔁 daily follow-main (06:17 JST)
-  workflow_dispatch:
 permissions:
   contents: read
 

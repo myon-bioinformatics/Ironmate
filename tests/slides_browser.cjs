@@ -27,8 +27,8 @@ const url =
     // The shelf hands the canvas to the normal slide image importer and leaves the source open.
     const source = await browser.newPage();
     await source.goto(new URL("../", url).href);
-    await source.locator("#studio-import summary").click();
-    await source.locator("#shelf-button").click();
+    await source.locator('#studio-toolbar [data-act="import"]').click();                       // 📥 どの形式から？ → シェルフ
+    await source.locator('#studio-candidates button:text-is("シェルフ")').click();
     const popup = source.waitForEvent("popup");
     await source.getByRole("link", {name: "編集中の画像をスライド工房へ"}).click();
     const destination = await popup;
@@ -174,7 +174,7 @@ const url =
     assert.deepEqual(extra.map((l) => l.kind), ["text", "clock", "triangle", "text"]);
     assert.ok(extra[3].id === kao.id && extra[3].bold === true);
     await snap("candidates");
-    const rows = await mobile.$$eval(".phone-row", (nodes) => nodes.map((n) => new Set([...n.children].map((c) => c.offsetTop)).size));
+    const rows = await mobile.$$eval(".ui-toolbar-row:not([hidden])", (nodes) => nodes.map((n) => new Set([...n.children].map((c) => c.offsetTop)).size));
     assert.ok(rows.every((n) => n === 1), JSON.stringify(rows));                                // 📱 390 px: no row wraps
     await act("back");
     assert.deepEqual(await layerFaces(), ["(・∀", "🌱", "🕒", "△"]);
@@ -256,6 +256,15 @@ const url =
     }), [1920, 1280]);
     await act("undo");
     assert.deepEqual((await state()).deck.slides[1].layers.map((l) => l.kind), ["rect", "arrow", "text"]);
+    // 🧰 IronmatePhone.act runs what the toolbar runs, awaitable (a host or Node needs no file input): a Blob is 📥's 画像 / カメラ
+    await mobile.evaluate(async (b64) => {
+      const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+      await IronmatePhone.act("camera", new Blob([bytes], { type: "image/png" }));
+      await IronmatePhone.act("undo");
+    }, photo);
+    assert.deepEqual((await state()).deck.slides[1].layers.map((l) => l.kind), ["rect", "arrow", "text"]);
+    assert.equal(await mobile.evaluate(() => IronmatePhone.act("redo").then(() => IronmatePhone.deck.slides[1].layers.at(-1).kind)), "image");
+    await mobile.evaluate(() => IronmatePhone.act("undo"));
     // 💾 autosave survives a reload
     await mobile.reload();
     await mobile.waitForFunction(() => !!window.IronmatePhone);
@@ -366,7 +375,7 @@ print('📱 phone: 2 slides, native text kept')
       tools = await wide.locator(".phone-tools").boundingBox();
     assert.ok(tools.x >= stage.x + stage.width && stage.width >= 896, JSON.stringify({ stage, tools }));
     assert.ok(tools.y + tools.height <= 800 && (await wide.evaluate(() => document.documentElement.scrollHeight)) === 800);
-    const wideRows = await wide.$$eval(".phone-row", (nodes) => nodes.filter((n) => n.id !== "phone-candidates")
+    const wideRows = await wide.$$eval(".ui-toolbar-row:not([hidden])", (nodes) => nodes.filter((n) => n.id !== "phone-candidates")
       .map((n) => new Set([...n.children].map((c) => c.offsetTop)).size));
     assert.ok(wideRows.every((n) => n === 1), JSON.stringify(wideRows));
     await wide.screenshot({ path: path.join(out, "slides-wide.png") });

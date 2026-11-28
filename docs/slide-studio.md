@@ -9,7 +9,7 @@ No installation, external CDN or server processing is needed. Input images and i
 
 <img src="assets/phone-slides.gif" width="240" alt="Phone slides in a 390×844 browser: blank slide, text box, editing later, bigger text, 🔷 😊 (^^) 🕒 placed from candidates, page 2, ⬅️ back to page 1, the slide saved">
 
-One editor for phones and PCs, phone-first. The slide stays pinned at the top while you work, and every control is an emoji (its words are only in the tooltip / screen-reader label). A phone held sideways and a PC window (960 px and wider) put the controls beside the slide, every row on one line. `/tools/slide-studio/phone/`, its address before it became the entrance, sends on to it. The pinned slide and the page controls are PySaiyanWeBoo's `stage` and `pager` components (`scripts/build_studio_css.py` writes them from the pinned commit).
+One editor for phones and PCs, phone-first. The slide stays pinned at the top while you work, and every control is an emoji (its words are only in the tooltip / screen-reader label). A phone held sideways and a PC window (960 px and wider) put the controls beside the slide, every row on one line. `/tools/slide-studio/phone/`, its address before it became the entrance, sends on to it. The pinned slide, the page controls and the toolbar are PySaiyanWeBoo's `stage`, `pager` and `toolbar` components (`scripts/build_studio_css.py` writes them from the pinned commit; the toolbar's rows, faces, words and candidates are data in `studio_toolbar("slides")`, the same table as Image Studio's, and `bindToolbar` opens a candidate row under the row of the button that asked).
 
 | | |
 | --- | --- |
@@ -30,7 +30,7 @@ One editor for phones and PCs, phone-first. The slide stays pinned at the top wh
 | 🗂️ ⊞ | All pages as thumbnails, or four at a time. In four-up, select any tile and edit it in place with the same tools. Views are not undoable |
 | 🆕 | Start over (one blank page) |
 | 🗑️ ↩️ ↪️ | Delete the selection, undo, redo (64 steps) |
-| 📥 📤 | Import and export. The formats open in the candidate row, in words, like 🔷's: 📥 どの形式から？ JSON (all slides, also those the PC studio saved) or 画像 (a picture onto this page; photos become PNG, at most 4 MP and 1920 px on the long side); 📤 どの形式に？ PPTX (every slide, editable in PowerPoint), JSON, PNG or SVG (this page as it looks). A pick does it and the row hides again |
+| 📥 📤 | Import and export. The formats open in the candidate row, in words, like 🔷's: 📥 どの形式から？ 画像 (a picture onto this page; カメラ takes a photo for it, on a phone; photos become PNG, at most 4 MP and 1920 px on the long side) or JSON (all slides, also those the PC studio saved); 📤 どの形式に？ PPTX (every slide, editable in PowerPoint), JSON, PNG or SVG (this page as it looks). A pick does it and the row hides again |
 | 🏠 | Image Studio |
 | 💻 ⇄ 📱 | 💻 To textual: short words in place of the emoji, as on a PC; 📱 To iconic: the emoji again (the default). The same page, no reload; remembered in this browser. On the site the switch is under ⋯ in the header. The rows are groups (make, adjust, change, pages, file) with a light dashed line between them |
 
